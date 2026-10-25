@@ -1,11 +1,11 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **13,232 active ingredients**: the original 100 curated entries,
-10,027 FoodOn-derived cooking/pantry entries, 2,550 Wikidata additions, 104
-USDA additions and 451 subsequently curated cooking-material definitions.
-Another 81 identities are retained as retired: 60 from the original deployment
-review and 21 from the subsequent ingredient-scope cleanup.
+The seed contains **13,361 active ingredients**: the original 100 curated entries,
+10,025 active FoodOn-derived cooking/pantry entries, 2,548 active Wikidata additions,
+104 USDA additions and 584 subsequently curated cooking-material definitions.
+Another **85 identities** are retained as retired: 60 from the original deployment
+review, 21 from the ingredient-scope cleanup and four from the final definition review.
 Every original ID, description and prior searchable label/alias is preserved,
 including the original fifteen IDs. Preferred labels may change through the
 explicit label-review layer below; authored recipes are not rewritten. The
@@ -95,7 +95,7 @@ adds **29 ingredients and 142 aliases**: 94 on new definitions and 48 on 17
 published identities. Dried angel hair, bouillon forms, whole-grain corn flour,
 white masarepa, instant polenta, named brandy styles and practical retail mixtures
 are represented. Chicken bouillon powder reuses the existing dry-mix UUID after
-checking its original source annotations. Current totals are **13,232 active,
+checking its original source annotations. Totals at that stage are **13,232 active,
 81 retired and 8,989 active aliases**. The separate checksum-pinned ledger is
 `adapters/ingredient-grocery-gaps.json`; all prior stages and source descriptors
 remain immutable. This adds suggestion data without assigning recipe identities.
@@ -104,7 +104,21 @@ The [final random discovery audit](../../scripts/vocabulary/GAPS.md#final-random
 checks 5,000 occurrences across 20 cuisine labels: 1,243 names from 4,375 unused
 profiles. It identifies 56 clear missing-material candidates and 20 qualified
 review candidates, plus two misleading exact-name definitions. This audit does
-not add ingredients or aliases; current vocabulary totals remain unchanged.
+not add ingredients or aliases; totals at that stage remain unchanged.
+
+The subsequent [final gap fill and pantry expansion](../../scripts/vocabulary/GAPS.md#final-gap-fill-and-pantry-expansion-2026-10-26)
+adds **133 ingredients and 322 aliases** (257 on new entries, 65 on 31 existing
+identities). The review covers all 76 discovery candidates plus a 154-name
+checklist of extracts, Asian produce, mushrooms, vinegars and cured meats.
+Qualified alternatives preserve unknown source forms. Verified synonyms reuse
+published IDs, including yu choy/choi sum, broccoli stems/stalks, coffee extract/
+liquid coffee concentrate, black trumpets/horn of plenty and Chinkiang/Zhenjiang.
+Four misleading source entries are retired with every historical field retained:
+ornamental sweet pea and its canned child, a grilled lamb-chop dish and a sweet
+raspberry-vinegar drink. Culinary names use the appropriate existing pea/lamb IDs
+and a separately defined cooking vinegar. No authored recipe is rewritten.
+The ledger is `adapters/ingredient-final-gap-fill.json`; current totals are
+**13,361 active, 85 retired and 9,307 active aliases**, with the same four sources.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

@@ -567,7 +567,9 @@
       "locale": "en",
       "aliases": [
         "kkaennip",
-        "perilla leaves"
+        "perilla leaves",
+        "Korean perilla leaves",
+        "Korean perilla leaf"
       ],
       "description": "Edible perilla leaves used in Korean and other cuisines; distinct from perilla seed and oil.",
       "status": "active",
@@ -13452,7 +13454,11 @@
     {
       "id": "b29932e2-9b70-4bbf-8a8b-e6d8884dc9da",
       "label": "banana flowers",
-      "aliases": [],
+      "aliases": [
+        "banana blossom",
+        "banana blossoms",
+        "banana heart"
+      ],
       "description": "Banana flowers or Banana blossom eaten as vegetables. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Banana] and [https://www.google.co.uk/search?tbm=isch&q=Banana+flowers]",
       "locale": "en",
       "status": "active",
@@ -26918,7 +26924,11 @@
     {
       "id": "ef9544fc-c9cf-4b72-9bc3-400b02184dff",
       "label": "bottle gourds",
-      "aliases": [],
+      "aliases": [
+        "bottle gourd",
+        "calabash gourd",
+        "lauki"
+      ],
       "description": "Fruiting vegetables from the plant classified under the species Lagenaria siceraria (Molinia) Standl., commonly known as Bottle gourds or Calabashes or Lauki or Cucuzzi. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Bottle_gourd] and [https://www.google.co.uk/search?tbm=isch&q=Bottle+gourds]",
       "locale": "en",
       "status": "active",
@@ -30217,7 +30227,9 @@
       "id": "8823df77-5a41-455f-ba62-06aae66f0569",
       "label": "broccoli stalk",
       "aliases": [
-        "broccoli stalks"
+        "broccoli stalks",
+        "broccoli stems",
+        "broccoli stem"
       ],
       "description": "A stalk of a broccoli plant (Brassica oleracea var. italica).",
       "locale": "en",
@@ -57369,7 +57381,13 @@
     {
       "id": "7187ab21-f16d-438b-80ee-2a042b9cddb3",
       "label": "choi sum",
-      "aliases": [],
+      "aliases": [
+        "choy sum",
+        "yu choy",
+        "yau choy",
+        "yu choi",
+        "Chinese flowering cabbage"
+      ],
       "description": "Brassica vegetables classified under the species Brassica rapa var. parachinensis (Lour.) Hanelt, commonly known as Tsoi sam or Tsai shim or Tsoi sum or choi sum. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Choi_sum] and [https://www.google.co.uk/search?tbm=isch&q=Choy sum]",
       "locale": "en",
       "status": "active",
@@ -97802,7 +97820,8 @@
       "aliases": [
         "garlic spear",
         "garlic spears",
-        "garlic top"
+        "garlic top",
+        "garlic scapes"
       ],
       "description": "An immature flower stalk of a garlic plant.",
       "locale": "en",
@@ -106397,7 +106416,9 @@
       "id": "9edae8c3-5ae8-45be-87e2-99486568e9cb",
       "label": "green pea",
       "aliases": [
-        "green peas"
+        "green peas",
+        "sweet pea",
+        "sweet peas"
       ],
       "description": "A whole raw green pea.",
       "locale": "en",
@@ -106443,7 +106464,11 @@
       "aliases": [
         "canned green peas",
         "green peas (canned)",
-        "green pea (canned)"
+        "green pea (canned)",
+        "canned sweet pea",
+        "canned sweet peas",
+        "sweet peas (canned)",
+        "sweet pea (canned)"
       ],
       "description": "",
       "locale": "en",
@@ -114679,7 +114704,9 @@
       "label": "horn of plenty",
       "aliases": [
         "black chanterelle",
-        "black trumpet"
+        "black trumpet",
+        "black trumpet mushroom",
+        "black trumpet mushrooms"
       ],
       "description": "A fruitbody of a Craterellus cornucopioides fungus.",
       "locale": "en",
@@ -120772,7 +120799,10 @@
       "id": "4fc4fbd1-2023-427c-80ac-0e48f99cb658",
       "label": "jelly ear",
       "aliases": [
-        "jelly ears"
+        "jelly ears",
+        "wood ear mushroom",
+        "wood ear mushrooms",
+        "fresh wood ear mushrooms"
       ],
       "description": "A raw jelly ear fungus fruitbody.",
       "locale": "en",
@@ -120802,7 +120832,9 @@
       "aliases": [
         "dried jelly ears",
         "jelly ears (dried)",
-        "jelly ear (dried)"
+        "jelly ear (dried)",
+        "dried wood ear mushroom",
+        "dried wood ear mushrooms"
       ],
       "description": "A dried jelly ear fungus fruitbody.",
       "locale": "en",
@@ -126891,7 +126923,9 @@
     {
       "id": "167b4335-f244-4b2e-8e99-b8c238af5733",
       "label": "lamb chop",
-      "aliases": [],
+      "aliases": [
+        "lamb chops"
+      ],
       "description": "A raw lamb chop.",
       "locale": "en",
       "status": "active",
@@ -128207,7 +128241,11 @@
     {
       "id": "f945cac0-0af6-4199-a919-b41b0dc08a43",
       "label": "leaf celery",
-      "aliases": [],
+      "aliases": [
+        "Chinese celery",
+        "Chinese leaf celery",
+        "kinchay"
+      ],
       "description": "A celery food product which derives from a leaf celery plant ('Apium graveolens Secalinum Group')",
       "locale": "en",
       "status": "active",
@@ -132105,7 +132143,10 @@
     {
       "id": "b649e375-2b38-4a39-bf67-01f2d31b6631",
       "label": "liquid coffee concentrate",
-      "aliases": [],
+      "aliases": [
+        "coffee extract",
+        "coffee baking extract"
+      ],
       "description": "The group includes Liquid coffee concentrate, i.e. Coffee extract in liquid concentrated form; it may be a product as such used as ingredient in the industry or in vending or community machines; it may also be an intermediate in the production of soluble and instant coffee powders. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. ] and [https://www.google.co.uk/search?tbm=isch&q=Liquid coffee concentrate]",
       "locale": "en",
       "status": "active",
@@ -136308,7 +136349,10 @@
     {
       "id": "6b418923-3be9-42eb-af89-20438ecfe0dd",
       "label": "malabar nightshades",
-      "aliases": [],
+      "aliases": [
+        "Malabar spinach",
+        "vine spinach"
+      ],
       "description": "Leaves from the plant classified under the species Basella alba L., commonly known as Malabar nightshades or Vine spinach. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Basella_alba] and [https://www.google.co.uk/search?tbm=isch&q=Malabar+nightshade]",
       "locale": "en",
       "status": "active",
@@ -146468,7 +146512,9 @@
       "id": "38c757f7-5b18-4c59-9cf4-7fd88a1ab15d",
       "label": "moringa pod",
       "aliases": [
-        "moringa pods"
+        "moringa pods",
+        "drumstick pods",
+        "drumstick pod"
       ],
       "description": "A moringa pod which is raw.",
       "locale": "en",
@@ -171937,7 +171983,10 @@
       "id": "2782acc1-f097-4bf3-b791-c787b646130c",
       "label": "pioppini mushroom",
       "aliases": [
-        "pioppini mushrooms"
+        "pioppini mushrooms",
+        "pioppino mushroom",
+        "pioppino mushrooms",
+        "black poplar mushrooms"
       ],
       "description": "",
       "locale": "en",
@@ -173079,7 +173128,10 @@
     {
       "id": "3cd0b25b-2bbc-46df-8e98-7f8e44834cc5",
       "label": "pointed gourds",
-      "aliases": [],
+      "aliases": [
+        "pointed gourd",
+        "parwal"
+      ],
       "description": "Fruiting vegetables from the plant classified under the species Trichosanthes dioica Roxb., commonly known as Pointed gourds or Parwals. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Trichosanthes_dioica] and [https://www.google.co.uk/search?tbm=isch&q=Pointed+gourds]",
       "locale": "en",
       "status": "active",
@@ -178712,7 +178764,9 @@
     {
       "id": "3ddbcdf2-a515-4ae1-9c09-37f934d132c2",
       "label": "prosciutto",
-      "aliases": [],
+      "aliases": [
+        "prosciutto crudo"
+      ],
       "description": "An Italian dry-cured ham that is usually thinly sliced and served uncooked.",
       "locale": "en",
       "status": "active",
@@ -181263,7 +181317,10 @@
     {
       "id": "7b378ed8-db5b-4fee-8ebf-97dbdf42a60b",
       "label": "quick oats",
-      "aliases": [],
+      "aliases": [
+        "quick-cooking oats",
+        "quick cooking oats"
+      ],
       "description": "Whole oat groats that are pre-cooked, dried, and then rolled into thinner flakes to reduce cooking time",
       "locale": "en",
       "status": "active",
@@ -193989,7 +194046,9 @@
     {
       "id": "bfb3d735-c78f-4ac0-b346-740a0f6aad22",
       "label": "salt pork meat",
-      "aliases": [],
+      "aliases": [
+        "salt pork"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -205011,7 +205070,9 @@
     {
       "id": "d759705b-c506-4793-9c9a-7d942302aa3e",
       "label": "snake gourds",
-      "aliases": [],
+      "aliases": [
+        "snake gourd"
+      ],
       "description": "Fruiting vegetables from the plant classified under the species Trichosanthes cucumerina L. var. anguina, commonly known as Snake gourds. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Trichosanthes_cucumerina] and [https://www.google.co.uk/search?tbm=isch&q=Snake gourds vegetable]",
       "locale": "en",
       "status": "active",
@@ -218181,7 +218242,7 @@
       ],
       "description": "A seed of a sweet pea plant (Lathyrus odoratus).",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -218216,7 +218277,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -228325,7 +228386,9 @@
       "id": "44085948-a8fd-4f90-8a01-674ec1b15ee7",
       "label": "turkey berries",
       "aliases": [
-        "turkey berry"
+        "turkey berry",
+        "pea eggplant",
+        "pea eggplants"
       ],
       "description": "Fruiting vegetables from the plant classified under the species Solanum torvum Sw., commonly known as Turkey berries or Devil's figs or Pea eggplants or Pea aubergines. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Solanum_torvum] and [https://www.google.co.uk/search?tbm=isch&q=Turkey+berries]",
       "locale": "en",
@@ -230166,7 +230229,8 @@
       "id": "96dee796-9cf0-4148-b8eb-ca9654187f6b",
       "label": "turmeric root",
       "aliases": [
-        "turmeric roots"
+        "turmeric roots",
+        "fresh turmeric root"
       ],
       "description": "A root of a turmeric plant (Curcuma longa)",
       "locale": "en",
@@ -234250,7 +234314,10 @@
     {
       "id": "65dae5fe-3a5f-4c4f-98c4-aa812491d5c3",
       "label": "vietnamese mint",
-      "aliases": [],
+      "aliases": [
+        "Vietnamese coriander",
+        "rau ram"
+      ],
       "description": "Aromatic fresh herb from the plant classified under the species Polygonum odoratum (Lour.) Soják or Persicaria odorata (Lour.) Soják, commonly known as Vietnamese mint or Vietnamese coriander or Vietnamese cilantro or Cambodian mint or Hot mint. The part consumed/analysed is not specified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors. In case of data collections related to legislations, the default part consumed/analysed is the one defined in the applicable legislation.[https://en.wikipedia.org/wiki/Vietnamese_mint] and [https://www.google.co.uk/search?tbm=isch&q=Vietnamese mint]",
       "locale": "en",
       "status": "active",
@@ -249456,7 +249523,11 @@
     {
       "id": "bff24779-2cd3-4150-a6a1-54c6aeb9b26e",
       "label": "Zhenjiang vinegar",
-      "aliases": [],
+      "aliases": [
+        "Chinkiang vinegar",
+        "Chinkiang rice vinegar",
+        "Zhenjiang black vinegar"
+      ],
       "description": "rice-based black vinegar",
       "locale": "en",
       "status": "active",
@@ -267388,7 +267459,10 @@
     {
       "id": "c58dc16f-fb9c-4d4c-9a73-eecccf948a8a",
       "label": "iberico ham",
-      "aliases": [],
+      "aliases": [
+        "jamón ibérico de bellota",
+        "jamon iberico de bellota"
+      ],
       "description": "Bellota ham",
       "locale": "en",
       "status": "active",
@@ -272822,7 +272896,9 @@
     {
       "id": "43bee09e-9479-4ded-b8d2-994baa7df0ef",
       "label": "seasoned rice vinegar",
-      "aliases": [],
+      "aliases": [
+        "seasoned rice wine vinegar"
+      ],
       "description": "condiment made from rice vinegar, sake, salt and sugar.",
       "locale": "en",
       "status": "active",
@@ -279179,7 +279255,7 @@
       "aliases": [],
       "description": "drink made from raspberry juice, vinegar and sugar",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "wikidata-2026-10-23",
@@ -282908,7 +282984,7 @@
       "aliases": [],
       "description": "Grilled lamb chops",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "wikidata-2026-10-23",
@@ -286864,7 +286940,10 @@
     {
       "id": "67c2f3f1-c6af-427c-b50e-6339b2c62961",
       "label": "Nipa palm vinegar",
-      "aliases": [],
+      "aliases": [
+        "nipa vinegar",
+        "nipa sap vinegar"
+      ],
       "description": "traditional Filipino vinegar",
       "locale": "en",
       "status": "active",
@@ -303554,7 +303633,9 @@
       "id": "795e2f91-c6ac-4bf4-a8a1-d08e68e31d02",
       "label": "lion's mane mushroom",
       "aliases": [
-        "lion's mane mushrooms"
+        "lion's mane mushrooms",
+        "lions mane mushroom",
+        "lions mane mushrooms"
       ],
       "description": "USDA food description: Mushroom, lion's mane",
       "locale": "en",
@@ -310489,7 +310570,8 @@
       "label": "reduced-fat cream cheese",
       "aliases": [
         "reduced fat cream cheese",
-        "reduced fat creamcheese"
+        "reduced fat creamcheese",
+        "light cream cheese"
       ],
       "description": "Cream cheese formulated with less fat than its regular reference product. Distinct from regular cream cheese, fat-free cream cheese and unrelated French Neufchatel cheese.",
       "locale": "en",
@@ -313035,6 +313117,2120 @@
         "graham crumbs"
       ],
       "description": "Baked sweet graham-style wheat crackers used whole or crushed in dessert crusts and toppings. Exact sweetener and flavor are unspecified; distinct from raw graham flour, breadcrumbs and a prepared cracker crust.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "82bcd7ea-1811-5d0e-9714-72eb0add9ec4",
+      "label": "annatto oil",
+      "aliases": [
+        "achiote oil",
+        "annatto-infused oil"
+      ],
+      "description": "Edible cooking oil infused with annatto seeds for color and mild flavor. Distinct from ground annatto, achiote paste and annatto-colored lard.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4e659266-a3c0-5503-903f-05e173680608",
+      "label": "beef bones",
+      "aliases": [
+        "beef bone",
+        "bovine stock bones"
+      ],
+      "description": "Beef bones sold for stock or cooking; cut and marrow content are unspecified. Distinct from chicken or pork bones and boneless beef.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f7d111ad-34e9-5310-aabb-80718e0deae5",
+      "label": "smoked beef sausage",
+      "aliases": [
+        "beef smoked sausage",
+        "smoked beef sausages"
+      ],
+      "description": "Beef-based sausage supplied smoked. Cure, cooking readiness and exact seasoning are unspecified; distinct from unsmoked beef sausage and smoked pork or turkey sausage.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "569b67d9-cada-55aa-a131-d8e55ae0b774",
+      "label": "European sea bass",
+      "aliases": [
+        "branzino",
+        "branzini",
+        "European seabass"
+      ],
+      "description": "Edible European sea bass, Dicentrarchus labrax, sold as branzino. Whole/fillet presentation and production method are unspecified; not other fish sold generically as sea bass.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0362718a-9fc3-50be-91de-0d600bbaabfb",
+      "label": "burrito seasoning mix",
+      "aliases": [
+        "burrito seasoning",
+        "burrito spice mix"
+      ],
+      "description": "Dry spice/seasoning blend sold for making burritos. Exact recipe and salt level vary; distinct from a specifically named taco or fajita blend.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c279a500-da3f-5cab-bd9a-47ec2bc178aa",
+      "label": "canola-oil cooking spray",
+      "aliases": [
+        "canola oil cooking spray",
+        "canola cooking spray"
+      ],
+      "description": "Cooking spray formulated with canola oil. Propellant and additional ingredients are unspecified; distinct from bottled canola oil and other oil-based cooking sprays.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9f835101-6563-5684-8c5b-4de932514a0b",
+      "label": "caramel ice cream",
+      "aliases": [],
+      "description": "Ice cream with a caramel flavor formulation. Fat level and mix-ins are unspecified; distinct from plain ice cream or separately supplied caramel sauce.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "50eaa57b-f909-5267-854d-d734a1276e99",
+      "label": "dried cavatelli",
+      "aliases": [
+        "dry cavatelli",
+        "cavatelli pasta, dried"
+      ],
+      "description": "Dried wheat pasta in the small curled cavatelli shape. Distinct from fresh cavatelli and from other pasta shapes.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e6e9166a-7869-574f-af37-46edc95a4b42",
+      "label": "fresh cavatelli",
+      "aliases": [
+        "fresh cavatelli pasta",
+        "cavatelli pasta, fresh"
+      ],
+      "description": "Fresh wheat pasta in the curled cavatelli shape. Exact egg/ricotta formulation is unspecified; distinct from dried cavatelli.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9ea4aa30-b7fe-52ce-b1cf-bd0c5c2288c8",
+      "label": "char siu sauce",
+      "aliases": [
+        "char-siu sauce",
+        "Chinese barbecue pork marinade"
+      ],
+      "description": "Sweet Chinese-style marinade/glaze sold for making char siu. Exact formula is unspecified; distinct from an unspecified barbecue sauce or siu-haau grilling sauce.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7a708ec4-bb14-5cb3-b8b6-7f11253cca30",
+      "label": "chicken breast tenderloins",
+      "aliases": [
+        "chicken breast tenders",
+        "chicken tenderloin",
+        "chicken tenderloins"
+      ],
+      "description": "The small inner tenderloin fillets of chicken breasts, supplied as meat for cooking. Distinct from arbitrary breast strips and breaded chicken fingers.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "61177ced-7c52-5ca6-b66b-c05c391f7f63",
+      "label": "chicken leg quarters",
+      "aliases": [
+        "chicken leg quarter"
+      ],
+      "description": "Chicken cuts consisting of thigh and drumstick with an attached back portion. Skin status is unspecified; distinct from a leg without the attached back portion.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a483ce04-8835-5fd1-b4ba-13d7d74fb694",
+      "label": "coconut extract",
+      "aliases": [
+        "coconut baking extract"
+      ],
+      "description": "Concentrated liquid coconut-flavored baking extract. Carrier and natural/imitation formulation are unspecified; distinct from coconut milk and a bulk water extract of coconut flesh.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3804dee9-9f84-51c7-9c0a-2c7b1dd1a9f4",
+      "label": "crème anglaise",
+      "aliases": [
+        "creme anglaise",
+        "crème anglaise custard sauce"
+      ],
+      "description": "Pourable cooked custard sauce made with dairy and egg yolk, used in desserts. Sweetening and flavor are unspecified; distinct from custard powder and plain cream.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9825e5c9-595c-5bf2-b80b-942c99b06b43",
+      "label": "dried mixed herbs",
+      "aliases": [
+        "mixed dried herbs",
+        "dried mixed-herb blend"
+      ],
+      "description": "A dry mixture of culinary herbs sold for seasoning. Exact herbs and proportions are unspecified; not an assertion of a particular named French or Italian blend.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5a0862ae-d5be-5253-95b2-d1b50e98f459",
+      "label": "dried porcini mushrooms",
+      "aliases": [
+        "dried porcini",
+        "dried porcini mushroom",
+        "dried cep mushrooms"
+      ],
+      "description": "Porcini/cep mushroom fruitbodies preserved by drying. Distinct from raw porcini and generic dried mushroom mixtures.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "94b94dfc-76df-5af8-a2c7-82ebe8f42581",
+      "label": "fat-free beef broth",
+      "aliases": [
+        "fat free beef broth"
+      ],
+      "description": "Ready-to-use beef broth sold with a fat-free formulation claim. Sodium level is unspecified; distinct from fat-free chicken broth and unspecified-fat beef broth.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4ec324c1-69d2-5692-955e-feb3e4b6a765",
+      "label": "fat-free reduced-sodium beef broth",
+      "aliases": [
+        "fat free less sodium beef broth",
+        "fat free reduced sodium beef broth"
+      ],
+      "description": "Ready-to-use beef broth carrying both fat-free and comparative reduced-sodium claims. The reference product and reduction percentage are unspecified; not an absolute low-sodium claim.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "98c1d9ce-878e-57ce-9cf3-8dafc82582eb",
+      "label": "fingerling potatoes",
+      "aliases": [
+        "fingerling potato"
+      ],
+      "description": "Potatoes sold as the fingerling market type, with small elongated tubers. Exact cultivar is unspecified; distinct from assigning an arbitrary named potato variety.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2a699660-abcc-5bd9-ba29-81176457a74d",
+      "label": "flat iron steak",
+      "aliases": [
+        "flat iron steaks",
+        "flatiron steak",
+        "flatiron steaks"
+      ],
+      "description": "Beef shoulder/top-blade steak prepared as a flat iron cut with its central connective seam removed. Distinct from sirloin and an untrimmed whole top blade.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e085d8d7-1d1a-5f08-b2f6-5fc0d1bbc225",
+      "label": "gin",
+      "aliases": [],
+      "description": "Juniper-flavored distilled spirit sold as gin for drinks or cooking. Style and strength are unspecified; distinct from specifically named malt-based jenever.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "93b473b4-7fe7-5fff-8d92-86b75e7d3646",
+      "label": "unripe mango",
+      "aliases": [
+        "green mango",
+        "green mangoes",
+        "unripe mangoes"
+      ],
+      "description": "Firm unripe mango flesh used for its tart flavor in cooking and salads. Distinct from ripe mango and prepared green-mango chutney.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2c8f7f1d-e10a-5337-b25b-72e61811c18b",
+      "label": "guanciale",
+      "aliases": [
+        "cured pork jowl, Italian"
+      ],
+      "description": "Italian-style cured pork jowl used in cooking. Exact spice and aging treatment are unspecified; distinct from cooked garlic jowl bacon or generic pork belly bacon.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f11c7662-92b2-5a69-8dd2-142a49a0fede",
+      "label": "jambalaya rice mix",
+      "aliases": [
+        "jambalaya seasoned rice mix"
+      ],
+      "description": "Dry rice-and-seasoning mixture sold for preparing jambalaya. Exact formula is unspecified; distinct from plain rice and a generic yellow-rice mix.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "81bc7472-2d5d-5ea6-bfa3-cd6775424790",
+      "label": "kelp noodles",
+      "aliases": [
+        "kelp noodle"
+      ],
+      "description": "Seaweed-derived noodle product commonly made with kelp, water and alginate. Exact formulation is unspecified; distinct from wheat/rice noodles and whole seaweed.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b8161b1b-8ce8-528c-b5bf-5677670979b0",
+      "label": "lamb loin",
+      "aliases": [
+        "whole lamb loin"
+      ],
+      "description": "Lamb loin supplied as a meat cut rather than individual chops. Bone and trim status are unspecified; distinct from lamb loin chops and generic lamb meat.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7f4abb9d-3259-5a37-81b6-898f4d3353ef",
+      "label": "light agave syrup",
+      "aliases": [
+        "light agave nectar"
+      ],
+      "description": "Agave syrup sold as a light-colored/filtered retail type. This is a color/flavor style, not a low-calorie claim; distinct from an explicitly dark/raw agave syrup.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c58d8a93-df4d-5125-a564-5f6ca9ca195d",
+      "label": "low-fat coffee ice cream",
+      "aliases": [
+        "low fat coffee ice cream"
+      ],
+      "description": "Coffee-flavored ice cream supplied as a low-fat formulation. Exact fat percentage is unspecified; distinct from regular coffee ice cream and a comparative reduced-fat claim.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2b326167-8f04-5bb3-a62e-9391c1016395",
+      "label": "low-fat cream cheese",
+      "aliases": [
+        "low fat cream cheese"
+      ],
+      "description": "Cream cheese sold with an absolute low-fat formulation claim. Exact fat percentage is unspecified; distinct from nonfat and comparative reduced-fat cream cheese.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f9549c2f-cd7a-537f-98b7-1125e6c2d958",
+      "label": "plain low-fat Greek yogurt",
+      "aliases": [
+        "low-fat plain greek yogurt",
+        "plain low fat Greek yogurt",
+        "plain low-fat Greek yoghurt"
+      ],
+      "description": "Unflavored strained Greek-style yogurt in a low-fat formulation. Exact fat percentage is unspecified; distinct from flavored low-fat Greek yogurt and nonfat plain Greek yogurt.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d154d71d-0518-52a9-b6f5-3d24326b71be",
+      "label": "maple extract",
+      "aliases": [
+        "maple baking extract"
+      ],
+      "description": "Concentrated liquid maple-flavored baking extract. Natural/imitation formulation and carrier are unspecified; distinct from maple syrup, maple sugar and maple butter.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f53218d3-01d5-5039-af1d-550f91379387",
+      "label": "mushroom caps",
+      "aliases": [
+        "mushroom cap"
+      ],
+      "description": "Edible cap portions of culinary mushrooms, excluding stems. Species and physical cutting are unspecified; distinct from a whole-mushroom or stem-only portion.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fe5a55fa-a3f8-508a-98a9-f351f44d8387",
+      "label": "no-added-salt black beans",
+      "aliases": [
+        "no-salt-added black beans",
+        "no salt added black beans"
+      ],
+      "description": "Prepared black turtle beans carrying a no-added-salt claim. Container and naturally occurring sodium are unspecified; distinct from reduced-sodium and ordinary prepared black beans.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "76d9045b-d787-599d-845a-bf604b42a39b",
+      "label": "peaches in heavy syrup",
+      "aliases": [
+        "heavy-syrup peaches"
+      ],
+      "description": "Peach fruit preserved/packed in heavy sugar syrup. Container and cut are unspecified; distinct from peaches in light syrup, juice or syrup of unspecified concentration.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f6ab3584-0838-58d2-b292-34a254d7660b",
+      "label": "peppered bacon",
+      "aliases": [
+        "pepper-coated bacon",
+        "pepper crusted bacon"
+      ],
+      "description": "Bacon supplied with a pepper seasoning/coating. Cure and smoke treatment are unspecified; distinct from plain bacon and separately measured pepper.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "af9dbbc8-082a-54e7-a286-c6d6ec741d8a",
+      "label": "peppermint extract",
+      "aliases": [
+        "peppermint baking extract",
+        "mint extract, peppermint"
+      ],
+      "description": "Food-grade liquid peppermint-flavored baking extract. Carrier and concentration are unspecified; distinct from peppermint leaf, brewed mint tea and concentrated essential oil.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "eacdae1d-89cd-524e-aa52-2c1454ae9720",
+      "label": "plain low-fat yogurt",
+      "aliases": [
+        "plain low fat yogurt",
+        "plain lowfat yogurt",
+        "plain low-fat yoghurt"
+      ],
+      "description": "Unflavored unstrained yogurt in a low-fat formulation. Exact fat percentage is unspecified; distinct from flavored low-fat yogurt and plain Greek-style yogurt.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b2f79a1e-a5cc-5bfd-b3d2-a91d3b5bcdac",
+      "label": "plain whole-milk yogurt",
+      "aliases": [
+        "plain whole milk yogurt",
+        "plain full-fat yogurt",
+        "plain whole-milk yoghurt"
+      ],
+      "description": "Unflavored unstrained yogurt made as a whole-milk/full-fat product. Sweetening and exact fat level are unspecified; distinct from flavored full-fat yogurt and lower-fat plain yogurt.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2577ba20-2467-59c9-8e92-8695bd32e0c8",
+      "label": "pork bones",
+      "aliases": [
+        "pork bone",
+        "porcine stock bones"
+      ],
+      "description": "Pork bones supplied for stock or cooking. Cut and marrow content are unspecified; not restricted to marrowbones and not equivalent to beef or chicken bones.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c10aae6a-5e1e-5e71-a375-ea29842d8011",
+      "label": "Red Bartlett pear",
+      "aliases": [
+        "red bartlett pears",
+        "Red Bartlett"
+      ],
+      "description": "The red-skinned Bartlett/Williams pear variety, supplied as fruit. Distinct from an unspecified Bartlett pear and red Anjou varieties.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "481dfe3b-86f0-57e3-98d5-9ce2e9482892",
+      "label": "rice crackers",
+      "aliases": [
+        "rice cracker"
+      ],
+      "description": "Baked or puffed rice-based crackers used as a snack or cooking ingredient. Seasoning and exact formula are unspecified; distinct from wheat crackers and uncooked rice.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "eb2c9b6e-fb57-5313-8885-f85eba090cf8",
+      "label": "Rome apple",
+      "aliases": [
+        "rome apples",
+        "Rome Beauty apple",
+        "Rome Beauty apples"
+      ],
+      "description": "Apples of the Rome/Rome Beauty cultivar. Distinct from generic apples and other named cultivars.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "eac64c8d-44e6-5e1a-b999-1ed899e1eb47",
+      "label": "seitan",
+      "aliases": [
+        "prepared wheat gluten"
+      ],
+      "description": "Prepared hydrated wheat-gluten food used as a cooking protein. Seasoning and shape are unspecified; distinct from finely ground wheat gluten or vital-gluten baking powder.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "cdedeb5b-eb89-5e96-aa78-32782e29f6e3",
+      "label": "sesame chili oil",
+      "aliases": [
+        "sesame chilli oil",
+        "sesame-based chili oil"
+      ],
+      "description": "Chili-infused/flavored cooking oil with a sesame-oil base. Toasting, chili variety and exact blend are unspecified; distinct from plain sesame oil and chili oil of an unspecified base.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "232a389b-610a-5ee4-adf7-6c071a2b88dd",
+      "label": "sharp white Cheddar",
+      "aliases": [
+        "sharp white cheddar cheese",
+        "white sharp Cheddar"
+      ],
+      "description": "White Cheddar supplied with a sharp maturity/flavor grade. Distinct from extra-sharp white Cheddar and color-unspecified sharp Cheddar; exact aging is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2fd35ff0-5c22-56af-8aff-cf52a3e5a8a2",
+      "label": "beef sirloin tip",
+      "aliases": [
+        "sirloin tip",
+        "beef round tip",
+        "beef knuckle"
+      ],
+      "description": "The US sirloin-tip/round-knuckle beef cut from the round primal. Roast/steak fabrication is unspecified; distinct from the sirloin primal despite the name.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1b5aa335-8615-59ac-a347-119d84857c9d",
+      "label": "boneless skinless duck breast",
+      "aliases": [
+        "skinned boned duck breast halves",
+        "skinless boneless duck breast"
+      ],
+      "description": "Duck breast meat supplied without skin or bones. Physical portioning is unspecified; distinct from skin-on or bone-unspecified duck breast.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d685737a-f63f-523b-9d43-3959d26fe7ff",
+      "label": "smoked streaky bacon",
+      "aliases": [
+        "smoked side bacon",
+        "smoked belly bacon"
+      ],
+      "description": "Smoked bacon from the pork belly/side, sold as streaky bacon. Distinct from smoked back bacon and smoke-unspecified side bacon.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c92f0d4f-3b8b-5219-9327-c36a0f738ed8",
+      "label": "smoked turkey sausage",
+      "aliases": [
+        "smoked turkey sausages"
+      ],
+      "description": "Turkey-based sausage supplied smoked. Cure, cooking readiness and exact seasoning are unspecified; distinct from unsmoked turkey sausage and smoked sausages of other meats.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1bdda130-c254-5cb7-bf7d-f0c0d3cc4484",
+      "label": "tarragon vinegar",
+      "aliases": [
+        "tarragon-flavored vinegar",
+        "tarragon flavoured vinegar"
+      ],
+      "description": "Culinary vinegar flavored by tarragon infusion or flavoring. Vinegar base and strength are unspecified; distinct from the preserved tarragon herb sold in vinegar.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "51555da3-b9b6-5470-989e-71a02e5741ca",
+      "label": "tikka masala paste",
+      "aliases": [
+        "tikka masala curry paste",
+        "tikka-masala spice paste"
+      ],
+      "description": "Concentrated spice paste sold for preparing tikka masala. Exact recipe is unspecified; distinct from a ready-to-use tikka-masala sauce and arbitrary curry paste.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5eb5da8c-7f6d-57de-a3b6-d1b22769ea2c",
+      "label": "toasted nori",
+      "aliases": [
+        "roasted nori",
+        "yaki nori",
+        "toasted nori sheets"
+      ],
+      "description": "Nori seaweed sheets supplied toasted/roasted for cooking. Seasoning is unspecified; distinct from explicitly untoasted nori and raw seaweed.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "530e1248-1727-5453-b327-eb735393da18",
+      "label": "toasted pine nuts",
+      "aliases": [
+        "roasted pine nuts",
+        "toasted pine nut kernels"
+      ],
+      "description": "Pine-nut kernels supplied toasted/roasted. Salt and added oil are unspecified; distinct from raw or merely dried pine nuts.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ec6e2296-7beb-5d6f-973d-5f015840fc45",
+      "label": "veal demi-glace",
+      "aliases": [
+        "veal demi glace"
+      ],
+      "description": "Demi-glace-style concentrated brown sauce made with a veal-stock base. Exact thickening and recipe are unspecified; distinct from beef or vegetable formulations.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e318fdd1-4353-51e5-b5f8-62465aa32b0a",
+      "label": "vegetable demi-glace",
+      "aliases": [
+        "vegetable demi glace"
+      ],
+      "description": "Vegetable-based demi-glace-style cooking sauce, with concentrated flavor and sauce consistency. Exact thickening is unspecified; distinct from plain vegetable glace and meat-based demi-glace.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1a5427fd-9a9e-55da-b1f3-b308cd0533a4",
+      "label": "frozen puff-pastry sheets",
+      "aliases": [
+        "frozen puff pastry sheets",
+        "frozen pastry puff sheets"
+      ],
+      "description": "Puff pastry supplied as frozen sheets for baking. Butter/other-fat formulation and sheet size are unspecified; distinct from an unfrozen or already baked pastry product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c4ff33fb-435f-51cb-b408-bdcc5430a70e",
+      "label": "fresh fines herbes",
+      "aliases": [
+        "fines herbes, fresh",
+        "fresh fines-herbes blend"
+      ],
+      "description": "Fresh delicate culinary-herb blend traditionally based on parsley, chives, chervil and tarragon. Exact proportions vary; distinct from dried fines herbes and Herbes de Provence.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8ffe598e-b07b-5cdc-badd-aa1bf0de2b6c",
+      "label": "dried fines herbes",
+      "aliases": [
+        "fines herbes, dried",
+        "dried fines-herbes blend"
+      ],
+      "description": "Dried fine-herb blend traditionally based on parsley, chives, chervil and tarragon. Exact proportions vary; distinct from the fresh blend and Herbes de Provence.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8f67f908-b2bc-5e16-8055-77177bd18765",
+      "label": "fresh lo mein noodles",
+      "aliases": [
+        "lo mein noodles, fresh",
+        "fresh lo-mein noodles"
+      ],
+      "description": "Fresh wheat-based noodles sold for lo mein. Egg content and exact thickness are unspecified; distinct from dried lo-mein noodles and a prepared noodle dish.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2195f967-2338-595c-8c4b-e6d7750d77d7",
+      "label": "dried lo mein noodles",
+      "aliases": [
+        "lo mein noodles, dried",
+        "dry lo mein noodles"
+      ],
+      "description": "Dry wheat-based noodles sold for lo mein, requiring hydration/cooking. Egg content is unspecified; distinct from fresh lo-mein noodles and generic rice noodles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3187dd8c-1b36-5c0b-a494-a350fe8e7135",
+      "label": "baked ham",
+      "aliases": [
+        "roasted ham"
+      ],
+      "description": "Ham supplied cooked by baking/roasting. Cure, glaze and smoke treatment are unspecified; distinct from raw ham and method-unspecified cooked ham.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b6afd851-a39b-5f0f-9b44-63220f3373f2",
+      "label": "fresh Black Mission figs",
+      "aliases": [
+        "fresh black mission fig",
+        "Black Mission figs, fresh"
+      ],
+      "description": "Fresh fruit of the Black Mission fig cultivar. Distinct from dried Black Mission figs and generic fig varieties.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a2c57938-e183-55a7-b93a-88c4c1450def",
+      "label": "dried Black Mission figs",
+      "aliases": [
+        "dried black mission fig",
+        "Black Mission figs, dried"
+      ],
+      "description": "Black Mission fig fruit preserved by drying. Distinct from the fresh fruit and variety-unspecified dried figs.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ccc721f3-53af-515f-9a44-96838f4b2310",
+      "label": "boneless beef sirloin steak",
+      "aliases": [
+        "boneless sirloin steak",
+        "boneless beef sirloin steaks"
+      ],
+      "description": "Beef sirloin supplied as steak cuts without bone. Exact sirloin subcut is unspecified; distinct from bone-in sirloin and sirloin-tip cuts from the round.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "aff0ce82-b75f-5468-84b7-df45031504cf",
+      "label": "boneless center-cut pork loin chop",
+      "aliases": [
+        "boneless center cut pork chops",
+        "boneless center-cut pork chops"
+      ],
+      "description": "Boneless chops from the center loin section of pork. Distinct from shoulder, sirloin-end or bone-in pork chops.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "05dc7f0e-2c38-558c-b0f5-1e48ee75345f",
+      "label": "boneless skinless chicken meat",
+      "aliases": [
+        "boneless skinless chicken",
+        "skinless boneless chicken meat"
+      ],
+      "description": "Chicken meat supplied without skin and bones. Breast/thigh mixture or cut is unspecified; no narrower cut is inferred.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3cf674b2-23a1-51f9-bbb6-90fc616c9774",
+      "label": "ready-to-use chicken consommé",
+      "aliases": [
+        "ready-to-use chicken consomme",
+        "chicken consomme, ready-to-use"
+      ],
+      "description": "Clarified chicken-stock consommé supplied at serving/cooking strength. Distinct from condensed chicken consommé, ordinary broth and stock powder.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c3b5690d-dab8-5382-8146-f37ae5342cc8",
+      "label": "plain chili puree",
+      "aliases": [
+        "plain chile puree",
+        "unseasoned chili puree",
+        "unseasoned chile puree"
+      ],
+      "description": "Plain pureed culinary chili-pepper flesh, optionally with water, supplied without a separate seasoning blend. Raw/cooked state is unspecified; distinct from fermented or seasoned chili sauces.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d934daba-b86d-522f-a734-8016af64fcba",
+      "label": "farofa mix",
+      "aliases": [
+        "seasoned farofa mix",
+        "seasoned toasted cassava flour"
+      ],
+      "description": "Retail seasoned toasted-cassava flour mixture sold for farofa. Exact fats and seasonings are unspecified; distinct from plain cassava flour and a finished cooked side with added ingredients.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "eb5ec702-26fb-543e-b685-34711a830b15",
+      "label": "toasted cassava flour",
+      "aliases": [
+        "toasted manioc flour",
+        "farinha de mandioca torrada"
+      ],
+      "description": "Plain cassava/manioc meal or flour supplied toasted. Exact grind is unspecified; distinct from raw cassava flour and seasoned farofa mix.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "26ceb17e-00d4-514d-b385-4e970bdde001",
+      "label": "frozen broccoli florets",
+      "aliases": [
+        "frozen broccoli floret"
+      ],
+      "description": "Broccoli floret portions preserved frozen. Cooking/blanching state is unspecified; distinct from frozen stalk pieces and fresh florets.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "58bea4dd-ce45-57a9-b516-ca71cd50e391",
+      "label": "instant couscous",
+      "aliases": [
+        "quick-cooking couscous",
+        "precooked couscous"
+      ],
+      "description": "Dry couscous processed/presteamed for rapid preparation. Grain formula is unspecified; distinct from traditional couscous requiring prolonged steaming and already hydrated couscous.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "cf7c809f-67b5-5d5f-8f21-4e4b17e5f2c5",
+      "label": "dried Kashmiri chili",
+      "aliases": [
+        "dried Kashmiri chillies",
+        "Kashmiri chilies, dried",
+        "Kashmiri chile, dried",
+        "dried Kashmiri chiles"
+      ],
+      "description": "Whole culinary chilies sold as Kashmiri type and preserved dried. Heat varies; distinct from the ground powder and unrelated dried chili varieties.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8bff3a3f-40ae-5573-bd77-cf8921d5ed79",
+      "label": "Kashmiri chili powder",
+      "aliases": [
+        "Kashmiri chilli powder",
+        "ground Kashmiri chili",
+        "Kashmiri mirch powder",
+        "Kashmiri chile powder"
+      ],
+      "description": "Ground dried chilies sold as Kashmiri type. Exact heat and cultivar are unspecified; distinct from whole dried chilies and generic curry/spice mixes.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b8d0f792-b3b3-5800-be0e-4a05949b992f",
+      "label": "dried dangmyeon",
+      "aliases": [
+        "dangmyeon",
+        "Korean vermicelli",
+        "Korean sweet potato starch noodles",
+        "dried Korean glass noodles"
+      ],
+      "description": "Dry Korean-style glass noodles, typically based on sweet-potato starch. Exact starch blend is unspecified; distinct from wheat/rice vermicelli and already cooked noodles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4ce92317-75a2-5442-a45b-d366c2395ae7",
+      "label": "fresh culinary lavender flowers",
+      "aliases": [
+        "fresh lavender flowers",
+        "lavender flowers, fresh"
+      ],
+      "description": "Fresh flower portions of lavender supplied as a culinary herb. Species/cultivar is unspecified; distinct from dried flowers and nonfood ornamental products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3923e6b7-9dfb-5d7c-8a71-b10f3290f5a0",
+      "label": "dried culinary lavender flowers",
+      "aliases": [
+        "dried lavender flowers",
+        "lavender flowers, dried"
+      ],
+      "description": "Lavender flower portions supplied dried for culinary use. Species/cultivar is unspecified; distinct from fresh flowers and part-unspecified dried lavender herb.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1bbb27d4-906d-5588-8fc4-28c8a983a3eb",
+      "label": "refined and virgin olive oil blend",
+      "aliases": [
+        "pure olive oil",
+        "refined-virgin olive oil blend"
+      ],
+      "description": "Culinary olive oil supplied as a blend of refined and virgin olive oils, often sold as pure olive oil. Ratio and acidity are unspecified; distinct from solely virgin/extra-virgin oil.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8fce3728-d61d-556e-adf2-77369da37295",
+      "label": "dried wheel-shaped pasta",
+      "aliases": [
+        "ruote pasta",
+        "pasta wheels",
+        "rotelle wheel pasta",
+        "wheel pasta"
+      ],
+      "description": "Dry wheat pasta with spokes and a wheel shape, often sold as ruote or wheel-style rotelle. Distinct from spiral pasta also marketed as rotelle.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1449f6f5-f3d7-5ecb-a60b-eb0ad080a17e",
+      "label": "tofu puffs",
+      "aliases": [
+        "fried tofu puffs",
+        "deep-fried tofu puffs",
+        "tau pok",
+        "dou pao"
+      ],
+      "description": "Airy porous puffed fried tofu pieces used to absorb sauces and in soups. Exact shape is unspecified; distinct from dense fried tofu blocks and thin aburaage sheets.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "53521f73-24ea-5c2c-82db-2228c18d8aa1",
+      "label": "orange extract",
+      "aliases": [
+        "orange baking extract"
+      ],
+      "description": "Concentrated liquid orange-flavored baking extract. Carrier and concentration are unspecified; distinct from orange juice, zest and orange-blossom water.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "653ac985-b731-5d3b-b5d5-71f7326bf6fe",
+      "label": "anise extract",
+      "aliases": [
+        "anise baking extract"
+      ],
+      "description": "Food-grade liquid anise-flavored extract for baking and drinks. Concentration is unspecified; distinct from anise seeds, star anise and concentrated anise essential oil.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8fe4d5ab-38af-5c43-b37b-e5df179b338c",
+      "label": "butter extract",
+      "aliases": [
+        "butter-flavored baking extract",
+        "butter flavouring extract"
+      ],
+      "description": "Concentrated liquid butter-flavored baking ingredient. Natural/imitation origin and carrier are unspecified; distinct from butterfat, melted butter and butter cooking spray.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a7605c12-4ca8-513c-beff-e6d99b9e5dd7",
+      "label": "banana extract",
+      "aliases": [
+        "banana baking extract"
+      ],
+      "description": "Concentrated liquid banana-flavored baking extract. Natural/imitation formulation is unspecified; distinct from banana puree and juice.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "aa817290-4719-5c47-85b9-0a77278f939c",
+      "label": "cherry extract",
+      "aliases": [
+        "cherry baking extract"
+      ],
+      "description": "Concentrated liquid cherry-flavored culinary extract. Natural/imitation formulation is unspecified; distinct from cherry juice, syrup and liqueur.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7f4f1f56-8938-5eb5-af62-761fef3ec8a0",
+      "label": "strawberry extract",
+      "aliases": [
+        "strawberry baking extract"
+      ],
+      "description": "Concentrated liquid strawberry-flavored baking extract. Natural/imitation formulation is unspecified; distinct from strawberry puree, syrup and jam.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1ef05fc3-0e6b-56cc-a715-8c7b9bf86319",
+      "label": "mint extract",
+      "aliases": [
+        "mixed mint extract"
+      ],
+      "description": "Concentrated liquid mint-flavored baking extract with mint species/blend unspecified. Distinct from an explicitly peppermint-only extract and fresh/dried mint leaves.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "995087c4-cb73-5721-b300-7ff8cb2be0fa",
+      "label": "hazelnut extract",
+      "aliases": [
+        "hazelnut baking extract"
+      ],
+      "description": "Concentrated liquid hazelnut-flavored baking extract. Natural/imitation formulation is unspecified; distinct from hazelnut oil, paste and nut pieces.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9e21de99-d1d8-5dc6-9dd4-8b3e4fdce7b5",
+      "label": "pandan extract",
+      "aliases": [
+        "pandan baking extract",
+        "pandan flavoring extract"
+      ],
+      "description": "Liquid pandan-flavored baking concentrate. Natural/imitation origin and color are unspecified; distinct from pandan leaves, leaf powder and thick pandan paste.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "22bb2bdc-28ef-5e60-9548-3837df4b4af5",
+      "label": "ube extract",
+      "aliases": [
+        "ube baking extract",
+        "ube flavoring"
+      ],
+      "description": "Liquid purple-yam/ube-flavored baking concentrate. Color and natural/imitation formula are unspecified; distinct from mashed yam, yam powder and ube jam.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9ba425da-2173-5fa5-85c3-b67d168e1b7e",
+      "label": "caramel extract",
+      "aliases": [
+        "caramel baking extract"
+      ],
+      "description": "Concentrated liquid caramel-flavored baking extract. Carrier and formulation are unspecified; distinct from caramel sauce, syrup and plain caramel coloring.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "38a1f7e4-c1c5-5cd9-bac2-89a27777d400",
+      "label": "tatsoi",
+      "aliases": [
+        "tat soi",
+        "tat choy",
+        "rosette mustard greens"
+      ],
+      "description": "Tender rosette-form Asian mustard greens sold as tatsoi, including leaves and stems. Distinct from upright komatsuna and heading bok choy types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "164dff3e-7714-5319-933f-2051f23e0837",
+      "label": "gai choy",
+      "aliases": [
+        "Chinese mustard greens",
+        "gai choi",
+        "mustard cabbage"
+      ],
+      "description": "Chinese mustard-greens market type, commonly Brassica juncea, supplied as edible leaves/stems. Exact cultivar is unspecified; distinct from gai lan and komatsuna.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f2a5170e-18a0-5718-b4ff-7f8410b89960",
+      "label": "pea shoots",
+      "aliases": [
+        "pea shoot",
+        "dou miao",
+        "pea tendrils"
+      ],
+      "description": "Tender edible shoots, young leaves and tendrils of culinary garden/snow peas. Distinct from pea seeds and generic sprouts of unknown plants.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b5152b33-fc07-5164-a7e2-df7d80f5c231",
+      "label": "flowering garlic chives",
+      "aliases": [
+        "garlic chive flowers",
+        "garlic chive flower stalks"
+      ],
+      "description": "Edible flowering stalks/buds of garlic/Chinese chives. Distinct from flat garlic-chive leaves and garlic-bulb scapes.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "68cb6cb6-d111-5e2f-afb4-41e9e6edcb1a",
+      "label": "Thai eggplant",
+      "aliases": [
+        "Thai eggplants",
+        "Thai round eggplant"
+      ],
+      "description": "Small round eggplant market types used in Thai cooking. Color/cultivar is unspecified; distinct from long Chinese/Japanese eggplants and pea eggplant berries.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c93e7d5d-39f0-5311-a3a6-fd338375651d",
+      "label": "Korean radish",
+      "aliases": [
+        "Korean mu radish",
+        "Korean moo radish"
+      ],
+      "description": "Short broad crisp radish market type sold as Korean mu/moo for cooking and pickling. Distinct from long Japanese daikon and generic small salad radishes.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "76bb7beb-7fed-5dff-8d08-ccb47924dbc9",
+      "label": "fresh edible lily bulbs",
+      "aliases": [
+        "fresh lily bulbs",
+        "fresh bai he",
+        "lily bulbs, fresh"
+      ],
+      "description": "Fresh bulbs/scales supplied as culinary Lilium lily vegetables. Exact edible species is unspecified; distinct from dried lily bulbs and Hemerocallis daylily flower buds.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c81396f7-328b-51a5-9cc9-7ba1b8d6a5b2",
+      "label": "dried edible lily bulbs",
+      "aliases": [
+        "dried lily bulbs",
+        "dried bai he",
+        "lily bulbs, dried"
+      ],
+      "description": "Culinary Lilium lily-bulb scales preserved dried. Exact species is unspecified; distinct from fresh bulbs and dried daylily buds.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "081297e6-0ac0-5aa8-a1c4-b4fcb388c2f2",
+      "label": "banana stem pith",
+      "aliases": [
+        "banana stem",
+        "banana pseudostem pith"
+      ],
+      "description": "Tender edible inner pith of a banana pseudostem, used as a vegetable. Distinct from banana flowers, fruit, leaves and fibrous outer sheaths.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "86a5bb2f-89f4-5309-9a55-79e5de72e4ca",
+      "label": "green shiso leaves",
+      "aliases": [
+        "green shiso",
+        "aojiso",
+        "ao-jiso"
+      ],
+      "description": "Green-leaf Japanese shiso culinary type, commonly Perilla frutescens var. crispa. Distinct from red shiso and Korean perilla/kkaennip leaves.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4d5f6b39-36fd-5bc2-9bf5-2ede05fc60d5",
+      "label": "red shiso leaves",
+      "aliases": [
+        "red shiso",
+        "akajiso",
+        "aka jiso"
+      ],
+      "description": "Red/purple-leaf Japanese shiso culinary type used in seasoning and pickling. Distinct from green shiso and Korean perilla/kkaennip leaves.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e3978663-0f71-5239-8081-6584158c7969",
+      "label": "dried snow fungus",
+      "aliases": [
+        "dried silver ear mushrooms",
+        "dried white fungus"
+      ],
+      "description": "Edible Tremella fuciformis fruitbodies supplied dried. Distinct from fresh snow fungus, wood ears and unrelated white mushrooms.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3337d666-5ab0-5643-acc8-f9da20c95ee0",
+      "label": "canned straw mushrooms",
+      "aliases": [
+        "canned straw mushroom"
+      ],
+      "description": "Straw mushrooms, commonly Volvariella volvacea, preserved by canning. Packing liquid and cut are unspecified; distinct from fresh straw mushrooms.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "66c55124-87f5-5e62-8197-7dc5b6e02b01",
+      "label": "dried chanterelle mushrooms",
+      "aliases": [
+        "dried chanterelles",
+        "dried chanterelle"
+      ],
+      "description": "Culinary chanterelle mushroom fruitbodies preserved dried. Species within the culinary type is unspecified; distinct from fresh chanterelles and generic dried mushrooms.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "56637321-76f6-50bb-bb95-f64fbfc74880",
+      "label": "dried morel mushrooms",
+      "aliases": [
+        "dried morels",
+        "dried morel"
+      ],
+      "description": "Culinary Morchella morel fruitbodies preserved dried. Species is unspecified; distinct from fresh morels and unrelated mushrooms.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "665165c3-5e0b-5788-ba88-70fd72331e73",
+      "label": "Pholiota chestnut mushrooms",
+      "aliases": [
+        "Pholiota adiposa mushrooms",
+        "cultivated chestnut mushrooms, Pholiota"
+      ],
+      "description": "Cultivated edible Pholiota adiposa chestnut-type mushrooms. Distinct from brown button/cremini mushrooms also called chestnut mushrooms in some markets.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e12940ab-5f12-5a5c-b90e-40fae2d02fd1",
+      "label": "dried mixed mushrooms",
+      "aliases": [
+        "mixed dried mushrooms",
+        "dried mushroom mix"
+      ],
+      "description": "A culinary mixture of more than one mushroom type supplied dried. Exact species and proportions are unspecified; distinct from a named single-species dried mushroom product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6c701316-a829-55b8-98f4-b398ef2a1daa",
+      "label": "dried oyster mushrooms",
+      "aliases": [
+        "dried oyster mushroom"
+      ],
+      "description": "Culinary oyster-type Pleurotus mushroom fruitbodies supplied dried. Exact species is unspecified; distinct from fresh oyster mushrooms and king-oyster types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b267709f-9327-53b1-b535-724f421c6e85",
+      "label": "unseasoned rice vinegar",
+      "aliases": [
+        "plain rice vinegar",
+        "unseasoned rice wine vinegar"
+      ],
+      "description": "Rice vinegar supplied without a separately added sushi-seasoning blend of sugar/salt. Exact acidity is unspecified; distinct from seasoned rice vinegar and rice wine.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8d929696-4a44-5283-8d31-94bd8529f65d",
+      "label": "red rice vinegar",
+      "aliases": [
+        "Chinese red rice vinegar"
+      ],
+      "description": "Red-colored Chinese rice vinegar used as a culinary condiment. Exact grains, aging and acidity are unspecified; distinct from red wine vinegar and black rice vinegar.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8d14c58b-195f-5987-ae5f-3a31c52c1a39",
+      "label": "ume plum vinegar",
+      "aliases": [
+        "ume vinegar",
+        "umezu",
+        "umeboshi vinegar"
+      ],
+      "description": "Salty acidic pickling liquid from umeboshi production, marketed as ume plum vinegar. Exact seasoning is unspecified; distinct from ordinary brewed vinegar and sweet plum wine.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "36f4e31e-9ef7-5c80-9abe-fb3ff3fc2f4c",
+      "label": "coconut vinegar",
+      "aliases": [],
+      "description": "Culinary vinegar fermented from coconut sap or coconut-derived liquid; exact substrate is unspecified. Distinct from coconut milk, oil and merely coconut-flavored drinks.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "91003002-a733-5d14-ad6d-3b4ab056a24e",
+      "label": "cane vinegar",
+      "aliases": [
+        "sugarcane vinegar",
+        "sugar cane vinegar"
+      ],
+      "description": "Culinary vinegar fermented from sugarcane-derived liquid. Acidity and dilution are unspecified; distinct from cane syrup and generic distilled white vinegar.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "56ad63d8-232d-57e6-86b1-3bed8ab211a3",
+      "label": "date vinegar",
+      "aliases": [],
+      "description": "Culinary vinegar fermented from dates/date-derived liquid. Exact strength and filtration are unspecified; distinct from date syrup and sweet drinking vinegar mixtures.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "82f1fae3-1d12-5d74-adef-a3a777bab543",
+      "label": "brown rice vinegar",
+      "aliases": [],
+      "description": "Culinary vinegar fermented from brown rice. Exact aging and acidity are unspecified; distinct from seasoned sushi vinegar and Chinese black vinegar styles.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7f3bb90a-328b-5b48-9ef0-f4c31a65abcb",
+      "label": "raspberry cooking vinegar",
+      "aliases": [
+        "raspberry vinegar",
+        "raspberry-flavored vinegar"
+      ],
+      "description": "Acid culinary vinegar flavored with raspberries/raspberry juice or fermented raspberry-derived liquid. Base, strength and method are unspecified; distinct from sweet raspberry-vinegar cordial/drink.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d7fa771b-4cca-56b0-bdaf-3c2a0d96d7ff",
+      "label": "coppa",
+      "aliases": [
+        "capocollo",
+        "capicola",
+        "capicolla"
+      ],
+      "description": "Italian-style dry-cured pork neck/shoulder muscle meat sold as coppa or capocollo. Exact spice and aging treatment are unspecified; distinct from raw pork shoulder and salami made from ground meat.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "aae8a6a6-17ae-570d-b03a-13c5f03d3462",
+      "label": "saucisson sec",
+      "aliases": [
+        "French dry sausage",
+        "French dry-cured sausage"
+      ],
+      "description": "French-style dry-cured fermented sausage sold as saucisson sec. Exact meat and seasoning are unspecified; distinct from fresh sausage and specifically named Italian salami types.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9f874c42-c5ba-588a-b995-35d96b3e5c26",
+      "label": "Spanish cured chorizo",
+      "aliases": [
+        "Spanish chorizo",
+        "dry-cured Spanish chorizo"
+      ],
+      "description": "Spanish-style paprika-seasoned chorizo supplied cured/dried. Heat grade is unspecified; distinct from fresh Mexican-style chorizo.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0f29eb8d-0006-525a-b7d4-58125bb46480",
+      "label": "fresh Mexican chorizo",
+      "aliases": [
+        "Mexican chorizo",
+        "Mexican-style fresh chorizo"
+      ],
+      "description": "Fresh Mexican-style seasoned sausage meat sold as chorizo, for cooking. Exact meat and spice mix are unspecified; distinct from dry-cured Spanish chorizo.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "020baa30-f100-5ccc-a0a1-518b61b2e490",
+      "label": "smoked pancetta",
+      "aliases": [
+        "pancetta affumicata"
+      ],
+      "description": "Pork-belly pancetta supplied with smoked flavor/processing. Cure and seasoning are unspecified; distinct from unsmoked pancetta and generic smoked bacon.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "36545874-544e-518e-a903-4238a59035fe",
+      "label": "cured jowl bacon",
+      "aliases": [
+        "jowl bacon",
+        "pork jowl bacon"
+      ],
+      "description": "Cured pork-jowl bacon supplied for cooking. Smoke treatment is unspecified; distinct from raw jowl, Italian guanciale and already cooked garlic jowl bacon.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d2524825-3a83-550d-a388-eab860448390",
+      "label": "lap cheong",
+      "aliases": [
+        "lap cheong sausage",
+        "lap cheong pork sausage",
+        "Cantonese dried pork sausage"
+      ],
+      "description": "Cantonese-style sweet seasoned dried/cured pork sausage. Exact smoke treatment and recipe are unspecified; distinct from fresh sausage and liver-based yun cheong.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a2391238-a6f6-593a-a90e-9a6b2c0f233a",
+      "label": "lap yuk",
+      "aliases": [
+        "Chinese cured pork belly",
+        "Chinese lap yuk"
+      ],
+      "description": "Chinese-style cured/dried pork belly used in cooking. Exact soy/sugar/spice treatment is unspecified; distinct from fresh belly and Western bacon.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2800d153-0929-5ce9-b6c9-a96e7174d0ab",
+      "label": "Chinese dried duck-liver sausage",
+      "aliases": [
+        "yun cheong",
+        "Chinese duck liver sausage"
+      ],
+      "description": "Chinese-style dried sausage made with duck liver and pork or other supporting meat/fat. Exact proportions are unspecified; distinct from lean-pork lap cheong and spreadable liverwurst.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3a359c01-4098-5852-9630-1b2d5ee7cce0",
+      "label": "nduja",
+      "aliases": [
+        "'nduja",
+        "spreadable nduja sausage"
+      ],
+      "description": "Calabrian-style soft spreadable cured pork sausage with chili. Exact recipe is unspecified; distinct from firm sliced salami and sobrasada.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "50a23e23-fd8a-53ad-aeaf-e951c30d4fc7",
+      "label": "finocchiona",
+      "aliases": [
+        "Tuscan fennel salami",
+        "finocchiona salami"
+      ],
+      "description": "Tuscan-style cured salami characterized by fennel seasoning. Exact aging and recipe are unspecified; distinct from unseasoned generic salami and fresh fennel sausage.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a9bc7035-7ff5-5022-a097-6d605ac2c8fc",
+      "label": "aburaage",
+      "aliases": [
+        "abura-age",
+        "Japanese fried tofu sheets"
+      ],
+      "description": "Thin deep-fried tofu sheets/pouches used in Japanese cooking. Seasoning is unspecified; distinct from dense thick fried tofu and chunky tofu puffs.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "00070fde-3a6d-50c6-a7ac-4796edaa3b5f",
+      "label": "atsuage",
+      "aliases": [
+        "atsu-age",
+        "Japanese thick fried tofu"
+      ],
+      "description": "Thick tofu pieces with a fried exterior and dense soft interior used in Japanese cooking. Seasoning is unspecified; distinct from thin aburaage sheets and airy tofu puffs.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "81e245e1-5061-5d43-b96c-cb6eb8ac9b67",
+      "label": "purple yam",
+      "aliases": [
+        "ube",
+        "purple yams",
+        "ube yam"
+      ],
+      "description": "Purple-fleshed Dioscorea alata yam sold as ube for cooking and desserts. Distinct from purple sweet potato, taro, generic yam types and concentrated ube flavoring.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "41049ecb-d958-5143-9ad3-fbe9d7211291",
+      "label": "frozen purple yam",
+      "aliases": [
+        "frozen ube",
+        "frozen grated purple yam"
+      ],
+      "description": "Purple-fleshed ube yam supplied frozen. Physical cutting or grating is unspecified; distinct from fresh ube, sweetened ube jam and ube extract.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "60943936-2427-5823-aff4-f510edbd0d2a",
+      "label": "ube jam",
+      "aliases": [
+        "ube halaya",
+        "purple yam jam",
+        "halayang ube"
+      ],
+      "description": "Cooked sweetened purple-yam spread sold as ube halaya/jam. Dairy or coconut ingredients and exact recipe are unspecified; distinct from plain cooked/frozen yam and concentrated ube flavoring.",
       "locale": "en",
       "status": "active",
       "source_mappings": [],

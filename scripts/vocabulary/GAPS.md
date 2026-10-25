@@ -1,7 +1,7 @@
 # Reviewed cooking-material gaps
 
-Current maintained totals after the [grocery follow-up](#grocery-material-follow-up-2026-10-25)
-are **13,232 active, 81 retired and 8,989 active aliases**. Earlier stage counts,
+Current maintained totals after the [final gap fill](#final-gap-fill-and-pantry-expansion-2026-10-26)
+are **13,361 active, 85 retired and 9,307 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -540,3 +540,126 @@ and four-source manifest remain byte-identical; no recipes, aliases, canonical
 entries or deployment state change. Raw reference pages, the full provider
 archive and private browser/session data stay outside Git and the download.
 Earlier reports and download bundles remain frozen.
+
+
+## Final gap fill and pantry expansion (2026-10-26)
+
+The user approved the discovery candidates and requested nearby grocery staples.
+This layer adds **133 defined ingredients and 322 aliases**: 257 on new entries,
+65 appended to 31 published identities. It records decisions for all **76 original
+candidate phrases** and a **154-name pantry checklist**. Totals are **13,361 active,
+85 retired and 9,307 active aliases**. All four source descriptors are unchanged.
+The explicit ledger is `data/vocabulary/adapters/ingredient-final-gap-fill.json`.
+
+- Fourteen new liquid baking-extract types include orange, peppermint, coconut,
+  maple, anise, butter, banana, cherry, strawberry, mint, hazelnut, pandan, ube and
+  caramel. Coffee extract reuses the existing `liquid coffee concentrate` UUID:
+  its definition already explicitly identifies liquid concentrated coffee extract.
+  Extracts are distinct from juice, syrup, fresh herbs and concentrated essential
+  oils; carrier, exact concentration and natural/imitation formulation stay
+  unspecified where the source does not establish them.
+- Asian produce includes tatsoi, gai choy, pea shoots, flowering garlic chives,
+  Thai eggplant, Korean radish, culinary lily bulbs, banana-stem pith and purple
+  yam/ube. Fresh/dried lily bulbs, fresh/frozen ube, ube jam and ube extract stay
+  separate. Green/red shiso types remain distinct from Korean perilla leaves.
+- Mushroom additions include dried porcini, morels, chanterelles, oyster mushrooms,
+  snow fungus, canned straw mushrooms, dried mixtures and qualified cultivated
+  Pholiota chestnut mushrooms. Existing jelly-ear, horn-of-plenty and pioppini
+  identities receive familiar wood-ear, black-trumpet and pioppino names.
+- Vinegars include tarragon, unseasoned rice, red rice, brown rice, cane, coconut,
+  date, ume pickling brine and a properly defined raspberry cooking vinegar.
+  Ume vinegar is explicitly a salty pickling liquid. Rice wine, seasoned/plain
+  vinegar and preserved tarragon herb are not equated.
+- Cured/processed meats include guanciale, coppa/capocollo, saucisson sec, Spanish
+  cured versus fresh Mexican chorizo, smoked pancetta, jowl bacon, lap cheong,
+  lap yuk, duck-liver sausage, nduja and finocchiona, alongside reviewed cuts,
+  bones and smoked/seasoned products from the sample.
+
+The review removes false gaps through published-ID reuse. `yu choy` is existing
+`choi sum`, `broccoli stems` are `broccoli stalk`, and `coffee extract` is already
+explicitly defined by `liquid coffee concentrate`. Also reuse Malabar spinach,
+Vietnamese coriander, banana blossom, garlic scapes, Chinkiang vinegar, prosciutto
+crudo, salt pork and other qualified equivalents. Similar words or related source
+mappings alone do not authorize an identity merge or nutrient linkage.
+
+### Explicit label and scope corrections
+
+Four entries change only from active to retired. Their UUIDs, labels, aliases,
+definitions, source mappings and provenance remain byte-for-byte unchanged:
+
+- `sweet pea` explicitly identifies *Lathyrus odoratus*. Its canned FoodOn child
+  inherits that species class. Both are retired; ordinary culinary names reuse
+  existing `green pea` and `canned green pea` IDs.
+- Plural `Lamb chops` describes a grilled dish. It is retired; the plural spelling
+  now belongs to the existing raw `lamb chop` definition.
+- Existing `raspberry vinegar` describes a sweet drink. It is retired from default
+  cooking suggestions; a distinct raspberry cooking-vinegar definition owns the
+  culinary name. The drink ID is not silently converted or merged.
+
+The generic builder now accepts optional, explicit status retirements with full
+before snapshots and reasons. It rejects stale/unknown retirements, preserves
+all other existing fields, and restores the exact prior seed at its own checksum.
+Historical layers remain immutable. Neither a retirement nor an alias moves
+an authored recipe reference; historical rendering and stored text are preserved.
+
+Fifteen reviewed bare phrases retain qualified choices rather than unconditional
+aliases. These include fresh/dried cavatelli, fines herbes, lo mein, Black Mission
+figs and lavender flowers; condensed/ready chicken consommé; plain chili puree
+versus seasoned paste; farofa products; Kashmiri chili forms; wheel/spiral rotelle;
+and unspecified palm/black vinegar, lily, Iberico or liver-sausage types. All
+candidate families have useful forms available; missing source qualifiers are
+not invented. The original discovery report stays frozen.
+
+### Replay and checks
+
+Baseline commit: `1e001d304da8ba085b6b7b7404fac2aa92f2b38d`.
+Input seed: `8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab`.
+Output seed: `0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45`.
+Sources remain `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`.
+
+```sh
+python3 scripts/vocabulary/fill_gaps.py \
+  --seed /tmp/final-gap-base/ingredients.json \
+  --sources data/vocabulary/sources.json \
+  --policy data/vocabulary/adapters/ingredient-final-gap-fill.json \
+  --output /tmp/final-gap-replay
+python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py'
+```
+
+All **117 Python tests** pass. The authoritative Rust validator accepts **13,446
+entries/four sources without warnings**. The complete canonical seed replays
+byte-for-byte, including restoration of every prior status/alias. Test deployment
+passes transactional dry-run rollback, DB/JSON definition equality and a final
+no-op load with all **13,446 unchanged**. All preexisting authored row hashes are
+preserved; one private synthetic UI draft is added, with no import/publication.
+
+All **455 new preferred/alias names** return their intended UUID first through
+the production SQL query. **215 final authenticated API checks** pass. Chromium
+verifies pandan-extract selection, UUID autosave/reload, clearing the ID on edit,
+free-text fallback after lookup failure, WASM responses and twelve representative
+lookup cases including the corrected pea/lamb labels and published-ID reuse.
+
+On the same frozen expected IDs, all **25,351 previously covered occurrences**
+across the two recipe studies and final occurrence sample retain full-wording
+and full-or-short-prefix retrieval: zero losses in this round. First-study full
+hits rise **9,370 -> 9,375**, second **8,976 -> 8,982**, final sample **3,902 ->
+3,905**. Full-or-prefix hits rise **9,516 -> 9,521**, **9,199 -> 9,201** and
+**4,020 -> 4,022**. Reviewed ordinary aliases for quick-cooking oats and seasoned
+rice-wine vinegar preserve their existing IDs and avoid crowding them out.
+Ranking and the eight-result limit are unchanged.
+
+On an after-copy of the same 5,000 sampled occurrences, represented materials
+rise **4,643 -> 4,714 (92.86% -> 94.28%)**. The 76-candidate missing/partial queue
+is addressed by explicit definitions, existing-ID reuse or qualified alternatives;
+unresolved forms remain source ambiguities. The 239 ambiguous, 17 branded, 23
+malformed and seven composite occurrences are excluded from full coverage. This
+is editorial material availability, not automatic recognition or a population
+estimate. The sample itself and earlier reports/downloads are unchanged.
+
+External evidence, complete canonical JSON/CSV, all new entries, original-case and
+pantry-checklist decisions, retirement review, lookup audits and replay tools are
+at `/workspace/vocabulary-final-gap-fill`. Download
+`/workspace/noms-vocabulary-final-gap-fill.zip`. Raw provider archives, reference
+pages, browser/session data and private draft contents remain outside Git and the
+portable bundle. No Details field, source/nutrient ingestion, parser/ranking
+change, automatic recipe assignment or production rollout is included.

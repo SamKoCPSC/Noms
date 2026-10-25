@@ -589,6 +589,48 @@ explicit decisions, candidate/quality CSVs and verified independent replay are i
 `/workspace/noms-final-5000-ingredient-gap-review.zip`. Generated full audits,
 provider snapshots and raw reference captures remain outside Git.
 
+## Final gap fill and pantry expansion — 2026-10-26
+
+User-approved curation adds **133 definitions and 322 aliases** (257 on new
+entries, 65 on 31 published identities), covering all 76 discovery cases plus a
+154-name pantry checklist. New families include culinary extracts, Asian produce,
+prepared mushroom forms, vinegars, cured meats, specific dairy/broth formulations,
+pasta forms and cooking cuts. Existing equivalents reuse their IDs, notably yu
+choy/choi sum, broccoli stems/stalks and coffee extract/liquid coffee concentrate.
+Fresh/dried, fat/sodium, species/part and product-formulation distinctions remain.
+
+Four misleading entries are retired with all identity/source fields unchanged:
+ornamental sweet pea, its canned child, the grilled `Lamb chops` dish and the
+raspberry-vinegar drink. Culinary suggestions use existing pea/lamb IDs and a
+separately defined cooking vinegar. No recipe text or references are rewritten.
+The builder supports checksum-pinned status-only retirements with complete before
+snapshots, rejects stale records and recovers every historical stage exactly.
+Fifteen bare phrases retain qualified choices; source omissions are not guessed.
+
+Current totals: **13,361 active, 85 retired, 9,307 active aliases**, four unchanged
+source descriptors. Ledger: `data/vocabulary/adapters/ingredient-final-gap-fill.json`.
+Baseline is `1e001d304da8ba085b6b7b7404fac2aa92f2b38d` / seed
+`8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab`;
+output `0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45`.
+
+**117 Python tests**, authoritative Rust validation of **13,446 entries** without
+warnings, byte-identical replay, dry-run rollback, DB equality and no-op repeat
+loading pass. All **455 new-name SQL lookups** and **215 final API checks** pass;
+Chromium verifies selection, UUID autosave/reload, edit clearing, failure fallback
+and WASM. All preexisting authored hashes remain unchanged; one private synthetic
+UI draft, no recipe import/publication or production load.
+
+All 25,351 previously covered occurrences in the three frozen studies retain
+full/short-prefix candidate retrieval with zero losses in this round. Final
+5,000-sample availability rises **4,643 -> 4,714 (94.28%)** under explicit review;
+ambiguity/brands/errors/components remain excluded. These are availability and
+retrieval checks, not automatic-assignment accuracy or a population estimate.
+[GAPS.md](../../scripts/vocabulary/GAPS.md#final-gap-fill-and-pantry-expansion-2026-10-26)
+records scope, evidence and limitations. External artifacts:
+`/workspace/vocabulary-final-gap-fill`; full vocabulary/review archive:
+`/workspace/noms-vocabulary-final-gap-fill.zip`. Raw catalogs/pages and private
+browser/draft data remain outside Git/downloads; earlier studies stay frozen.
+
 ## Remaining scope
 
 Other metadata dimensions, localization, further Wikidata/USDA curation, FNDDS and

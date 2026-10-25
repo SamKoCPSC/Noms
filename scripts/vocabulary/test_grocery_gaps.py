@@ -12,7 +12,8 @@ class GroceryGapsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy=json.loads(gaps.GROCERY_POLICY.read_text())
-        cls.seed=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.maintained=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.seed=rename_labels.maintained_grocery_stage(cls.maintained)
         cls.sources=json.loads((gaps.ROOT/'data/vocabulary/sources.json').read_text())
         cls.base=gaps.restore_baseline(cls.seed,cls.policy)
         cls.entries={e['id']:e for e in cls.seed['entries']}
@@ -27,7 +28,7 @@ class GroceryGapsTest(unittest.TestCase):
         self.assertEqual(gaps.checksum(self.base),'6e703364b9ab3b7476a0637b7d1063dcdf0096dfb26d6b7a42b740b39acfa821')
         self.assertEqual(validate(self.seed,self.sources),[])
         self.assertEqual((summary['added'],summary['active'],summary['retired']),(29,13232,81))
-        self.assertEqual(rename_labels.maintained_second_sample_stage(self.seed),self.base)
+        self.assertEqual(rename_labels.maintained_second_sample_stage(self.maintained),self.base)
         for old in self.base['entries']:
             expected=copy.deepcopy(old)
             expected['aliases']+=self.policy['alias_additions'].get(old['id'],{}).get('aliases',[])

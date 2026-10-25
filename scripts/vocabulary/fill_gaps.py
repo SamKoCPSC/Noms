@@ -1,7 +1,7 @@
 """Apply an explicit cooking-material review to its checksum-pinned preceding seed.
 
 No network, fuzzy identity inference, UUID generation or recipe rewrites.
-The ledger owns new UUIDs and only appended, explicitly reviewed aliases.
+The ledger owns new UUIDs, reviewed alias suffixes and explicit status retirements.
 """
 import argparse
 import collections
@@ -18,6 +18,7 @@ DEFAULT_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-review.json'
 FOLLOWUP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-followup.json'
 SECOND_SAMPLE_POLICY=ROOT/'data/vocabulary/adapters/ingredient-second-sample-gaps.json'
 GROCERY_POLICY=ROOT/'data/vocabulary/adapters/ingredient-grocery-gaps.json'
+FINAL_GAP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-final-gap-fill.json'
 
 
 def encoded(value):
@@ -41,6 +42,12 @@ def restore_baseline(result,policy):
         if aliases:
             require(e['aliases'][-len(aliases):]==aliases,'Existing alias suffix differs from the ledger')
             e['aliases']=e['aliases'][:-len(aliases)]
+        retirement=policy.get('retirements',{}).get(e['id'])
+        if retirement:
+            before=retirement['before']
+            require(retirement['reason'].strip() and e=={**before,'status':'retired'},
+                    'Retired definition differs from the ledger')
+            e['status']=before['status']
     require(checksum(base)==policy['base_seed_checksum'],'Restored baseline differs from approved input')
     return base
 
@@ -51,6 +58,12 @@ def apply_review(seed,sources,policy):
             'Stale gap-review baseline')
     require(not validate(seed,sources),'Ambiguous baseline ingredient names')
     result=copy.deepcopy(seed);entries={e['id']:e for e in result['entries']}
+    retirements=policy.get('retirements',{})
+    for ident,decision in retirements.items():
+        require(ident in entries and entries[ident]==decision['before']
+                and entries[ident]['status']=='active' and decision['reason'].strip(),
+                'Unknown, stale or unexplained retirement')
+        entries[ident]['status']='retired'
     names={normalize(n):e['id'] for e in result['entries'] if e['status']=='active'
            for n in [e['label'],*e['aliases']]}
     added=set()
@@ -103,16 +116,18 @@ def apply_review(seed,sources,policy):
                 'Invalid scoped context target')
     require(not validate(result,sources),'Ambiguous or invalid gap-review output')
     # Existing authored definitions, UUIDs, retired identities and source evidence
-    # are immutable at this stage; only approved aliases can be appended.
+    # are immutable except approved alias suffixes and explicit status retirements.
     for original,current in zip(seed['entries'],result['entries']):
         expected=copy.deepcopy(original)
         expected['aliases']+=policy['alias_additions'].get(original['id'],{}).get('aliases',[])
+        if original['id'] in retirements:expected['status']='retired'
         require(current==expected,'Gap review rewrote an existing identity')
     summary=dict(added=len(added),aliases_added_to_existing=aliases_added,
                  aliases_on_new_entries=sum(len(e['aliases']) for e in policy['additions']),
                  decisions=dict(collections.Counter(d['action'] for d in policy['reviewed_names'].values())),
                  active=sum(e['status']=='active' for e in result['entries']),
                  retired=sum(e['status']=='retired' for e in result['entries']),output_checksum=checksum(result))
+    if retirements:summary['retired_by_review']=len(retirements)
     return result,summary
 
 
