@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import rename_labels
 import wikidata as wd
 from foodon import digest, load
 from fetch_wikidata import project
@@ -223,7 +224,7 @@ class MaintainedWikidataTest(unittest.TestCase):
     def test_approved_ledger_matches_canonical_seed_without_upstream_download(self):
         descriptor=load(wd.ROOT/'data/vocabulary/adapters/wikidata.json')
         review=load(wd.ROOT/'data/vocabulary/adapters/wikidata-cooking-review.json')
-        seed=load(wd.ROOT/'data/vocabulary/ingredients.json')
+        seed=rename_labels.restore_maintained_baseline(load(wd.ROOT/'data/vocabulary/ingredients.json'))
         manifest=load(wd.ROOT/'data/vocabulary/sources.json')
         self.assertEqual(wd.validate(seed,manifest),[])
         self.assertEqual(review['descriptor_checksum'],digest(wd.ROOT/'data/vocabulary/adapters/wikidata.json'))
@@ -233,7 +234,11 @@ class MaintainedWikidataTest(unittest.TestCase):
             self.assertIn(dict(source=descriptor['source']['id'],external_id=d['term_id'],relationship=d['relationship']),
                           entries[d['canonical_id']]['source_mappings'])
             if d['action']=='import':
-                for key,value in d['canonical'].items():self.assertEqual(entries[d['canonical_id']][key],value)
+                for key,value in d['canonical'].items():
+                    current=entries[d['canonical_id']][key]
+                    # Later alias-only review appends to the exact source stage.
+                    if key=='aliases' and entries[d['canonical_id']]['status']=='active':current=current[:len(value)]
+                    self.assertEqual(current,value)
 
 
 if __name__ == '__main__':

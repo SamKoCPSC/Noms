@@ -22,3 +22,6 @@
 
 # Tailwind
 node_modules/
+
+# Offline vocabulary tool/test imports
+__pycache__/

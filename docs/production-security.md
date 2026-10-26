@@ -70,9 +70,21 @@ and quota serialization even though tenant authorization remains intact.
 
 The migration role creates extensions and owns the declarative schema. The
 entrypoint then applies `migrations/runtime-grants.sql`, granting the runtime
-role only schema usage plus table/sequence data-plane privileges. Migration
-credentials are removed from the server process environment before launch.
+role only schema usage plus table/sequence data-plane privileges. It runs the
+packaged vocabulary loader with `--if-changed`, supplying the migration URL as
+`DATABASE_URL` only for that child process. The runtime role retains SELECT-only
+access to maintained vocabulary. A matching latest committed ingredient/source
+fingerprint skips the entry scan and all seed writes; failures prevent startup.
+Migration credentials are removed from the server process environment before launch.
 The entrypoint supplies only a non-secret completion marker to the server.
+
+`entrypoint.sh --prepare-database` performs the same preparation and exits without
+launching the server. Repository Railway configs use it as the pre-deploy hook;
+image-backed services require the equivalent dashboard setting. Startup also
+prepares the database so image deployments without that setting still seed.
+The hook and startup share transaction-serialized checksum checks, so unchanged
+catalogs do not load twice. The fingerprint assumes vocabulary is maintained via
+this loader; omit `--if-changed` for an explicit database-drift check/repair.
 
 The runtime role must be standalone: no inherited roles, `CREATEDB`,
 `CREATEROLE`, superuser, replication, row-security bypass,

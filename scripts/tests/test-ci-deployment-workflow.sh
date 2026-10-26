@@ -78,5 +78,13 @@ grep -Fq 'RUN dx bundle --platform web --release --force-sequential true' "$dock
     || fail 'deployment builds must still produce the release web bundle'
 grep -Fq 'RUN cargo chef cook --release --recipe-path recipe.json' "$dockerfile" \
     || fail 'deployment builds must preserve dependency caching'
+for artifact in \
+    'RUN cargo build --locked --release --no-default-features --features server --bin seed-vocabulary' \
+    '/usr/src/app/target/release/seed-vocabulary /usr/local/app/seed-vocabulary' \
+    '/usr/src/app/data/vocabulary/ingredients.json /usr/local/app/data/vocabulary/ingredients.json' \
+    '/usr/src/app/data/vocabulary/sources.json /usr/local/app/data/vocabulary/sources.json'; do
+    grep -Fq -- "$artifact" "$dockerfile" \
+        || fail "release image is missing maintained vocabulary: $artifact"
+done
 
 echo 'PASS: CI owns validation and exposes its database tools'

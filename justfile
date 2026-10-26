@@ -164,8 +164,8 @@ ci: fmt check lint test schema-check-test security-policy-test security-check re
 	@echo ""
 	@echo "✅ All checks passed."
 
-# Seed after `just migrate`; --validate-only checks files without DATABASE_URL.
-# Usage: just seed-vocabulary --dry-run | just seed-vocabulary --validate-only
+# Manual check/repair after `just migrate`; deployments use --if-changed.
+# Usage: just seed-vocabulary --dry-run | --validate-only | --if-changed
 seed-vocabulary *args:
 	SQLX_OFFLINE=true cargo run --features server --bin seed-vocabulary -- {{args}}
 

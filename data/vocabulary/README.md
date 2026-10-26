@@ -1,15 +1,16 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **12,802 active ingredients**: the original 100 curated entries,
-10,048 FoodOn-derived cooking/pantry entries, 2,550 Wikidata additions and 104
-USDA additions.
-Another 60 staged identities
-are retained as retired after the deployment review removed unsuitable categories.
-Every original ID and authored
-label/alias/description is preserved, including the original fifteen IDs. The
-previously tested cumin-seed UUID is also retained. There are 12,016 FoodOn source
-mappings (11,956 on active entries); overlapping source records use conservative `related` relationships
+The seed contains **13,361 active ingredients**: the original 100 curated entries,
+10,025 active FoodOn-derived cooking/pantry entries, 2,548 active Wikidata additions,
+104 USDA additions and 584 subsequently curated cooking-material definitions.
+Another **85 identities** are retained as retired: 60 from the original deployment
+review, 21 from the ingredient-scope cleanup and four from the final definition review.
+Every original ID, description and prior searchable label/alias is preserved,
+including the original fifteen IDs. Preferred labels may change through the
+explicit label-review layer below; authored recipes are not rewritten. The
+previously tested cumin-seed UUID is also retained. Before gap curation there were
+12,016 FoodOn source mappings (11,935 on active entries); overlapping source records use conservative `related` relationships
 rather than inferred exact equivalence from matching names.
 
 The expansion uses a recorded cooking-scope policy and explicit source-specific
@@ -38,6 +39,87 @@ ingredient; they do not establish exact equivalence or link nutrient values.
 All 12,758 pre-USDA IDs and authored fields are preserved. Raw archives and full
 audits stay outside Git. FNDDS, Branded and nutrient ingestion remain deferred.
 
+The subsequent [alias and scope review](../../scripts/vocabulary/ALIASES.md) screens every
+active name and adds 7,009 reviewed plurals, regional spellings, alternative names
+and qualified word-order variants to 4,823 entries. There are now 7,137 active
+aliases, plus two retained on newly retired entries. Source/definition review of
+200 flagged labels retires 21 unsuitable entries, including livestock salt blocks,
+clinical formulations, manufacturing terms, catch-all categories and finished
+meals. Their UUIDs, labels, aliases and source evidence remain available for
+history; only active suggestion status changes. The recorded policy holds
+conflicting aliases and reproduces from the immutable combined pre-alias seed.
+It does not add ingredients or change runtime matching semantics.
+
+The subsequent [gap curation](../../scripts/vocabulary/GAPS.md) reviews all 314
+missing/partial names in a frozen 1,000-profile recipe sample. It adds 258 defined
+cooking materials and 246 aliases on them, plus 25 aliases on 15 existing entries;
+there are now **7,408 active aliases**. Stock/broth, cream, formulation, named
+variety and meaningful processing distinctions remain separate. Verified
+equivalents reuse their existing UUIDs; 19 unclear source names stay held. The
+immutable ledger, builder and tests reproduce the final seed after the original
+alias stage. Existing definitions/statuses/source evidence and all four source
+descriptors are preserved. Source data, recipe text and generated audits stay
+external; this layer does not change runtime recognition or substitution rules.
+
+The separately pinned October 25 follow-up resolves ten of the nineteen held
+names through source evidence or explicit generic material definitions, and
+adds useful specific forms and names. It adds **16 ingredients and 114 aliases**:
+55 on new ingredients and 59 appended to existing entries. Totals at that stage are
+**13,055 active, 81 retired and 7,522 active aliases**. Qualified botanical and
+regional names preserve context; ground coriander, dry/liquid pectin and vanilla
+extract/imitation flavouring remain distinct. All prior IDs, definitions and
+source metadata remain intact. See the [follow-up evidence and replay guide](../../scripts/vocabulary/GAPS.md#source-follow-up-2026-10-25).
+
+The subsequent [preferred-label review](../../scripts/vocabulary/LABELS.md)
+renames **2,624** parenthetical labels into ordinary cooking word order, such as
+`tomato (canned)` → `canned tomatoes`. All old names remain searchable against
+the same UUIDs. Another **244** labels retain their wording for contextual,
+scientific or name-ownership reasons. Totals at that stage are **13,055 active,
+81 retired and 8,549 active aliases**. Cooking states, species, edible parts,
+fat/sodium qualifiers and packing media retain their distinctions. This layer
+changes preferred vocabulary labels only; recipes and source definitions remain
+unchanged. Historical stage counts and checksums above remain frozen.
+
+
+The subsequent [second-sample curation](../../scripts/vocabulary/GAPS.md#second-sample-curation-2026-10-25)
+adds **148 defined cooking materials** and **298 aliases** (273 on new entries,
+25 on 13 existing identities). These include MSG, named pasta shapes, fresh
+mozzarella, Greek-yogurt formulations, preserved produce and stock/broth forms.
+Ambiguous names get qualified alternatives or scoped corrections rather than
+forced identities. All prior preferred labels, descriptions, source evidence,
+statuses and alias order remain intact. Totals at that stage are **13,203 active,
+81 retired and 8,847 active aliases**; the four-source manifest is unchanged.
+
+The subsequent [grocery-material follow-up](../../scripts/vocabulary/GAPS.md#grocery-material-follow-up-2026-10-25)
+adds **29 ingredients and 142 aliases**: 94 on new definitions and 48 on 17
+published identities. Dried angel hair, bouillon forms, whole-grain corn flour,
+white masarepa, instant polenta, named brandy styles and practical retail mixtures
+are represented. Chicken bouillon powder reuses the existing dry-mix UUID after
+checking its original source annotations. Totals at that stage are **13,232 active,
+81 retired and 8,989 active aliases**. The separate checksum-pinned ledger is
+`adapters/ingredient-grocery-gaps.json`; all prior stages and source descriptors
+remain immutable. This adds suggestion data without assigning recipe identities.
+
+The [final random discovery audit](../../scripts/vocabulary/GAPS.md#final-random-ingredient-discovery-2026-10-26)
+checks 5,000 occurrences across 20 cuisine labels: 1,243 names from 4,375 unused
+profiles. It identifies 56 clear missing-material candidates and 20 qualified
+review candidates, plus two misleading exact-name definitions. This audit does
+not add ingredients or aliases; totals at that stage remain unchanged.
+
+The subsequent [final gap fill and pantry expansion](../../scripts/vocabulary/GAPS.md#final-gap-fill-and-pantry-expansion-2026-10-26)
+adds **133 ingredients and 322 aliases** (257 on new entries, 65 on 31 existing
+identities). The review covers all 76 discovery candidates plus a 154-name
+checklist of extracts, Asian produce, mushrooms, vinegars and cured meats.
+Qualified alternatives preserve unknown source forms. Verified synonyms reuse
+published IDs, including yu choy/choi sum, broccoli stems/stalks, coffee extract/
+liquid coffee concentrate, black trumpets/horn of plenty and Chinkiang/Zhenjiang.
+Four misleading source entries are retired with every historical field retained:
+ornamental sweet pea and its canned child, a grilled lamb-chop dish and a sweet
+raspberry-vinegar drink. Culinary names use the appropriate existing pea/lamb IDs
+and a separately defined cooking vinegar. No authored recipe is rewritten.
+The ledger is `adapters/ingredient-final-gap-fill.json`; current totals are
+**13,361 active, 85 retired and 9,307 active aliases**, with the same four sources.
+
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.
 See `coverage/benchmark.json` and the coverage review for source-matching evidence.
@@ -51,12 +133,24 @@ Use `just seed-vocabulary --validate-only --file PATH --sources PATH` to run the
 Rust validator without connecting to a database before a normal loader dry-run.
 
 Apply the declarative schema with the existing `just migrate` workflow first.
-With the deployment/seed role's `DATABASE_URL` exported, run:
+Production database preparation now runs the packaged loader automatically with
+`--if-changed` after schema/grants. A fingerprint of both parsed JSON contracts is
+checked against the latest committed seed receipt under the writer lock. Matching
+inputs skip the entry scan and all seed writes. Changed inputs load atomically;
+failures and dry runs do not mark them applied. JSON whitespace/key order does
+not change the fingerprint; ingredient/alias/status/source changes do.
+
+For an explicit check or repair, with the deployment/seed role's `DATABASE_URL`
+exported, run:
 
 ```bash
 just seed-vocabulary --dry-run
 just seed-vocabulary
 ```
+
+Omitting `--if-changed` checks actual database definitions even if the fingerprint
+matches. This is the repair path for out-of-band database edits. Deployment uses
+the committed files without fetching or regenerating any upstream dataset.
 
 The recipe editor searches maintained English labels and aliases by prefix after
 two characters. Results prefer exact labels, then exact aliases, then prefixes;
@@ -95,6 +189,43 @@ new source-derived entries use imported origin.
 A normalized label/alias must be unique within an entry. Collisions between
 entries produce warnings and remain separate suggestions for review. IDs are
 never deduced from names. The loader does not ingest upstream data directly.
+
+## Ingredient identity for gap curation
+
+Use the recipe effect of substitution when deciding whether related cooking
+materials need separate identities. If replacing one with the other in ordinary
+uses would likely require changing the recipe's balance or method, or materially
+change flavor, texture, body, whipping, setting or other cooking behavior,
+represent them as distinct ingredients. An occasional successful substitution
+does not establish identity. Base the decision on a defined product/material
+distinction, rather than small differences between batches or brands.
+
+Apply this rule to the reviewed gap candidates as follows:
+
+| Distinction | Curation decision |
+|---|---|
+| Stock versus broth | Separate ingredients for each animal/vegetable base and product type; describe intended body, gelatin and seasoning where supported. Commercial names overlap, so labels alone do not establish composition or equivalence. |
+| Ready-to-use stock/broth versus concentrate, cube or powder | Separate forms; dilution and seasoning can change the recipe. |
+| Regular versus reduced-sodium or unsalted stock/broth | Separate formulations; retain the stated sodium qualifier and its source definition. Reduced-sodium and unsalted are distinct claims. |
+| Single, double, whipping and heavy cream | Separate defined cream types when fat content or cooking/whipping behavior differs. Record locale and supported fat range in descriptions; regional names do not automatically establish aliases. |
+| Full-fat, reduced-fat and nonfat dairy; salted and unsalted butter | Separate formulations where the difference changes richness, setting, cooking behavior or seasoning. |
+| Fresh and dried herbs; fresh, dried and smoked peppers | Preserve the distinct material/form when flavor, strength, water content or preparation differs. |
+| Named rice varieties, pasta shapes and corn/wheat tortillas | Preserve the named variety, shape or base when cooking behavior or the intended dish differs. |
+| Spelling, plurals and equivalent regional names | Alias candidates only after confirming the same defined cooking material and formulation. |
+
+Chopping, portion size, melting and similar preparation instructions remain in
+authored recipe text. They do not by themselves create a new purchased-material
+identity. Preserve a distinct manufactured or preserved form when that processing
+changes cooking behavior. Review other qualifiers case by case rather than
+creating an entry for every modifier combination.
+
+An unspecified ingredient such as `cream` or `stock` remains unspecified; do not
+infer a precise type, fat level or sodium formulation. Existing broad entries can
+coexist with specific entries, with source relationships recorded conservatively.
+Each new identity needs a definition, duplicate review, stable UUID and source or
+curation provenance. This policy does not change existing IDs, aliases, recipe
+references, or NOMS-018 quantity/substitution behavior by itself.
+
 
 ## Loading and maintenance
 

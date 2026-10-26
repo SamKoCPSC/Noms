@@ -16,6 +16,7 @@ pub struct SeedReport {
     pub unchanged: usize,
     pub source_updates: usize,
     pub dry_run: bool,
+    pub skipped: bool,
     pub warnings: Vec<String>,
 }
 
@@ -25,7 +26,34 @@ pub async fn seed(
     sources: &SourceManifest,
     dry_run: bool,
 ) -> Result<SeedReport, Error> {
+    seed_with_mode(pool, file, sources, dry_run, false).await
+}
+
+/// Deployment fast path: trust only the latest successfully committed fingerprint.
+/// Use `seed` without this mode to inspect/repair out-of-band database changes.
+pub async fn seed_if_changed(
+    pool: &PgPool,
+    file: &SeedFile,
+    sources: &SourceManifest,
+    dry_run: bool,
+) -> Result<SeedReport, Error> {
+    seed_with_mode(pool, file, sources, dry_run, true).await
+}
+
+async fn seed_with_mode(
+    pool: &PgPool,
+    file: &SeedFile,
+    sources: &SourceManifest,
+    dry_run: bool,
+    if_changed: bool,
+) -> Result<SeedReport, Error> {
     let warnings = validate(file, sources)?;
+    // Hash parsed contracts, so JSON whitespace/key order does not trigger a load.
+    // Keep the existing digest format compatible with historical seed receipts.
+    let digest = format!(
+        "{:x}",
+        Sha256::digest(serde_json::to_vec(&(file, sources))?)
+    );
     let mut report = SeedReport {
         dry_run,
         warnings,
@@ -36,6 +64,16 @@ pub async fn seed(
     sqlx::query("SELECT pg_advisory_xact_lock(170017)")
         .execute(&mut *tx)
         .await?;
+    let latest: Option<String> =
+        sqlx::query_scalar("SELECT checksum FROM vocabulary_seed_runs ORDER BY id DESC LIMIT 1")
+            .fetch_optional(&mut *tx)
+            .await?;
+    if if_changed && latest.as_deref() == Some(digest.as_str()) {
+        report.skipped = true;
+        report.unchanged = file.entries.len();
+        tx.rollback().await?;
+        return Ok(report);
+    }
     sqlx::query("SELECT pg_advisory_xact_lock(170018)")
         .execute(&mut *tx)
         .await?;
@@ -118,11 +156,11 @@ pub async fn seed(
         // A newly seeded ID may already occur in historical recipe JSON.
         reconcile_in_transaction(&mut tx, false).await?;
     }
-    if report.added + report.updated + report.source_updates > 0 {
-        let digest = format!(
-            "{:x}",
-            Sha256::digest(serde_json::to_vec(&(file, sources))?)
-        );
+    if report.added + report.updated + report.source_updates > 0
+        || latest.as_deref() != Some(digest.as_str())
+    {
+        // A new fingerprint can have identical definitions (e.g. reordered entries).
+        // Record that successful check too, otherwise every deploy repeats it.
         sqlx::query("INSERT INTO vocabulary_seed_runs (checksum,entry_count) VALUES ($1,$2)")
             .bind(digest)
             .bind(file.entries.len() as i32)
@@ -282,6 +320,160 @@ mod tests {
             .fetch_one(pool)
             .await
             .unwrap()
+    }
+
+    async fn seed_runs(pool: &PgPool) -> i64 {
+        sqlx::query_scalar("SELECT count(*) FROM vocabulary_seed_runs")
+            .fetch_one(pool)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn deployment_seed_skips_before_reading_definitions_and_manual_seed_repairs_drift() {
+        let (_db, pool, file, sources) = popularity_db().await;
+        let runs = seed_runs(&pool).await;
+        // A matching receipt must not require scanning the ingredient table.
+        sqlx::query("ALTER TABLE vocabulary_entries RENAME TO definitions_unavailable")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let report = seed_if_changed(&pool, &file, &sources, false)
+            .await
+            .unwrap();
+        assert!(report.skipped);
+        assert_eq!(report.unchanged, file.entries.len());
+        assert_eq!(seed_runs(&pool).await, runs);
+        sqlx::query("ALTER TABLE definitions_unavailable RENAME TO vocabulary_entries")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // The fast path trusts its receipt; the explicit command still repairs drift.
+        sqlx::query("UPDATE vocabulary_entries SET definition=jsonb_set(definition,'{description}','\"out-of-band change\"') WHERE id=$1")
+            .bind(file.entries[0].id).execute(&pool).await.unwrap();
+        assert!(
+            seed_if_changed(&pool, &file, &sources, false)
+                .await
+                .unwrap()
+                .skipped
+        );
+        let repaired = seed(&pool, &file, &sources, false).await.unwrap();
+        assert!(!repaired.skipped);
+        assert_eq!(repaired.updated, 1);
+    }
+
+    #[tokio::test]
+    async fn deployment_seed_tracks_source_changes_and_latest_receipt_not_any_old_match() {
+        let (_db, pool, file, _) = popularity_db().await;
+        let mut sources: SourceManifest =
+            serde_json::from_str(include_str!("../../data/vocabulary/sources.json")).unwrap();
+        seed(&pool, &file, &sources, false).await.unwrap();
+        sources.sources[0].version.push_str("-new");
+        let report = seed_if_changed(&pool, &file, &sources, false)
+            .await
+            .unwrap();
+        assert!(!report.skipped);
+        assert_eq!(report.source_updates, 1);
+        let mut changed = file.clone();
+        changed.entries[0]
+            .aliases
+            .push("deployment test alias".into());
+        assert_eq!(
+            seed_if_changed(&pool, &changed, &sources, false)
+                .await
+                .unwrap()
+                .updated,
+            1
+        );
+        // Rolling back to an older catalog must not mistake its historical receipt
+        // for the current database state.
+        let restored = seed_if_changed(&pool, &file, &sources, false)
+            .await
+            .unwrap();
+        assert!(!restored.skipped);
+        assert_eq!(restored.updated, 1);
+        assert!(
+            seed_if_changed(&pool, &file, &sources, false)
+                .await
+                .unwrap()
+                .skipped
+        );
+    }
+
+    #[tokio::test]
+    async fn deployment_seed_dry_run_and_failure_do_not_advance_receipts() {
+        let (_db, pool, mut file, sources) = popularity_db().await;
+        let runs = seed_runs(&pool).await;
+        file.entries[0]
+            .description
+            .push_str(" Changed for deployment.");
+        let dry = seed_if_changed(&pool, &file, &sources, true).await.unwrap();
+        assert!(!dry.skipped);
+        assert_eq!(dry.updated, 1);
+        assert_eq!(seed_runs(&pool).await, runs);
+        assert_eq!(
+            seed_if_changed(&pool, &file, &sources, false)
+                .await
+                .unwrap()
+                .updated,
+            1
+        );
+        sqlx::raw_sql("CREATE FUNCTION reject_deployment_seed() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.label='reject-deployment' THEN RAISE EXCEPTION 'test failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER reject_deployment_seed BEFORE INSERT OR UPDATE ON vocabulary_entries FOR EACH ROW EXECUTE FUNCTION reject_deployment_seed();")
+            .execute(&pool).await.unwrap();
+        let committed = seed_runs(&pool).await;
+        file.entries[0].description.push_str(" Must roll back.");
+        file.entries[1].label = "reject-deployment".into();
+        assert!(seed_if_changed(&pool, &file, &sources, false)
+            .await
+            .is_err());
+        assert_eq!(seed_runs(&pool).await, committed);
+        sqlx::query("DROP TRIGGER reject_deployment_seed ON vocabulary_entries")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let retry = seed_if_changed(&pool, &file, &sources, false)
+            .await
+            .unwrap();
+        assert!(!retry.skipped);
+        assert_eq!(retry.updated, 2);
+        assert_eq!(seed_runs(&pool).await, committed + 1);
+    }
+
+    #[tokio::test]
+    async fn deployment_seed_records_new_fingerprint_even_when_definitions_are_unchanged() {
+        let (_db, pool, mut file, sources) = popularity_db().await;
+        let runs = seed_runs(&pool).await;
+        file.entries.reverse();
+        let checked = seed_if_changed(&pool, &file, &sources, false)
+            .await
+            .unwrap();
+        assert!(!checked.skipped);
+        assert_eq!(checked.unchanged, file.entries.len());
+        assert_eq!(seed_runs(&pool).await, runs + 1);
+        assert!(
+            seed_if_changed(&pool, &file, &sources, false)
+                .await
+                .unwrap()
+                .skipped
+        );
+    }
+
+    #[tokio::test]
+    async fn deployment_seed_is_serialized_across_concurrent_deployments() {
+        let (_db, pool, mut file, sources) = popularity_db().await;
+        file.entries[0]
+            .description
+            .push_str(" Concurrent deployment.");
+        let runs = seed_runs(&pool).await;
+        let (a, b) = tokio::join!(
+            seed_if_changed(&pool, &file, &sources, false),
+            seed_if_changed(&pool, &file, &sources, false)
+        );
+        let (a, b) = (a.unwrap(), b.unwrap());
+        assert_eq!(a.updated + b.updated, 1);
+        assert_ne!(a.skipped, b.skipped);
+        assert_eq!(seed_runs(&pool).await, runs + 1);
     }
 
     #[tokio::test]

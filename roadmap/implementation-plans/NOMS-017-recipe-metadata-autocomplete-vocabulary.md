@@ -123,6 +123,7 @@ NOMS-018 owns amounts, units and conversion, density or substitution rules, pant
 - Preserve authored text and recipe history through vocabulary updates, merges, and retirements.
 - Maintain independently validated repository seed files per dimension and a reproducible, idempotent ingestion and loading process.
 - Treat search recognition and quantitative ingredient compatibility as distinct concerns.
+- Curate related ingredients separately when ordinary substitution would likely require recipe adjustments or materially change the result; preserve defined stock/broth, cream, preservation and formulation distinctions. See the [ingredient identity policy](../../data/vocabulary/README.md#ingredient-identity-for-gap-curation). Equivalent names can be aliases after identity review; this does not implement substitution or quantity compatibility in NOMS-018.
 
 ## Questions to resolve
 
