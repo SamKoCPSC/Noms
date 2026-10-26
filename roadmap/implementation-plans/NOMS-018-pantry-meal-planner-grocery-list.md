@@ -14,7 +14,7 @@
 1. **Slice 1 — Independent grocery lists (merged in PR #21):** Deliver saved-list management, compact creation, recipe ingredient snapshots, manual items, shopping progress, and optional recipe context.
 2. **Slice 2 — Pantry inventory (merged in PR #25):** multiple named pantries, ingredients with optional authored quantities/units, equipment, and explicit availability. See the [pantry inventory implementation plan](NOMS-018-pantry-inventory.md) and its selected W01/C01 UI.
 3. **Workspace unification:** [Kitchen workspace](NOMS-018-kitchen-workspace.md) combines pantry and grocery navigation. Kitchen names the whole workspace; pantry names each inventory profile. Existing lists stay independent.
-4. **Slice 3 — Recipe feasibility and shortages:** exact ingredient-name/unit matching, serving-aware requirements, known shortages, and quantity uncertainty against one pantry.
+4. **Slice 3 — Recipe feasibility and shortages:** start with an ingredient-only [recipe detail pantry check](NOMS-018-recipe-pantry-check.md), using case-insensitive ingredient names and explicit availability against one pantry. Amounts, units and servings do not affect this first check. Cookable search and shortage-list generation follow later.
 5. **Later — Shopping enhancements:** explicit shortage-to-list generation, regeneration/reconciliation, offline synchronization, and deliberate purchased-stock updates. Define those contracts before implementation.
 
 The current Kitchen/pantry terminology above supersedes the older kitchen-profile wording in historical sections below. The broader product scope remains recorded after the Slice 1 plan. Its pantry, equipment, and offline acceptance scenarios are not release gates for Slice 1. All saved lists remain independent: editing a source recipe never silently changes list contents or check-offs.
@@ -223,6 +223,8 @@ Saved kitchen profiles make these later workflows reusable. They build on the in
 - Keep inventory changes deliberate. Selecting or making a recipe and checking off a shopping item do not automatically deduct or replenish inventory.
 
 ### Initial matching and quantity rules
+
+**Current recipe-detail scope:** the [recipe pantry check](NOMS-018-recipe-pantry-check.md) uses case-insensitive ingredient-name presence and explicit availability only. It ignores amounts, units and recorded zero quantities. The quantitative rules below describe deferred sufficiency/shortage work and do not apply to the current check.
 
 Pantry uses the grocery list’s exact ingredient-name/unit matching rule. This supersedes the older grams-only proposal. Inventory management ships before recipe feasibility; pantry integration must preserve authored units and explicitly report incompatible or unknown quantities.
 

@@ -17,7 +17,7 @@ fn feedback(error: &ServerFnError) -> String {
         .unwrap_or_else(|| error.to_string())
 }
 #[cfg(target_arch = "wasm32")]
-fn saved_selection(owner: Uuid) -> Option<Uuid> {
+pub(super) fn saved_selection(owner: Uuid) -> Option<Uuid> {
     let storage = web_sys::window()?.local_storage().ok()??;
     Uuid::parse_str(
         &storage
@@ -27,10 +27,10 @@ fn saved_selection(owner: Uuid) -> Option<Uuid> {
     .ok()
 }
 #[cfg(not(target_arch = "wasm32"))]
-fn saved_selection(_owner: Uuid) -> Option<Uuid> {
+pub(super) fn saved_selection(_owner: Uuid) -> Option<Uuid> {
     None
 }
-fn remember_selection(owner: Uuid, id: Option<Uuid>) {
+pub(super) fn remember_selection(owner: Uuid, id: Option<Uuid>) {
     #[cfg(target_arch = "wasm32")]
     if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) {
         let key = format!("noms-pantry-selection-{owner}");

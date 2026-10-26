@@ -1,4 +1,5 @@
 //! Shared pantry inventory contracts. Authored names and units are never normalized.
+pub mod feasibility;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
