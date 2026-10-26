@@ -6,6 +6,7 @@ use crate::auth::account_binding::{
 };
 use crate::auth::context::AuthContext;
 use crate::components::base::{LoadingSpinner, SharedModal};
+use crate::components::ingredient_autocomplete::IngredientAutocomplete;
 use crate::components::AuthRequired;
 use crate::pantry::*;
 use crate::Route;
@@ -87,14 +88,14 @@ fn PantryFieldsInput(
 ) -> Element {
     rsx! {
         label { r#for: "{prefix}-name", "Ingredient name" }
-        input {
+        IngredientAutocomplete {
             id: "{prefix}-name",
-            class: "input input--shared neumo-inset",
+            accessible_name: "Ingredient name",
             value: "{fields().name}",
             maxlength: 500,
             required: true,
             disabled,
-            oninput: move |e| fields.write().name = e.value(),
+            oninput: move |(name, _)| fields.write().name = name,
         }
 
         div { class: "pantry-amount-fields",
@@ -279,6 +280,7 @@ fn PantryEditor(
 }
 #[component]
 fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let nav = use_navigator();
@@ -949,17 +951,17 @@ fn PantryQuickAdd(
                     on_add.call(fields());
                 }
             },
-            label {
-
-                span { class: "sr-only", "Ingredient name" }
-                input {
-                    class: "input input--shared neumo-inset",
+            div { class: "grocery-add-name",
+                label { class: "sr-only", r#for: "pantry-add-name", "Ingredient name" }
+                IngredientAutocomplete {
+                    id: "pantry-add-name",
+                    accessible_name: "Ingredient name",
                     placeholder: "Add an ingredient…",
                     value: "{fields().name}",
                     disabled: disabled || frozen,
                     maxlength: 500,
                     required: true,
-                    oninput: move |e| fields.write().name = e.value(),
+                    oninput: move |(name, _)| fields.write().name = name,
                 }
             }
 
@@ -1004,6 +1006,7 @@ fn PantryQuickAdd(
 }
 #[component]
 pub fn PantryNew() -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let nav = use_navigator();

@@ -352,7 +352,7 @@
         grid-template-columns:minmax(0,1fr) 56px 56px auto;
     }
 
-    .pantry-create-card .grocery-add-row>label:first-child,.pantry-add>label:first-child {
+    .pantry-create-card .grocery-add-row>.grocery-add-name,.pantry-add>.grocery-add-name {
         grid-column:auto;
     }
     .pantry-draft-row {
