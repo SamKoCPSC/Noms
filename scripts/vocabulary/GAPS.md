@@ -1,7 +1,7 @@
 # Reviewed cooking-material gaps
 
 Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
-are **13,479 active, 85 retired and 9,630 active aliases**. Earlier stage counts,
+are **13,490 active, 85 retired and 9,655 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -686,9 +686,9 @@ white sesame, dry breadcrumbs and black-treacle qualifiers, so these percentages
 are not a before/after score against earlier studies. Titles, quantities, methods
 and individual recipe URLs are absent from the source and are not invented.
 
-The user-approved curation adds **118 ingredients and 323 aliases**: 261 aliases
-on the new entries and 62 on 31 existing identities. Current totals become
-**13,479 active, 85 retired and 9,630 active aliases**. All 13,446 prior records,
+The user-approved curation adds **129 ingredients and 348 aliases**: 281 aliases
+on the new entries and 67 on 33 existing identities. Current totals become
+**13,490 active, 85 retired and 9,655 active aliases**. All 13,446 prior records,
 including retired identities, retain their exact fields except approved alias
 suffixes. Source descriptors and source mappings are unchanged; all new entries
 have curated origin, original descriptions and no inferred external mappings.
@@ -770,13 +770,48 @@ upstream prose, nutrition, medical/allergen claims and brand formulas are not
 imported. The ledger records this as a separate user-requested checklist, not
 new findings or improved coverage from the frozen 5,000-occurrence sample.
 
+### Flour and starch follow-up
+
+The user requested the identified non-molecular-gastronomy gaps, including
+khorasan flour, in the same unmerged PR. This follow-up adds **11 ingredients
+and 25 aliases** beyond the plant-milk stage: 20 aliases on the new entries,
+plus five on two existing identities.
+
+- Teff, einkorn wheat, emmer wheat, lupin and tiger-nut flours.
+- Khorasan wheat flour with unspecified refinement, plus distinct white and
+  wholemeal khorasan wheat flours. An unspecified flour is not assigned either
+  milling state. The Kamut trademark is not used as a generic alias.
+- Sweet-potato, mung-bean and Chinese water-chestnut starches. Extracted starch
+  is not whole-root/whole-bean flour or a prepared noodle/cake. Bare water-chestnut
+  flour is not assigned, since species and whether it denotes flour or starch
+  require context; singhara/water-caltrop flour remains separate.
+
+Existing **tapioca** explicitly denotes extracted cassava starch and gains
+`tapioca starch`, `cassava starch` and `manioc starch`. The separate legacy
+tapioca-flour ID is preserved; no duplicate UUID is added and no legacy IDs are
+merged. Existing **glutinous rice flour** gains `sweet rice flour` and
+`sticky rice flour`, remaining distinct from ordinary rice flour.
+
+The ledger pins public captures from [Jovial's einkorn FAQ](https://jovialfoods.com/pages/faqs),
+[Shipton Mill's emmer flour](https://www.shipton-mill.com/products/organic-emmer-wholemeal-flour-414),
+[Cotswold wholegrain khorasan](https://cotswoldflour.com/products/matthews-stoneground-wholegrain-khorosan-flour),
+[Khorasan Mills' white flour](https://www.khorasanmills.com/products/khorasan-white-flour-compare-to-kamut%C2%AE-brand-flour-5lb-14-00-25lb-49-50),
+[a tiger-nut flour producer](https://www.tigernuts.com/products/tigernuts-flour/),
+[the Asian flour/starch glossary](https://thewoksoflife.com/chinese-ingredients-glossary/rice-grains-and-flours/)
+and [a starch characterization study](https://www.mdpi.com/2304-8158/9/2/182),
+plus flour/khorasan/lupin overviews. These inform original material definitions;
+producer formulas, health claims and substitution ratios are not imported.
+Failed captures and a CAPTCHA response are excluded. Molecular-gastronomy
+additives and processing aids remain deferred. This is a separate checklist,
+not a change to the frozen 5,000-occurrence sample or its coverage score.
+
 ### Replay
 
 The preceding complete bundle is main commit
 `bd80fa349a2fe6231a4b42e0d4f9452354f0403d`:
 
 - Input seed: `0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45`
-- Output seed: `a4af605bf3b320c71412d8ca0da69cc965d882fff46360b664e45d5b2efbd0b1`
+- Output seed: `654787a3931ef6b9b5005ed78ff007cad031066360d5933b2d373b22f46ca097`
 - Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
 
 Copy the preceding seed/source files from that commit into a fresh external
@@ -801,15 +836,15 @@ original pins; earlier ledgers and checksums remain unchanged.
 
 ### Verification and scope
 
-All **125 Python tests** pass, including exact replay, existing-field preservation,
+All **126 Python tests** pass, including exact replay, existing-field preservation,
 source contracts, every candidate/checklist decision, qualified-search choices
 and recipe-significant identity boundaries. The Rust seed validator accepts
-**13,564 total records/four sources with no warnings**.
+**13,575 total records/four sources with no warnings**.
 
 On the local mock-auth deployment, dry runs roll back completely, cumulative
-loads add 118 entries/update 31 alias-bearing entries, and a second `--if-changed`
+loads add 129 entries/update 33 alias-bearing entries, and a second `--if-changed`
 run skips with no writes. Existing recipe, draft, version, source and mapping
-hashes are unchanged by the load. All **441 new preferred/alias names** return
+hashes are unchanged by the load. All **477 new preferred/alias names** return
 the intended UUID first through the production SQL query. Chromium verifies
 catalog refresh from the previous 13,361-entry snapshot to 13,479 entries,
 qualified ingredient choices and six local searches without per-query server
@@ -818,6 +853,13 @@ IDs on text edits, optional server fallback and 161 authenticated lookup checks.
 The plant-milk follow-up adds 21 browser checks covering all 16 types and five
 aliases, with no per-query server calls or new draft. One private synthetic draft
 was used by the initial smoke check; no recipe is published.
+
+The flour/starch follow-up verifies its own dry-run rollback, 11 additions/two
+alias-bearing updates, and a write-free fingerprinted repeat. All 36 new
+preferred/alias names pass Chromium checks without per-query server requests.
+The browser refreshes its real 13,479-entry cached catalog to 13,490 entries;
+there are no page errors or new drafts, and authored-row/source hashes remain
+unchanged after both the seed and browser checks.
 
 Replaying the unchanged 5,000-occurrence review increases represented materials
 **4,668 -> 4,724 (93.36% -> 94.48%)**, with no previously covered name losing its
@@ -832,7 +874,10 @@ The curation ledger, full canonical JSON/CSV, new-entry/alias lists and verifica
 summaries are external at `/workspace/vocabulary-next-gap-fill`; the portable
 review archive is `/workspace/noms-vocabulary-next-gap-fill.zip`.
 
-The plant-milk follow-up and current full seed are also available at
+The plant-milk-stage full seed is also available at
 `/workspace/plant-milk-expansion`; its archive is
 `/workspace/noms-plant-milk-vocabulary-update.zip`. The earlier 102-entry archive
-remains frozen as the initial-round snapshot.
+remains frozen as the initial-round snapshot. Both archives are historical
+snapshots; the maintained `data/vocabulary/ingredients.json` includes the later
+flour/starch update. Its research and local verification artifacts are external
+at `/workspace/flour-starch-expansion`.

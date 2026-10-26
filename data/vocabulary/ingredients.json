@@ -100464,7 +100464,10 @@
     {
       "id": "88734962-8bef-499b-b49c-d2a04f7fb52b",
       "label": "glutinous rice flour",
-      "aliases": [],
+      "aliases": [
+        "sweet rice flour",
+        "sticky rice flour"
+      ],
       "description": "Flour made from glutinous rice.",
       "locale": "en",
       "status": "active",
@@ -221409,7 +221412,11 @@
     {
       "id": "c78d6f48-ef53-4548-995d-4ed9ad14ec88",
       "label": "tapioca",
-      "aliases": [],
+      "aliases": [
+        "tapioca starch",
+        "cassava starch",
+        "manioc starch"
+      ],
       "description": "Tapioca is a starch extracted from the storage roots of the cassava plant (Manihot esculenta).",
       "locale": "en",
       "status": "active",
@@ -317227,6 +317234,180 @@
         "tiger nut milk, unsweetened"
       ],
       "description": "Tiger-nut-tuber-based milk alternative explicitly supplied without added sweetener. Exact processing and fortification vary; distinct from the existing sweetened horchata de chufa and tree-nut milks.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7cc61fb2-55eb-5517-ac6a-db16681327d2",
+      "label": "teff flour",
+      "locale": "en",
+      "aliases": [
+        "tef flour"
+      ],
+      "description": "Flour milled from teff grain for cooking and baking. Grain color, refinement and exact grind are unspecified; distinct from whole teff grain and teff milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "bda9fef7-43cc-559e-9098-04a80d364955",
+      "label": "einkorn wheat flour",
+      "locale": "en",
+      "aliases": [
+        "einkorn flour"
+      ],
+      "description": "Flour milled from einkorn wheat. Refinement and whole-grain status are unspecified; distinct from einkorn grain, emmer flour and common wheat flour.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f596f6da-3e69-503a-9b52-542b35495968",
+      "label": "emmer wheat flour",
+      "locale": "en",
+      "aliases": [
+        "emmer flour"
+      ],
+      "description": "Flour milled from emmer wheat for cooking and baking. Refinement and whole-grain status are unspecified; distinct from emmer grain, einkorn flour and spelt flour.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9c7fe196-6294-55c8-85fb-c1579640c993",
+      "label": "lupin flour",
+      "locale": "en",
+      "aliases": [
+        "lupine flour"
+      ],
+      "description": "Food-grade flour milled from edible lupin seeds for cooking and baking. Species, fat content and exact processing are unspecified; distinct from whole lupin beans, lupin milk and extracted lupin protein.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "bdfeeb73-693c-5e25-b0ff-4047c065d81a",
+      "label": "tiger nut flour",
+      "locale": "en",
+      "aliases": [
+        "tigernut flour",
+        "tiger-nut flour",
+        "chufa flour"
+      ],
+      "description": "Flour made from dried tiger-nut tubers for cooking and baking. Exact grind and fat content are unspecified; distinct from whole tiger nuts, tiger-nut milk and tree-nut flours.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "574f0723-d96f-5bcb-a349-551c6c8d4ab0",
+      "label": "khorasan wheat flour",
+      "locale": "en",
+      "aliases": [
+        "khorasan flour"
+      ],
+      "description": "Flour milled from khorasan wheat. Refinement and whole-grain status are unspecified; distinct from khorasan grain and explicitly white or wholemeal khorasan flour.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e0ce942d-af99-5ad2-8c9f-8c646c97843d",
+      "label": "wholemeal khorasan wheat flour",
+      "locale": "en",
+      "aliases": [
+        "whole wheat khorasan flour",
+        "whole-grain khorasan flour",
+        "wholegrain khorasan flour",
+        "wholemeal khorasan flour",
+        "whole-wheat khorasan flour"
+      ],
+      "description": "Whole-grain flour milled from khorasan wheat, retaining bran, germ and endosperm. Exact grind is unspecified; distinct from refined white khorasan flour and flour with unspecified refinement.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4058d4f7-bad7-533a-b907-277173318535",
+      "label": "white khorasan wheat flour",
+      "locale": "en",
+      "aliases": [
+        "white khorasan flour",
+        "refined khorasan wheat flour",
+        "refined khorasan flour"
+      ],
+      "description": "Refined white flour milled from khorasan wheat with bran and germ largely removed. Exact extraction level, enrichment and bleaching are unspecified; distinct from wholemeal khorasan flour.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "da044379-be8d-5d12-a1c3-3138681f4981",
+      "label": "sweet potato starch",
+      "locale": "en",
+      "aliases": [
+        "sweet-potato starch"
+      ],
+      "description": "Food-grade starch extracted from sweet-potato roots, used for thickening, coatings and noodle making. Exact granule size and processing are unspecified; distinct from whole-root sweet-potato flour, potato starch and prepared sweet-potato noodles.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0ea57c36-7dde-5d0a-9322-ffeeb2bbe991",
+      "label": "mung bean starch",
+      "locale": "en",
+      "aliases": [
+        "mung-bean starch",
+        "green gram starch"
+      ],
+      "description": "Food-grade starch extracted from mung beans, used for gels, thickening and noodle making. Exact processing is unspecified; distinct from whole-bean mung flour, mung beans and prepared mung-bean starch noodles.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ed854fd2-7f26-5277-a2e3-26333378df34",
+      "label": "water chestnut starch",
+      "locale": "en",
+      "aliases": [
+        "Chinese water chestnut starch"
+      ],
+      "description": "Food-grade starch extracted from Chinese water-chestnut corms (Eleocharis dulcis), used for setting cakes and thickening. Distinct from whole-corm flour, water-caltrop or singhara flour, and prepared water-chestnut cake.",
       "status": "active",
       "source_mappings": [],
       "provenance": {

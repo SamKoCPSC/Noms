@@ -1,9 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **13,479 active ingredients**: the original 100 curated entries,
+The seed contains **13,490 active ingredients**: the original 100 curated entries,
 10,025 active FoodOn-derived cooking/pantry entries, 2,548 active Wikidata additions,
-104 USDA additions and 702 subsequently curated cooking-material definitions.
+104 USDA additions and 713 subsequently curated cooking-material definitions.
 Another **85 identities** are retained as retired: 60 from the original deployment
 review, 21 from the ingredient-scope cleanup and four from the final definition review.
 Every original ID, description and prior searchable label/alias is preserved,
@@ -122,13 +122,13 @@ The ledger is `adapters/ingredient-final-gap-fill.json`; totals at that stage ar
 
 The subsequent [next-sample gap fill](../../scripts/vocabulary/GAPS.md#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
 reviews all 58 candidate phrases from another 5,000-occurrence sample and adds
-**118 definitions and 323 aliases** (261 on new entries, 62 on 31 existing
+**129 definitions and 348 aliases** (281 on new entries, 67 on 33 existing
 identities). It covers useful related forms of tofu skin, yogurt, plant drinks,
 stocks/broths, preserved pantry components, flavoring oils, seasonings and named
 wine/rum styles. Existing filbert/hazelnut, spaghettini, casing and other synonym
 identities are reused. Eleven underspecified source phrases retain explicit
-qualified choices rather than forced aliases. Current totals are **13,479 active,
-85 retired and 9,630 active aliases**. The forward ledger is
+qualified choices rather than forced aliases. Current totals are **13,490 active,
+85 retired and 9,655 active aliases**. The forward ledger is
 `adapters/ingredient-next-gap-fill.json`; every previous definition, UUID, status,
 source association and existing alias is retained. The four-source manifest is
 unchanged, and authored recipes are not rewritten.
@@ -138,6 +138,13 @@ flaxseed, sesame, sunflower seed, pumpkin seed, quinoa, buckwheat, amaranth, tef
 millet and lupin milks, plus explicitly unsweetened tiger-nut milk. Existing
 spelt drink and sweetened horchata de chufa retain their IDs and gain qualified
 milk aliases. Base-only names do not assert an unsweetened or fortified formula.
+
+The flour/starch follow-up adds teff, einkorn, emmer, lupin and tiger-nut flours;
+generic, white and wholemeal khorasan wheat flours; and sweet-potato, mung-bean
+and Chinese water-chestnut starches. Explicit milling forms and extracted starches
+retain their distinctions. Tapioca/cassava/manioc starch names reuse the existing
+tapioca ID; sweet/sticky rice flour names reuse glutinous rice flour. This is a
+separate user-requested expansion, outside the frozen recipe-sample score.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

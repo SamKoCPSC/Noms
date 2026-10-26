@@ -27,9 +27,9 @@ class NextGapFillTest(unittest.TestCase):
         self.assertEqual(result,self.seed)
         self.assertEqual(summary['output_checksum'],self.policy['expected_output_checksum'])
         self.assertEqual(gaps.checksum(self.base),'0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45')
-        self.assertEqual((summary['added'],summary['active'],summary['retired']),(118,13479,85))
-        self.assertEqual(summary['aliases_added_to_existing'],62)
-        self.assertEqual(summary['aliases_on_new_entries'],261)
+        self.assertEqual((summary['added'],summary['active'],summary['retired']),(129,13490,85))
+        self.assertEqual(summary['aliases_added_to_existing'],67)
+        self.assertEqual(summary['aliases_on_new_entries'],281)
         self.assertEqual(self.policy['retirements'],{})
         self.assertEqual(rename_labels.maintained_final_gap_stage(self.seed),self.base)
         self.assertEqual(gaps.checksum(self.sources),self.policy['base_sources_checksum'])
@@ -47,7 +47,7 @@ class NextGapFillTest(unittest.TestCase):
         self.assertEqual(hashlib.sha256(gaps.encoded(original)).hexdigest(),research['original_candidate_names_sha256'])
         extras=[q for group in research['expansion_groups'].values() for q in group]
         self.assertEqual(len(extras),research['expansion_checklist_names'])
-        self.assertEqual(len(extras),118)
+        self.assertEqual(len(extras),129)
         self.assertEqual(hashlib.sha256(gaps.encoded(research['expansion_groups'])).hexdigest(),research['expansion_checklist_sha256'])
         self.assertTrue({normalize(q) for q in original+extras}<=set(self.policy['reviewed_names']))
         self.assertEqual(len(self.policy['reviewed_names']),research['candidate_names'])
@@ -146,6 +146,46 @@ class NextGapFillTest(unittest.TestCase):
                 self.assertTrue(evidence['url'].startswith('https://'))
                 self.assertEqual(len(evidence['sha256']),64)
                 self.assertTrue(evidence['capture_kind'])
+
+    def test_flour_species_milling_and_starch_boundaries_and_existing_alias_targets(self):
+        labels=['teff flour','einkorn wheat flour','emmer wheat flour','lupin flour',
+                'tiger nut flour','khorasan wheat flour','wholemeal khorasan wheat flour',
+                'white khorasan wheat flour','sweet potato starch','mung bean starch',
+                'water chestnut starch']
+        followup=self.policy['research']['flour_starch_followup']
+        self.assertEqual(set(labels),set(followup['added_types']))
+        self.assertEqual(len({self.labels[label] for label in labels}),11)
+        for pair in [
+            ('teff flour','teff grain'),('einkorn wheat flour','einkorn wheat grain'),
+            ('emmer wheat flour','emmer wheat grain'),('lupin flour','lupin seed'),
+            ('tiger nut flour','tigernuts'),('khorasan wheat flour','khorasan wheat grain'),
+            ('sweet potato starch','sweet potato'),('sweet potato starch','potato starch'),
+            ('mung bean starch','mung bean'),('mung bean starch','dried mung-bean starch noodles'),
+            ('water chestnut starch','chinese water chestnut'),
+            ('tapioca','cassava flour'),('glutinous rice flour','white rice flour'),
+        ]:
+            self.assertNotEqual(self.labels[pair[0]],self.labels[pair[1]],pair)
+        for query,label in [
+            ('tef flour','teff flour'),('einkorn flour','einkorn wheat flour'),
+            ('emmer flour','emmer wheat flour'),('lupine flour','lupin flour'),
+            ('chufa flour','tiger nut flour'),('khorasan flour','khorasan wheat flour'),
+            ('whole wheat khorasan flour','wholemeal khorasan wheat flour'),
+            ('refined khorasan flour','white khorasan wheat flour'),
+            ('green gram starch','mung bean starch'),
+            ('tapioca starch','tapioca'),('cassava starch','tapioca'),('manioc starch','tapioca'),
+            ('sweet rice flour','glutinous rice flour'),('sticky rice flour','glutinous rice flour'),
+        ]:
+            self.assertEqual(self.names[normalize(query)],self.labels[label])
+        for label in followup['existing_id_reuses']:
+            self.assertIn(self.labels[label],self.original)
+        # Bare flour wording does not establish an extracted starch or a species.
+        for query in ['water chestnut flour','singhara flour','mung bean flour',
+                      'sweet potato flour','kamut flour']:
+            self.assertNotIn(query,self.names)
+        # This user-requested batch excludes the deferred molecular additions.
+        new_labels={e['label'] for e in self.policy['additions']}
+        self.assertFalse(new_labels & {'liquid nitrogen','dry ice','wheat dextrin',
+                                      'carboxymethylcellulose','hydroxypropyl methylcellulose'})
 
     def test_stale_inputs_and_alias_shadowing_are_rejected(self):
         with self.assertRaisesRegex(ValueError,'Stale'):
