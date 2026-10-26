@@ -375,6 +375,7 @@ mod tests {
                 revision: "a".repeat(64),
             },
             ingredients: vec![crate::types::RecipeIngredient {
+                vocabulary_id: None,
                 name: name.into(),
                 amount: amount.into(),
                 unit: unit.into(),
