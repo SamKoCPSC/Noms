@@ -1,4 +1,3 @@
-use super::about::ABOUT_SECTIONS;
 use super::home::{home_cta, HomeCtaDestination};
 use super::how_to::HOW_TO_SECTIONS;
 use dioxus::prelude::*;
@@ -37,32 +36,52 @@ fn signed_in_home_cta_opens_dashboard() {
 }
 
 #[test]
-fn about_story_covers_the_six_approved_beats() {
-    let ids = ABOUT_SECTIONS
-        .iter()
-        .map(|section| section.id)
-        .collect::<Vec<_>>();
-
-    assert_eq!(
-        ids,
-        ["capture", "organize", "evolve", "cook", "share", "build"]
-    );
+fn about_renders_the_four_approved_chapters_and_readable_fallback() {
+    let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
+    for title in [
+        "The Ultimate Recipe Manager",
+        "A side project that grew in to something larger.",
+        "Hi, I&#39;m Sam!",
+        "Just a simple and easy-to-use app.",
+    ] {
+        assert!(html.contains(title), "Missing {title}");
+    }
+    assert_eq!(html.matches("<article").count(), 4);
+    assert!(html.contains("class=\"kitchen-fallback\""));
+    assert!(html.contains("loading=\"lazy\""));
+    let opening = html.split("id=\"panel-1\"").next().unwrap();
+    assert!(opening.contains("kitchen-fallback"));
+    let creator = html
+        .split("id=\"panel-2\"")
+        .nth(1)
+        .unwrap()
+        .split("id=\"panel-3\"")
+        .next()
+        .unwrap();
+    assert!(!creator.contains("kitchen-fallback"));
+    assert!(html.contains("Nowadays I continue to support the project"));
+    assert!(!html.contains("How did Noms start"));
 }
 
 #[test]
-fn about_cozy_layout_preserves_navigation_and_recipe_creation_flow() {
-    let page = include_str!("about.rs");
-    let css = include_str!("../../assets/main.css");
+fn about_provides_motion_and_reading_controls_before_enhancement() {
+    let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
+    assert!(html.contains("id=\"mode-toggle\""));
+    assert!(html.contains("id=\"motion-toggle\""));
+    assert!(html.contains("Story chapters"));
+    for id in ["idea", "why", "creator", "community"] {
+        assert!(html.contains(&format!("href=\"#{id}\"")));
+    }
+}
 
-    assert!(page.contains("class: \"about-hero__illustration\""));
-    assert!(page.contains("class: \"about-story__section\""));
-    assert!(page.contains("href: \"/login?redirect_uri=/recipes/new\""));
-    assert!(page.contains("to: Route::RecipeNew {}"));
-    assert!(page.contains("for section in ABOUT_SECTIONS"));
-    assert!(page.contains("class: \"about-story__versions\""));
-    assert!(page.contains("class: \"about-story__visibility\""));
-    assert!(css.contains(".about-story {\n    display: grid;"));
-    assert!(css.contains(".about-story__section {\n    position: relative;"));
+#[test]
+fn about_loading_screen_keeps_a_reading_escape_and_accessible_status() {
+    let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
+    assert!(html.contains("id=\"tour-loader\""));
+    assert!(html.contains("role=\"status\""));
+    assert!(html.contains("Click here if the page takes too long to load"));
+    assert!(html.contains("class=\"about-tour is-reader\""));
+    assert!(!html.contains("data-entry-state=\"loading\""));
 }
 
 #[test]

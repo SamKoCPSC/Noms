@@ -13,9 +13,11 @@ mod components;
 mod config;
 #[cfg(feature = "server")]
 mod db;
+mod grocery;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+mod pantry;
 mod recipe_html;
 mod recipe_json;
 mod routing;
@@ -38,7 +40,8 @@ use auth::context::build_context_from_fullstack;
 use components::{AppLayout, ErrorFallback};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
-    Dashboard, Explore, Home, HowTo, Login, MobileYou, NotFound, RecipeDetail, RecipeDraftEdit,
+    Dashboard, Explore, GroceryListDetail, GroceryListNew, GroceryLists, Home, HowTo, Login,
+    MobileYou, NotFound, Pantry, PantryDetail, PantryNew, RecipeDetail, RecipeDraftEdit,
     RecipeEdit, RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search,
     SettingsAccounts, SettingsProfile, UserProfile,
 };
@@ -75,6 +78,18 @@ enum GeneratedRoute {
         RecipeEdit { id: String },
         #[route("/recipes/drafts/:id/edit")]
         RecipeDraftEdit { id: String },
+        #[route("/pantry")]
+        Pantry {},
+        #[route("/pantry/new")]
+        PantryNew {},
+        #[route("/pantry/:id")]
+        PantryDetail { id: String },
+        #[route("/grocery-lists")]
+        GroceryLists {},
+        #[route("/grocery-lists/new")]
+        GroceryListNew {},
+        #[route("/grocery-lists/:id")]
+        GroceryListDetail { id: String },
         #[route("/collections")]
         CollectionList {},
         #[route("/collections/new?:parent")]
@@ -121,6 +136,14 @@ const COLLECTION_FORMS_CSS: Asset = asset!(
     CssAssetOptions::new().with_minify(false)
 );
 
+const GROCERY_CSS: Asset = asset!(
+    "/assets/grocery.css",
+    CssAssetOptions::new().with_minify(false)
+);
+const PANTRY_CSS: Asset = asset!(
+    "/assets/pantry.css",
+    CssAssetOptions::new().with_minify(false)
+);
 const MOBILE_CSS: Asset = asset!("/assets/mobile.css");
 const FREDOKA: Asset = asset!("/assets/fonts/Fredoka.ttf");
 const NUNITO: Asset = asset!("/assets/fonts/Nunito.ttf");
@@ -538,6 +561,8 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: COLLECTION_FORMS_CSS }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         document::Link { rel: "stylesheet", href: MOBILE_CSS }
+        document::Link { rel: "stylesheet", href: GROCERY_CSS }
+        document::Link { rel: "stylesheet", href: PANTRY_CSS }
         document::Style { {format!("@font-face{{font-family:Fredoka;font-style:normal;font-weight:300 700;font-display:swap;src:url('{}') format('truetype')}}@font-face{{font-family:Nunito;font-style:normal;font-weight:200 1000;font-display:swap;src:url('{}') format('truetype')}}", FREDOKA, NUNITO)} }
         document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
 
