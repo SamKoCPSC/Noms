@@ -1,27 +1,76 @@
 /* Pantry W01 / C01: shared grocery composition and Noms materials. */
+.kitchen-header {
+    max-width:1480px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:18px;
+    margin-bottom:28px;
+}
+.kitchen-title {
+    margin:0;
+    font-family:var(--font-display);
+    font-size:32px;
+    line-height:1.2;
+    color:var(--text-primary);
+}
+.kitchen-description {
+    max-width:85ch;
+    margin:0;
+    color:var(--text-secondary);
+    font-size:14px;
+    line-height:1.65;
+    overflow-wrap:anywhere;
+}
+.kitchen-views {
+    display:flex;
+    gap:6px;
+    padding:5px;
+    border-radius:18px;
+    background:var(--neumo-surface);
+    box-shadow:var(--elevation-inset-compact);
+}
+.kitchen-view {
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 22px;
+    border-radius:13px;
+    font-size:14px;
+    font-weight:800;
+    color:var(--text-secondary);
+    text-decoration:none!important;
+}
+.kitchen-view:hover { color:var(--text-primary); }
+.kitchen-view[aria-current=page] {
+    color:var(--accent-ink);
+    background:var(--surface);
+    box-shadow:var(--elevation-raised-compact);
+}
+.kitchen-view:focus-visible {
+    outline:3px solid var(--accent-ink);
+    outline-offset:3px;
+}
+.kitchen-workspace .grocery-page { max-width:1480px; }
+@media (max-width:760px) {
+    .kitchen-header {
+        padding-inline:18px;
+        align-items:stretch;
+        margin-bottom:24px;
+    }
+    .kitchen-title { font-size:28px; }
+    .kitchen-view { flex:1; padding-inline:12px; }
+}
 .pantry-page {
     max-width:1480px;
 }
 .pantry-detail-layout.has-inspector {
     grid-template-columns:minmax(0,1fr) 270px;
 }
-.pantry-tabs {
-    display:flex;
-    gap:8px;
-    padding:5px;
-    border-radius:15px;
-    background:var(--neumo-surface);
-    box-shadow:var(--elevation-inset-compact);
-    margin:20px 0;
-}
-.pantry-tabs button {
-    flex:1;
-    min-height:44px;
-}
-.pantry-tabs [aria-pressed=true] {
-    background:var(--surface);
-    box-shadow:var(--elevation-raised-compact);
-}
+
+
+
 .pantry-row {
     display:flex;
     align-items:center;
@@ -110,9 +159,7 @@
     color:var(--error-ink);
     font-size:12px;
 }
-.pantry-add-equipment {
-    grid-template-columns:minmax(0,1fr) auto;
-}
+
 .pantry-empty {
     padding:25px 0;
 }
@@ -183,32 +230,11 @@
     font-size:20px;
     font-weight:500;
 }
-.pantry-initial-equipment {
-    margin-top:22px;
-    padding:10px 0 20px;
-    border-bottom:1px solid var(--border-color);
-}
-.pantry-initial-equipment>summary {
-    display:flex;
-    align-items:center;
-    gap:10px;
-    cursor:pointer;
-    min-height:44px;
-    font-weight:800;
-    list-style:none;
-}
-.pantry-initial-equipment>summary:after {
-    content:'+';
-    margin-left:auto;
-    font-size:22px;
-}
-.pantry-initial-equipment[open]>summary:after {
-    content:'−';
-}
-.pantry-initial-equipment>summary .grocery-muted {
-    font-size:11px;
-    font-weight:400;
-}
+
+
+
+
+
 .pantry-draft-row {
     display:flex;
     align-items:center;
@@ -239,9 +265,7 @@
 .pantry-create-card .grocery-add-row {
     grid-template-columns:minmax(0,1fr) 80px 80px auto;
 }
-.pantry-create-card .pantry-add-equipment {
-    grid-template-columns:minmax(0,1fr) auto;
-}
+
 .pantry-create-card .grocery-create-actions {
     margin-top:24px;
 }
@@ -327,9 +351,7 @@
     .pantry-create-card .grocery-add-row,.pantry-add {
         grid-template-columns:minmax(0,1fr) 56px 56px auto;
     }
-    .pantry-create-card .pantry-add-equipment,.pantry-add-equipment {
-        grid-template-columns:minmax(0,1fr) auto;
-    }
+
     .pantry-create-card .grocery-add-row>label:first-child,.pantry-add>label:first-child {
         grid-column:auto;
     }
@@ -383,9 +405,7 @@
         grid-template-columns:minmax(0,1fr) 50px 50px 44px;
         gap:5px;
     }
-    .pantry-create-card .pantry-add-equipment,.pantry-add-equipment {
-        grid-template-columns:minmax(0,1fr) 44px;
-    }
+
 }
 .pantry-modal {
     max-width:560px;

@@ -1,4 +1,4 @@
-# NOMS-018: Independent Grocery Lists, Kitchen Profiles & Recipe Feasibility — Implementation Plan
+# NOMS-018: Kitchen Workspace, Pantries, Grocery Lists & Recipe Feasibility — Implementation Plan
 
 **Status:** Grocery lists merged in [PR #21](https://github.com/SamKoCPSC/Noms/pull/21); pantry inventory implemented and locally validated with W01/C01. Production deployment is not verified here.
 **Created:** 2026-08-15
@@ -11,12 +11,13 @@
 
 ## Delivery sequence
 
-1. **Slice 1 — Independent grocery lists:** the implementation target in this update. Deliver saved-list management, compact creation, recipe ingredient snapshots, manual items, shopping progress, and optional recipe context.
-2. **Slice 2 — Pantry inventory (implemented locally):** multiple named kitchens, ingredients with optional authored quantities/units, equipment, and explicit availability. See the [pantry inventory implementation plan](NOMS-018-pantry-inventory.md) and its selected W01/C01 UI.
-3. **Slice 3 — Recipe feasibility and shortages:** exact ingredient-name/unit matching, serving-aware requirements, known shortages, and quantity uncertainty against one pantry.
-4. **Later — Shopping enhancements:** explicit shortage-to-list generation, regeneration/reconciliation, offline synchronization, and deliberate purchased-stock updates. Define those contracts before implementation.
+1. **Slice 1 — Independent grocery lists (merged in PR #21):** Deliver saved-list management, compact creation, recipe ingredient snapshots, manual items, shopping progress, and optional recipe context.
+2. **Slice 2 — Pantry inventory (merged in PR #25):** multiple named pantries, ingredients with optional authored quantities/units, equipment, and explicit availability. See the [pantry inventory implementation plan](NOMS-018-pantry-inventory.md) and its selected W01/C01 UI.
+3. **Workspace unification:** [Kitchen workspace](NOMS-018-kitchen-workspace.md) combines pantry and grocery navigation. Kitchen names the whole workspace; pantry names each inventory profile. Existing lists stay independent.
+4. **Slice 3 — Recipe feasibility and shortages:** exact ingredient-name/unit matching, serving-aware requirements, known shortages, and quantity uncertainty against one pantry.
+5. **Later — Shopping enhancements:** explicit shortage-to-list generation, regeneration/reconciliation, offline synchronization, and deliberate purchased-stock updates. Define those contracts before implementation.
 
-The broader product scope remains recorded after the Slice 1 plan. Its pantry, equipment, and offline acceptance scenarios are not release gates for Slice 1. All saved lists remain independent: editing a source recipe never silently changes list contents or check-offs.
+The current Kitchen/pantry terminology above supersedes the older kitchen-profile wording in historical sections below. The broader product scope remains recorded after the Slice 1 plan. Its pantry, equipment, and offline acceptance scenarios are not release gates for Slice 1. All saved lists remain independent: editing a source recipe never silently changes list contents or check-offs.
 
 ## Slice 1: decisions confirmed with the user
 

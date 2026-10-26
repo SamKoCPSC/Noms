@@ -15,7 +15,7 @@ pub enum PantryError {
 impl std::fmt::Display for PantryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self{
-Self::Invalid(s)=>f.write_str(s),Self::Missing=>f.write_str("Kitchen or inventory item not found."),Self::Conflict=>f.write_str("This kitchen changed in another session. Refresh saved data before retrying."),Self::RetryMismatch=>f.write_str("This request was already used for different contents. Refresh the kitchen before starting a new request."),Self::Limit=>f.write_str("This kitchen exceeds the supported size or account limit."),Self::Database(e)=>{tracing::warn!(error=%e,"Pantry database operation failed");f.write_str("Your kitchen could not be saved. Please retry.")}}
+Self::Invalid(s)=>f.write_str(s),Self::Missing=>f.write_str("Pantry or inventory item not found."),Self::Conflict=>f.write_str("This pantry changed in another session. Refresh saved data before retrying."),Self::RetryMismatch=>f.write_str("This request was already used for different contents. Refresh the pantry before starting a new request."),Self::Limit=>f.write_str("This pantry exceeds the supported size or account limit."),Self::Database(e)=>{tracing::warn!(error=%e,"Pantry database operation failed");f.write_str("Your pantry could not be saved. Please retry.")}}
     }
 }
 impl From<sqlx::Error> for PantryError {

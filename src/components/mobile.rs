@@ -1,6 +1,7 @@
 //! Mobile presentation shares the existing routes, session and write handlers.
 use crate::auth::context::use_auth;
 use crate::components::base::{Avatar, AvatarSize, NavigationArtwork, PageIconKind, SharedModal};
+use crate::components::kitchen::SectionLink;
 use crate::utils::theme::UseTheme;
 use crate::Route;
 use dioxus::prelude::*;
@@ -46,7 +47,7 @@ pub fn route_heading(route: &Route) -> Option<(&'static str, Route)> {
         Route::Login {} => Some(("Sign in", Route::Home {})),
         Route::About {} => Some(("About Noms", Route::MobileYou {})),
         Route::HowTo {} => Some(("How to use Noms", Route::MobileYou {})),
-        Route::PantryNew {} => Some(("New kitchen", Route::Pantry {})),
+        Route::PantryNew {} => Some(("New pantry", Route::Pantry {})),
         Route::PantryDetail { .. } => Some(("Pantry", Route::Pantry {})),
         Route::GroceryListNew {} => Some(("New grocery list", Route::GroceryLists {})),
         Route::GroceryListDetail { .. } => Some(("Grocery list", Route::GroceryLists {})),
@@ -81,13 +82,15 @@ pub fn route_heading(route: &Route) -> Option<(&'static str, Route)> {
 
 fn selected_tab(route: &Route) -> &'static str {
     match route {
-        Route::Dashboard {}
-        | Route::CollectionList {}
-        | Route::CollectionDetail { .. }
-        | Route::Pantry {}
+        Route::Dashboard {} | Route::CollectionList {} | Route::CollectionDetail { .. } => {
+            "Library"
+        }
+        Route::Pantry {}
+        | Route::PantryNew {}
         | Route::PantryDetail { .. }
         | Route::GroceryLists {}
-        | Route::GroceryListDetail { .. } => "Library",
+        | Route::GroceryListNew {}
+        | Route::GroceryListDetail { .. } => "Kitchen",
         Route::Explore {} | Route::Search { .. } => "Explore",
         Route::MobileYou {}
         | Route::SettingsProfile {}
@@ -102,6 +105,7 @@ pub fn MobileIcon(kind: &'static str) -> Element {
     let path = match kind {
         "home" => "M3 10 12 3l9 7v11h-6v-7H9v7H3Z",
         "explore" => "m16 8-3 5-5 3 3-5z M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20",
+        "kitchen" => "M8 3h8v3H8z M7 6h10l2 4v10H5V10z M5 12h14",
         "library" => "M4 4h4v17H4z M10 4h4v17h-4z M17 4l4 16-4 1-4-16",
         "user" => "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 5 0 0 1 16 0v2",
         "back" => "m14 6-6 6 6 6",
@@ -124,9 +128,10 @@ pub fn MobileNavigation() -> Element {
         nav { class: "mobile-bottom-nav", aria_label: "Mobile navigation",
             for (label, kind, destination) in [
                 ("Home", "home", if auth.is_authenticated { Route::CommunityHome {} } else { Route::Home {} }),
-                ("Explore", "explore", Route::Explore {}), ("Library", "library", Route::Dashboard {}), ("You", "user", Route::MobileYou {}),
-            ] {
-                Link { to: destination, class: if active == label { "mobile-tab mobile-tab--active" } else { "mobile-tab" }, aria_current: if active == label { "page" } else { "false" },
+                ("Explore", "explore", Route::Explore {}), ("Library", "library", Route::Dashboard {}),
+                ("Kitchen", "kitchen", Route::Pantry {}), ("You", "user", Route::MobileYou {}),
+            ].into_iter().filter(|(label, _, _)| *label != "Kitchen" || auth.is_authenticated) {
+                SectionLink { to: destination, class: if active == label { "mobile-tab mobile-tab--active" } else { "mobile-tab" }, current: active == label,
                     span { class: "mobile-tab-icon", MobileIcon { kind } } span { "{label}" }
                 }
             }
@@ -150,7 +155,7 @@ pub fn MobileCreateButton() -> Element {
                         ("Import recipe", "Paste content from a recipe page.", PageIconKind::Import, Route::RecipeImport {}),
                         ("New collection", "Give your recipes a place.", PageIconKind::Collections, Route::CollectionNew { parent: None }),
                         ("New grocery list", "Recipes, essentials, or a blank list.", PageIconKind::Collections, Route::GroceryListNew {}),
-                        ("New kitchen", "Keep track of ingredients and equipment.", PageIconKind::Collections, Route::PantryNew {}),
+                        ("New pantry", "Keep track of the ingredients you have.", PageIconKind::Collections, Route::PantryNew {}),
                     ] {
                         Link { to: target, class: "mobile-hub-row", onclick: move |_| open.set(false), NavigationArtwork { kind: Some(kind) } div { strong { "{label}" } small { "{detail}" } } span { aria_hidden: "true", "›" } }
                     }
@@ -214,5 +219,25 @@ mod tests {
             "Library"
         );
         assert_eq!(selected_tab(&Route::SettingsAccounts {}), "You");
+    }
+
+    #[test]
+    fn kitchen_views_share_a_mobile_destination_and_pantry_terminology() {
+        for route in [
+            Route::Pantry {},
+            Route::PantryDetail { id: "home".into() },
+            Route::PantryNew {},
+            Route::GroceryLists {},
+            Route::GroceryListDetail {
+                id: "weekly".into(),
+            },
+            Route::GroceryListNew {},
+        ] {
+            assert_eq!(selected_tab(&route), "Kitchen");
+        }
+        assert_eq!(
+            route_heading(&Route::PantryNew {}),
+            Some(("New pantry", Route::Pantry {}))
+        );
     }
 }
