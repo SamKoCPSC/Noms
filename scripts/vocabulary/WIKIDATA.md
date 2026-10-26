@@ -39,7 +39,8 @@ A held or unmatched name is not proof that Wikidata lacks the ingredient. The
 fixed coverage benchmark is unchanged; its discovery grades are not imported
 as exact mappings automatically.
 
-The combined seed has **12,698 active entries and 60 retired entries**. All prior
+The Wikidata-only seed has **12,698 active entries and 60 retired entries**.
+The subsequent [USDA batch](USDA.md) extends this baseline. All prior
 10,253 UUIDs (including the initial Wikidata batch), authored fields, origins,
 references and mappings are preserved. New
 aliases are explicit editorial choices; Wikidata aliases are never bulk copied.
@@ -145,8 +146,10 @@ python3 scripts/vocabulary/wikidata.py build \
   --sources /tmp/noms-wikidata-base/sources.json \
   --review data/vocabulary/adapters/wikidata-cooking-review.json \
   --output /tmp/noms-wikidata-seed
-cmp /tmp/noms-wikidata-seed/ingredients.json data/vocabulary/ingredients.json
-cmp /tmp/noms-wikidata-seed/sources.json data/vocabulary/sources.json
+git show ab7ab53c32d48ff89f8fbd90833008f0ba292a73:data/vocabulary/ingredients.json > /tmp/noms-wikidata-reviewed-ingredients.json
+git show ab7ab53c32d48ff89f8fbd90833008f0ba292a73:data/vocabulary/sources.json > /tmp/noms-wikidata-reviewed-sources.json
+cmp /tmp/noms-wikidata-seed/ingredients.json /tmp/noms-wikidata-reviewed-ingredients.json
+cmp /tmp/noms-wikidata-seed/sources.json /tmp/noms-wikidata-reviewed-sources.json
 just seed-vocabulary --validate-only \
   --file /tmp/noms-wikidata-seed/ingredients.json \
   --sources /tmp/noms-wikidata-seed/sources.json
@@ -159,8 +162,9 @@ require explicit wording, an eligible food entity and a saved UUIDv4. Selected
 entity/revision evidence accompanies the full output bundle outside Git.
 
 After validation, use the existing deployment-role loader's dry-run and rollout
-procedure in the [seed guide](../../data/vocabulary/README.md). This batch has not
-been loaded into a test or production database. UI loading is the same canonical
+procedure in the [seed guide](../../data/vocabulary/README.md). The subsequent
+[USDA pass](USDA.md) loads the combined seed into the disposable local test stack;
+no production rollout occurred. UI loading is the same canonical
 seed path as FoodOn; no separate Wikidata API call runs in the recipe editor.
 
 ## Verification
