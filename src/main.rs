@@ -37,7 +37,7 @@ mod utils;
 mod worker;
 
 use auth::context::build_context_from_fullstack;
-use components::{AppLayout, ErrorFallback};
+use components::{AppLayout, ErrorFallback, KitchenLayout};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
     Dashboard, Explore, GroceryListDetail, GroceryListNew, GroceryLists, Home, HowTo, Login,
@@ -78,18 +78,27 @@ enum GeneratedRoute {
         RecipeEdit { id: String },
         #[route("/recipes/drafts/:id/edit")]
         RecipeDraftEdit { id: String },
-        #[route("/pantry")]
+        #[layout(KitchenLayout)]
+        #[redirect("/kitchen", || Self::Pantry {})]
+        #[redirect("/pantry", || Self::Pantry {})]
+        #[route("/kitchen/pantry")]
         Pantry {},
-        #[route("/pantry/new")]
+        #[redirect("/pantry/new", || Self::PantryNew {})]
+        #[route("/kitchen/pantry/new")]
         PantryNew {},
-        #[route("/pantry/:id")]
+        #[redirect("/pantry/:id", |id: String| Self::PantryDetail { id })]
+        #[route("/kitchen/pantry/:id")]
         PantryDetail { id: String },
-        #[route("/grocery-lists")]
+        #[redirect("/grocery-lists", || Self::GroceryLists {})]
+        #[route("/kitchen/grocery-lists")]
         GroceryLists {},
-        #[route("/grocery-lists/new")]
+        #[redirect("/grocery-lists/new", || Self::GroceryListNew {})]
+        #[route("/kitchen/grocery-lists/new")]
         GroceryListNew {},
-        #[route("/grocery-lists/:id")]
+        #[redirect("/grocery-lists/:id", |id: String| Self::GroceryListDetail { id })]
+        #[route("/kitchen/grocery-lists/:id")]
         GroceryListDetail { id: String },
+        #[end_layout]
         #[route("/collections")]
         CollectionList {},
         #[route("/collections/new?:parent")]

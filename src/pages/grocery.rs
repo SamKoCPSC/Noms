@@ -193,22 +193,6 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
             } else {
                 div {
                     class: "container grocery-page",
-                    nav {
-                        class: "grocery-breadcrumb",
-                        aria_label: "Breadcrumb",
-                        Link {
-                            to: Route::Dashboard {},
-                            "Your library"
-                        }
-                        span {
-
-                            " / "
-                        }
-                        span {
-
-                            "Grocery lists"
-                        }
-                    }
                     if let Some(problem) = error() {
                         div {
                             class: "grocery-error",
@@ -319,7 +303,7 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
 
                                         div {
                                             class: "grocery-eyebrow",
-                                            "Your grocery workspace"
+                                            "Grocery lists"
                                         }
                                         h1 {
 
@@ -1204,7 +1188,7 @@ pub fn GroceryListNew() -> Element {
                         class: "grocery-create-heading",
                         div {
                             class: "grocery-eyebrow",
-                            "Your grocery workspace"
+                            "Grocery lists"
                         }
                         h1 {
 

@@ -32,6 +32,7 @@ use crate::auth::context::use_auth;
 use crate::components::base::{
     Avatar, AvatarSize, BrandMark, NavigationArtwork, PageIconKind, SharedModal,
 };
+use crate::components::kitchen::SectionLink;
 use crate::utils::theme::UseTheme;
 use crate::Route;
 
@@ -99,9 +100,9 @@ pub fn Navbar(theme: UseTheme) -> Element {
                 }
                 div { class: "navbar-links",
                     for (route, label) in primary_navigation(is_signed_in) {
-                        Link {
+                        SectionLink {
                             class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
-                            aria_current: if navigation_is_current(&route, &current_route) { "page" } else { "false" },
+                            current: navigation_is_current(&route, &current_route),
                             to: route,
                             "{label}"
                         }
@@ -230,18 +231,17 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", Some(PageIconKind::Home)),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
-                            (Route::GroceryLists {}, "Grocery lists", None),
-                            (Route::Pantry {}, "Pantry", None),
+                            (Route::Pantry {}, "Kitchen", None),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
                             (Route::Search { query: Default::default() }, "Search", Some(PageIconKind::Search)),
                             (Route::RecipeNew {}, "New recipe", Some(PageIconKind::Editor)),
                             (Route::About {}, "About", Some(PageIconKind::About)),
                             (Route::HowTo {}, "How to", Some(PageIconKind::HowTo)),
                         ] {
-                            Link {
+                            SectionLink {
                                 class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
-                                aria_current: if navigation_is_current(&route, &current_route) { "page" } else { "false" },
-                                to: route, onclick: move |_| menu_open.set(false),
+                                current: navigation_is_current(&route, &current_route),
+                                to: route, on_navigate: move |_| menu_open.set(false),
                                 span { class: "navigation-artwork-slot", aria_hidden: "true",
                                     if let Some(kind) = icon { NavigationArtwork { kind: Some(kind) } }
                                 }
@@ -311,8 +311,7 @@ fn primary_navigation(signed_in: bool) -> Vec<(Route, &'static str)> {
             (Route::CommunityHome {}, "Home"),
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
-            (Route::GroceryLists {}, "Grocery lists"),
-            (Route::Pantry {}, "Pantry"),
+            (Route::Pantry {}, "Kitchen"),
             (Route::Explore {}, "Explore"),
         ]
     } else {
@@ -334,11 +333,7 @@ fn navigation_is_current(destination: &Route, current: &Route) -> bool {
             | Route::CollectionDetail { .. }
             | Route::CollectionEdit { .. },
         ) => true,
-        (
-            Route::GroceryLists {},
-            Route::GroceryLists {} | Route::GroceryListNew {} | Route::GroceryListDetail { .. },
-        ) => true,
-        (Route::Pantry {}, Route::Pantry {} | Route::PantryNew {} | Route::PantryDetail { .. }) => {
+        (Route::Pantry {}, route) if super::kitchen::KitchenView::for_route(route).is_some() => {
             true
         }
         (Route::Search { .. }, Route::Search { .. }) => true,

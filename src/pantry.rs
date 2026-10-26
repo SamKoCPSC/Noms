@@ -13,12 +13,7 @@ pub enum PantryKind {
     Equipment,
 }
 impl PantryKind {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Ingredient => "Ingredients",
-            Self::Equipment => "Equipment",
-        }
-    }
+    #[cfg(feature = "server")]
     pub fn limit(self) -> usize {
         match self {
             Self::Ingredient => MAX_INGREDIENTS,
@@ -34,7 +29,16 @@ pub struct PantryFields {
 }
 impl PantryFields {
     pub fn validate(&self, kind: PantryKind) -> Result<(), String> {
-        text(&self.name, 500, true, "Ingredient or equipment name")?;
+        text(
+            &self.name,
+            500,
+            true,
+            if kind == PantryKind::Ingredient {
+                "Ingredient name"
+            } else {
+                "Equipment name"
+            },
+        )?;
         text(&self.amount, 64, false, "Amount")?;
         text(&self.unit, 64, false, "Unit")?;
         if kind == PantryKind::Equipment && (!self.amount.is_empty() || !self.unit.is_empty()) {
@@ -55,8 +59,8 @@ fn text(value: &str, max: usize, required: bool, label: &str) -> Result<(), Stri
     Ok(())
 }
 pub fn validate_profile(name: &str, note: &str) -> Result<(), String> {
-    text(name, 100, true, "Kitchen name")?;
-    text(note, 500, false, "Kitchen note")
+    text(name, 100, true, "Pantry name")?;
+    text(note, 500, false, "Pantry note")
 }
 /// None means descriptive/unknown; numeric-looking invalid values are rejected,
 /// rather than disguised as presence-only stock. Parsing shares grocery bounds.
@@ -186,11 +190,14 @@ pub struct PantryCreate {
 impl PantryCreate {
     pub fn validate(&self) -> Result<(), String> {
         validate_profile(&self.name, &self.note)?;
-        if self.ingredients.len() > MAX_INGREDIENTS || self.equipment.len() > MAX_EQUIPMENT {
-            return Err("A kitchen supports up to 1,000 ingredients and 200 tools.".into());
+        if self.ingredients.len() > MAX_INGREDIENTS {
+            return Err("A pantry supports up to 1,000 ingredients.".into());
+        }
+        if self.equipment.len() > MAX_EQUIPMENT {
+            return Err("A pantry supports up to 200 equipment items.".into());
         }
         if self.copy.is_some() && (!self.ingredients.is_empty() || !self.equipment.is_empty()) {
-            return Err("A kitchen copy cannot also submit starting inventory.".into());
+            return Err("A pantry copy cannot also submit starting inventory.".into());
         }
         for x in &self.ingredients {
             x.fields.validate(PantryKind::Ingredient)?
@@ -199,11 +206,11 @@ impl PantryCreate {
             x.fields.validate(PantryKind::Equipment)?
         }
         if serde_json::to_vec(self)
-            .map_err(|_| "Invalid kitchen data.")?
+            .map_err(|_| "Invalid pantry data.")?
             .len()
             > MAX_PAYLOAD
         {
-            return Err("This kitchen is too large.".into());
+            return Err("This pantry is too large.".into());
         }
         Ok(())
     }

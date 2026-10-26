@@ -47,7 +47,6 @@ fn remember_selection(owner: Uuid, id: Option<Uuid>) {
 fn PantryIcon(#[props(default="jar".into())] kind: String) -> Element {
     let path = match kind.as_str() {
         "home" => "M3 11 12 3l9 8M5 10v11h14V10M9 21v-7h6v7",
-        "tool" => "M8 3h8v5l-2 4v9h-4v-9L8 8V3ZM8 7h8",
         "check" => "m5 12 4 4 10-10",
         "plus" => "M12 5v14M5 12h14",
         "pen" => "m15 4 5 5M4 20l5-1L21 7l-5-5L4 14v6Z",
@@ -63,9 +62,7 @@ fn PantryIcon(#[props(default="jar".into())] kind: String) -> Element {
             stroke_linecap: "round",
             stroke_linejoin: "round",
             "aria-hidden": "true",
-            path {
-                d: path,
-            }
+            path { d: path }
         }
     }
 }
@@ -73,37 +70,23 @@ fn PantryIcon(#[props(default="jar".into())] kind: String) -> Element {
 pub fn Pantry() -> Element {
     rsx! {
         PantryWorkspace {
-
-
-
         }
     }
 }
 #[component]
 pub fn PantryDetail(id: String) -> Element {
     rsx! {
-        PantryWorkspace {
-            key: "{id}",
-            id: Some(id),
-        }
+        PantryWorkspace { key: "{id}", id: Some(id) }
     }
 }
 #[component]
 fn PantryFieldsInput(
     mut fields: Signal<PantryFields>,
-    kind: PantryKind,
     prefix: String,
     #[props(default)] disabled: bool,
 ) -> Element {
     rsx! {
-        label {
-            r#for: "{prefix}-name",
-            if kind == PantryKind::Ingredient {
-                "Ingredient name"
-            } else {
-                "Equipment name"
-            }
-        }
+        label { r#for: "{prefix}-name", "Ingredient name" }
         input {
             id: "{prefix}-name",
             class: "input input--shared neumo-inset",
@@ -113,45 +96,36 @@ fn PantryFieldsInput(
             disabled,
             oninput: move |e| fields.write().name = e.value(),
         }
-        if kind == PantryKind::Ingredient {
-            div {
-                class: "pantry-amount-fields",
-                label {
-                    r#for: "{prefix}-amount",
-                    "Amount"
-                    span {
-                        class: "grocery-muted",
-                        "Optional"
-                    }
-                }
-                label {
-                    r#for: "{prefix}-unit",
-                    "Unit"
-                    span {
-                        class: "grocery-muted",
-                        "As written"
-                    }
-                }
-                input {
-                    id: "{prefix}-amount",
-                    class: "input input--shared neumo-inset",
-                    value: "{fields().amount}",
-                    maxlength: 64,
-                    placeholder: "Unknown",
-                    disabled,
-                    oninput: move |e| fields.write().amount = e.value(),
-                }
-                input {
-                    id: "{prefix}-unit",
-                    class: "input input--shared neumo-inset",
-                    value: "{fields().unit}",
-                    maxlength: 64,
-                    placeholder: "e.g. cup",
-                    disabled,
-                    oninput: move |e| fields.write().unit = e.value(),
-                }
+
+        div { class: "pantry-amount-fields",
+            label { r#for: "{prefix}-amount",
+                "Amount"
+                span { class: "grocery-muted", "Optional" }
+            }
+            label { r#for: "{prefix}-unit",
+                "Unit"
+                span { class: "grocery-muted", "As written" }
+            }
+            input {
+                id: "{prefix}-amount",
+                class: "input input--shared neumo-inset",
+                value: "{fields().amount}",
+                maxlength: 64,
+                placeholder: "Unknown",
+                disabled,
+                oninput: move |e| fields.write().amount = e.value(),
+            }
+            input {
+                id: "{prefix}-unit",
+                class: "input input--shared neumo-inset",
+                value: "{fields().unit}",
+                maxlength: 64,
+                placeholder: "e.g. cup",
+                disabled,
+                oninput: move |e| fields.write().unit = e.value(),
             }
         }
+
     }
 }
 #[component]
@@ -168,7 +142,7 @@ fn PantryEditor(
     let mut busy = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let mut confirm_remove = use_signal(|| false);
-    let kind = entry.kind;
+    let kind = PantryKind::Ingredient;
     let expected = entry.revision;
     let item = entry.id;
     let unavailable = disabled || busy() || auth.read().current_user_id != account();
@@ -178,41 +152,17 @@ fn PantryEditor(
             id: "pantry-editor",
             tabindex: "-1",
             aria_label: "Inventory details",
-            div {
-                class: "pantry-editor-head",
-                span {
-                    class: "grocery-eyebrow",
-                    if kind == PantryKind::Ingredient {
-                        "Ingredient details"
-                    } else {
-                        "Equipment details"
-                    }
-                }
-                PantryIcon {
-                    kind: if kind == PantryKind::Ingredient { "jar" } else { "tool" },
-                }
+            div { class: "pantry-editor-head",
+                span { class: "grocery-eyebrow", "Ingredient details" }
+                PantryIcon { kind: "jar" }
             }
-            h2 {
+            h2 { "{entry.stock.fields.name}" }
+            p { class: "grocery-muted", "{entry.status()}" }
 
+            div { class: "grocery-inspector-amount", "{entry.amount_label()}" }
 
-                "{entry.stock.fields.name}"
-            }
-            p {
-                class: "grocery-muted",
-                "{entry.status()}"
-            }
-            if kind == PantryKind::Ingredient {
-                div {
-                    class: "grocery-inspector-amount",
-                    "{entry.amount_label()}"
-                }
-            }
             if let Some(problem) = error() {
-                p {
-                    class: "grocery-error",
-                    role: "alert",
-                    "{problem}"
-                }
+                p { class: "grocery-error", role: "alert", "{problem}" }
             }
             form {
                 class: "pantry-editor-form",
@@ -251,7 +201,7 @@ fn PantryEditor(
                 },
                 PantryFieldsInput {
                     fields,
-                    kind,
+
                     prefix: "pantry-edit",
                     disabled: unavailable,
                 }
@@ -270,11 +220,9 @@ fn PantryEditor(
                 class: "btn btn-ghost pantry-remove",
                 disabled: unavailable,
                 onclick: move |_| confirm_remove.set(true),
-                if kind == PantryKind::Ingredient {
-                    "Remove ingredient"
-                } else {
-                    "Remove equipment"
-                }
+
+                "Remove ingredient"
+
             }
             if confirm_remove() {
                 SharedModal {
@@ -285,12 +233,8 @@ fn PantryEditor(
                     div {
                         class: "modal-card pantry-modal",
                         onclick: move |e| e.stop_propagation(),
-                        h2 {
-                            id: "pantry-remove-title",
-                            "Remove {entry.stock.fields.name}?"
-                        }
-                        div {
-                            class: "grocery-dialog-actions",
+                        h2 { id: "pantry-remove-title", "Remove {entry.stock.fields.name}?" }
+                        div { class: "grocery-dialog-actions",
                             button {
                                 id: "pantry-keep-item",
                                 class: "btn btn-secondary",
@@ -356,7 +300,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
             }
         }
     }));
-    let mut kind = use_signal(|| PantryKind::Ingredient);
+    let kind = PantryKind::Ingredient;
     let mut filter = use_signal(String::new);
     let mut availability = use_signal(|| "all".to_string());
     let mut selected = use_signal(|| None::<Uuid>);
@@ -364,7 +308,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
     let mut error = use_signal(|| None::<String>);
     let mut message = use_signal(String::new);
     let mut addition = use_signal(PantryFields::default);
-    let mut pending_add = use_signal(|| None::<(Uuid, PantryKind, PantryStock)>);
+    let mut pending_add = use_signal(|| None::<(Uuid, PantryStock)>);
     let mut edit_open = use_signal(|| false);
     let mut edit_name = use_signal(String::new);
     let mut edit_note = use_signal(String::new);
@@ -450,43 +394,13 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
     rsx! {
         AuthRequired {
 
-
-            div {
-                class: "container grocery-page pantry-page",
-                nav {
-                    class: "grocery-breadcrumb",
-                    aria_label: "Breadcrumb",
-                    Link {
-                        to: Route::Dashboard {},
-                        "Your library"
-                    }
-                    span {
-
-
-                        " / "
-                    }
-                    span {
-
-
-                        "Pantry"
-                    }
-                }
+            div { class: "container grocery-page pantry-page",
                 if account_changed {
-                    p {
-                        class: "grocery-error",
-                        role: "alert",
-                        "{ACCOUNT_CHANGED_FEEDBACK}"
-                    }
+                    p { class: "grocery-error", role: "alert", "{ACCOUNT_CHANGED_FEEDBACK}" }
                 } else {
                     if let Some(problem) = error() {
-                        div {
-                            class: "grocery-error",
-                            role: "alert",
-                            p {
-
-
-                                "{problem}"
-                            }
+                        div { class: "grocery-error", role: "alert",
+                            p { "{problem}" }
                             button {
                                 class: "btn btn-secondary",
                                 disabled: busy(),
@@ -498,23 +412,14 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                             }
                         }
                     }
-                    p {
-                        class: "sr-only",
-                        role: "status",
-                        "{message}"
-                    }
-                    div {
-                        class: "grocery-workspace",
+                    p { class: "sr-only", role: "status", "{message}" }
+                    div { class: "grocery-workspace",
                         aside {
                             class: "grocery-rail neumo-raised",
-                            aria_label: "Your kitchens",
-                            div {
-                                class: "grocery-eyebrow",
-                                "Your kitchens"
-                            }
+                            aria_label: "Your pantries",
+                            div { class: "grocery-eyebrow", "Your pantries" }
                             if let Some(rows) = sidebar.clone() {
-                                div {
-                                    class: "grocery-list-links",
+                                div { class: "grocery-list-links",
                                     for row in rows {
                                         Link {
                                             key: "{row.id}",
@@ -525,29 +430,15 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                             aria_current: if Some(row.id) == parsed { "page" } else { "false" },
                                             div {
 
-
-                                                PantryIcon {
-                                                    kind: "home",
-                                                }
-                                                strong {
-
-
-                                                    "{row.name}"
-                                                }
+                                                PantryIcon { kind: "home" }
+                                                strong { "{row.name}" }
                                             }
-                                            small {
-
-
-                                                "{row.ingredient_count} ingredients · {row.equipment_count} tools"
-                                            }
+                                            small { "{row.ingredient_count} ingredients" }
                                         }
                                     }
                                 }
                             } else if summaries.read().as_ref().is_some_and(Result::is_err) {
-                                p {
-                                    class: "grocery-muted",
-                                    "Your kitchens couldn’t be loaded."
-                                }
+                                p { class: "grocery-muted", "Your pantries couldn’t be loaded." }
                                 button {
                                     class: "btn btn-secondary",
                                     onclick: move |_| refresh += 1,
@@ -555,54 +446,29 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                 }
                             } else {
                                 LoadingSpinner {
-
-
-
                                 }
                             }
                             Link {
                                 to: Route::PantryNew {},
                                 class: "btn btn-primary grocery-new-link",
-                                PantryIcon {
-                                    kind: "plus",
-                                }
-                                "New kitchen"
+                                PantryIcon { kind: "plus" }
+                                "New pantry"
                             }
                         }
-                        div {
-                            class: "grocery-workspace-main",
+                        div { class: "grocery-workspace-main",
                             if invalid {
-                                div {
-                                    class: "grocery-state",
-                                    h1 {
-
-
-                                        "Kitchen not found"
-                                    }
-                                    p {
-
-
-                                        "Check the kitchen address or choose a saved kitchen."
-                                    }
+                                div { class: "grocery-state",
+                                    h1 { "Pantry not found" }
+                                    p { "Check the pantry address or choose a saved pantry." }
                                 }
                             } else if let Some(p) = kitchen.clone() {
-                                header {
-                                    class: "grocery-list-heading",
+                                header { class: "grocery-list-heading",
                                     div {
 
-
-                                        div {
-                                            class: "grocery-eyebrow",
-                                            "Your pantry workspace"
-                                        }
-                                        h1 {
-
-
-                                            "{p.name}"
-                                        }
+                                        div { class: "grocery-eyebrow", "Pantry" }
+                                        h1 { "{p.name}" }
                                     }
-                                    div {
-                                        class: "grocery-heading-actions",
+                                    div { class: "grocery-heading-actions",
                                         button {
                                             class: "btn btn-secondary",
                                             disabled,
@@ -615,7 +481,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                     edit_open.set(true);
                                                 }
                                             },
-                                            "Edit kitchen"
+                                            "Edit pantry"
                                         }
                                         button {
                                             class: "btn btn-ghost",
@@ -680,58 +546,27 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                             if duplicate().is_some() {
                                                 "Retry duplicate"
                                             } else {
-                                                "Duplicate kitchen"
+                                                "Duplicate pantry"
                                             }
                                         }
                                         button {
                                             class: "btn btn-ghost",
                                             disabled,
                                             onclick: move |_| delete_open.set(true),
-                                            "Delete kitchen"
+                                            "Delete pantry"
                                         }
                                     }
                                 }
-                                div {
-                                    class: "grocery-detail-layout has-inspector pantry-detail-layout",
-                                    section {
-                                        class: "grocery-shopping neumo-raised",
-                                        div {
-                                            class: "grocery-section-heading",
-                                            h2 {
-
-
-                                                if kind() == PantryKind::Ingredient {
-                                                    "Available ingredients"
-                                                } else {
-                                                    "Available equipment"
-                                                }
-                                            }
-                                            span {
-                                                class: "grocery-pill",
+                                div { class: "grocery-detail-layout has-inspector pantry-detail-layout",
+                                    section { class: "grocery-shopping neumo-raised",
+                                        div { class: "grocery-section-heading",
+                                            h2 { "Available ingredients" }
+                                            span { class: "grocery-pill",
                                                 "{p.entries.iter().filter(|e|e.kind==PantryKind::Ingredient&&e.usable()).count()} in stock"
                                             }
                                         }
-                                        div {
-                                            class: "pantry-tabs",
-                                            role: "group",
-                                            aria_label: "Inventory type",
-                                            for choice in [PantryKind::Ingredient, PantryKind::Equipment] {
-                                                button {
-                                                    class: "btn btn-ghost",
-                                                    disabled: disabled || pending_add().is_some(),
-                                                    aria_pressed: kind() == choice,
-                                                    onclick: move |_| {
-                                                        kind.set(choice);
-                                                        selected.set(None);
-                                                        addition.set(PantryFields::default());
-                                                        error.set(None);
-                                                    },
-                                                    "{choice.label()} {p.entries.iter().filter(|e|e.kind==choice).count()}"
-                                                }
-                                            }
-                                        }
-                                        div {
-                                            class: "grocery-tools",
+
+                                        div { class: "grocery-tools",
                                             label {
                                                 class: "sr-only",
                                                 r#for: "pantry-search",
@@ -740,7 +575,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                             input {
                                                 id: "pantry-search",
                                                 class: "input input--shared neumo-inset",
-                                                placeholder: "Find an ingredient or tool…",
+                                                placeholder: "Find an ingredient…",
                                                 value: "{filter}",
                                                 oninput: move |e| filter.set(e.value()),
                                             }
@@ -754,25 +589,15 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                 class: "input input--shared neumo-inset",
                                                 value: "{availability}",
                                                 onchange: move |e| availability.set(e.value()),
-                                                option {
-                                                    value: "all",
-                                                    "Everything"
-                                                }
-                                                option {
-                                                    value: "in",
-                                                    "Available"
-                                                }
-                                                option {
-                                                    value: "out",
-                                                    "Out / unavailable"
-                                                }
+                                                option { value: "all", "Everything" }
+                                                option { value: "in", "Available" }
+                                                option { value: "out", "Out of stock" }
                                             }
                                         }
-                                        div {
-                                            class: "pantry-rows",
+                                        div { class: "pantry-rows",
                                             for item in p.entries
                                                 .iter()
-                                                .filter(|e| e.kind == kind())
+                                                .filter(|e| e.kind == kind)
                                                 .filter(|e| {
                                                     e.stock.fields.name.to_lowercase().contains(&filter().to_lowercase())
                                                 })
@@ -785,38 +610,24 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                 div {
                                                     key: "{item.id}",
                                                     class: if item.usable() { "pantry-row" } else { "pantry-row pantry-row-out" },
-                                                    div {
-                                                        class: "pantry-row-name",
-                                                        strong {
+                                                    div { class: "pantry-row-name",
+                                                        strong { "{item.stock.fields.name}" }
+                                                        small { "{item.status()}" }
+                                                    }
 
-
-                                                            "{item.stock.fields.name}"
-                                                        }
-                                                        small {
-
-
-                                                            "{item.status()}"
+                                                    span { class: "grocery-amount",
+                                                        if item.stock.fields.amount.trim().is_empty() {
+                                                            "—"
+                                                        } else {
+                                                            "{item.amount_label()}"
                                                         }
                                                     }
-                                                    if item.kind == PantryKind::Ingredient {
-                                                        span {
-                                                            class: "grocery-amount",
-                                                            if item.stock.fields.amount.trim().is_empty() {
-                                                                "—"
-                                                            } else {
-                                                                "{item.amount_label()}"
-                                                            }
-                                                        }
-                                                    }
+
                                                     button {
                                                         class: "pantry-stock-toggle",
                                                         disabled: disabled || pending_add().is_some() || duplicate().is_some(),
                                                         aria_pressed: item.stock.available,
-                                                        aria_label: if item.stock.available { format!(
-                                                            "Mark {} {}",
-                                                            item.stock.fields.name,
-                                                            if item.kind == PantryKind::Ingredient { "out" } else { "unavailable" },
-                                                        ) } else { format!("Restore {}", item.stock.fields.name) },
+                                                        aria_label: if item.stock.available { format!("Mark {} {}", item.stock.fields.name, "out") } else { format!("Restore {}", item.stock.fields.name) },
                                                         onclick: move |_| {
                                                             if disabled {
                                                                 return;
@@ -836,9 +647,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                                 )
                                                             });
                                                         },
-                                                        PantryIcon {
-                                                            kind: if item.stock.available { "check" } else { "plus" },
-                                                        }
+                                                        PantryIcon { kind: if item.stock.available { "check" } else { "plus" } }
                                                     }
                                                     button {
                                                         class: "btn btn-ghost pantry-edit-trigger",
@@ -854,22 +663,19 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                                     .await;
                                                             });
                                                         },
-                                                        PantryIcon {
-                                                            kind: "pen",
-                                                        }
+                                                        PantryIcon { kind: "pen" }
                                                     }
                                                 }
                                             }
-                                            if !p.entries.iter().any(|e| e.kind == kind()) {
-                                                p {
-                                                    class: "grocery-muted pantry-empty",
+                                            if !p.entries.iter().any(|e| e.kind == kind) {
+                                                p { class: "grocery-muted pantry-empty",
                                                     "No items here yet. Add your first one below."
                                                 }
                                             }
                                         }
                                         PantryQuickAdd {
-                                            key: "{p.id}:{kind():?}",
-                                            kind: kind(),
+                                            key: "{p.id}:{kind:?}",
+
                                             fields: addition,
                                             disabled: disabled || duplicate().is_some(),
                                             frozen: pending_add().is_some(),
@@ -877,23 +683,30 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                 if disabled {
                                                     return;
                                                 }
-                                                let (key, entry_kind, stock) = pending_add()
+                                                let (key, stock) = pending_add()
                                                     .unwrap_or_else(|| (
                                                         Uuid::new_v4(),
-                                                        kind(),
+
                                                         PantryStock {
                                                             fields,
                                                             available: true,
                                                         },
                                                     ));
-                                                if let Err(problem) = stock.fields.validate(entry_kind) {
+                                                if let Err(problem) = stock.fields.validate(PantryKind::Ingredient) {
                                                     error.set(Some(problem));
                                                     return;
                                                 }
-                                                pending_add.set(Some((key, entry_kind, stock.clone())));
+                                                pending_add.set(Some((key, stock.clone())));
                                                 busy.set(true);
                                                 spawn(async move {
-                                                    let result = add_pantry_entry(account(), p.id, entry_kind, key, stock).await;
+                                                    let result = add_pantry_entry(
+                                                            account(),
+                                                            p.id,
+                                                            PantryKind::Ingredient,
+                                                            key,
+                                                            stock,
+                                                        )
+                                                        .await;
                                                     if *current_route.peek() == parsed && result.is_ok()
                                                         && auth.peek().current_user_id == account()
                                                     {
@@ -908,8 +721,8 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                     if let Some(entry) = p
                                         .entries
                                         .iter()
-                                        .find(|e| e.kind == kind() && Some(e.id) == selected())
-                                        .or_else(|| p.entries.iter().find(|e| e.kind == kind()))
+                                        .find(|e| e.kind == kind && Some(e.id) == selected())
+                                        .or_else(|| p.entries.iter().find(|e| e.kind == kind))
                                         .cloned()
                                     {
                                         PantryEditor {
@@ -922,20 +735,11 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                             },
                                         }
                                     } else {
-                                        aside {
-                                            class: "grocery-inspector",
-                                            div {
-                                                class: "grocery-eyebrow",
-                                                "Inventory details"
-                                            }
-                                            h2 {
-
-
-                                                "A little room to grow."
-                                            }
-                                            p {
-                                                class: "grocery-muted",
-                                                "Add an ingredient or tool to start keeping stock."
+                                        aside { class: "grocery-inspector",
+                                            div { class: "grocery-eyebrow", "Inventory details" }
+                                            h2 { "A little room to grow." }
+                                            p { class: "grocery-muted",
+                                                "Add an ingredient to start keeping stock."
                                             }
                                         }
                                     }
@@ -949,10 +753,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                         div {
                                             class: "modal-card pantry-modal",
                                             onclick: move |e| e.stop_propagation(),
-                                            h2 {
-                                                id: "pantry-profile-title",
-                                                "Edit kitchen"
-                                            }
+                                            h2 { id: "pantry-profile-title", "Edit pantry" }
                                             form {
                                                 class: "pantry-profile-form",
                                                 onsubmit: move |e| {
@@ -980,9 +781,8 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                         done(result);
                                                     });
                                                 },
-                                                label {
-                                                    r#for: "pantry-profile-name",
-                                                    "Kitchen name"
+                                                label { r#for: "pantry-profile-name",
+                                                    "Pantry name"
                                                 }
                                                 input {
                                                     id: "pantry-profile-name",
@@ -993,8 +793,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                     disabled: busy(),
                                                     oninput: move |e| edit_name.set(e.value()),
                                                 }
-                                                label {
-                                                    r#for: "pantry-profile-note",
+                                                label { r#for: "pantry-profile-note",
                                                     "Note"
                                                 }
                                                 input {
@@ -1012,8 +811,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                         "{problem}"
                                                     }
                                                 }
-                                                div {
-                                                    class: "grocery-dialog-actions",
+                                                div { class: "grocery-dialog-actions",
                                                     button {
                                                         class: "btn btn-secondary",
                                                         r#type: "button",
@@ -1024,7 +822,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                     button {
                                                         class: "btn btn-primary",
                                                         disabled: busy(),
-                                                        "Save kitchen"
+                                                        "Save pantry"
                                                     }
                                                 }
                                             }
@@ -1041,13 +839,9 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                         div {
                                             class: "modal-card pantry-modal",
                                             onclick: move |e| e.stop_propagation(),
-                                            h2 {
-                                                id: "pantry-delete-title",
-                                                "Delete {p.name}?"
-                                            }
-                                            p {
-                                                class: "grocery-muted",
-                                                "This removes this kitchen and its inventory."
+                                            h2 { id: "pantry-delete-title", "Delete {p.name}?" }
+                                            p { class: "grocery-muted",
+                                                "This removes this pantry and its inventory."
                                             }
                                             if let Some(problem) = error() {
                                                 p {
@@ -1056,14 +850,13 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                     "{problem}"
                                                 }
                                             }
-                                            div {
-                                                class: "grocery-dialog-actions",
+                                            div { class: "grocery-dialog-actions",
                                                 button {
                                                     id: "pantry-keep-profile",
                                                     class: "btn btn-secondary",
                                                     disabled: busy(),
                                                     onclick: move |_| delete_open.set(false),
-                                                    "Keep kitchen"
+                                                    "Keep pantry"
                                                 }
                                                 button {
                                                     class: "btn btn-danger",
@@ -1096,7 +889,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                             }
                                                         });
                                                     },
-                                                    "Delete kitchen"
+                                                    "Delete pantry"
                                                 }
                                             }
 
@@ -1104,30 +897,16 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                     }
                                 }
                             } else if loading {
-                                div {
-                                    class: "grocery-state",
+                                div { class: "grocery-state",
                                     LoadingSpinner {
-
-
-
                                     }
-                                    p {
-
-
-                                        "Loading your kitchen…"
-                                    }
+                                    p { "Loading your pantry…" }
                                 }
                             } else if details.read().as_ref().is_some_and(Result::is_err) {
-                                div {
-                                    class: "grocery-state",
-                                    h1 {
-
-
-                                        "Kitchen unavailable"
-                                    }
-                                    p {
-                                        class: "grocery-muted",
-                                        "This kitchen could not be opened. Choose another kitchen or retry."
+                                div { class: "grocery-state",
+                                    h1 { "Pantry unavailable" }
+                                    p { class: "grocery-muted",
+                                        "This pantry could not be opened. Choose another pantry or retry."
                                     }
                                     button {
                                         class: "btn btn-secondary",
@@ -1136,25 +915,14 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                     }
                                 }
                             } else {
-                                div {
-                                    class: "grocery-state neumo-raised",
-                                    PantryIcon {
-                                        kind: "home",
-                                    }
-                                    h1 {
-
-
-                                        "A kitchen of your own."
-                                    }
-                                    p {
-
-
-                                        "Keep track of your ingredients and tools, wherever you cook."
-                                    }
+                                div { class: "grocery-state neumo-raised",
+                                    PantryIcon { kind: "home" }
+                                    h1 { "A pantry of your own." }
+                                    p { "Keep track of your ingredients, wherever you cook." }
                                     Link {
                                         to: Route::PantryNew {},
                                         class: "btn btn-primary",
-                                        "Create your first kitchen"
+                                        "Create your first pantry"
                                     }
                                 }
                             }
@@ -1167,7 +935,6 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
 }
 #[component]
 fn PantryQuickAdd(
-    kind: PantryKind,
     mut fields: Signal<PantryFields>,
     disabled: bool,
     #[props(default)] frozen: bool,
@@ -1175,7 +942,7 @@ fn PantryQuickAdd(
 ) -> Element {
     rsx! {
         form {
-            class: if kind == PantryKind::Ingredient { "grocery-add-row pantry-add" } else { "grocery-add-row pantry-add pantry-add-equipment" },
+            class: "grocery-add-row pantry-add",
             onsubmit: move |e| {
                 e.prevent_default();
                 if !disabled {
@@ -1184,18 +951,10 @@ fn PantryQuickAdd(
             },
             label {
 
-
-                span {
-                    class: "sr-only",
-                    if kind == PantryKind::Ingredient {
-                        "Ingredient name"
-                    } else {
-                        "Equipment name"
-                    }
-                }
+                span { class: "sr-only", "Ingredient name" }
                 input {
                     class: "input input--shared neumo-inset",
-                    placeholder: if kind == PantryKind::Ingredient { "Add an ingredient…" } else { "Add equipment…" },
+                    placeholder: "Add an ingredient…",
                     value: "{fields().name}",
                     disabled: disabled || frozen,
                     maxlength: 500,
@@ -1203,51 +962,41 @@ fn PantryQuickAdd(
                     oninput: move |e| fields.write().name = e.value(),
                 }
             }
-            if kind == PantryKind::Ingredient {
-                label {
 
+            label {
 
-                    span {
-                        class: "sr-only",
-                        "Amount"
-                    }
-                    input {
-                        class: "input input--shared neumo-inset",
-                        value: "{fields().amount}",
-                        placeholder: "Qty",
-                        disabled: disabled || frozen,
-                        maxlength: 64,
-                        oninput: move |e| fields.write().amount = e.value(),
-                    }
-                }
-                label {
-
-
-                    span {
-                        class: "sr-only",
-                        "Unit"
-                    }
-                    input {
-                        class: "input input--shared neumo-inset",
-                        value: "{fields().unit}",
-                        placeholder: "Unit",
-                        disabled: disabled || frozen,
-                        maxlength: 64,
-                        oninput: move |e| fields.write().unit = e.value(),
-                    }
+                span { class: "sr-only", "Amount" }
+                input {
+                    class: "input input--shared neumo-inset",
+                    value: "{fields().amount}",
+                    placeholder: "Qty",
+                    disabled: disabled || frozen,
+                    maxlength: 64,
+                    oninput: move |e| fields.write().amount = e.value(),
                 }
             }
+            label {
+
+                span { class: "sr-only", "Unit" }
+                input {
+                    class: "input input--shared neumo-inset",
+                    value: "{fields().unit}",
+                    placeholder: "Unit",
+                    disabled: disabled || frozen,
+                    maxlength: 64,
+                    oninput: move |e| fields.write().unit = e.value(),
+                }
+            }
+
             button {
                 class: "btn btn-secondary",
                 r#type: "submit",
                 disabled,
-                aria_label: if kind == PantryKind::Ingredient { "Add ingredient" } else { "Add equipment" },
+                aria_label: "Add ingredient",
                 if frozen {
                     "Retry"
                 } else {
-                    PantryIcon {
-                        kind: "plus",
-                    }
+                    PantryIcon { kind: "plus" }
                 }
             }
         }
@@ -1261,163 +1010,92 @@ pub fn PantryNew() -> Element {
     let mut name = use_signal(String::new);
     let mut note = use_signal(String::new);
     let mut ingredients = use_signal(Vec::<PantryStock>::new);
-    let mut equipment = use_signal(Vec::<PantryStock>::new);
     let mut ingredient = use_signal(PantryFields::default);
-    let mut tool = use_signal(PantryFields::default);
     let mut busy = use_signal(|| false);
     let mut pending = use_signal(|| None::<PantryCreate>);
     let mut created = use_signal(|| None::<Uuid>);
     let mut error = use_signal(|| None::<String>);
-    let mut draft_edit = use_signal(|| None::<(PantryKind, usize, PantryStock)>);
+    let mut draft_edit = use_signal(|| None::<(usize, PantryStock)>);
     let mut edited = use_signal(PantryFields::default);
     let frozen = busy() || pending().is_some() || created().is_some();
     let account_changed = auth.read().current_user_id != account();
-    let mut add_initial = move |(kind, fields): (PantryKind, PantryFields)| {
+    let add_initial = move |fields: PantryFields| {
         if frozen {
             return;
         }
-        if let Err(problem) = fields.validate(kind) {
+        if let Err(problem) = fields.validate(PantryKind::Ingredient) {
             error.set(Some(problem));
             return;
         }
-        let mut list = if kind == PantryKind::Ingredient {
-            ingredients
-        } else {
-            equipment
-        };
-        if list.read().len() >= kind.limit() {
-            error.set(Some("This kitchen has reached its inventory limit.".into()));
+        if ingredients.read().len() >= MAX_INGREDIENTS {
+            error.set(Some("This pantry has reached its ingredient limit.".into()));
             return;
         }
-        list.write().push(PantryStock {
+        ingredients.write().push(PantryStock {
             fields,
             available: true,
         });
-        if kind == PantryKind::Ingredient {
-            ingredient.set(PantryFields::default())
-        } else {
-            tool.set(PantryFields::default())
-        }
+        ingredient.set(PantryFields::default());
         error.set(None);
     };
     rsx! {
         AuthRequired {
 
-
-            div {
-                class: "container grocery-create-page pantry-create-page",
-                nav {
-                    class: "grocery-breadcrumb",
-                    aria_label: "Breadcrumb",
-                    Link {
-                        to: Route::Pantry {},
-                        "Pantry"
-                    }
-                    span {
-
-
-                        " / "
-                    }
-                    span {
-
-
-                        "New kitchen"
-                    }
+            div { class: "container grocery-create-page pantry-create-page",
+                nav { class: "grocery-breadcrumb", aria_label: "Breadcrumb",
+                    Link { to: Route::Pantry {}, "Pantry" }
+                    span { " / " }
+                    span { "New pantry" }
                 }
                 if account_changed {
-                    p {
-                        class: "grocery-error",
-                        role: "alert",
-                        "{ACCOUNT_CHANGED_FEEDBACK}"
-                    }
+                    p { class: "grocery-error", role: "alert", "{ACCOUNT_CHANGED_FEEDBACK}" }
                 } else {
-                    header {
-                        class: "grocery-create-heading",
-                        div {
-                            class: "grocery-eyebrow",
-                            "A new kitchen"
-                        }
-                        h1 {
-
-
-                            "A place for what’s on hand."
-                        }
-                        p {
-
-
-                            "Start with a name. Add your ingredients and tools whenever you’re ready."
-                        }
+                    header { class: "grocery-create-heading",
+                        div { class: "grocery-eyebrow", "A new pantry" }
+                        h1 { "A place for what’s on hand." }
+                        p { "Start with a name. Add your ingredients whenever you’re ready." }
                     }
-                    div {
-                        class: "neumo-raised pantry-create-card",
-                        div {
-                            class: "pantry-create-intro",
+                    div { class: "neumo-raised pantry-create-card",
+                        div { class: "pantry-create-intro",
                             div {
 
-
-                                h2 {
-
-
-                                    "Make yourself at home."
-                                }
-                                p {
-                                    class: "grocery-muted",
-                                    "One kitchen, just the things you have."
-                                }
+                                h2 { "Make yourself at home." }
+                                p { class: "grocery-muted", "One pantry, just the things you have." }
                             }
                             PantryIcon {
-
-
-
                             }
                         }
-                        label {
-                            r#for: "pantry-create-name",
-                            "Kitchen name"
-                        }
+                        label { r#for: "pantry-create-name", "Pantry name" }
                         input {
                             id: "pantry-create-name",
                             class: "input input--shared neumo-inset",
                             value: "{name}",
-                            placeholder: "e.g. Home kitchen",
+                            placeholder: "e.g. Home pantry",
                             maxlength: 100,
                             required: true,
                             disabled: frozen,
                             oninput: move |e| name.set(e.value()),
                         }
-                        label {
-                            r#for: "pantry-create-note",
+                        label { r#for: "pantry-create-note",
                             "Note"
-                            span {
-                                class: "grocery-muted",
-                                "Optional"
-                            }
+                            span { class: "grocery-muted", "Optional" }
                         }
                         input {
                             id: "pantry-create-note",
                             class: "input input--shared neumo-inset",
                             value: "{note}",
-                            placeholder: "A little context for this kitchen…",
+                            placeholder: "A little context for this pantry…",
                             maxlength: 500,
                             disabled: frozen,
                             oninput: move |e| note.set(e.value()),
                         }
-                        section {
-                            class: "pantry-initial-section",
-                            div {
-                                class: "pantry-initial-heading",
-                                h3 {
-
-
-                                    "Starting ingredients"
-                                }
-                                span {
-                                    class: "grocery-muted",
-                                    "Optional · {ingredients.read().len()}"
-                                }
+                        section { class: "pantry-initial-section",
+                            div { class: "pantry-initial-heading",
+                                h3 { "Starting ingredients" }
+                                span { class: "grocery-muted", "Optional · {ingredients.read().len()}" }
                             }
                             PantryDraftRows {
-                                kind: PantryKind::Ingredient,
+
                                 rows: ingredients(),
                                 disabled: frozen,
                                 on_remove: move |i| {
@@ -1426,56 +1104,19 @@ pub fn PantryNew() -> Element {
                                 on_edit: move |i: usize| {
                                     let stock = ingredients()[i].clone();
                                     edited.set(stock.fields.clone());
-                                    draft_edit.set(Some((PantryKind::Ingredient, i, stock)));
+                                    draft_edit.set(Some((i, stock)));
                                 },
                             }
                             PantryQuickAdd {
-                                kind: PantryKind::Ingredient,
+
                                 fields: ingredient,
                                 disabled: frozen,
-                                on_add: move |fields| add_initial((PantryKind::Ingredient, fields)),
+                                on_add: add_initial,
                             }
                         }
-                        details {
-                            class: "pantry-initial-equipment",
-                            summary {
 
-
-                                PantryIcon {
-                                    kind: "tool",
-                                }
-                                "Equipment"
-                                span {
-                                    class: "grocery-muted",
-                                    "Optional · {equipment.read().len()} tools"
-                                }
-                            }
-                            PantryDraftRows {
-                                kind: PantryKind::Equipment,
-                                rows: equipment(),
-                                disabled: frozen,
-                                on_remove: move |i| {
-                                    equipment.write().remove(i);
-                                },
-                                on_edit: move |i: usize| {
-                                    let stock = equipment()[i].clone();
-                                    edited.set(stock.fields.clone());
-                                    draft_edit.set(Some((PantryKind::Equipment, i, stock)));
-                                },
-                            }
-                            PantryQuickAdd {
-                                kind: PantryKind::Equipment,
-                                fields: tool,
-                                disabled: frozen,
-                                on_add: move |fields| add_initial((PantryKind::Equipment, fields)),
-                            }
-                        }
                         if let Some(problem) = error() {
-                            p {
-                                class: "grocery-error",
-                                role: "alert",
-                                "{problem}"
-                            }
+                            p { class: "grocery-error", role: "alert", "{problem}" }
                         }
                         if let Some(id) = created() {
                             Link {
@@ -1483,16 +1124,11 @@ pub fn PantryNew() -> Element {
                                     id: id.to_string(),
                                 },
                                 class: "btn btn-primary",
-                                "Open created kitchen"
+                                "Open created pantry"
                             }
                         }
-                        div {
-                            class: "grocery-create-actions",
-                            Link {
-                                to: Route::Pantry {},
-                                class: "btn btn-ghost",
-                                "Cancel"
-                            }
+                        div { class: "grocery-create-actions",
+                            Link { to: Route::Pantry {}, class: "btn btn-ghost", "Cancel" }
                             button {
                                 class: "btn btn-primary",
                                 disabled: busy() || created().is_some(),
@@ -1504,35 +1140,26 @@ pub fn PantryNew() -> Element {
                                         request
                                     } else {
                                         let mut initial = ingredients();
-                                        let mut tools = equipment();
-                                        for (kind, fields) in [
-                                            (PantryKind::Ingredient, ingredient()),
-                                            (PantryKind::Equipment, tool()),
-                                        ] {
-                                            if !fields.name.is_empty() || !fields.amount.is_empty()
-                                                || !fields.unit.is_empty()
-                                            {
-                                                if let Err(problem) = fields.validate(kind) {
-                                                    error.set(Some(problem));
-                                                    return;
-                                                }
-                                                let list = if kind == PantryKind::Ingredient {
-                                                    &mut initial
-                                                } else {
-                                                    &mut tools
-                                                };
-                                                list.push(PantryStock {
+                                        let fields = ingredient();
+                                        if !fields.name.is_empty() || !fields.amount.is_empty()
+                                            || !fields.unit.is_empty()
+                                        {
+                                            if let Err(problem) = fields.validate(PantryKind::Ingredient) {
+                                                error.set(Some(problem));
+                                                return;
+                                            }
+                                            initial
+                                                .push(PantryStock {
                                                     fields,
                                                     available: true,
                                                 });
-                                            }
                                         }
                                         let request = PantryCreate {
                                             request_id: Uuid::new_v4(),
                                             name: name(),
                                             note: note(),
                                             ingredients: initial,
-                                            equipment: tools,
+                                            equipment: Vec::new(),
                                             copy: None,
                                         };
                                         if let Err(problem) = request.validate() {
@@ -1572,12 +1199,12 @@ pub fn PantryNew() -> Element {
                                 } else if pending().is_some() {
                                     "Retry create"
                                 } else {
-                                    "Create kitchen"
+                                    "Create pantry"
                                 }
                             }
                         }
                     }
-                    if let Some((kind, index, stock)) = draft_edit() {
+                    if let Some((index, stock)) = draft_edit() {
                         SharedModal {
                             aria_labelledby: "pantry-draft-title",
                             focus_selector: "#pantry-draft-name",
@@ -1585,25 +1212,17 @@ pub fn PantryNew() -> Element {
                             div {
                                 class: "modal-card pantry-modal",
                                 onclick: move |e| e.stop_propagation(),
-                                h2 {
-                                    id: "pantry-draft-title",
-                                    "Edit starting stock"
-                                }
+                                h2 { id: "pantry-draft-title", "Edit starting stock" }
                                 form {
                                     class: "pantry-profile-form",
                                     onsubmit: move |e| {
                                         e.prevent_default();
                                         let fields = edited();
-                                        if let Err(problem) = fields.validate(kind) {
+                                        if let Err(problem) = fields.validate(PantryKind::Ingredient) {
                                             error.set(Some(problem));
                                             return;
                                         }
-                                        let mut rows = if kind == PantryKind::Ingredient {
-                                            ingredients
-                                        } else {
-                                            equipment
-                                        };
-                                        if let Some(row) = rows.write().get_mut(index) {
+                                        if let Some(row) = ingredients.write().get_mut(index) {
                                             *row = PantryStock {
                                                 fields,
                                                 available: stock.available,
@@ -1613,7 +1232,7 @@ pub fn PantryNew() -> Element {
                                     },
                                     PantryFieldsInput {
                                         fields: edited,
-                                        kind,
+
                                         prefix: "pantry-draft",
                                     }
                                     if let Some(problem) = error() {
@@ -1623,18 +1242,14 @@ pub fn PantryNew() -> Element {
                                             "{problem}"
                                         }
                                     }
-                                    div {
-                                        class: "grocery-dialog-actions",
+                                    div { class: "grocery-dialog-actions",
                                         button {
                                             r#type: "button",
                                             class: "btn btn-secondary",
                                             onclick: move |_| draft_edit.set(None),
                                             "Cancel"
                                         }
-                                        button {
-                                            class: "btn btn-primary",
-                                            "Save item"
-                                        }
+                                        button { class: "btn btn-primary", "Save item" }
                                     }
                                 }
 
@@ -1648,52 +1263,35 @@ pub fn PantryNew() -> Element {
 }
 #[component]
 fn PantryDraftRows(
-    kind: PantryKind,
     rows: Vec<PantryStock>,
     disabled: bool,
     on_remove: EventHandler<usize>,
     on_edit: EventHandler<usize>,
 ) -> Element {
     rsx! {
-        div {
-            class: "pantry-draft-rows",
+        div { class: "pantry-draft-rows",
             if rows.is_empty() {
-                p {
-                    class: "grocery-muted",
-                    if kind == PantryKind::Ingredient {
-                        "Add anything you have on hand, or start empty."
-                    } else {
-                        "Add your own tools, or leave this for later."
-                    }
-                }
+                p { class: "grocery-muted", "Add anything you have on hand, or start empty." }
             }
             for (index, row) in rows.into_iter().enumerate() {
-                div {
-                    class: "pantry-draft-row",
-                    strong {
+                div { class: "pantry-draft-row",
+                    strong { "{row.fields.name}" }
 
+                    span {
 
-                        "{row.fields.name}"
-                    }
-                    if kind == PantryKind::Ingredient {
-                        span {
-
-
-                            if row.fields.amount.trim().is_empty() {
-                                "Quantity unknown"
-                            } else {
-                                "{row.fields.amount} {row.fields.unit}"
-                            }
+                        if row.fields.amount.trim().is_empty() {
+                            "Quantity unknown"
+                        } else {
+                            "{row.fields.amount} {row.fields.unit}"
                         }
                     }
+
                     button {
                         class: "btn btn-ghost",
                         disabled,
                         aria_label: "Edit initial {row.fields.name}",
                         onclick: move |_| on_edit.call(index),
-                        PantryIcon {
-                            kind: "pen",
-                        }
+                        PantryIcon { kind: "pen" }
                     }
                     button {
                         class: "btn btn-ghost",

@@ -29,6 +29,8 @@ def literal(value):
 
 async def main(args):
     from playwright.async_api import async_playwright, expect
+    # Fresh browser contexts can finish network loading before WASM hydration.
+    expect.set_options(timeout=20000)
     if not re.fullmatch(r"noms-[a-z0-9][a-z0-9-]*", args.instance):
         raise RuntimeError("Expected an exact local Noms development instance name")
     values = dict(line.split("=", 1) for line in
@@ -74,7 +76,7 @@ async def main(args):
             statements.append(f"INSERT INTO recipes(id,user_id,title,servings,ingredients,visibility) VALUES('{ids[key]}','{actor}',{literal(title+" "+suffix)},{servings},{literal(ingredients)}::jsonb,'{visibility}');")
         sql(args.instance, "\n".join(statements))
         # Manual list, adding the unsubmitted entry is deliberate and lossless.
-        await page.goto(base + "/grocery-lists/new", wait_until="networkidle")
+        await page.goto(base + "/kitchen/grocery-lists/new", wait_until="networkidle")
         await page.get_by_label("List name", exact=True).fill("Household essentials")
         form = page.locator(".grocery-add-row")
         await form.get_by_label("Item name", exact=True).fill("Dish soap")
@@ -101,11 +103,12 @@ async def main(args):
         # A second browser session reads committed database state.
         second = await browser.new_context(storage_state=await context.storage_state())
         second_page = await second.new_page()
+        second_page.on("pageerror", lambda e: errors.append(str(e)))
         await second_page.goto(manual_url, wait_until="networkidle")
         await expect(second_page.locator('input[type="checkbox"]').first).to_be_checked()
         await second.close()
 
-        await page.goto(base + "/grocery-lists/new", wait_until="networkidle")
+        await page.goto(base + "/kitchen/grocery-lists/new", wait_until="networkidle")
         await page.get_by_label("List name", exact=True).fill("This week’s groceries")
         await page.get_by_role("button", name="From recipes").click()
         await expect(page.locator(".grocery-recipe-options")).to_be_visible()
@@ -173,11 +176,15 @@ async def main(args):
         await page.screenshot(path=str(args.output / "workspace-phone.png"), full_page=True)
         await page.locator(".grocery-inspector").get_by_role("button", name="Close recipe details").click()
         await expect(page.get_by_role("button", name="Recipe details for Brown rice")).to_be_focused()
-        await page.goto(base + "/grocery-lists/new", wait_until="networkidle")
+        await page.goto(base + "/kitchen/grocery-lists/new", wait_until="networkidle")
         assert await page.evaluate("document.documentElement.scrollWidth <= innerWidth")
         await page.screenshot(path=str(args.output / "create-phone.png"), full_page=True)
         await page.set_viewport_size({"width": 1440, "height": 1000})
         await page.goto(recipe_url, wait_until="networkidle")
+        # The theme button is already in SSR HTML. Wait for loaded list items
+        # before using client handlers after this full navigation.
+        await expect(page.locator(".grocery-row").filter(has_text="Brown rice")).to_be_visible()
+        assert not errors, errors
         await page.get_by_role("button", name="Toggle theme", exact=True).click()
         await expect(page.locator("html")).to_have_class(re.compile("dark"))
         await page.screenshot(path=str(args.output / "workspace-dark.png"), full_page=True)
