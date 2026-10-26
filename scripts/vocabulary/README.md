@@ -1,5 +1,8 @@
 # FoodOn → Noms seed adapter
 
+For Wikidata revision capture, complete name screening and canonical ingestion,
+see the [Wikidata adapter guide](WIKIDATA.md).
+
 Requires Python 3.11+ and the standard library. This is offline ingestion tooling,
 independent of autocomplete and server startup. It consumes a local RDF/XML OWL
 snapshot and emits review candidates or complete files in Noms' version-1 seed

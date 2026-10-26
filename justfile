@@ -169,6 +169,10 @@ ci: fmt check lint test schema-check-test security-policy-test security-check re
 seed-vocabulary *args:
 	SQLX_OFFLINE=true cargo run --features server --bin seed-vocabulary -- {{args}}
 
+# Offline revision-pinned Wikidata extraction and reviewed canonical generation.
+wikidata-adapter *args:
+	@python3 scripts/vocabulary/wikidata.py {{args}}
+
 # Offline FoodOn extraction and approved canonical seed generation.
 foodon-adapter *args:
 	@python3 scripts/vocabulary/foodon.py {{args}}

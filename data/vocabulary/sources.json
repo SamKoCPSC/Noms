@@ -8,6 +8,14 @@
       "checksum": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
       "license": "CC-BY-4.0",
       "attribution": "FoodOn contributors, FoodOn food ontology, https://foodon.org/. Selected term annotations and definition sources are retained in the extraction catalog; review those notices before reusing upstream wording."
+    },
+    {
+      "id": "wikidata-2026-10-23",
+      "url": "https://www.wikidata.org/wiki/Wikidata:Data_access",
+      "version": "2026-10-23T11:28:09.390884+00:00 (per-entity revisions; not an atomic global dump)",
+      "checksum": "be250244b4a83b641e3a7f0f38402032b1de88a3e8ca9b63414f7dc45408f85d",
+      "license": "CC0-1.0",
+      "attribution": "Wikidata contributors; structured entity data under CC0. English text and selected ranked statements retained at the listed entity revisions; Wikipedia article text is not imported."
     }
   ]
 }
