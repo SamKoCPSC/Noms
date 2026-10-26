@@ -928,7 +928,7 @@ async fn render_avatar_variant(
         .get_image_data(0.0, 0.0, size as f64, size as f64)
         .map_err(|e| format!("Failed to read avatar pixels: {:?}", e))?;
     let mut pixels = image_data.data().0;
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.chunks_mut(4) {
         let (red, green, blue) = apply_avatar_color(pixel[0], pixel[1], pixel[2], edit);
         pixel[0] = red;
         pixel[1] = green;

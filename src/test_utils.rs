@@ -460,6 +460,14 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create collection_recipes recipe index");
+    sqlx::raw_sql(include_str!("../migrations/grocery-lists.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create grocery tables");
+    sqlx::raw_sql(include_str!("../migrations/pantry.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create pantry tables");
 
     let schema = include_str!("../migrations/schema.sql");
     let start = schema

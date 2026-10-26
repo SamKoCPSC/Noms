@@ -12,7 +12,9 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 pub mod diff;
+pub mod grocery;
 mod media_assets;
+pub mod pantry;
 mod versioning;
 
 #[cfg(test)]
@@ -8254,3 +8256,9 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod grocery_tests;
+
+#[cfg(test)]
+mod pantry_tests;
