@@ -84,10 +84,16 @@ async def check(args):
                 assert rows[0]['name'] == name and rows[0].get('vocabulary_id') == identifier
                 return data
 
-            async with page.expect_response(lambda r: '/api/ingredient_suggestions' in r.url
-                                            and r.request.post_data_json.get('text') == args.query) as lookup_info:
-                await field.fill(args.query)
-            lookup_url = (await lookup_info.value).url
+            cache_name = 'noms-ingredient-vocabulary-v1'
+            cache_key = '/__noms_cache/ingredient-vocabulary-v1'
+            await page.wait_for_function("""async ([name, key]) =>
+                Boolean(await (await caches.open(name)).match(key))""", arg=[cache_name, cache_key])
+            lookups, catalogs = [], []
+            page.on('request', lambda request: lookups.append(request.url)
+                    if '/api/ingredient_suggestions' in request.url else None)
+            page.on('request', lambda request: catalogs.append(request.url)
+                    if '/api/vocabulary/ingredients/' in request.url and '/version.json' not in request.url else None)
+            await field.fill(args.query)
             option = page.get_by_role('option', name=entry['label'], exact=True)
             await expect(option).to_be_visible(timeout=15000)
             # Keep source IDs, technical metadata and definitions out of options.
@@ -101,12 +107,17 @@ async def check(args):
                 await expect(field).to_have_value(entry['label'])
                 await expect(page.get_by_role('listbox')).to_have_count(0)
             selected = await saved(response_info, entry['label'], str(args.entry_id))
+            assert not lookups, 'Loaded vocabulary should search locally'
             draft_url = base + '/recipes/drafts/' + selected['id'] + '/edit'
             checks.append('Alias query, label-only option, keyboard selection, canonical UUID saved')
 
             await page.goto(draft_url, wait_until='networkidle')
             field = page.get_by_role('combobox', name='Ingredient 1 name', exact=True)
             await expect(field).to_have_value(entry['label'])
+            await field.focus()
+            await expect(page.get_by_role('option', name=entry['label'], exact=True)).to_be_visible()
+            assert not catalogs, 'Editor reload should reuse the stored catalog'
+            assert not lookups, 'Persisted vocabulary should search locally'
             checks.append('Imported selection survives page reload')
             await page.screenshot(path=str(output / 'ingredient-selected.png'), full_page=True)
 
@@ -114,6 +125,18 @@ async def check(args):
                 await field.fill(custom)
             await saved(response_info, custom, None)
             checks.append('Editing selection clears canonical UUID and saves free text')
+
+            # Without a catalog the existing authenticated server fallback works.
+            await page.evaluate('(name) => caches.delete(name)', cache_name)
+            await page.route('**/api/vocabulary/ingredients/**', lambda route: route.abort())
+            await page.reload(wait_until='networkidle')
+            field = page.get_by_role('combobox', name='Ingredient 1 name', exact=True)
+            async with page.expect_response(lambda r: '/api/ingredient_suggestions' in r.url
+                                            and r.request.post_data_json.get('text') == args.query) as lookup_info:
+                await field.fill(args.query)
+            lookup_url = (await lookup_info.value).url
+            await expect(page.get_by_role('option', name=entry['label'], exact=True)).to_be_visible()
+            checks.append('Missing catalog uses the authenticated server fallback')
 
             # Confirm lookup failure is optional and does not block draft saving.
             await page.route('**/api/ingredient_suggestions*', lambda route: route.abort())
@@ -124,6 +147,9 @@ async def check(args):
             await saved(response_info, fallback, None)
             await page.unroute('**/api/ingredient_suggestions*')
             checks.append('Lookup failure still permits free text autosave')
+            await page.unroute('**/api/vocabulary/ingredients/**')
+            await page.reload(wait_until='networkidle')
+            field = page.get_by_role('combobox', name='Ingredient 1 name', exact=True)
 
             # Leave the probe visibly selected for manual inspection of this draft.
             await field.fill(args.query)

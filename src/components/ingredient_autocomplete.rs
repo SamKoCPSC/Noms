@@ -11,9 +11,10 @@ pub fn IngredientAutocomplete(
     let mut query = use_signal(String::new);
     let mut open = use_signal(|| false);
     let mut active = use_signal(|| None::<usize>);
+    let vocabulary = super::ingredient_vocabulary::state();
     let results = use_resource(move || async move {
         let text = query();
-        if text.trim().chars().count() < 2 {
+        if vocabulary.read().index.is_some() || text.trim().chars().count() < 2 {
             return (text, Some(Vec::new()));
         }
         #[cfg(target_arch = "wasm32")]
@@ -24,6 +25,9 @@ pub fn IngredientAutocomplete(
             });
             let _ = receive.await;
         }
+        if vocabulary.peek().index.is_some() {
+            return (text, Some(Vec::new()));
+        }
         let response = crate::api::vocabulary::ingredient_suggestions(text.clone())
             .await
             .ok();
@@ -31,14 +35,21 @@ pub fn IngredientAutocomplete(
     });
     // Never display a response for an older value, even before cancellation runs.
     let result = results.read();
-    let suggestions = result
+    let search_index = vocabulary.read().index.clone();
+    let suggestions = search_index
         .as_ref()
-        .filter(|(q, _)| q == &value)
-        .and_then(|(_, rows)| rows.clone())
-        .unwrap_or_default();
-    let unavailable = result
-        .as_ref()
-        .is_some_and(|(q, rows)| q == &value && rows.is_none());
+        .map(|i| i.search(&value))
+        .unwrap_or_else(|| {
+            result
+                .as_ref()
+                .filter(|(q, _)| q == &value)
+                .and_then(|(_, rows)| rows.clone())
+                .unwrap_or_default()
+        });
+    let unavailable = search_index.is_none()
+        && result
+            .as_ref()
+            .is_some_and(|(q, rows)| q == &value && rows.is_none());
     let expanded = open() && !suggestions.is_empty();
     let list_id = format!("ingredient-suggestions-{index}");
     let active_id = active()
@@ -60,7 +71,10 @@ pub fn IngredientAutocomplete(
                 autocomplete: "off",
                 placeholder: "Ingredient name",
                 value: value.clone(),
-                onfocus: move |_| open.set(true),
+                onfocus: move |_| {
+                    open.set(true);
+                    super::ingredient_vocabulary::on_focus(vocabulary);
+                },
                 onblur: move |_| { open.set(false); active.set(None); },
                 oninput: move |event| {
                     let text = event.value();

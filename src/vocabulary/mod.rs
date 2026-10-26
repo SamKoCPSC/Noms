@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 use uuid::Uuid;
 
+pub mod index;
+#[cfg(feature = "server")]
+pub mod index_store;
 #[cfg(feature = "server")]
 pub mod store;
 

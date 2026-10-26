@@ -4432,6 +4432,7 @@ dependencies = [
  "dioxus-html",
  "dioxus-ssr",
  "dioxus-web",
+ "flate2",
  "futures-channel",
  "gloo-net",
  "gloo-timers",
