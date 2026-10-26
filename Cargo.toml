@@ -39,7 +39,8 @@ tokio            = { version = "1", features = ["rt-multi-thread", "macros"], op
 unicode-normalization = "0.1"
 dashmap = { version = "6", optional = true }
 ipnet = { version = "2", optional = true }
-sha2 = { version = "0.10", optional = true }
+sha2 = "0.10"
+flate2 = { version = "1", optional = true }
 wasm-bindgen = "0.2"
 futures-channel = "0.3"
 
@@ -57,7 +58,8 @@ web-sys = { version = "0.3.98", features = [
     "DragEvent", "KeyboardEvent", "Event", "EventTarget", "HtmlElement", "HtmlDialogElement",
     "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions",
     "MediaQueryList", "WebGlRenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlUniformLocation", "WebGlTexture", "WebGlContextEvent", "ScrollToOptions",
-    "VisualViewport", "ScrollIntoViewOptions", "ScrollLogicalPosition", "ScrollBehavior"
+    "VisualViewport", "ScrollIntoViewOptions", "ScrollLogicalPosition", "ScrollBehavior",
+    "Cache", "CacheStorage", "Response", "RequestCache", "AbortController", "AbortSignal"
 ] }
 js-sys = "0.3"
 wasm-bindgen-futures = "0.4"
@@ -85,7 +87,7 @@ server  = [
     "tokio",
     "dashmap",
     "ipnet",
-    "sha2",
+    "dep:flate2",
     "serde_jcs",
     "dep:zip",
     "dep:base64",

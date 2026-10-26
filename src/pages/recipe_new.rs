@@ -120,6 +120,7 @@ fn trigger_file_input(_selector: &str) {}
 /// Create recipe page — full form with ingredients, steps, and tags.
 #[component]
 pub fn RecipeNew() -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let form_account = crate::auth::account_binding::use_form_account();
     let navigator = use_navigator();
     // Basic fields

@@ -145,6 +145,7 @@ pub fn RecipeDraftEdit(id: String) -> Element {
 }
 
 fn recipe_editor(id: String, id_is_draft: bool) -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let form_account = crate::auth::account_binding::use_form_account();
     let navigator = use_navigator();
     // ── Form signals ─────────────────────────────────────────────────────

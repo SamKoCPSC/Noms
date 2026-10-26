@@ -307,6 +307,10 @@ lookup, label-only options, keyboard/mouse selection, the saved canonical UUID,
 reload persistence, UUID clearing on edits, and free-text saving while lookup
 requests fail. It records screenshots/results outside the checkout and leaves
 the private draft available for inspection. It never publishes a recipe.
+The smoke check also verifies that a downloaded/persisted client catalog avoids
+per-query server requests and catalog downloads on editor reload. It clears only
+its browser context's catalog cache and blocks catalog downloads to exercise the
+server fallback before checking optional-lookup failure.
 
 The 2026-10-22 live check used `FOODON_00003396` (cumin seed; alias `cumin`) with
 persisted probe UUID `1745729e-d12c-454d-92cd-1c448f08dd23`. Loading the 100-entry

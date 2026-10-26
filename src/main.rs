@@ -269,6 +269,17 @@ async fn build_application_router() -> axum::Router {
 fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClient) -> axum::Router {
     let application_routes = axum::Router::new()
         .route(
+            "/api/vocabulary/ingredients/version.json",
+            axum::routing::get(api::vocabulary_index::manifest),
+        )
+        .route(
+            "/api/vocabulary/ingredients/{version}",
+            axum::routing::get(api::vocabulary_index::catalog),
+        )
+        .layer(axum::Extension(vocabulary::index_store::IndexService::new(
+            pool.clone(),
+        )))
+        .route(
             "/api/user_profile",
             axum::routing::get(auth::user_profile::handle_user_profile),
         )

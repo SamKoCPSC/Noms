@@ -162,6 +162,39 @@ Missing suggestions never prevent saving. Existing ingredient JSON without IDs
 remains readable; draft and published snapshots retain optional IDs independently
 of subsequent vocabulary changes. A reference does not imply interchangeability.
 
+## Client autocomplete cache
+
+Recipe creation, draft editing and published-recipe editing share one browser
+search index. It contains active English ingredient IDs, labels and aliases;
+descriptions, provenance and authored recipe data are excluded. Search uses the
+same Unicode normalization, exact/alias priority, public popularity ranking and
+eight-result limit as the server. Once loaded, typing searches locally without
+the server lookup's 200 ms debounce or a request per query.
+
+The authenticated `GET /api/vocabulary/ingredients/version.json` returns the
+schema version, catalog SHA-256, content URL and sparse public-recipe counts.
+The content URL, `/api/vocabulary/ingredients/{sha256}.json`, serves the compact
+catalog with gzip support, a private immutable cache policy and conditional
+ETags. Errors are never cached. Both routes use the existing request/work budgets.
+
+The browser validates the schema and checksum before replacing its index, then
+persists only catalog data and public counts in CacheStorage. Reopening an editor
+uses the stored index immediately while revalidating the small manifest. Returning
+to the tab or focusing an ingredient checks again, throttled to once a minute
+(five seconds after failure). A changed catalog hash triggers one new download;
+popularity changes update ranking without downloading the catalog again. Storage
+failures are tolerated. Failed refreshes retain the last usable index; without an
+index, the original debounced server suggestions remain available. Custom text
+and existing selection/reference behavior are preserved.
+
+Each server process coalesces snapshot builds and caches the compressed response.
+Manifest requests check the ingredient count/update timestamp at most once per
+second; committed seed edits, including aliases and retirement, invalidate the
+catalog. Public counts refresh within five minutes of the next manifest request.
+Two previous catalog versions remain available for concurrent requests; a client
+receiving `410 Gone` rechecks the manifest once. No schema or seed changes are
+needed for this feature.
+
 ## Seed contract (version 1)
 
 - `dimension`: currently `ingredient`; `locale`: currently `en`.
@@ -290,6 +323,7 @@ SQLX_OFFLINE=true cargo test --features server --lib vocabulary
 SQLX_OFFLINE=true cargo test --features server --bin noms ingredient_vocabulary
 SQLX_OFFLINE=true cargo test --features server --bin noms ingredient_popularity
 SQLX_OFFLINE=true cargo test --features server --bin noms runtime_grants
+SQLX_OFFLINE=true cargo test --no-default-features --features server --bin noms api::vocabulary_index::tests
 ```
 
 Database tests require PostgreSQL tools on PATH and permission to bind a local
@@ -300,3 +334,6 @@ index. History tests cover draft saves, publication, forks, and restored version
 Popularity tests cover duplicate rows, prefix ranking, exact-match priority,
 seed preservation, reconciliation, concurrent writes, visibility transitions,
 late-write rollback, ownership failures, deletion cascades, and runtime grants.
+Index tests cover local/SQL matching parity, invalid cached content, atomic
+catalog snapshots, popularity-only updates, seed invalidation, authentication,
+conditional responses and gzip downloads.
