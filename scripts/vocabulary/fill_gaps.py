@@ -19,6 +19,7 @@ FOLLOWUP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-followup.json'
 SECOND_SAMPLE_POLICY=ROOT/'data/vocabulary/adapters/ingredient-second-sample-gaps.json'
 GROCERY_POLICY=ROOT/'data/vocabulary/adapters/ingredient-grocery-gaps.json'
 FINAL_GAP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-final-gap-fill.json'
+NEXT_GAP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-next-gap-fill.json'
 
 
 def encoded(value):

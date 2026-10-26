@@ -1,9 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **13,361 active ingredients**: the original 100 curated entries,
+The seed contains **13,463 active ingredients**: the original 100 curated entries,
 10,025 active FoodOn-derived cooking/pantry entries, 2,548 active Wikidata additions,
-104 USDA additions and 584 subsequently curated cooking-material definitions.
+104 USDA additions and 686 subsequently curated cooking-material definitions.
 Another **85 identities** are retained as retired: 60 from the original deployment
 review, 21 from the ingredient-scope cleanup and four from the final definition review.
 Every original ID, description and prior searchable label/alias is preserved,
@@ -117,8 +117,21 @@ Four misleading source entries are retired with every historical field retained:
 ornamental sweet pea and its canned child, a grilled lamb-chop dish and a sweet
 raspberry-vinegar drink. Culinary names use the appropriate existing pea/lamb IDs
 and a separately defined cooking vinegar. No authored recipe is rewritten.
-The ledger is `adapters/ingredient-final-gap-fill.json`; current totals are
+The ledger is `adapters/ingredient-final-gap-fill.json`; totals at that stage are
 **13,361 active, 85 retired and 9,307 active aliases**, with the same four sources.
+
+The subsequent [next-sample gap fill](../../scripts/vocabulary/GAPS.md#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
+reviews all 58 candidate phrases from another 5,000-occurrence sample and adds
+**102 definitions and 280 aliases** (223 on new entries, 57 on 29 existing
+identities). It covers useful related forms of tofu skin, yogurt, plant drinks,
+stocks/broths, preserved pantry components, flavoring oils, seasonings and named
+wine/rum styles. Existing filbert/hazelnut, spaghettini, casing and other synonym
+identities are reused. Eleven underspecified source phrases retain explicit
+qualified choices rather than forced aliases. Current totals are **13,463 active,
+85 retired and 9,587 active aliases**. The forward ledger is
+`adapters/ingredient-next-gap-fill.json`; every previous definition, UUID, status,
+source association and existing alias is retained. The four-source manifest is
+unchanged, and authored recipes are not rewritten.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

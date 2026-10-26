@@ -1,7 +1,7 @@
 # Reviewed cooking-material gaps
 
-Current maintained totals after the [final gap fill](#final-gap-fill-and-pantry-expansion-2026-10-26)
-are **13,361 active, 85 retired and 9,307 active aliases**. Earlier stage counts,
+Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
+are **13,463 active, 85 retired and 9,587 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -663,3 +663,143 @@ at `/workspace/vocabulary-final-gap-fill`. Download
 pages, browser/session data and private draft contents remain outside Git and the
 portable bundle. No Details field, source/nutrient ingestion, parser/ranking
 change, automatic recipe assignment or production rollout is included.
+
+## Next-sample gap fill and grocery expansion (2026-10-26)
+
+A fresh outcome-blind draw selects **5,000 ingredient occurrences**, 250 from
+each of 20 cuisine labels in the same checksum-pinned 39,774-profile
+Yummly/Kaggle corpus. It excludes all 6,375 recipe IDs and exact normalized
+ingredient-set fingerprints from the three earlier studies. The result contains
+**1,237 normalized names from 4,143 previously unused profiles**: 242 names new to
+prior name-level reviews, and 101 new even to all previous full-profile ingredient
+contexts. The fixed seed is `noms-next-ingredient-gap-5000-2026-10-26-v2`.
+Independent selection replay reproduces every occurrence. This is a new sample
+from the historical snapshot, not a fresh crawl or 5,000 unique ingredients.
+
+Against the preceding complete seed, explicit definition review finds 26 likely
+missing-material names and 32 qualified-form/product cases: **58 phrases affecting
+67 occurrences**. Another 265 occurrences contain ambiguity, brands, malformed
+wording or grouped/components; these are not counted as proven material gaps.
+Existing definitions represent 4,668/5,000 occurrences (93.36%) under this review.
+A few older broad mappings are reassessed to preserve plain/nonfat yogurt,
+white sesame, dry breadcrumbs and black-treacle qualifiers, so these percentages
+are not a before/after score against earlier studies. Titles, quantities, methods
+and individual recipe URLs are absent from the source and are not invented.
+
+The user-approved curation adds **102 ingredients and 280 aliases**: 223 aliases
+on the new entries and 57 on 29 existing identities. Current totals become
+**13,463 active, 85 retired and 9,587 active aliases**. All 13,446 prior records,
+including retired identities, retain their exact fields except approved alias
+suffixes. Source descriptors and source mappings are unchanged; all new entries
+have curated origin, original descriptions and no inferred external mappings.
+The explicit ledger is `data/vocabulary/adapters/ingredient-next-gap-fill.json`.
+
+### Material boundaries and reuse
+
+- Fresh/dried tofu skin, raw/cooked lamb sausage, unspiced tarako/spicy mentaiko,
+  dried mung-bean starch noodles and wasabi seasoning/pure wasabi powder keep
+  consequential processing and formulation distinctions.
+- Plain nonfat and plain Greek yogurt retain flavor/fat qualifications. Similar
+  additions include unsweetened almond/oat/soy/cashew/coconut drinking beverages
+  and barista oat milk; coconut drinking milk is not canned culinary coconut milk.
+- Veal stock, white/brown veal stock, veal broth, bone-broth styles and existing
+  demi-glace remain separate. Canned chicken broth does not imply low sodium or
+  interchangeability with stock, dry bouillon or a concentrate.
+- Pantry components include candied ginger, dry/plain-dry breadcrumbs, condensed
+  tomato soup, refried black beans, raw crescent dough/baked crescent rolls,
+  baked/frozen pound cake, gumbo vegetable blends and specified tomato packings.
+- Truffle oils/pastes, food-grade flavoring oils, dried/ground guajillo, ground
+  Sichuan pepper, coarse sparkling/sanding sugar, named sherries, port styles and
+  spiced/amber rum retain useful product distinctions. Concentrations, exact
+  formulas and substitution ratios are not inferred from brands.
+- Roasted hazelnut forms reuse the existing dry-/oil-roasted filbert UUIDs.
+  Thin spaghetti reuses spaghettini, artichoke bottom reuses the FoodOn exact
+  heart synonym, and familiar sheep/beef/collagen casing names reuse their IDs.
+  Existing tarako, lemon oil, cream sherry and white balsamic vinegar are retained.
+
+All 58 discovery phrases have an explicit outcome. Forty-seven use reviewed new
+material definitions; **11 remain source-ambiguous with usable qualified choices**:
+`baking spray`, `crescent rolls`, `fideos`, `lamb sausage`, `natural peanut butter`,
+`roasted hazelnuts`, `wasabi powder`, `diced tomatoes in juice`, `chinese rose wine`,
+`mung bean noodles` and `pork and beans`. Their omissions do not become assumptions
+about flour content, baking state, shape, roasting method, plant base or packing.
+Qualified searchable aliases offer the choices without claiming a single raw
+phrase is equivalent to all of them. No source recipe is automatically assigned
+an ID. The separate green-tomato maturity and chrysanthemum-species review leads
+remain outside this addition; existing definitions/statuses are not silently fixed.
+
+Pinned FoodOn/Wikidata/USDA leads, current definitions, sampled ingredient wording
+and public culinary/producer references support the review. References include
+[Just One Cookbook's mitsuba](https://www.justonecookbook.com/mitsuba/),
+[mentaiko](https://www.justonecookbook.com/mentaiko/) and
+[matcha](https://www.justonecookbook.com/green-tea-powder-matcha/) guides,
+[The Ginger People](https://gingerpeople.com/products/fiji-crystallized-ginger/),
+[PAM baking spray](https://www.pamcookingspray.com/products/baking),
+[Smucker's natural peanut butter](https://www.smuckers.com/peanut-butter/natural),
+[Pictsweet gumbo vegetables](https://pictsweetfarms.com/product/vegetables-for-gumbo/frozen/steamables/)
+and the [sherry regulatory council](https://www.sherry.wine/sherry-wine).
+Capture types and hashes distinguish real response bodies, frozen ingredient
+contexts, canonical baseline JSON and retained source-lead extracts. Commercial
+examples are family/form evidence, not certification of every possible formula,
+exact source equivalence, brand aliases or nutrient values. Raw pages, full
+provider catalogs and copyrighted recipe methods remain external.
+
+### Replay
+
+The preceding complete bundle is main commit
+`bd80fa349a2fe6231a4b42e0d4f9452354f0403d`:
+
+- Input seed: `0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45`
+- Output seed: `13ab2a642029fed668e6713c9cd31fb4dc0071000faac0822cc469a1712fc6d6`
+- Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
+
+Copy the preceding seed/source files from that commit into a fresh external
+folder, then run:
+
+```sh
+python3 scripts/vocabulary/fill_gaps.py \
+  --seed /tmp/next-gap-base/ingredients.json \
+  --sources /tmp/next-gap-base/sources.json \
+  --policy data/vocabulary/adapters/ingredient-next-gap-fill.json \
+  --output /tmp/next-gap-replay
+python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py'
+just seed-vocabulary --validate-only \
+  --file /tmp/next-gap-replay/ingredients.json \
+  --sources /tmp/next-gap-replay/sources.json
+```
+
+The builder never generates IDs or accesses the network. The ledger owns the
+new UUIDs; stale baselines, name shadowing and unreviewed rewrites are rejected.
+Historical-stage tests remove this explicit forward layer before checking their
+original pins; earlier ledgers and checksums remain unchanged.
+
+### Verification and scope
+
+All **124 Python tests** pass, including exact replay, existing-field preservation,
+source contracts, every candidate/checklist decision, qualified-search choices
+and recipe-significant identity boundaries. The Rust seed validator accepts
+**13,548 total records/four sources with no warnings**.
+
+On the local mock-auth deployment, a dry run rolls back completely, the actual
+load adds 102 entries/updates 29 alias-bearing entries, and a second `--if-changed`
+run skips with no writes. Existing recipe, draft, version, source and mapping
+hashes are unchanged by the load. All **382 new preferred/alias names** return
+the intended UUID first through the production SQL query. Chromium verifies
+catalog refresh from the previous 13,361-entry snapshot to 13,463 entries,
+qualified ingredient choices and six local searches without per-query server
+calls. The existing smoke flow verifies canonical UUID autosave/reload, clearing
+IDs on text edits, optional server fallback and 161 authenticated lookup checks.
+One private synthetic draft is used by the smoke check; no recipe is published.
+
+Replaying the unchanged 5,000-occurrence review increases represented materials
+**4,668 -> 4,724 (93.36% -> 94.48%)**, with no previously covered name losing its
+material. Eleven newly represented families retain source ambiguity; there are
+no unreviewed missing/partial phrases in this candidate queue. This is editorial
+material availability, not automatic recognition, substitution or a whole-recipe
+completeness score. No details field, schema/search rule or production deployment
+is introduced. A later merge uses the existing fingerprinted deployment seeder.
+
+Full discovery artifacts remain at `/workspace/ingredient-gap-next-5000`.
+The curation ledger, full canonical JSON/CSV, new-entry/alias lists and verification
+summaries are external at `/workspace/vocabulary-next-gap-fill`; the portable
+review archive is `/workspace/noms-vocabulary-next-gap-fill.zip`.
