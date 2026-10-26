@@ -27,9 +27,9 @@ class NextGapFillTest(unittest.TestCase):
         self.assertEqual(result,self.seed)
         self.assertEqual(summary['output_checksum'],self.policy['expected_output_checksum'])
         self.assertEqual(gaps.checksum(self.base),'0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45')
-        self.assertEqual((summary['added'],summary['active'],summary['retired']),(102,13463,85))
-        self.assertEqual(summary['aliases_added_to_existing'],57)
-        self.assertEqual(summary['aliases_on_new_entries'],223)
+        self.assertEqual((summary['added'],summary['active'],summary['retired']),(118,13479,85))
+        self.assertEqual(summary['aliases_added_to_existing'],62)
+        self.assertEqual(summary['aliases_on_new_entries'],261)
         self.assertEqual(self.policy['retirements'],{})
         self.assertEqual(rename_labels.maintained_final_gap_stage(self.seed),self.base)
         self.assertEqual(gaps.checksum(self.sources),self.policy['base_sources_checksum'])
@@ -47,7 +47,7 @@ class NextGapFillTest(unittest.TestCase):
         self.assertEqual(hashlib.sha256(gaps.encoded(original)).hexdigest(),research['original_candidate_names_sha256'])
         extras=[q for group in research['expansion_groups'].values() for q in group]
         self.assertEqual(len(extras),research['expansion_checklist_names'])
-        self.assertEqual(len(extras),102)
+        self.assertEqual(len(extras),118)
         self.assertEqual(hashlib.sha256(gaps.encoded(research['expansion_groups'])).hexdigest(),research['expansion_checklist_sha256'])
         self.assertTrue({normalize(q) for q in original+extras}<=set(self.policy['reviewed_names']))
         self.assertEqual(len(self.policy['reviewed_names']),research['candidate_names'])
@@ -65,6 +65,8 @@ class NextGapFillTest(unittest.TestCase):
             ('sheep casings','sheep intestine casing'),
             ('edible collagen casings','edible collagen casing'),
             ('nonfat evaporated milk','evaporated skim milk'),
+            ('spelt milk','spelt drink'),
+            ('sweetened tiger nut milk','horchata de chufa'),
         ]:
             ident=self.names[normalize(query)]
             self.assertEqual(ident,self.labels[label])
@@ -109,6 +111,27 @@ class NextGapFillTest(unittest.TestCase):
         self.assertNotIn('spiced amber rum',self.names)
         self.assertNotIn('Chinese rose wine'.lower(),self.names)
         self.assertNotIn('spicy cod roe',self.names)
+
+    def test_less_common_plant_milk_bases_and_tiger_nut_sweetening_stay_distinct(self):
+        labels=['hazelnut milk','macadamia milk','walnut milk','pecan milk',
+                'Brazil nut milk','flaxseed milk','sesame milk','sunflower seed milk',
+                'pumpkin seed milk','quinoa milk','buckwheat milk','amaranth milk',
+                'teff milk','millet milk','lupin milk','unsweetened tiger nut milk']
+        self.assertEqual(set(labels),set(self.policy['research']['plant_milk_followup']['added_types']))
+        self.assertEqual(len({self.labels[label] for label in labels}),16)
+        self.assertNotEqual(self.labels['unsweetened tiger nut milk'],self.labels['horchata de chufa'])
+        self.assertEqual(self.names['filbert milk'],self.labels['hazelnut milk'])
+        self.assertEqual(self.names['linseed milk'],self.labels['flaxseed milk'])
+        self.assertEqual(self.names['pepita milk'],self.labels['pumpkin seed milk'])
+        self.assertEqual(self.names['lupine milk'],self.labels['lupin milk'])
+        for label in labels:
+            entry=self.entries[self.labels[label]]
+            self.assertEqual(entry['provenance']['origin'],'curated')
+            self.assertEqual(entry['source_mappings'],[])
+        # Base-only names do not invent an unsweetened or fortified formula.
+        for name in ['unsweetened hazelnut milk','unsweetened walnut milk',
+                     'fortified sesame milk','tiger nut milk']:
+            self.assertNotIn(name,self.names)
 
     def test_new_definitions_are_curated_without_inferred_source_or_brand_mappings(self):
         self.assertEqual(set(self.policy['entry_reviews']),{e['id'] for e in self.policy['additions']})

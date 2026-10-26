@@ -1,7 +1,7 @@
 # Reviewed cooking-material gaps
 
 Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
-are **13,463 active, 85 retired and 9,587 active aliases**. Earlier stage counts,
+are **13,479 active, 85 retired and 9,630 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -686,9 +686,9 @@ white sesame, dry breadcrumbs and black-treacle qualifiers, so these percentages
 are not a before/after score against earlier studies. Titles, quantities, methods
 and individual recipe URLs are absent from the source and are not invented.
 
-The user-approved curation adds **102 ingredients and 280 aliases**: 223 aliases
-on the new entries and 57 on 29 existing identities. Current totals become
-**13,463 active, 85 retired and 9,587 active aliases**. All 13,446 prior records,
+The user-approved curation adds **118 ingredients and 323 aliases**: 261 aliases
+on the new entries and 62 on 31 existing identities. Current totals become
+**13,479 active, 85 retired and 9,630 active aliases**. All 13,446 prior records,
 including retired identities, retain their exact fields except approved alias
 suffixes. Source descriptors and source mappings are unchanged; all new entries
 have curated origin, original descriptions and no inferred external mappings.
@@ -744,13 +744,39 @@ examples are family/form evidence, not certification of every possible formula,
 exact source equivalence, brand aliases or nutrient values. Raw pages, full
 provider catalogs and copyrighted recipe methods remain external.
 
+### Less-common plant-milk follow-up
+
+The user requested additional less-common plant bases in the same unmerged PR.
+This follow-up adds **16 entries and 43 aliases** beyond the initial 102-entry
+round: hazelnut, macadamia, walnut, pecan, Brazil nut, flaxseed, sesame, sunflower
+seed, pumpkin seed, quinoa, buckwheat, amaranth, teff, millet and lupin milks, plus
+**unsweetened tiger-nut milk**. Base-only definitions leave sweetening, flavoring,
+fortification and exact formulation unspecified; these are milk alternatives,
+not oils, butters, seeds or teas. Fortified/unsweetened variants are not generated
+without explicit ingredient definitions.
+
+The existing **spelt drink** explicitly describes a milk substitute and gains
+`spelt milk`/`spelt beverage` aliases. Existing **horchata de chufa** explicitly
+includes sweetening and gains qualified sweetened-tiger-nut aliases; it stays
+separate from unsweetened tiger-nut milk. Neither receives a new UUID, and the
+unqualified `tiger nut milk` phrase is not forced into either sweetness state.
+
+The public [plant-milk review](https://pmc.ncbi.nlm.nih.gov/articles/PMC5069255/),
+[plant-base overview](https://en.wikipedia.org/wiki/Plant_milk),
+[macadamia producer](https://www.milkadamia.com/) and
+[tiger-nut preparation reference](https://www.alphafoodie.com/homemade-tiger-nut-milk-horchata-de-chufa/)
+support type/processing review. Captured facts inform original descriptions;
+upstream prose, nutrition, medical/allergen claims and brand formulas are not
+imported. The ledger records this as a separate user-requested checklist, not
+new findings or improved coverage from the frozen 5,000-occurrence sample.
+
 ### Replay
 
 The preceding complete bundle is main commit
 `bd80fa349a2fe6231a4b42e0d4f9452354f0403d`:
 
 - Input seed: `0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45`
-- Output seed: `13ab2a642029fed668e6713c9cd31fb4dc0071000faac0822cc469a1712fc6d6`
+- Output seed: `a4af605bf3b320c71412d8ca0da69cc965d882fff46360b664e45d5b2efbd0b1`
 - Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
 
 Copy the preceding seed/source files from that commit into a fresh external
@@ -775,21 +801,23 @@ original pins; earlier ledgers and checksums remain unchanged.
 
 ### Verification and scope
 
-All **124 Python tests** pass, including exact replay, existing-field preservation,
+All **125 Python tests** pass, including exact replay, existing-field preservation,
 source contracts, every candidate/checklist decision, qualified-search choices
 and recipe-significant identity boundaries. The Rust seed validator accepts
-**13,548 total records/four sources with no warnings**.
+**13,564 total records/four sources with no warnings**.
 
-On the local mock-auth deployment, a dry run rolls back completely, the actual
-load adds 102 entries/updates 29 alias-bearing entries, and a second `--if-changed`
+On the local mock-auth deployment, dry runs roll back completely, cumulative
+loads add 118 entries/update 31 alias-bearing entries, and a second `--if-changed`
 run skips with no writes. Existing recipe, draft, version, source and mapping
-hashes are unchanged by the load. All **382 new preferred/alias names** return
+hashes are unchanged by the load. All **441 new preferred/alias names** return
 the intended UUID first through the production SQL query. Chromium verifies
-catalog refresh from the previous 13,361-entry snapshot to 13,463 entries,
+catalog refresh from the previous 13,361-entry snapshot to 13,479 entries,
 qualified ingredient choices and six local searches without per-query server
-calls. The existing smoke flow verifies canonical UUID autosave/reload, clearing
+calls. The initial-round smoke verifies canonical UUID autosave/reload, clearing
 IDs on text edits, optional server fallback and 161 authenticated lookup checks.
-One private synthetic draft is used by the smoke check; no recipe is published.
+The plant-milk follow-up adds 21 browser checks covering all 16 types and five
+aliases, with no per-query server calls or new draft. One private synthetic draft
+was used by the initial smoke check; no recipe is published.
 
 Replaying the unchanged 5,000-occurrence review increases represented materials
 **4,668 -> 4,724 (93.36% -> 94.48%)**, with no previously covered name losing its
@@ -803,3 +831,8 @@ Full discovery artifacts remain at `/workspace/ingredient-gap-next-5000`.
 The curation ledger, full canonical JSON/CSV, new-entry/alias lists and verification
 summaries are external at `/workspace/vocabulary-next-gap-fill`; the portable
 review archive is `/workspace/noms-vocabulary-next-gap-fill.zip`.
+
+The plant-milk follow-up and current full seed are also available at
+`/workspace/plant-milk-expansion`; its archive is
+`/workspace/noms-plant-milk-vocabulary-update.zip`. The earlier 102-entry archive
+remains frozen as the initial-round snapshot.

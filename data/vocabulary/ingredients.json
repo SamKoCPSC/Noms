@@ -114714,7 +114714,11 @@
     {
       "id": "1086aa25-3092-4d36-92c8-c4771a2cf58a",
       "label": "horchata de chufa",
-      "aliases": [],
+      "aliases": [
+        "sweetened tiger nut milk",
+        "sweetened tigernut milk",
+        "tiger nut milk, sweetened"
+      ],
       "description": "Horchata de chufa (also sometimes called horchata de chufas or, in West African countries such as Nigeria and Mali, kunnu aya) is a beverage made from soaked, ground and sweetened tiger nuts.  It is the original form of horchata.",
       "locale": "en",
       "status": "active",
@@ -210845,7 +210849,10 @@
     {
       "id": "197eb89c-954c-4da3-bfe7-b42943395cae",
       "label": "spelt drink",
-      "aliases": [],
+      "aliases": [
+        "spelt milk",
+        "spelt beverage"
+      ],
       "description": "The group includes any type of Spelt drink, often sold as milk substitute. The part consumed/analysed is by default the whole marketed unit or a homogeneous representative portion.[https://en.wikipedia.org/wiki/Milk_substitute] and [https://www.google.co.uk/search?tbm=isch&q=Spelt drink]",
       "locale": "en",
       "status": "active",
@@ -316958,6 +316965,268 @@
         "Chinese rose wine, cooking liquor"
       ],
       "description": "Chinese rice/grain-based liquor flavored with rose and used in cooking. Strength and sweetening vary; distinct from pink rosé grape wine and generic rice wine.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "cd344052-d33c-5273-b6d1-ce677048fb98",
+      "label": "hazelnut milk",
+      "locale": "en",
+      "aliases": [
+        "hazelnut beverage",
+        "filbert milk",
+        "hazelnut drink"
+      ],
+      "description": "Hazelnut-based beverage used as a milk alternative. Sweetening, flavoring, fortification and added ingredients are unspecified; distinct from hazelnut cream, butter and oil.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fa89c8fe-f927-51c6-87b1-851b8754529f",
+      "label": "macadamia milk",
+      "locale": "en",
+      "aliases": [
+        "macadamia nut milk",
+        "macadamia beverage"
+      ],
+      "description": "Macadamia-nut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from macadamia oil, butter and dairy milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8409b48c-f654-5cd6-81de-7a389e35f7c7",
+      "label": "walnut milk",
+      "locale": "en",
+      "aliases": [
+        "walnut beverage",
+        "walnut drink"
+      ],
+      "description": "Walnut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from walnut oil, butter and whole nuts.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9fe81d47-23c5-50e7-b232-16f25051cf0d",
+      "label": "pecan milk",
+      "locale": "en",
+      "aliases": [
+        "pecan nut milk",
+        "pecan beverage"
+      ],
+      "description": "Pecan-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from walnut milk, pecan butter and whole pecans.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a1ee1367-6464-5bd3-9966-6e08af1ebd48",
+      "label": "Brazil nut milk",
+      "locale": "en",
+      "aliases": [
+        "Brazil-nut milk",
+        "Brazil nut beverage"
+      ],
+      "description": "Brazil-nut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from other nut milks, nut butter and whole Brazil nuts.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c28934f8-eb35-5b0a-908a-5f206d959cd6",
+      "label": "flaxseed milk",
+      "locale": "en",
+      "aliases": [
+        "flax milk",
+        "linseed milk",
+        "flaxseed beverage"
+      ],
+      "description": "Flaxseed-based beverage used as a milk alternative. Seed extraction, sweetening and fortification vary; distinct from flaxseed oil, ground flaxseed and hemp milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e4f73226-0497-5398-83a5-336c11d18e8d",
+      "label": "sesame milk",
+      "locale": "en",
+      "aliases": [
+        "sesame seed milk",
+        "sesame beverage"
+      ],
+      "description": "Sesame-seed-based beverage used as a milk alternative. Seed color, sweetening and fortification are unspecified; distinct from tahini, sesame oil and sesame paste.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c6b2395f-4196-576e-bc0c-e8ed94333956",
+      "label": "sunflower seed milk",
+      "locale": "en",
+      "aliases": [
+        "sunflower milk",
+        "sunflower-seed milk",
+        "sunflower seed beverage"
+      ],
+      "description": "Sunflower-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from sunflower oil, seed butter and whole seeds.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c4d4316f-7ce2-5ab1-b2da-2866574a1f89",
+      "label": "pumpkin seed milk",
+      "locale": "en",
+      "aliases": [
+        "pumpkin-seed milk",
+        "pumpkin seed beverage",
+        "pepita milk"
+      ],
+      "description": "Pumpkin-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from pumpkin-pulp drinks, seed oil and seed butter.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "649e2792-935f-5eb5-9f15-202571853457",
+      "label": "quinoa milk",
+      "locale": "en",
+      "aliases": [
+        "quinoa beverage",
+        "quinoa drink"
+      ],
+      "description": "Quinoa-based beverage used as a milk alternative. Grain variety, processing, sweetening and fortification are unspecified; distinct from whole cooked quinoa and rice milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e1c65e01-a381-5296-a2ef-c92388c5a613",
+      "label": "buckwheat milk",
+      "locale": "en",
+      "aliases": [
+        "buckwheat beverage",
+        "buckwheat drink"
+      ],
+      "description": "Buckwheat-groat-based beverage used as a milk alternative. Sweetening and fortification are unspecified; distinct from brewed buckwheat tea, wheat milk and whole buckwheat groats.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3d68b7e2-e9c0-5199-93b0-df63d81a82b3",
+      "label": "amaranth milk",
+      "locale": "en",
+      "aliases": [
+        "amaranth beverage",
+        "amaranth drink"
+      ],
+      "description": "Amaranth-grain-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from amaranth leaves, whole cooked grain and quinoa milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "aca235de-d921-5d3e-bb65-31401a29e876",
+      "label": "teff milk",
+      "locale": "en",
+      "aliases": [
+        "teff beverage",
+        "teff drink"
+      ],
+      "description": "Teff-grain-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from teff flour, whole grain and other cereal drinks.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2907ba1c-9407-57a0-a72c-51012f2daf25",
+      "label": "millet milk",
+      "locale": "en",
+      "aliases": [
+        "millet beverage",
+        "millet drink"
+      ],
+      "description": "Millet-based beverage used as a milk alternative. Millet species, sweetening and fortification are unspecified; distinct from whole cooked millet, flour and rice milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b4fe5aa5-0c91-5f40-88b3-48082f95a2b9",
+      "label": "lupin milk",
+      "locale": "en",
+      "aliases": [
+        "lupine milk",
+        "lupin seed beverage",
+        "lupin beverage"
+      ],
+      "description": "Prepared edible-lupin-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from soy or pea milk and whole lupin beans.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "276b2c3e-f25d-5814-b78a-38b878f43aa0",
+      "label": "unsweetened tiger nut milk",
+      "locale": "en",
+      "aliases": [
+        "unsweetened tigernut milk",
+        "unsweetened chufa milk",
+        "tiger nut milk, unsweetened"
+      ],
+      "description": "Tiger-nut-tuber-based milk alternative explicitly supplied without added sweetener. Exact processing and fortification vary; distinct from the existing sweetened horchata de chufa and tree-nut milks.",
       "status": "active",
       "source_mappings": [],
       "provenance": {

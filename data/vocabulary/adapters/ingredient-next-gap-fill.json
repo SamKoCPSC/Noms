@@ -5,10 +5,10 @@
   "base_commit": "bd80fa349a2fe6231a4b42e0d4f9452354f0403d",
   "base_seed_checksum": "0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45",
   "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
-  "expected_output_checksum": "13ab2a642029fed668e6713c9cd31fb4dc0071000faac0822cc469a1712fc6d6",
-  "criterion": "User-authorized next-sample gap filling plus similar grocery materials. Keep materially different species/parts, preservation, named styles and explicit formulations distinct. Reuse current definitions and existing IDs when equivalent; ambiguous source names offer qualified options and remain unassigned. Existing records, source metadata and alias ownership are preserved. No automatic recipe recognition, substitution ratios, nutrient/source equivalence, recipe rewriting or production deployment.",
+  "expected_output_checksum": "a4af605bf3b320c71412d8ca0da69cc965d882fff46360b664e45d5b2efbd0b1",
+  "criterion": "User-authorized next-sample gap filling plus similar grocery materials. Keep materially different species/parts, preservation, named styles and explicit formulations distinct. Reuse current definitions and existing IDs when equivalent; ambiguous source names offer qualified options and remain unassigned. Existing records, source metadata and alias ownership are preserved. No automatic recipe recognition, substitution ratios, nutrient/source equivalence, recipe rewriting or production deployment. Includes the user-requested less-common plant-milk follow-up, retaining existing spelt and sweetened horchata identities.",
   "research": {
-    "candidate_names": 191,
+    "candidate_names": 212,
     "discovery_corpus_sha256": "93d65938736a62568b562a0b3432fbe6e857f0110019cdd0ccdeba8f79b68be4",
     "discovery_review_sha256": "16aec6e2676737f4ccb001765855a3b948b7aa5922b36e34527af40db1b82f74",
     "original_candidate_names": 58,
@@ -214,11 +214,55 @@
       "custards": [
         "vanilla custard",
         "vanilla custard powder"
+      ],
+      "plant_milks": [
+        "hazelnut milk",
+        "macadamia milk",
+        "walnut milk",
+        "pecan milk",
+        "Brazil nut milk",
+        "flaxseed milk",
+        "sesame milk",
+        "sunflower seed milk",
+        "pumpkin seed milk",
+        "quinoa milk",
+        "buckwheat milk",
+        "amaranth milk",
+        "teff milk",
+        "millet milk",
+        "lupin milk",
+        "unsweetened tiger nut milk"
       ]
     },
-    "expansion_checklist_names": 102,
+    "expansion_checklist_names": 118,
+    "plant_milk_followup": {
+      "request": "Add other less common types of plant milks",
+      "added_types": [
+        "hazelnut milk",
+        "macadamia milk",
+        "walnut milk",
+        "pecan milk",
+        "Brazil nut milk",
+        "flaxseed milk",
+        "sesame milk",
+        "sunflower seed milk",
+        "pumpkin seed milk",
+        "quinoa milk",
+        "buckwheat milk",
+        "amaranth milk",
+        "teff milk",
+        "millet milk",
+        "lupin milk",
+        "unsweetened tiger nut milk"
+      ],
+      "existing_id_reuses": [
+        "spelt drink",
+        "horchata de chufa"
+      ],
+      "scope": "Additional user-requested plant bases, not new findings from the frozen 5,000-occurrence sample. Generic entries leave sweetening, fortification and formula unspecified; unsweetened tiger-nut milk remains distinct from sweetened horchata."
+    },
     "original_candidate_names_sha256": "8a77f3aa15d53001fb1db3bed5f9cb7243954520725caf8c41020686769936ec",
-    "expansion_checklist_sha256": "7cf340c79af740ba377372449f6b9aa0c8a64cb10aae9167b32607f2b7280b70"
+    "expansion_checklist_sha256": "21c174b9492cacc8c4b007378f24eeb8d5860b68f7367f12e64c7b30dd5ddcaf"
   },
   "additions": [
     {
@@ -1871,6 +1915,268 @@
         "origin": "curated",
         "references": []
       }
+    },
+    {
+      "id": "cd344052-d33c-5273-b6d1-ce677048fb98",
+      "label": "hazelnut milk",
+      "locale": "en",
+      "aliases": [
+        "hazelnut beverage",
+        "filbert milk",
+        "hazelnut drink"
+      ],
+      "description": "Hazelnut-based beverage used as a milk alternative. Sweetening, flavoring, fortification and added ingredients are unspecified; distinct from hazelnut cream, butter and oil.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fa89c8fe-f927-51c6-87b1-851b8754529f",
+      "label": "macadamia milk",
+      "locale": "en",
+      "aliases": [
+        "macadamia nut milk",
+        "macadamia beverage"
+      ],
+      "description": "Macadamia-nut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from macadamia oil, butter and dairy milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8409b48c-f654-5cd6-81de-7a389e35f7c7",
+      "label": "walnut milk",
+      "locale": "en",
+      "aliases": [
+        "walnut beverage",
+        "walnut drink"
+      ],
+      "description": "Walnut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from walnut oil, butter and whole nuts.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9fe81d47-23c5-50e7-b232-16f25051cf0d",
+      "label": "pecan milk",
+      "locale": "en",
+      "aliases": [
+        "pecan nut milk",
+        "pecan beverage"
+      ],
+      "description": "Pecan-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from walnut milk, pecan butter and whole pecans.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a1ee1367-6464-5bd3-9966-6e08af1ebd48",
+      "label": "Brazil nut milk",
+      "locale": "en",
+      "aliases": [
+        "Brazil-nut milk",
+        "Brazil nut beverage"
+      ],
+      "description": "Brazil-nut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from other nut milks, nut butter and whole Brazil nuts.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c28934f8-eb35-5b0a-908a-5f206d959cd6",
+      "label": "flaxseed milk",
+      "locale": "en",
+      "aliases": [
+        "flax milk",
+        "linseed milk",
+        "flaxseed beverage"
+      ],
+      "description": "Flaxseed-based beverage used as a milk alternative. Seed extraction, sweetening and fortification vary; distinct from flaxseed oil, ground flaxseed and hemp milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e4f73226-0497-5398-83a5-336c11d18e8d",
+      "label": "sesame milk",
+      "locale": "en",
+      "aliases": [
+        "sesame seed milk",
+        "sesame beverage"
+      ],
+      "description": "Sesame-seed-based beverage used as a milk alternative. Seed color, sweetening and fortification are unspecified; distinct from tahini, sesame oil and sesame paste.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c6b2395f-4196-576e-bc0c-e8ed94333956",
+      "label": "sunflower seed milk",
+      "locale": "en",
+      "aliases": [
+        "sunflower milk",
+        "sunflower-seed milk",
+        "sunflower seed beverage"
+      ],
+      "description": "Sunflower-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from sunflower oil, seed butter and whole seeds.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c4d4316f-7ce2-5ab1-b2da-2866574a1f89",
+      "label": "pumpkin seed milk",
+      "locale": "en",
+      "aliases": [
+        "pumpkin-seed milk",
+        "pumpkin seed beverage",
+        "pepita milk"
+      ],
+      "description": "Pumpkin-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from pumpkin-pulp drinks, seed oil and seed butter.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "649e2792-935f-5eb5-9f15-202571853457",
+      "label": "quinoa milk",
+      "locale": "en",
+      "aliases": [
+        "quinoa beverage",
+        "quinoa drink"
+      ],
+      "description": "Quinoa-based beverage used as a milk alternative. Grain variety, processing, sweetening and fortification are unspecified; distinct from whole cooked quinoa and rice milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e1c65e01-a381-5296-a2ef-c92388c5a613",
+      "label": "buckwheat milk",
+      "locale": "en",
+      "aliases": [
+        "buckwheat beverage",
+        "buckwheat drink"
+      ],
+      "description": "Buckwheat-groat-based beverage used as a milk alternative. Sweetening and fortification are unspecified; distinct from brewed buckwheat tea, wheat milk and whole buckwheat groats.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3d68b7e2-e9c0-5199-93b0-df63d81a82b3",
+      "label": "amaranth milk",
+      "locale": "en",
+      "aliases": [
+        "amaranth beverage",
+        "amaranth drink"
+      ],
+      "description": "Amaranth-grain-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from amaranth leaves, whole cooked grain and quinoa milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "aca235de-d921-5d3e-bb65-31401a29e876",
+      "label": "teff milk",
+      "locale": "en",
+      "aliases": [
+        "teff beverage",
+        "teff drink"
+      ],
+      "description": "Teff-grain-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from teff flour, whole grain and other cereal drinks.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2907ba1c-9407-57a0-a72c-51012f2daf25",
+      "label": "millet milk",
+      "locale": "en",
+      "aliases": [
+        "millet beverage",
+        "millet drink"
+      ],
+      "description": "Millet-based beverage used as a milk alternative. Millet species, sweetening and fortification are unspecified; distinct from whole cooked millet, flour and rice milk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b4fe5aa5-0c91-5f40-88b3-48082f95a2b9",
+      "label": "lupin milk",
+      "locale": "en",
+      "aliases": [
+        "lupine milk",
+        "lupin seed beverage",
+        "lupin beverage"
+      ],
+      "description": "Prepared edible-lupin-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from soy or pea milk and whole lupin beans.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "276b2c3e-f25d-5814-b78a-38b878f43aa0",
+      "label": "unsweetened tiger nut milk",
+      "locale": "en",
+      "aliases": [
+        "unsweetened tigernut milk",
+        "unsweetened chufa milk",
+        "tiger nut milk, unsweetened"
+      ],
+      "description": "Tiger-nut-tuber-based milk alternative explicitly supplied without added sweetener. Exact processing and fortification vary; distinct from the existing sweetened horchata de chufa and tree-nut milks.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
     }
   ],
   "alias_additions": {
@@ -2167,6 +2473,29 @@
         "lamb sausage, cooked"
       ],
       "note": "Cooking-state-qualified name for the existing cooked lamb sausage, distinct from raw lamb sausage.",
+      "public_evidence": [
+        "baseline"
+      ]
+    },
+    "197eb89c-954c-4da3-bfe7-b42943395cae": {
+      "label": "spelt drink",
+      "aliases": [
+        "spelt milk",
+        "spelt beverage"
+      ],
+      "note": "The published spelt-drink definition explicitly identifies a milk substitute; preserve its ID instead of adding another spelt milk.",
+      "public_evidence": [
+        "baseline"
+      ]
+    },
+    "1086aa25-3092-4d36-92c8-c4771a2cf58a": {
+      "label": "horchata de chufa",
+      "aliases": [
+        "sweetened tiger nut milk",
+        "sweetened tigernut milk",
+        "tiger nut milk, sweetened"
+      ],
+      "note": "The existing definition explicitly includes sweetening; retain its ID and keep newly added unsweetened tiger-nut milk separate.",
       "public_evidence": [
         "baseline"
       ]
@@ -3408,6 +3737,191 @@
         "discovery",
         "baseline"
       ]
+    },
+    "cd344052-d33c-5273-b6d1-ce677048fb98": {
+      "category": "plant_milks",
+      "observed_names": [
+        "hazelnut milk"
+      ],
+      "rationale": "Hazelnut-based beverage used as a milk alternative. Sweetening, flavoring, fortification and added ingredients are unspecified; distinct from hazelnut cream, butter and oil.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review",
+        "plant-types"
+      ]
+    },
+    "fa89c8fe-f927-51c6-87b1-851b8754529f": {
+      "category": "plant_milks",
+      "observed_names": [
+        "macadamia milk"
+      ],
+      "rationale": "Macadamia-nut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from macadamia oil, butter and dairy milk.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "macadamia",
+        "plant-types"
+      ]
+    },
+    "8409b48c-f654-5cd6-81de-7a389e35f7c7": {
+      "category": "plant_milks",
+      "observed_names": [
+        "walnut milk"
+      ],
+      "rationale": "Walnut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from walnut oil, butter and whole nuts.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review",
+        "plant-types"
+      ]
+    },
+    "9fe81d47-23c5-50e7-b232-16f25051cf0d": {
+      "category": "plant_milks",
+      "observed_names": [
+        "pecan milk"
+      ],
+      "rationale": "Pecan-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from walnut milk, pecan butter and whole pecans.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-types"
+      ]
+    },
+    "a1ee1367-6464-5bd3-9966-6e08af1ebd48": {
+      "category": "plant_milks",
+      "observed_names": [
+        "Brazil nut milk"
+      ],
+      "rationale": "Brazil-nut-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from other nut milks, nut butter and whole Brazil nuts.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-types"
+      ]
+    },
+    "c28934f8-eb35-5b0a-908a-5f206d959cd6": {
+      "category": "plant_milks",
+      "observed_names": [
+        "flaxseed milk"
+      ],
+      "rationale": "Flaxseed-based beverage used as a milk alternative. Seed extraction, sweetening and fortification vary; distinct from flaxseed oil, ground flaxseed and hemp milk.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review",
+        "plant-types"
+      ]
+    },
+    "e4f73226-0497-5398-83a5-336c11d18e8d": {
+      "category": "plant_milks",
+      "observed_names": [
+        "sesame milk"
+      ],
+      "rationale": "Sesame-seed-based beverage used as a milk alternative. Seed color, sweetening and fortification are unspecified; distinct from tahini, sesame oil and sesame paste.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review",
+        "plant-types"
+      ]
+    },
+    "c6b2395f-4196-576e-bc0c-e8ed94333956": {
+      "category": "plant_milks",
+      "observed_names": [
+        "sunflower seed milk"
+      ],
+      "rationale": "Sunflower-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from sunflower oil, seed butter and whole seeds.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review",
+        "plant-types"
+      ]
+    },
+    "c4d4316f-7ce2-5ab1-b2da-2866574a1f89": {
+      "category": "plant_milks",
+      "observed_names": [
+        "pumpkin seed milk"
+      ],
+      "rationale": "Pumpkin-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from pumpkin-pulp drinks, seed oil and seed butter.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-types"
+      ]
+    },
+    "649e2792-935f-5eb5-9f15-202571853457": {
+      "category": "plant_milks",
+      "observed_names": [
+        "quinoa milk"
+      ],
+      "rationale": "Quinoa-based beverage used as a milk alternative. Grain variety, processing, sweetening and fortification are unspecified; distinct from whole cooked quinoa and rice milk.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review",
+        "plant-types"
+      ]
+    },
+    "e1c65e01-a381-5296-a2ef-c92388c5a613": {
+      "category": "plant_milks",
+      "observed_names": [
+        "buckwheat milk"
+      ],
+      "rationale": "Buckwheat-groat-based beverage used as a milk alternative. Sweetening and fortification are unspecified; distinct from brewed buckwheat tea, wheat milk and whole buckwheat groats.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-types"
+      ]
+    },
+    "3d68b7e2-e9c0-5199-93b0-df63d81a82b3": {
+      "category": "plant_milks",
+      "observed_names": [
+        "amaranth milk"
+      ],
+      "rationale": "Amaranth-grain-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from amaranth leaves, whole cooked grain and quinoa milk.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review"
+      ]
+    },
+    "aca235de-d921-5d3e-bb65-31401a29e876": {
+      "category": "plant_milks",
+      "observed_names": [
+        "teff milk"
+      ],
+      "rationale": "Teff-grain-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from teff flour, whole grain and other cereal drinks.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review"
+      ]
+    },
+    "2907ba1c-9407-57a0-a72c-51012f2daf25": {
+      "category": "plant_milks",
+      "observed_names": [
+        "millet milk"
+      ],
+      "rationale": "Millet-based beverage used as a milk alternative. Millet species, sweetening and fortification are unspecified; distinct from whole cooked millet, flour and rice milk.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review",
+        "plant-types"
+      ]
+    },
+    "b4fe5aa5-0c91-5f40-88b3-48082f95a2b9": {
+      "category": "plant_milks",
+      "observed_names": [
+        "lupin milk"
+      ],
+      "rationale": "Prepared edible-lupin-seed-based beverage used as a milk alternative. Sweetening, flavoring and fortification are unspecified; distinct from soy or pea milk and whole lupin beans.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-review"
+      ]
+    },
+    "276b2c3e-f25d-5814-b78a-38b878f43aa0": {
+      "category": "plant_milks",
+      "observed_names": [
+        "unsweetened tiger nut milk"
+      ],
+      "rationale": "Tiger-nut-tuber-based milk alternative explicitly supplied without added sweetener. Exact processing and fortification vary; distinct from the existing sweetened horchata de chufa and tree-nut milks.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "plant-horchata",
+        "plant-review"
+      ]
     }
   },
   "reviewed_names": {
@@ -4023,6 +4537,102 @@
       "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
       "related_ids": []
     },
+    "hazelnut milk": {
+      "action": "add",
+      "canonical_id": "cd344052-d33c-5273-b6d1-ce677048fb98",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "macadamia milk": {
+      "action": "add",
+      "canonical_id": "fa89c8fe-f927-51c6-87b1-851b8754529f",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "walnut milk": {
+      "action": "add",
+      "canonical_id": "8409b48c-f654-5cd6-81de-7a389e35f7c7",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "pecan milk": {
+      "action": "add",
+      "canonical_id": "9fe81d47-23c5-50e7-b232-16f25051cf0d",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "brazil nut milk": {
+      "action": "add",
+      "canonical_id": "a1ee1367-6464-5bd3-9966-6e08af1ebd48",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "flaxseed milk": {
+      "action": "add",
+      "canonical_id": "c28934f8-eb35-5b0a-908a-5f206d959cd6",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "sesame milk": {
+      "action": "add",
+      "canonical_id": "e4f73226-0497-5398-83a5-336c11d18e8d",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "sunflower seed milk": {
+      "action": "add",
+      "canonical_id": "c6b2395f-4196-576e-bc0c-e8ed94333956",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "pumpkin seed milk": {
+      "action": "add",
+      "canonical_id": "c4d4316f-7ce2-5ab1-b2da-2866574a1f89",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "quinoa milk": {
+      "action": "add",
+      "canonical_id": "649e2792-935f-5eb5-9f15-202571853457",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "buckwheat milk": {
+      "action": "add",
+      "canonical_id": "e1c65e01-a381-5296-a2ef-c92388c5a613",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "amaranth milk": {
+      "action": "add",
+      "canonical_id": "3d68b7e2-e9c0-5199-93b0-df63d81a82b3",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "teff milk": {
+      "action": "add",
+      "canonical_id": "aca235de-d921-5d3e-bb65-31401a29e876",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "millet milk": {
+      "action": "add",
+      "canonical_id": "2907ba1c-9407-57a0-a72c-51012f2daf25",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "lupin milk": {
+      "action": "add",
+      "canonical_id": "b4fe5aa5-0c91-5f40-88b3-48082f95a2b9",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "unsweetened tiger nut milk": {
+      "action": "add",
+      "canonical_id": "276b2c3e-f25d-5814-b78a-38b878f43aa0",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
     "thin spaghetti": {
       "action": "reuse",
       "canonical_id": "bddd954c-0336-4085-b604-72d987902615",
@@ -4357,6 +4967,36 @@
       "action": "reuse",
       "canonical_id": "1988aded-2ba5-4057-a2e5-012c79a480fe",
       "note": "Cooking-state-qualified name for the existing cooked lamb sausage, distinct from raw lamb sausage.",
+      "related_ids": []
+    },
+    "spelt milk": {
+      "action": "reuse",
+      "canonical_id": "197eb89c-954c-4da3-bfe7-b42943395cae",
+      "note": "The published spelt-drink definition explicitly identifies a milk substitute; preserve its ID instead of adding another spelt milk.",
+      "related_ids": []
+    },
+    "spelt beverage": {
+      "action": "reuse",
+      "canonical_id": "197eb89c-954c-4da3-bfe7-b42943395cae",
+      "note": "The published spelt-drink definition explicitly identifies a milk substitute; preserve its ID instead of adding another spelt milk.",
+      "related_ids": []
+    },
+    "sweetened tiger nut milk": {
+      "action": "reuse",
+      "canonical_id": "1086aa25-3092-4d36-92c8-c4771a2cf58a",
+      "note": "The existing definition explicitly includes sweetening; retain its ID and keep newly added unsweetened tiger-nut milk separate.",
+      "related_ids": []
+    },
+    "sweetened tigernut milk": {
+      "action": "reuse",
+      "canonical_id": "1086aa25-3092-4d36-92c8-c4771a2cf58a",
+      "note": "The existing definition explicitly includes sweetening; retain its ID and keep newly added unsweetened tiger-nut milk separate.",
+      "related_ids": []
+    },
+    "tiger nut milk, sweetened": {
+      "action": "reuse",
+      "canonical_id": "1086aa25-3092-4d36-92c8-c4771a2cf58a",
+      "note": "The existing definition explicitly includes sweetening; retain its ID and keep newly added unsweetened tiger-nut milk separate.",
       "related_ids": []
     },
     "loin pork chops": {
@@ -4790,6 +5430,42 @@
       "capture_kind": "https_response_body",
       "title": "Sherry Wine | Types and classification - Sherry Wines",
       "note": "Commercial/culinary example reviewed for product family and material form. Curated wording is original; no brand aliases, exact source mapping, fixed recipe/nutrient content or substitution ratio is inferred."
+    },
+    "plant-review": {
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5069255/",
+      "final_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5069255/",
+      "sha256": "74250827b0ef524862238b8ad309baed6d3d6ea9a1173c438d6543b9b2ed6463",
+      "title": "Plant-based milk alternatives an emerging segment of functional beverages: a review - PMC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed plant-base or product-form evidence only. No upstream prose, exact formula, nutrients, allergen guarantees or automatic source equivalence is imported."
+    },
+    "macadamia": {
+      "url": "https://milkadamia.com/",
+      "final_url": "https://www.milkadamia.com/",
+      "sha256": "ce3056e6b649e5643ee9fc413845fdc99b29bf7a4804c7861787b65c64b747a4",
+      "title": "Shop milkadamia",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed plant-base or product-form evidence only. No upstream prose, exact formula, nutrients, allergen guarantees or automatic source equivalence is imported."
+    },
+    "plant-horchata": {
+      "url": "https://www.alphafoodie.com/homemade-tiger-nut-milk-horchata-de-chufa/",
+      "final_url": "https://www.alphafoodie.com/homemade-tiger-nut-milk-horchata-de-chufa/",
+      "sha256": "7fe1ab854b3a01200ddaa340f08c0416241f5a6832a28d18c38aad15be8f3113",
+      "title": "Homemade Tiger Nut Milk (Horchata De Chufa) - Alphafoodie",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed plant-base or product-form evidence only. No upstream prose, exact formula, nutrients, allergen guarantees or automatic source equivalence is imported."
+    },
+    "plant-types": {
+      "url": "https://en.wikipedia.org/wiki/Plant_milk",
+      "final_url": "https://en.wikipedia.org/wiki/Plant_milk",
+      "sha256": "5f107d1214bc63d5826c112143ae12bd7552bde424a5bbb572364a49a832b9ed",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "title": "Plant milk",
+      "note": "Plant-base names only support editorial type distinctions. Descriptions are original; no upstream prose, product formula, nutrients or allergen guarantees are imported."
     }
   },
   "context_rows": {}
