@@ -22,14 +22,15 @@ class NextGapFillTest(unittest.TestCase):
         cls.names={normalize(n):e['id'] for e in cls.seed['entries'] if e['status']=='active'
                    for n in [e['label'],*e['aliases']]}
 
-    def test_replay_retains_every_prior_definition_and_only_appends_reviewed_aliases(self):
+    def test_replay_retains_prior_definitions_with_reviewed_aliases_and_label_correction(self):
         result,summary=gaps.apply_review(self.base,self.sources,self.policy)
         self.assertEqual(result,self.seed)
         self.assertEqual(summary['output_checksum'],self.policy['expected_output_checksum'])
         self.assertEqual(gaps.checksum(self.base),'0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45')
-        self.assertEqual((summary['added'],summary['active'],summary['retired']),(129,13490,85))
-        self.assertEqual(summary['aliases_added_to_existing'],67)
-        self.assertEqual(summary['aliases_on_new_entries'],281)
+        self.assertEqual((summary['added'],summary['active'],summary['retired']),(171,13532,85))
+        self.assertEqual(summary['aliases_added_to_existing'],71)
+        self.assertEqual(summary['aliases_on_new_entries'],367)
+        self.assertEqual(summary['labels_renamed'],1)
         self.assertEqual(self.policy['retirements'],{})
         self.assertEqual(rename_labels.maintained_final_gap_stage(self.seed),self.base)
         self.assertEqual(gaps.checksum(self.sources),self.policy['base_sources_checksum'])
@@ -37,6 +38,8 @@ class NextGapFillTest(unittest.TestCase):
         for old in self.base['entries']:
             expected=copy.deepcopy(old)
             expected['aliases']+=self.policy['alias_additions'].get(old['id'],{}).get('aliases',[])
+            if old['id'] in self.policy.get('label_renames',{}):
+                expected['label']=self.policy['label_renames'][old['id']]['label']
             self.assertEqual(self.entries[old['id']],expected)
 
     def test_all_58_candidates_and_every_expansion_choice_have_explicit_reviews(self):
@@ -47,7 +50,7 @@ class NextGapFillTest(unittest.TestCase):
         self.assertEqual(hashlib.sha256(gaps.encoded(original)).hexdigest(),research['original_candidate_names_sha256'])
         extras=[q for group in research['expansion_groups'].values() for q in group]
         self.assertEqual(len(extras),research['expansion_checklist_names'])
-        self.assertEqual(len(extras),129)
+        self.assertEqual(len(extras),171)
         self.assertEqual(hashlib.sha256(gaps.encoded(research['expansion_groups'])).hexdigest(),research['expansion_checklist_sha256'])
         self.assertTrue({normalize(q) for q in original+extras}<=set(self.policy['reviewed_names']))
         self.assertEqual(len(self.policy['reviewed_names']),research['candidate_names'])
@@ -182,10 +185,78 @@ class NextGapFillTest(unittest.TestCase):
         for query in ['water chestnut flour','singhara flour','mung bean flour',
                       'sweet potato flour','kamut flour']:
             self.assertNotIn(query,self.names)
-        # This user-requested batch excludes the deferred molecular additions.
-        new_labels={e['label'] for e in self.policy['additions']}
-        self.assertFalse(new_labels & {'liquid nitrogen','dry ice','wheat dextrin',
-                                      'carboxymethylcellulose','hydroxypropyl methylcellulose'})
+        # The flour follow-up remains frozen when a later checklist is added.
+        self.assertEqual(followup['added_types'],self.policy['research']['expansion_groups']['flours_and_starches'])
+
+    def test_molecular_formulations_remain_distinct_and_processing_aids_are_excluded(self):
+        labels=[
+            'sodium alginate','calcium chloride','calcium lactate','calcium lactate gluconate',
+            'carrageenan','kappa carrageenan','iota carrageenan','lambda carrageenan',
+            'gellan gum','high-acyl gellan gum','low-acyl gellan gum',
+            'methylcellulose','sodium carboxymethylcellulose','hydroxypropyl methylcellulose',
+            'high-methoxyl pectin','rapid-set high-methoxyl pectin','slow-set high-methoxyl pectin',
+            'low-methoxyl pectin','amidated low-methoxyl pectin','NH nappage pectin blend',
+            'soy lecithin','powdered soy lecithin','sunflower lecithin','powdered sunflower lecithin',
+            'sucrose fatty-acid esters','mono- and diglyceride emulsifier blend',
+            'tapioca maltodextrin','fat-powdering tapioca maltodextrin','wheat dextrin',
+            'resistant wheat dextrin','inulin','polydextrose','transglutaminase preparation',
+            'pectinase preparation','sodium citrate','citric acid','malic acid','tartaric acid',
+            'ascorbic acid','glucono delta-lactone','trehalose','glycerin',
+        ]
+        followup=self.policy['research']['molecular_followup']
+        self.assertEqual(set(labels),set(followup['added_types']))
+        self.assertEqual(len({self.labels[label] for label in labels}),42)
+        for label in labels:
+            self.assertNotIn(self.labels[label],self.original)
+        for group in [
+            ['carrageenan','kappa carrageenan','iota carrageenan','lambda carrageenan'],
+            ['gellan gum','high-acyl gellan gum','low-acyl gellan gum'],
+            ['methylcellulose','sodium carboxymethylcellulose','hydroxypropyl methylcellulose'],
+            ['pectin','powdered pectin','liquid pectin','high-methoxyl pectin',
+             'rapid-set high-methoxyl pectin','slow-set high-methoxyl pectin',
+             'low-methoxyl pectin','amidated low-methoxyl pectin','NH nappage pectin blend'],
+            ['soy lecithin','powdered soy lecithin','sunflower lecithin','powdered sunflower lecithin','soy lecithin spread'],
+            ['maltodextrin','tapioca maltodextrin','fat-powdering tapioca maltodextrin',
+             'dextrin','corn dextrin','wheat dextrin','resistant wheat dextrin'],
+            ['transglutaminase preparation','pectinase preparation','pectin'],
+            ['sodium citrate','citric acid'],['tartaric acid','cream of tartar'],
+            ['glycerin','diacylglycerol oil','mono- and diglyceride emulsifier blend'],
+        ]:
+            self.assertEqual(len({self.labels[label] for label in group}),len(group),group)
+        for alias,label in [
+            ('CMC','sodium carboxymethylcellulose'),('cellulose gum','sodium carboxymethylcellulose'),
+            ('HPMC','hydroxypropyl methylcellulose'),('NH pectin','NH nappage pectin blend'),
+            ('trisodium citrate','sodium citrate'),('GDL','glucono delta-lactone'),
+            ('glycerol','glycerin'),('soy lecithin powder','powdered soy lecithin'),
+        ]:
+            self.assertEqual(self.names[normalize(alias)],self.labels[label])
+        for query in followup['excluded_materials']+followup['unassigned_names']:
+            self.assertNotIn(normalize(query),self.names)
+        for label in ['transglutaminase preparation','pectinase preparation']:
+            self.assertIn('unspecified',self.entries[self.labels[label]]['description'])
+
+    def test_fructose_correction_preserves_id_definition_and_every_old_name(self):
+        ident=self.labels['crystalline fructose']
+        self.assertEqual(self.original[ident]['label'],'crystaline fructose')
+        for query in ['crystaline fructose','crystalline fructose','fructose powder',
+                      'powdered fructose','crystalline fructose powder']:
+            self.assertEqual(self.names[query],ident)
+        self.assertNotEqual(ident,self.labels['fructose'])
+        self.assertEqual(self.entries[ident]['description'],self.original[ident]['description'])
+        self.assertEqual(set(self.policy['label_renames']),{ident})
+
+    def test_label_correction_rejects_collisions_stale_targets_and_lost_old_names(self):
+        ident=self.labels['crystalline fructose']
+        for field,value,message in [('label','soy sauce','shadows'),
+                                    ('before_label','fructose','label correction')]:
+            policy=copy.deepcopy(self.policy)
+            policy['label_renames'][ident][field]=value
+            with self.assertRaisesRegex(ValueError,message):
+                gaps.apply_review(self.base,self.sources,policy)
+        policy=copy.deepcopy(self.policy)
+        policy['alias_additions'][ident]['aliases'].remove('crystaline fructose')
+        with self.assertRaisesRegex(ValueError,'retain the old label'):
+            gaps.apply_review(self.base,self.sources,policy)
 
     def test_stale_inputs_and_alias_shadowing_are_rejected(self):
         with self.assertRaisesRegex(ValueError,'Stale'):

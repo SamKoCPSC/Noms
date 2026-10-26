@@ -1,7 +1,7 @@
 # Reviewed cooking-material gaps
 
 Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
-are **13,490 active, 85 retired and 9,655 active aliases**. Earlier stage counts,
+are **13,532 active, 85 retired and 9,745 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -686,11 +686,12 @@ white sesame, dry breadcrumbs and black-treacle qualifiers, so these percentages
 are not a before/after score against earlier studies. Titles, quantities, methods
 and individual recipe URLs are absent from the source and are not invented.
 
-The user-approved curation adds **129 ingredients and 348 aliases**: 281 aliases
-on the new entries and 67 on 33 existing identities. Current totals become
-**13,490 active, 85 retired and 9,655 active aliases**. All 13,446 prior records,
+The user-approved curation adds **171 ingredients and 438 aliases**: 367 aliases
+on the new entries and 71 on 34 existing identities. Current totals become
+**13,532 active, 85 retired and 9,745 active aliases**. All 13,446 prior records,
 including retired identities, retain their exact fields except approved alias
-suffixes. Source descriptors and source mappings are unchanged; all new entries
+suffixes and one recorded spelling correction retaining its old searchable name.
+Source descriptors and source mappings are unchanged; all new entries
 have curated origin, original descriptions and no inferred external mappings.
 The explicit ledger is `data/vocabulary/adapters/ingredient-next-gap-fill.json`.
 
@@ -802,8 +803,55 @@ and [a starch characterization study](https://www.mdpi.com/2304-8158/9/2/182),
 plus flour/khorasan/lupin overviews. These inform original material definitions;
 producer formulas, health claims and substitution ratios are not imported.
 Failed captures and a CAPTCHA response are excluded. Molecular-gastronomy
-additives and processing aids remain deferred. This is a separate checklist,
+additives and processing aids were deferred at this stage. This is a separate checklist,
 not a change to the frozen 5,000-occurrence sample or its coverage score.
+
+### Molecular-ingredient follow-up
+
+The user approved the proposed food ingredients and explicitly excluded
+preparation aids such as liquid nitrogen and dry ice. This follow-up adds
+**42 entries and 90 aliases**: 86 aliases on new entries and four on the existing
+crystalline-fructose identity. It covers:
+
+- Sodium alginate and three distinct calcium salts/materials.
+- Generic carrageenan plus kappa, iota and lambda types; generic gellan plus
+  high-acyl and low-acyl types; methylcellulose, sodium CMC and HPMC.
+- HM pectin with unspecified setting speed and separate rapid/slow-set forms,
+  LM pectin with unspecified amidation, explicit LMA pectin, and an NH nappage
+  pectin blend. NH is a formulated mixture, not an alias for every LMA pectin.
+- Soy and sunflower lecithins with unspecified form and separate powder forms;
+  sucrose fatty-acid esters and a mono-/diglyceride emulsifier blend.
+- Tapioca maltodextrin and a specifically fat-powdering grade; wheat dextrin and
+  resistant wheat dextrin; inulin and polydextrose.
+- Food-grade transglutaminase and pectinase preparations with activity, carrier
+  and accompanying proteins/enzymes unspecified.
+- Sodium citrate (the culinary trisodium salt), citric, malic, tartaric and
+  ascorbic acids, GDL, trehalose and glycerin.
+
+Producer captures include [Modernist Pantry](https://modernistpantry.com/categories/ingredients/gelation.html),
+[Sosa's NH pectin blend](https://www.sosa.cat/en/product/pectin-nh/),
+[Roquette's wheat dextrin](https://www.roquette.com/health-pharma/consumer-healthcare-product-catalog/nutriose-fb-06-wheat-dextrin),
+[SMI's fibers](https://smingredients.com/products/fibers/) and
+[Special Ingredients' lecithin](https://specialingredients.co.uk/products/sunflower-lecithin-powder-e322).
+Public reference captures support substance identities. Only accepted, topic-checked
+captures are recorded; failed URLs are excluded. Definitions are original and
+import no dosing, brand formulas, health claims or regulatory advice. Unknown
+grade/formulation does not establish interchangeability. Bare `Methocel`,
+`sour salt` and `meat glue` are not forced into an identity.
+
+The published `crystaline fructose` definition already specifies dried, ground,
+high-purity fructose. Its UUID, definition and source associations are preserved.
+The preferred label becomes **crystalline fructose**; `crystaline fructose`,
+`fructose powder`, `powdered fructose` and `crystalline fructose powder` are
+aliases. Generic fructose and syrups remain distinct. The optional
+`label_renames` ledger field pins the old/new spelling and rationale. The builder
+rejects stale targets, name collisions and corrections losing the old label;
+restoration reproduces the exact previous baseline and all historical pins.
+
+Liquid nitrogen, dry ice, carbon dioxide and nitrous oxide are excluded.
+Existing xanthan, agar, guar, locust-bean gum, gum arabic, gelatin and other
+covered materials are reused without duplicate entries. This separate
+user-requested checklist does not alter the frozen recipe-sample score.
 
 ### Replay
 
@@ -811,7 +859,7 @@ The preceding complete bundle is main commit
 `bd80fa349a2fe6231a4b42e0d4f9452354f0403d`:
 
 - Input seed: `0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45`
-- Output seed: `654787a3931ef6b9b5005ed78ff007cad031066360d5933b2d373b22f46ca097`
+- Output seed: `4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571`
 - Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
 
 Copy the preceding seed/source files from that commit into a fresh external
@@ -836,15 +884,15 @@ original pins; earlier ledgers and checksums remain unchanged.
 
 ### Verification and scope
 
-All **126 Python tests** pass, including exact replay, existing-field preservation,
+All **129 Python tests** pass, including exact replay, existing-field preservation,
 source contracts, every candidate/checklist decision, qualified-search choices
 and recipe-significant identity boundaries. The Rust seed validator accepts
-**13,575 total records/four sources with no warnings**.
+**13,617 total records/four sources with no warnings**.
 
 On the local mock-auth deployment, dry runs roll back completely, cumulative
-loads add 129 entries/update 33 alias-bearing entries, and a second `--if-changed`
+loads add 171 entries/update 34 existing entries, and a second `--if-changed`
 run skips with no writes. Existing recipe, draft, version, source and mapping
-hashes are unchanged by the load. All **477 new preferred/alias names** return
+hashes are unchanged by the load. All **610 reviewed preferred/alias names** return
 the intended UUID first through the production SQL query. Chromium verifies
 catalog refresh from the previous 13,361-entry snapshot to 13,479 entries,
 qualified ingredient choices and six local searches without per-query server
@@ -860,6 +908,12 @@ preferred/alias names pass Chromium checks without per-query server requests.
 The browser refreshes its real 13,479-entry cached catalog to 13,490 entries;
 there are no page errors or new drafts, and authored-row/source hashes remain
 unchanged after both the seed and browser checks.
+
+The molecular follow-up verifies dry-run rollback, 42 additions/one existing-ID
+update, and a write-free fingerprinted repeat. Chromium checks all 133 preferred/
+alias names in this follow-up, including the corrected/legacy fructose labels,
+without per-query server calls. Its real 13,490-entry cache refreshes to 13,532
+entries. Authored rows and source/mapping hashes remain unchanged.
 
 Replaying the unchanged 5,000-occurrence review increases represented materials
 **4,668 -> 4,724 (93.36% -> 94.48%)**, with no previously covered name losing its
@@ -881,3 +935,7 @@ remains frozen as the initial-round snapshot. Both archives are historical
 snapshots; the maintained `data/vocabulary/ingredients.json` includes the later
 flour/starch update. Its research and local verification artifacts are external
 at `/workspace/flour-starch-expansion`.
+
+The molecular follow-up's capture metadata, new-entry CSV, replay and local
+verification artifacts are external at `/workspace/molecular-ingredient-expansion`.
+The maintained repository seed and ledger include all follow-ups.

@@ -74459,8 +74459,13 @@
     },
     {
       "id": "7cc7e247-5726-44b8-a72c-629706e4d3c6",
-      "label": "crystaline fructose",
-      "aliases": [],
+      "label": "crystalline fructose",
+      "aliases": [
+        "crystaline fructose",
+        "fructose powder",
+        "powdered fructose",
+        "crystalline fructose powder"
+      ],
       "description": "A commercial product which is monosaccharide fructose, dried, ground, and of high purity.",
       "locale": "en",
       "status": "active",
@@ -317408,6 +317413,679 @@
         "Chinese water chestnut starch"
       ],
       "description": "Food-grade starch extracted from Chinese water-chestnut corms (Eleocharis dulcis), used for setting cakes and thickening. Distinct from whole-corm flour, water-caltrop or singhara flour, and prepared water-chestnut cake.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0f195098-74ca-5f3f-a207-5729ff5d6513",
+      "label": "sodium alginate",
+      "locale": "en",
+      "aliases": [
+        "sodium alginate powder"
+      ],
+      "description": "Food-grade sodium salt of alginic acid used for gelling and thickening. Viscosity grade is unspecified; distinct from alginic acid and calcium alginate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "89281097-754f-55be-842a-ea199563b447",
+      "label": "calcium chloride",
+      "locale": "en",
+      "aliases": [
+        "food-grade calcium chloride",
+        "food grade calcium chloride"
+      ],
+      "description": "Food-grade calcium chloride used in pickling, setting and spherification. Hydration state and physical form are unspecified; distinct from calcium lactate and calcium lactate gluconate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b0155a76-6c06-552d-ac40-8fc92c0cbe46",
+      "label": "calcium lactate",
+      "locale": "en",
+      "aliases": [
+        "food-grade calcium lactate"
+      ],
+      "description": "Food-grade calcium salt of lactic acid used for setting and spherification. Hydration state is unspecified; distinct from calcium chloride and calcium lactate gluconate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "53dfeacd-dd62-5c9f-be1f-4c1a02490f88",
+      "label": "calcium lactate gluconate",
+      "locale": "en",
+      "aliases": [
+        "calcium gluconate lactate"
+      ],
+      "description": "Food-grade calcium lactate/gluconate material used as a soluble calcium source for setting and spherification. Composition is unspecified; distinct from either calcium salt supplied alone.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5b5e8c55-1f43-5aa5-bbb7-58f1f3701e1d",
+      "label": "carrageenan",
+      "locale": "en",
+      "aliases": [
+        "carrageenan gum"
+      ],
+      "description": "Food-grade carrageenan hydrocolloid extracted from red seaweeds. Type and formulation are unspecified; not an assignment to kappa, iota or lambda carrageenan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "69684a83-576f-51d0-9949-4421ca48b474",
+      "label": "kappa carrageenan",
+      "locale": "en",
+      "aliases": [
+        "kappa-carrageenan",
+        "kappa carrageenan powder"
+      ],
+      "description": "Food-grade kappa-type carrageenan used for firm gels. Counterions and grade are unspecified; distinct from iota and lambda types.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "199550bf-4952-5979-933f-e731fa1dc403",
+      "label": "iota carrageenan",
+      "locale": "en",
+      "aliases": [
+        "iota-carrageenan",
+        "iota carrageenan powder"
+      ],
+      "description": "Food-grade iota-type carrageenan used for elastic gels. Counterions and grade are unspecified; distinct from kappa and lambda types.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3cb66890-d63e-597d-87de-cd4717994bc9",
+      "label": "lambda carrageenan",
+      "locale": "en",
+      "aliases": [
+        "lambda-carrageenan",
+        "lambda carrageenan powder"
+      ],
+      "description": "Food-grade lambda-type carrageenan used principally for thickening. Grade is unspecified; distinct from the kappa and iota gelling types.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "57cc766f-d2e6-5df7-b7c5-80285609a3ae",
+      "label": "gellan gum",
+      "locale": "en",
+      "aliases": [
+        "gellan"
+      ],
+      "description": "Food-grade gellan hydrocolloid used for texture and setting. Acyl type and formulation are unspecified; not an assignment to high-acyl or low-acyl gellan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "121b4ce5-cdf4-5b53-926a-9354a8dc8b66",
+      "label": "high-acyl gellan gum",
+      "locale": "en",
+      "aliases": [
+        "high acyl gellan gum",
+        "high-acyl gellan",
+        "high acyl gellan"
+      ],
+      "description": "Food-grade high-acyl gellan gum used for softer, elastic gels. Grade and formula are unspecified; distinct from low-acyl gellan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3ac435d6-d655-5c86-bd2b-8f8d6566432c",
+      "label": "low-acyl gellan gum",
+      "locale": "en",
+      "aliases": [
+        "low acyl gellan gum",
+        "low-acyl gellan",
+        "low acyl gellan"
+      ],
+      "description": "Food-grade low-acyl gellan gum used for firm, brittle gels. Grade and formula are unspecified; distinct from high-acyl gellan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f56433f3-ba71-51da-b4d8-6265f9d81bdd",
+      "label": "methylcellulose",
+      "locale": "en",
+      "aliases": [
+        "methyl cellulose",
+        "methylcellulose powder"
+      ],
+      "description": "Food-grade methylcellulose used for thickening and thermal gelation. Viscosity and gelation grade are unspecified; distinct from CMC and HPMC.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "10c971ad-e809-5b22-b0df-064dee8737ea",
+      "label": "sodium carboxymethylcellulose",
+      "locale": "en",
+      "aliases": [
+        "carboxymethylcellulose",
+        "carboxymethyl cellulose",
+        "sodium carboxymethyl cellulose",
+        "CMC",
+        "cellulose gum"
+      ],
+      "description": "Food-grade sodium carboxymethylcellulose used for thickening and stabilization. Viscosity grade is unspecified; distinct from methylcellulose and HPMC.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3fe4b2b9-33a3-50ab-8cd2-bd0e416d54fb",
+      "label": "hydroxypropyl methylcellulose",
+      "locale": "en",
+      "aliases": [
+        "hydroxypropylmethylcellulose",
+        "hydroxypropyl methyl cellulose",
+        "HPMC"
+      ],
+      "description": "Food-grade hydroxypropyl methylcellulose used for thickening, binding and thermal gelation. Viscosity and thermal grade are unspecified; distinct from methylcellulose and CMC.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2b08d6d4-4ee1-53f8-b3d7-e5c1f0eaf9d4",
+      "label": "high-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "high methoxyl pectin",
+        "HM pectin",
+        "high-methoxy pectin"
+      ],
+      "description": "Food-grade high-methoxyl pectin for sugar/acid-dependent gelling. Setting speed and formulation are unspecified; distinct from low-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b8ae77bf-c504-55fb-94ec-b3bfbee6d422",
+      "label": "rapid-set high-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "rapid set high methoxyl pectin",
+        "rapid-set HM pectin",
+        "rapid set HM pectin"
+      ],
+      "description": "Food-grade high-methoxyl pectin specified as rapid-set. Exact formulation is unspecified; distinct from slow-set high-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "afd1f685-ffc4-53e0-a50d-6f1cd5b70869",
+      "label": "slow-set high-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "slow set high methoxyl pectin",
+        "slow-set HM pectin",
+        "slow set HM pectin"
+      ],
+      "description": "Food-grade high-methoxyl pectin specified as slow-set. Exact formulation is unspecified; distinct from rapid-set high-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fbe7193d-f761-5b9d-ae97-5f04287ce27d",
+      "label": "low-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "low methoxyl pectin",
+        "LM pectin",
+        "low-methoxy pectin"
+      ],
+      "description": "Food-grade low-methoxyl pectin used for calcium-dependent setting. Amidation and formulation are unspecified; distinct from high-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e3e2928c-6bc3-559b-a435-9af1ddf4dd72",
+      "label": "amidated low-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "amidated low methoxyl pectin",
+        "LMA pectin",
+        "low-methoxyl amidated pectin"
+      ],
+      "description": "Food-grade low-methoxyl pectin explicitly modified by amidation. Added salts and sugars are unspecified; distinct from unspecified LM pectin and formulated NH nappage blends.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2e2edfc0-c898-5144-af7e-3c9fa3222b38",
+      "label": "NH nappage pectin blend",
+      "locale": "en",
+      "aliases": [
+        "NH pectin",
+        "pectin NH",
+        "NH nappage pectin"
+      ],
+      "description": "Food-grade NH-style pectin blend for reheatable glazes, based on amidated low-methoxyl pectin with formulation aids. Exact composition varies; distinct from unformulated LMA pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "539ff440-773d-54b0-93e1-9e677a95ca92",
+      "label": "soy lecithin",
+      "locale": "en",
+      "aliases": [
+        "soya lecithin",
+        "soybean lecithin"
+      ],
+      "description": "Food-grade lecithin derived from soy, used as an emulsifier. Physical form and oil content are unspecified; distinct from sunflower lecithin and soy-lecithin spreads.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "458d7209-c6fe-50c1-8a5a-05d8b35857a7",
+      "label": "powdered soy lecithin",
+      "locale": "en",
+      "aliases": [
+        "soy lecithin powder",
+        "soya lecithin powder"
+      ],
+      "description": "Food-grade soy lecithin supplied as a dry powder for emulsification and foaming. Residual oil and carrier are unspecified; distinct from liquid lecithin and lecithin spreads.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a724fddb-dbcf-5cde-a0a1-fe0e58888c66",
+      "label": "sunflower lecithin",
+      "locale": "en",
+      "aliases": [
+        "sunflower seed lecithin"
+      ],
+      "description": "Food-grade lecithin derived from sunflower seeds, used as an emulsifier. Physical form and oil content are unspecified; distinct from soy lecithin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3abb67af-1b3e-502c-ad37-b34aae46f909",
+      "label": "powdered sunflower lecithin",
+      "locale": "en",
+      "aliases": [
+        "sunflower lecithin powder",
+        "sunflower seed lecithin powder"
+      ],
+      "description": "Food-grade sunflower lecithin supplied as a dry powder. Residual oil and carrier are unspecified; distinct from liquid lecithin and soy-derived lecithin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d7e935c1-a9e7-50df-934f-42bc506ff2dd",
+      "label": "sucrose fatty-acid esters",
+      "locale": "en",
+      "aliases": [
+        "sucrose esters",
+        "sucrose ester",
+        "sucrose esters of fatty acids"
+      ],
+      "description": "Food-grade sucrose esters of fatty acids used as emulsifiers. Fatty-acid composition and emulsification grade are unspecified; distinct from sucrose sugar and glyceride emulsifiers.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f885c588-1dc6-5560-9793-603db2cfb542",
+      "label": "mono- and diglyceride emulsifier blend",
+      "locale": "en",
+      "aliases": [
+        "mono and diglycerides",
+        "mono- and diglycerides",
+        "monoglyceride and diglyceride emulsifier"
+      ],
+      "description": "Food-grade emulsifier mixture of mono- and diglycerides of fatty acids. Fat source and proportions are unspecified; distinct from diacylglycerol cooking oil and purified monoglycerides.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2cf1964a-60a6-5c35-a2b1-7f81a24864b4",
+      "label": "tapioca maltodextrin",
+      "locale": "en",
+      "aliases": [
+        "cassava maltodextrin"
+      ],
+      "description": "Food-grade maltodextrin derived from tapioca starch. Density and grade are unspecified; the tapioca source alone does not establish fat-powdering performance.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2d9c1bf5-ecd6-54eb-af8c-bf9ebbd37912",
+      "label": "fat-powdering tapioca maltodextrin",
+      "locale": "en",
+      "aliases": [
+        "tapioca maltodextrin for fat powders",
+        "tapioca maltodextrin for oil powders"
+      ],
+      "description": "Food-grade low-density tapioca maltodextrin specifically supplied for carrying fats as powders. Exact grade is unspecified; distinct from tapioca maltodextrin without that functionality.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e5e594cc-bbaf-5444-9955-b8e0fd70d667",
+      "label": "wheat dextrin",
+      "locale": "en",
+      "aliases": [],
+      "description": "Food-grade dextrin derived from wheat starch. Digestibility and grade are unspecified; distinct from corn dextrin and explicitly resistant wheat dextrin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a20718e3-0dad-5b61-a07d-c52a8db7f918",
+      "label": "resistant wheat dextrin",
+      "locale": "en",
+      "aliases": [
+        "soluble wheat dextrin fiber",
+        "soluble wheat dextrin fibre",
+        "resistant wheat dextrin powder"
+      ],
+      "description": "Food-grade digestion-resistant wheat dextrin used as a soluble-fiber ingredient. Exact grade is unspecified; distinct from wheat dextrin without a resistance specification.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "72afe2e1-48df-527c-bbdb-2ffe5877979d",
+      "label": "inulin",
+      "locale": "en",
+      "aliases": [
+        "inulin powder"
+      ],
+      "description": "Food-grade inulin fructan used for bulk and texture. Plant source and chain length are unspecified; distinct from fructose, polydextrose and other isolated fibers.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "92e830df-52c2-5b54-93ed-99cd2407f0ee",
+      "label": "polydextrose",
+      "locale": "en",
+      "aliases": [
+        "polydextrose powder"
+      ],
+      "description": "Food-grade polydextrose used as a bulking and texture ingredient. Exact formulation is unspecified; distinct from dextrose, maltodextrin and inulin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f7cf0f08-1a73-5b48-aa80-5f9a1bcdac3d",
+      "label": "transglutaminase preparation",
+      "locale": "en",
+      "aliases": [
+        "transglutaminase",
+        "food-grade transglutaminase"
+      ],
+      "description": "Food-grade transglutaminase enzyme preparation for modifying food proteins. Activity, carrier and helper proteins are unspecified; formulations are not presumed interchangeable by weight.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3836ed54-03ca-5b2f-baf3-8e3bdff506ac",
+      "label": "pectinase preparation",
+      "locale": "en",
+      "aliases": [
+        "pectinase",
+        "food-grade pectinase"
+      ],
+      "description": "Food-grade pectin-degrading enzyme preparation used in fruit processing and clarification. Activity, accompanying enzymes and carrier are unspecified; distinct from pectin gelling ingredients.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5e83bca9-f0c1-53d5-82ef-f63a759e0561",
+      "label": "sodium citrate",
+      "locale": "en",
+      "aliases": [
+        "trisodium citrate",
+        "tribasic sodium citrate"
+      ],
+      "description": "Food-grade trisodium citrate used for buffering and emulsification. Hydration state is unspecified; distinct from citric acid and mono- or disodium citrate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fb32efbd-ec41-5a6c-9d7f-696036c96fa3",
+      "label": "citric acid",
+      "locale": "en",
+      "aliases": [
+        "citric acid powder"
+      ],
+      "description": "Food-grade citric acid used for tartness and acidity adjustment. Hydration state is unspecified; distinct from sodium citrate and other food acids.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3739a7c4-3868-5ab4-8723-2d468b6e50f5",
+      "label": "malic acid",
+      "locale": "en",
+      "aliases": [
+        "malic acid powder"
+      ],
+      "description": "Food-grade malic acid used for tartness and acidity adjustment. Stereoisomer composition is unspecified; distinct from citric and tartaric acids.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ded1ca1d-90f3-5e39-a684-d41f1d9693fe",
+      "label": "tartaric acid",
+      "locale": "en",
+      "aliases": [
+        "tartaric acid powder"
+      ],
+      "description": "Food-grade tartaric acid used for acidity adjustment. Physical grade is unspecified; distinct from cream of tartar, a potassium salt, and from malic acid.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "917e111f-8e9d-5bfa-906c-56e8c1411232",
+      "label": "ascorbic acid",
+      "locale": "en",
+      "aliases": [
+        "ascorbic acid powder"
+      ],
+      "description": "Food-grade ascorbic acid used as an antioxidant and flour-treatment ingredient. Not a vitamin supplement blend; distinct from citric acid and ascorbate salts.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a8742223-5624-5d0a-b801-91c7bd3552e0",
+      "label": "glucono delta-lactone",
+      "locale": "en",
+      "aliases": [
+        "glucono delta lactone",
+        "glucono-delta-lactone",
+        "GDL"
+      ],
+      "description": "Food-grade glucono delta-lactone used as a gradual acidifier and coagulant. Grade is unspecified; distinct from gluconate salts and pre-acidified mixtures.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "567ebf40-4fa3-5267-ba3b-6c921baa2935",
+      "label": "trehalose",
+      "locale": "en",
+      "aliases": [
+        "trehalose powder"
+      ],
+      "description": "Food-grade trehalose sugar used for sweetness, bulk and texture. Hydration state is unspecified; distinct from sucrose, fructose and dextrose.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8dbbf7d3-d23a-5531-b150-188c9e4d5fb7",
+      "label": "glycerin",
+      "locale": "en",
+      "aliases": [
+        "glycerine",
+        "glycerol",
+        "food-grade glycerin",
+        "food grade glycerol"
+      ],
+      "description": "Food-grade glycerol used as a humectant and texture ingredient. Feedstock is unspecified; distinct from glyceride emulsifiers and glycerol-containing blends.",
       "status": "active",
       "source_mappings": [],
       "provenance": {

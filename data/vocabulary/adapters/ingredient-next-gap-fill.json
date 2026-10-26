@@ -5,10 +5,10 @@
   "base_commit": "bd80fa349a2fe6231a4b42e0d4f9452354f0403d",
   "base_seed_checksum": "0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45",
   "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
-  "expected_output_checksum": "654787a3931ef6b9b5005ed78ff007cad031066360d5933b2d373b22f46ca097",
-  "criterion": "User-authorized next-sample gap filling plus similar grocery materials. Keep materially different species/parts, preservation, named styles and explicit formulations distinct. Reuse current definitions and existing IDs when equivalent; ambiguous source names offer qualified options and remain unassigned. Existing records, source metadata and alias ownership are preserved. No automatic recipe recognition, substitution ratios, nutrient/source equivalence, recipe rewriting or production deployment. Includes the user-requested less-common plant-milk follow-up, retaining existing spelt and sweetened horchata identities. Includes the user-requested non-molecular flour/starch follow-up; retain species and explicit milling distinctions and reuse existing starch/rice-flour identities.",
+  "expected_output_checksum": "4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571",
+  "criterion": "User-authorized next-sample gap filling plus similar grocery materials. Keep materially different species/parts, preservation, named styles and explicit formulations distinct. Reuse current definitions and existing IDs when equivalent; ambiguous source names offer qualified options and remain unassigned. Existing records, source metadata and alias ownership are preserved except explicitly recorded preferred-label corrections retaining the old name. No automatic recipe recognition, substitution ratios, nutrient/source equivalence, recipe rewriting or production deployment. Includes the user-requested less-common plant-milk follow-up, retaining existing spelt and sweetened horchata identities. Includes the user-requested non-molecular flour/starch follow-up; retain species and explicit milling distinctions and reuse existing starch/rice-flour identities. Includes the approved food-grade molecular ingredients only; excludes culinary gases and cryogenic processing aids. Corrects crystalline-fructose spelling on its existing UUID with legacy-name retention.",
   "research": {
-    "candidate_names": 228,
+    "candidate_names": 275,
     "discovery_corpus_sha256": "93d65938736a62568b562a0b3432fbe6e857f0110019cdd0ccdeba8f79b68be4",
     "discovery_review_sha256": "16aec6e2676737f4ccb001765855a3b948b7aa5922b36e34527af40db1b82f74",
     "original_candidate_names": 58,
@@ -245,9 +245,53 @@
         "sweet potato starch",
         "mung bean starch",
         "water chestnut starch"
+      ],
+      "molecular_ingredients": [
+        "sodium alginate",
+        "calcium chloride",
+        "calcium lactate",
+        "calcium lactate gluconate",
+        "carrageenan",
+        "kappa carrageenan",
+        "iota carrageenan",
+        "lambda carrageenan",
+        "gellan gum",
+        "high-acyl gellan gum",
+        "low-acyl gellan gum",
+        "methylcellulose",
+        "sodium carboxymethylcellulose",
+        "hydroxypropyl methylcellulose",
+        "high-methoxyl pectin",
+        "rapid-set high-methoxyl pectin",
+        "slow-set high-methoxyl pectin",
+        "low-methoxyl pectin",
+        "amidated low-methoxyl pectin",
+        "NH nappage pectin blend",
+        "soy lecithin",
+        "powdered soy lecithin",
+        "sunflower lecithin",
+        "powdered sunflower lecithin",
+        "sucrose fatty-acid esters",
+        "mono- and diglyceride emulsifier blend",
+        "tapioca maltodextrin",
+        "fat-powdering tapioca maltodextrin",
+        "wheat dextrin",
+        "resistant wheat dextrin",
+        "inulin",
+        "polydextrose",
+        "transglutaminase preparation",
+        "pectinase preparation",
+        "sodium citrate",
+        "citric acid",
+        "malic acid",
+        "tartaric acid",
+        "ascorbic acid",
+        "glucono delta-lactone",
+        "trehalose",
+        "glycerin"
       ]
     },
-    "expansion_checklist_names": 129,
+    "expansion_checklist_names": 171,
     "plant_milk_followup": {
       "request": "Add other less common types of plant milks",
       "added_types": [
@@ -295,8 +339,70 @@
       ],
       "scope": "Separate user-requested expansion, not new findings from the frozen 5,000-occurrence sample. Named wheat species, explicitly refined/wholemeal khorasan forms and extracted starches retain distinct identities. No molecular-gastronomy additives or processing aids are added. Bare water chestnut flour and branded Kamut flour are not assigned as aliases because species/milling state or trademark/product scope needs context."
     },
+    "molecular_followup": {
+      "request": "Fill the approved molecular-gastronomy ingredient gaps, excluding preparation-based items such as liquid nitrogen and dry ice",
+      "added_types": [
+        "sodium alginate",
+        "calcium chloride",
+        "calcium lactate",
+        "calcium lactate gluconate",
+        "carrageenan",
+        "kappa carrageenan",
+        "iota carrageenan",
+        "lambda carrageenan",
+        "gellan gum",
+        "high-acyl gellan gum",
+        "low-acyl gellan gum",
+        "methylcellulose",
+        "sodium carboxymethylcellulose",
+        "hydroxypropyl methylcellulose",
+        "high-methoxyl pectin",
+        "rapid-set high-methoxyl pectin",
+        "slow-set high-methoxyl pectin",
+        "low-methoxyl pectin",
+        "amidated low-methoxyl pectin",
+        "NH nappage pectin blend",
+        "soy lecithin",
+        "powdered soy lecithin",
+        "sunflower lecithin",
+        "powdered sunflower lecithin",
+        "sucrose fatty-acid esters",
+        "mono- and diglyceride emulsifier blend",
+        "tapioca maltodextrin",
+        "fat-powdering tapioca maltodextrin",
+        "wheat dextrin",
+        "resistant wheat dextrin",
+        "inulin",
+        "polydextrose",
+        "transglutaminase preparation",
+        "pectinase preparation",
+        "sodium citrate",
+        "citric acid",
+        "malic acid",
+        "tartaric acid",
+        "ascorbic acid",
+        "glucono delta-lactone",
+        "trehalose",
+        "glycerin"
+      ],
+      "existing_id_reuses": [
+        "crystalline fructose"
+      ],
+      "excluded_materials": [
+        "liquid nitrogen",
+        "dry ice",
+        "carbon dioxide",
+        "nitrous oxide"
+      ],
+      "scope": "Additional user-requested food ingredients, separate from the frozen recipe sample. Keep gum/pectin subtypes, lecithin sources and powder forms, resistant dextrin and fat-powdering carrier grades distinct. Generic enzyme preparations leave activity, carriers and helper proteins unspecified. Molecular-gastronomy gases and cryogenic processing aids are excluded. No universal substitution or dose is inferred.",
+      "unassigned_names": [
+        "Methocel",
+        "sour salt",
+        "meat glue"
+      ]
+    },
     "original_candidate_names_sha256": "8a77f3aa15d53001fb1db3bed5f9cb7243954520725caf8c41020686769936ec",
-    "expansion_checklist_sha256": "b526c1843777e68381e760693e4ec6b1bd7e2548898497045cc23fbc8a147967"
+    "expansion_checklist_sha256": "f910819e3a67551f1bfd3022eb0b8d8df035deaae5b311f5c3dd2102f1adbe66"
   },
   "additions": [
     {
@@ -2385,6 +2491,679 @@
         "origin": "curated",
         "references": []
       }
+    },
+    {
+      "id": "0f195098-74ca-5f3f-a207-5729ff5d6513",
+      "label": "sodium alginate",
+      "locale": "en",
+      "aliases": [
+        "sodium alginate powder"
+      ],
+      "description": "Food-grade sodium salt of alginic acid used for gelling and thickening. Viscosity grade is unspecified; distinct from alginic acid and calcium alginate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "89281097-754f-55be-842a-ea199563b447",
+      "label": "calcium chloride",
+      "locale": "en",
+      "aliases": [
+        "food-grade calcium chloride",
+        "food grade calcium chloride"
+      ],
+      "description": "Food-grade calcium chloride used in pickling, setting and spherification. Hydration state and physical form are unspecified; distinct from calcium lactate and calcium lactate gluconate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b0155a76-6c06-552d-ac40-8fc92c0cbe46",
+      "label": "calcium lactate",
+      "locale": "en",
+      "aliases": [
+        "food-grade calcium lactate"
+      ],
+      "description": "Food-grade calcium salt of lactic acid used for setting and spherification. Hydration state is unspecified; distinct from calcium chloride and calcium lactate gluconate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "53dfeacd-dd62-5c9f-be1f-4c1a02490f88",
+      "label": "calcium lactate gluconate",
+      "locale": "en",
+      "aliases": [
+        "calcium gluconate lactate"
+      ],
+      "description": "Food-grade calcium lactate/gluconate material used as a soluble calcium source for setting and spherification. Composition is unspecified; distinct from either calcium salt supplied alone.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5b5e8c55-1f43-5aa5-bbb7-58f1f3701e1d",
+      "label": "carrageenan",
+      "locale": "en",
+      "aliases": [
+        "carrageenan gum"
+      ],
+      "description": "Food-grade carrageenan hydrocolloid extracted from red seaweeds. Type and formulation are unspecified; not an assignment to kappa, iota or lambda carrageenan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "69684a83-576f-51d0-9949-4421ca48b474",
+      "label": "kappa carrageenan",
+      "locale": "en",
+      "aliases": [
+        "kappa-carrageenan",
+        "kappa carrageenan powder"
+      ],
+      "description": "Food-grade kappa-type carrageenan used for firm gels. Counterions and grade are unspecified; distinct from iota and lambda types.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "199550bf-4952-5979-933f-e731fa1dc403",
+      "label": "iota carrageenan",
+      "locale": "en",
+      "aliases": [
+        "iota-carrageenan",
+        "iota carrageenan powder"
+      ],
+      "description": "Food-grade iota-type carrageenan used for elastic gels. Counterions and grade are unspecified; distinct from kappa and lambda types.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3cb66890-d63e-597d-87de-cd4717994bc9",
+      "label": "lambda carrageenan",
+      "locale": "en",
+      "aliases": [
+        "lambda-carrageenan",
+        "lambda carrageenan powder"
+      ],
+      "description": "Food-grade lambda-type carrageenan used principally for thickening. Grade is unspecified; distinct from the kappa and iota gelling types.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "57cc766f-d2e6-5df7-b7c5-80285609a3ae",
+      "label": "gellan gum",
+      "locale": "en",
+      "aliases": [
+        "gellan"
+      ],
+      "description": "Food-grade gellan hydrocolloid used for texture and setting. Acyl type and formulation are unspecified; not an assignment to high-acyl or low-acyl gellan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "121b4ce5-cdf4-5b53-926a-9354a8dc8b66",
+      "label": "high-acyl gellan gum",
+      "locale": "en",
+      "aliases": [
+        "high acyl gellan gum",
+        "high-acyl gellan",
+        "high acyl gellan"
+      ],
+      "description": "Food-grade high-acyl gellan gum used for softer, elastic gels. Grade and formula are unspecified; distinct from low-acyl gellan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3ac435d6-d655-5c86-bd2b-8f8d6566432c",
+      "label": "low-acyl gellan gum",
+      "locale": "en",
+      "aliases": [
+        "low acyl gellan gum",
+        "low-acyl gellan",
+        "low acyl gellan"
+      ],
+      "description": "Food-grade low-acyl gellan gum used for firm, brittle gels. Grade and formula are unspecified; distinct from high-acyl gellan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f56433f3-ba71-51da-b4d8-6265f9d81bdd",
+      "label": "methylcellulose",
+      "locale": "en",
+      "aliases": [
+        "methyl cellulose",
+        "methylcellulose powder"
+      ],
+      "description": "Food-grade methylcellulose used for thickening and thermal gelation. Viscosity and gelation grade are unspecified; distinct from CMC and HPMC.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "10c971ad-e809-5b22-b0df-064dee8737ea",
+      "label": "sodium carboxymethylcellulose",
+      "locale": "en",
+      "aliases": [
+        "carboxymethylcellulose",
+        "carboxymethyl cellulose",
+        "sodium carboxymethyl cellulose",
+        "CMC",
+        "cellulose gum"
+      ],
+      "description": "Food-grade sodium carboxymethylcellulose used for thickening and stabilization. Viscosity grade is unspecified; distinct from methylcellulose and HPMC.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3fe4b2b9-33a3-50ab-8cd2-bd0e416d54fb",
+      "label": "hydroxypropyl methylcellulose",
+      "locale": "en",
+      "aliases": [
+        "hydroxypropylmethylcellulose",
+        "hydroxypropyl methyl cellulose",
+        "HPMC"
+      ],
+      "description": "Food-grade hydroxypropyl methylcellulose used for thickening, binding and thermal gelation. Viscosity and thermal grade are unspecified; distinct from methylcellulose and CMC.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2b08d6d4-4ee1-53f8-b3d7-e5c1f0eaf9d4",
+      "label": "high-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "high methoxyl pectin",
+        "HM pectin",
+        "high-methoxy pectin"
+      ],
+      "description": "Food-grade high-methoxyl pectin for sugar/acid-dependent gelling. Setting speed and formulation are unspecified; distinct from low-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b8ae77bf-c504-55fb-94ec-b3bfbee6d422",
+      "label": "rapid-set high-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "rapid set high methoxyl pectin",
+        "rapid-set HM pectin",
+        "rapid set HM pectin"
+      ],
+      "description": "Food-grade high-methoxyl pectin specified as rapid-set. Exact formulation is unspecified; distinct from slow-set high-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "afd1f685-ffc4-53e0-a50d-6f1cd5b70869",
+      "label": "slow-set high-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "slow set high methoxyl pectin",
+        "slow-set HM pectin",
+        "slow set HM pectin"
+      ],
+      "description": "Food-grade high-methoxyl pectin specified as slow-set. Exact formulation is unspecified; distinct from rapid-set high-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fbe7193d-f761-5b9d-ae97-5f04287ce27d",
+      "label": "low-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "low methoxyl pectin",
+        "LM pectin",
+        "low-methoxy pectin"
+      ],
+      "description": "Food-grade low-methoxyl pectin used for calcium-dependent setting. Amidation and formulation are unspecified; distinct from high-methoxyl pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e3e2928c-6bc3-559b-a435-9af1ddf4dd72",
+      "label": "amidated low-methoxyl pectin",
+      "locale": "en",
+      "aliases": [
+        "amidated low methoxyl pectin",
+        "LMA pectin",
+        "low-methoxyl amidated pectin"
+      ],
+      "description": "Food-grade low-methoxyl pectin explicitly modified by amidation. Added salts and sugars are unspecified; distinct from unspecified LM pectin and formulated NH nappage blends.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2e2edfc0-c898-5144-af7e-3c9fa3222b38",
+      "label": "NH nappage pectin blend",
+      "locale": "en",
+      "aliases": [
+        "NH pectin",
+        "pectin NH",
+        "NH nappage pectin"
+      ],
+      "description": "Food-grade NH-style pectin blend for reheatable glazes, based on amidated low-methoxyl pectin with formulation aids. Exact composition varies; distinct from unformulated LMA pectin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "539ff440-773d-54b0-93e1-9e677a95ca92",
+      "label": "soy lecithin",
+      "locale": "en",
+      "aliases": [
+        "soya lecithin",
+        "soybean lecithin"
+      ],
+      "description": "Food-grade lecithin derived from soy, used as an emulsifier. Physical form and oil content are unspecified; distinct from sunflower lecithin and soy-lecithin spreads.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "458d7209-c6fe-50c1-8a5a-05d8b35857a7",
+      "label": "powdered soy lecithin",
+      "locale": "en",
+      "aliases": [
+        "soy lecithin powder",
+        "soya lecithin powder"
+      ],
+      "description": "Food-grade soy lecithin supplied as a dry powder for emulsification and foaming. Residual oil and carrier are unspecified; distinct from liquid lecithin and lecithin spreads.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a724fddb-dbcf-5cde-a0a1-fe0e58888c66",
+      "label": "sunflower lecithin",
+      "locale": "en",
+      "aliases": [
+        "sunflower seed lecithin"
+      ],
+      "description": "Food-grade lecithin derived from sunflower seeds, used as an emulsifier. Physical form and oil content are unspecified; distinct from soy lecithin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3abb67af-1b3e-502c-ad37-b34aae46f909",
+      "label": "powdered sunflower lecithin",
+      "locale": "en",
+      "aliases": [
+        "sunflower lecithin powder",
+        "sunflower seed lecithin powder"
+      ],
+      "description": "Food-grade sunflower lecithin supplied as a dry powder. Residual oil and carrier are unspecified; distinct from liquid lecithin and soy-derived lecithin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d7e935c1-a9e7-50df-934f-42bc506ff2dd",
+      "label": "sucrose fatty-acid esters",
+      "locale": "en",
+      "aliases": [
+        "sucrose esters",
+        "sucrose ester",
+        "sucrose esters of fatty acids"
+      ],
+      "description": "Food-grade sucrose esters of fatty acids used as emulsifiers. Fatty-acid composition and emulsification grade are unspecified; distinct from sucrose sugar and glyceride emulsifiers.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f885c588-1dc6-5560-9793-603db2cfb542",
+      "label": "mono- and diglyceride emulsifier blend",
+      "locale": "en",
+      "aliases": [
+        "mono and diglycerides",
+        "mono- and diglycerides",
+        "monoglyceride and diglyceride emulsifier"
+      ],
+      "description": "Food-grade emulsifier mixture of mono- and diglycerides of fatty acids. Fat source and proportions are unspecified; distinct from diacylglycerol cooking oil and purified monoglycerides.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2cf1964a-60a6-5c35-a2b1-7f81a24864b4",
+      "label": "tapioca maltodextrin",
+      "locale": "en",
+      "aliases": [
+        "cassava maltodextrin"
+      ],
+      "description": "Food-grade maltodextrin derived from tapioca starch. Density and grade are unspecified; the tapioca source alone does not establish fat-powdering performance.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2d9c1bf5-ecd6-54eb-af8c-bf9ebbd37912",
+      "label": "fat-powdering tapioca maltodextrin",
+      "locale": "en",
+      "aliases": [
+        "tapioca maltodextrin for fat powders",
+        "tapioca maltodextrin for oil powders"
+      ],
+      "description": "Food-grade low-density tapioca maltodextrin specifically supplied for carrying fats as powders. Exact grade is unspecified; distinct from tapioca maltodextrin without that functionality.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e5e594cc-bbaf-5444-9955-b8e0fd70d667",
+      "label": "wheat dextrin",
+      "locale": "en",
+      "aliases": [],
+      "description": "Food-grade dextrin derived from wheat starch. Digestibility and grade are unspecified; distinct from corn dextrin and explicitly resistant wheat dextrin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a20718e3-0dad-5b61-a07d-c52a8db7f918",
+      "label": "resistant wheat dextrin",
+      "locale": "en",
+      "aliases": [
+        "soluble wheat dextrin fiber",
+        "soluble wheat dextrin fibre",
+        "resistant wheat dextrin powder"
+      ],
+      "description": "Food-grade digestion-resistant wheat dextrin used as a soluble-fiber ingredient. Exact grade is unspecified; distinct from wheat dextrin without a resistance specification.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "72afe2e1-48df-527c-bbdb-2ffe5877979d",
+      "label": "inulin",
+      "locale": "en",
+      "aliases": [
+        "inulin powder"
+      ],
+      "description": "Food-grade inulin fructan used for bulk and texture. Plant source and chain length are unspecified; distinct from fructose, polydextrose and other isolated fibers.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "92e830df-52c2-5b54-93ed-99cd2407f0ee",
+      "label": "polydextrose",
+      "locale": "en",
+      "aliases": [
+        "polydextrose powder"
+      ],
+      "description": "Food-grade polydextrose used as a bulking and texture ingredient. Exact formulation is unspecified; distinct from dextrose, maltodextrin and inulin.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f7cf0f08-1a73-5b48-aa80-5f9a1bcdac3d",
+      "label": "transglutaminase preparation",
+      "locale": "en",
+      "aliases": [
+        "transglutaminase",
+        "food-grade transglutaminase"
+      ],
+      "description": "Food-grade transglutaminase enzyme preparation for modifying food proteins. Activity, carrier and helper proteins are unspecified; formulations are not presumed interchangeable by weight.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3836ed54-03ca-5b2f-baf3-8e3bdff506ac",
+      "label": "pectinase preparation",
+      "locale": "en",
+      "aliases": [
+        "pectinase",
+        "food-grade pectinase"
+      ],
+      "description": "Food-grade pectin-degrading enzyme preparation used in fruit processing and clarification. Activity, accompanying enzymes and carrier are unspecified; distinct from pectin gelling ingredients.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5e83bca9-f0c1-53d5-82ef-f63a759e0561",
+      "label": "sodium citrate",
+      "locale": "en",
+      "aliases": [
+        "trisodium citrate",
+        "tribasic sodium citrate"
+      ],
+      "description": "Food-grade trisodium citrate used for buffering and emulsification. Hydration state is unspecified; distinct from citric acid and mono- or disodium citrate.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "fb32efbd-ec41-5a6c-9d7f-696036c96fa3",
+      "label": "citric acid",
+      "locale": "en",
+      "aliases": [
+        "citric acid powder"
+      ],
+      "description": "Food-grade citric acid used for tartness and acidity adjustment. Hydration state is unspecified; distinct from sodium citrate and other food acids.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3739a7c4-3868-5ab4-8723-2d468b6e50f5",
+      "label": "malic acid",
+      "locale": "en",
+      "aliases": [
+        "malic acid powder"
+      ],
+      "description": "Food-grade malic acid used for tartness and acidity adjustment. Stereoisomer composition is unspecified; distinct from citric and tartaric acids.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ded1ca1d-90f3-5e39-a684-d41f1d9693fe",
+      "label": "tartaric acid",
+      "locale": "en",
+      "aliases": [
+        "tartaric acid powder"
+      ],
+      "description": "Food-grade tartaric acid used for acidity adjustment. Physical grade is unspecified; distinct from cream of tartar, a potassium salt, and from malic acid.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "917e111f-8e9d-5bfa-906c-56e8c1411232",
+      "label": "ascorbic acid",
+      "locale": "en",
+      "aliases": [
+        "ascorbic acid powder"
+      ],
+      "description": "Food-grade ascorbic acid used as an antioxidant and flour-treatment ingredient. Not a vitamin supplement blend; distinct from citric acid and ascorbate salts.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a8742223-5624-5d0a-b801-91c7bd3552e0",
+      "label": "glucono delta-lactone",
+      "locale": "en",
+      "aliases": [
+        "glucono delta lactone",
+        "glucono-delta-lactone",
+        "GDL"
+      ],
+      "description": "Food-grade glucono delta-lactone used as a gradual acidifier and coagulant. Grade is unspecified; distinct from gluconate salts and pre-acidified mixtures.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "567ebf40-4fa3-5267-ba3b-6c921baa2935",
+      "label": "trehalose",
+      "locale": "en",
+      "aliases": [
+        "trehalose powder"
+      ],
+      "description": "Food-grade trehalose sugar used for sweetness, bulk and texture. Hydration state is unspecified; distinct from sucrose, fructose and dextrose.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8dbbf7d3-d23a-5531-b150-188c9e4d5fb7",
+      "label": "glycerin",
+      "locale": "en",
+      "aliases": [
+        "glycerine",
+        "glycerol",
+        "food-grade glycerin",
+        "food grade glycerol"
+      ],
+      "description": "Food-grade glycerol used as a humectant and texture ingredient. Feedstock is unspecified; distinct from glyceride emulsifiers and glycerol-containing blends.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
     }
   ],
   "alias_additions": {
@@ -2752,6 +3531,31 @@
       "public_evidence": [
         "baseline",
         "asian-flours"
+      ]
+    },
+    "7cc7e247-5726-44b8-a72c-629706e4d3c6": {
+      "label": "crystaline fructose",
+      "aliases": [
+        "crystaline fructose",
+        "fructose powder",
+        "powdered fructose",
+        "crystalline fructose powder"
+      ],
+      "note": "Existing definition explicitly denotes dried, ground, high-purity fructose. Correct the spelling on the same UUID and retain its old name; do not merge with generic fructose or fructose syrup.",
+      "public_evidence": [
+        "baseline",
+        "molecular-sugars"
+      ]
+    }
+  },
+  "label_renames": {
+    "7cc7e247-5726-44b8-a72c-629706e4d3c6": {
+      "before_label": "crystaline fructose",
+      "label": "crystalline fructose",
+      "reason": "Correct the spelling of crystalline on the existing dried/ground fructose identity; retain the prior label as an alias and every other field.",
+      "public_evidence": [
+        "baseline",
+        "molecular-sugars"
       ]
     }
   },
@@ -4276,6 +5080,477 @@
       "public_evidence": [
         "starch-study"
       ]
+    },
+    "0f195098-74ca-5f3f-a207-5729ff5d6513": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "sodium alginate"
+      ],
+      "rationale": "Food-grade sodium salt of alginic acid used for gelling and thickening. Viscosity grade is unspecified; distinct from alginic acid and calcium alginate.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-alginate"
+      ]
+    },
+    "89281097-754f-55be-842a-ea199563b447": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "calcium chloride"
+      ],
+      "rationale": "Food-grade calcium chloride used in pickling, setting and spherification. Hydration state and physical form are unspecified; distinct from calcium lactate and calcium lactate gluconate.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-calcium-chloride"
+      ]
+    },
+    "b0155a76-6c06-552d-ac40-8fc92c0cbe46": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "calcium lactate"
+      ],
+      "rationale": "Food-grade calcium salt of lactic acid used for setting and spherification. Hydration state is unspecified; distinct from calcium chloride and calcium lactate gluconate.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-calcium-lactate"
+      ]
+    },
+    "53dfeacd-dd62-5c9f-be1f-4c1a02490f88": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "calcium lactate gluconate"
+      ],
+      "rationale": "Food-grade calcium lactate/gluconate material used as a soluble calcium source for setting and spherification. Composition is unspecified; distinct from either calcium salt supplied alone.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-calcium-lactate-gluconate"
+      ]
+    },
+    "5b5e8c55-1f43-5aa5-bbb7-58f1f3701e1d": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "carrageenan"
+      ],
+      "rationale": "Food-grade carrageenan hydrocolloid extracted from red seaweeds. Type and formulation are unspecified; not an assignment to kappa, iota or lambda carrageenan.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-kappa",
+        "molecular-iota",
+        "molecular-lambda"
+      ]
+    },
+    "69684a83-576f-51d0-9949-4421ca48b474": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "kappa carrageenan"
+      ],
+      "rationale": "Food-grade kappa-type carrageenan used for firm gels. Counterions and grade are unspecified; distinct from iota and lambda types.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-kappa"
+      ]
+    },
+    "199550bf-4952-5979-933f-e731fa1dc403": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "iota carrageenan"
+      ],
+      "rationale": "Food-grade iota-type carrageenan used for elastic gels. Counterions and grade are unspecified; distinct from kappa and lambda types.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-iota"
+      ]
+    },
+    "3cb66890-d63e-597d-87de-cd4717994bc9": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "lambda carrageenan"
+      ],
+      "rationale": "Food-grade lambda-type carrageenan used principally for thickening. Grade is unspecified; distinct from the kappa and iota gelling types.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-lambda"
+      ]
+    },
+    "57cc766f-d2e6-5df7-b7c5-80285609a3ae": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "gellan gum"
+      ],
+      "rationale": "Food-grade gellan hydrocolloid used for texture and setting. Acyl type and formulation are unspecified; not an assignment to high-acyl or low-acyl gellan.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-gellan-low",
+        "molecular-gellan-high"
+      ]
+    },
+    "121b4ce5-cdf4-5b53-926a-9354a8dc8b66": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "high-acyl gellan gum"
+      ],
+      "rationale": "Food-grade high-acyl gellan gum used for softer, elastic gels. Grade and formula are unspecified; distinct from low-acyl gellan.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-gellan-high"
+      ]
+    },
+    "3ac435d6-d655-5c86-bd2b-8f8d6566432c": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "low-acyl gellan gum"
+      ],
+      "rationale": "Food-grade low-acyl gellan gum used for firm, brittle gels. Grade and formula are unspecified; distinct from high-acyl gellan.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-gellan-low"
+      ]
+    },
+    "f56433f3-ba71-51da-b4d8-6265f9d81bdd": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "methylcellulose"
+      ],
+      "rationale": "Food-grade methylcellulose used for thickening and thermal gelation. Viscosity and gelation grade are unspecified; distinct from CMC and HPMC.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-methylcellulose"
+      ]
+    },
+    "10c971ad-e809-5b22-b0df-064dee8737ea": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "sodium carboxymethylcellulose"
+      ],
+      "rationale": "Food-grade sodium carboxymethylcellulose used for thickening and stabilization. Viscosity grade is unspecified; distinct from methylcellulose and HPMC.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-cmc"
+      ]
+    },
+    "3fe4b2b9-33a3-50ab-8cd2-bd0e416d54fb": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "hydroxypropyl methylcellulose"
+      ],
+      "rationale": "Food-grade hydroxypropyl methylcellulose used for thickening, binding and thermal gelation. Viscosity and thermal grade are unspecified; distinct from methylcellulose and CMC.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-hpmc"
+      ]
+    },
+    "2b08d6d4-4ee1-53f8-b3d7-e5c1f0eaf9d4": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "high-methoxyl pectin"
+      ],
+      "rationale": "Food-grade high-methoxyl pectin for sugar/acid-dependent gelling. Setting speed and formulation are unspecified; distinct from low-methoxyl pectin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-pectin-hm",
+        "molecular-pectin-rapid"
+      ]
+    },
+    "b8ae77bf-c504-55fb-94ec-b3bfbee6d422": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "rapid-set high-methoxyl pectin"
+      ],
+      "rationale": "Food-grade high-methoxyl pectin specified as rapid-set. Exact formulation is unspecified; distinct from slow-set high-methoxyl pectin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-pectin-rapid"
+      ]
+    },
+    "afd1f685-ffc4-53e0-a50d-6f1cd5b70869": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "slow-set high-methoxyl pectin"
+      ],
+      "rationale": "Food-grade high-methoxyl pectin specified as slow-set. Exact formulation is unspecified; distinct from rapid-set high-methoxyl pectin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-pectin-hm"
+      ]
+    },
+    "fbe7193d-f761-5b9d-ae97-5f04287ce27d": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "low-methoxyl pectin"
+      ],
+      "rationale": "Food-grade low-methoxyl pectin used for calcium-dependent setting. Amidation and formulation are unspecified; distinct from high-methoxyl pectin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-pectin-lm",
+        "molecular-pectin-lma"
+      ]
+    },
+    "e3e2928c-6bc3-559b-a435-9af1ddf4dd72": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "amidated low-methoxyl pectin"
+      ],
+      "rationale": "Food-grade low-methoxyl pectin explicitly modified by amidation. Added salts and sugars are unspecified; distinct from unspecified LM pectin and formulated NH nappage blends.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-pectin-lma",
+        "molecular-pectin-nh"
+      ]
+    },
+    "2e2edfc0-c898-5144-af7e-3c9fa3222b38": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "NH nappage pectin blend"
+      ],
+      "rationale": "Food-grade NH-style pectin blend for reheatable glazes, based on amidated low-methoxyl pectin with formulation aids. Exact composition varies; distinct from unformulated LMA pectin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-pectin-nh"
+      ]
+    },
+    "539ff440-773d-54b0-93e1-9e677a95ca92": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "soy lecithin"
+      ],
+      "rationale": "Food-grade lecithin derived from soy, used as an emulsifier. Physical form and oil content are unspecified; distinct from sunflower lecithin and soy-lecithin spreads.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-soy-lecithin"
+      ]
+    },
+    "458d7209-c6fe-50c1-8a5a-05d8b35857a7": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "powdered soy lecithin"
+      ],
+      "rationale": "Food-grade soy lecithin supplied as a dry powder for emulsification and foaming. Residual oil and carrier are unspecified; distinct from liquid lecithin and lecithin spreads.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-soy-lecithin"
+      ]
+    },
+    "a724fddb-dbcf-5cde-a0a1-fe0e58888c66": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "sunflower lecithin"
+      ],
+      "rationale": "Food-grade lecithin derived from sunflower seeds, used as an emulsifier. Physical form and oil content are unspecified; distinct from soy lecithin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-sunflower-lecithin"
+      ]
+    },
+    "3abb67af-1b3e-502c-ad37-b34aae46f909": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "powdered sunflower lecithin"
+      ],
+      "rationale": "Food-grade sunflower lecithin supplied as a dry powder. Residual oil and carrier are unspecified; distinct from liquid lecithin and soy-derived lecithin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-sunflower-lecithin"
+      ]
+    },
+    "d7e935c1-a9e7-50df-934f-42bc506ff2dd": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "sucrose fatty-acid esters"
+      ],
+      "rationale": "Food-grade sucrose esters of fatty acids used as emulsifiers. Fatty-acid composition and emulsification grade are unspecified; distinct from sucrose sugar and glyceride emulsifiers.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-sucrose-esters"
+      ]
+    },
+    "f885c588-1dc6-5560-9793-603db2cfb542": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "mono- and diglyceride emulsifier blend"
+      ],
+      "rationale": "Food-grade emulsifier mixture of mono- and diglycerides of fatty acids. Fat source and proportions are unspecified; distinct from diacylglycerol cooking oil and purified monoglycerides.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-additive-identities"
+      ]
+    },
+    "2cf1964a-60a6-5c35-a2b1-7f81a24864b4": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "tapioca maltodextrin"
+      ],
+      "rationale": "Food-grade maltodextrin derived from tapioca starch. Density and grade are unspecified; the tapioca source alone does not establish fat-powdering performance.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-fat-powdering"
+      ]
+    },
+    "2d9c1bf5-ecd6-54eb-af8c-bf9ebbd37912": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "fat-powdering tapioca maltodextrin"
+      ],
+      "rationale": "Food-grade low-density tapioca maltodextrin specifically supplied for carrying fats as powders. Exact grade is unspecified; distinct from tapioca maltodextrin without that functionality.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-fat-powdering"
+      ]
+    },
+    "e5e594cc-bbaf-5444-9955-b8e0fd70d667": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "wheat dextrin"
+      ],
+      "rationale": "Food-grade dextrin derived from wheat starch. Digestibility and grade are unspecified; distinct from corn dextrin and explicitly resistant wheat dextrin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-wheat-dextrin"
+      ]
+    },
+    "a20718e3-0dad-5b61-a07d-c52a8db7f918": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "resistant wheat dextrin"
+      ],
+      "rationale": "Food-grade digestion-resistant wheat dextrin used as a soluble-fiber ingredient. Exact grade is unspecified; distinct from wheat dextrin without a resistance specification.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-wheat-dextrin",
+        "molecular-resistant-wheat-dextrin"
+      ]
+    },
+    "72afe2e1-48df-527c-bbdb-2ffe5877979d": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "inulin"
+      ],
+      "rationale": "Food-grade inulin fructan used for bulk and texture. Plant source and chain length are unspecified; distinct from fructose, polydextrose and other isolated fibers.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-fibers"
+      ]
+    },
+    "92e830df-52c2-5b54-93ed-99cd2407f0ee": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "polydextrose"
+      ],
+      "rationale": "Food-grade polydextrose used as a bulking and texture ingredient. Exact formulation is unspecified; distinct from dextrose, maltodextrin and inulin.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-fibers"
+      ]
+    },
+    "f7cf0f08-1a73-5b48-aa80-5f9a1bcdac3d": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "transglutaminase preparation"
+      ],
+      "rationale": "Food-grade transglutaminase enzyme preparation for modifying food proteins. Activity, carrier and helper proteins are unspecified; formulations are not presumed interchangeable by weight.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-transglutaminase"
+      ]
+    },
+    "3836ed54-03ca-5b2f-baf3-8e3bdff506ac": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "pectinase preparation"
+      ],
+      "rationale": "Food-grade pectin-degrading enzyme preparation used in fruit processing and clarification. Activity, accompanying enzymes and carrier are unspecified; distinct from pectin gelling ingredients.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-pectinase"
+      ]
+    },
+    "5e83bca9-f0c1-53d5-82ef-f63a759e0561": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "sodium citrate"
+      ],
+      "rationale": "Food-grade trisodium citrate used for buffering and emulsification. Hydration state is unspecified; distinct from citric acid and mono- or disodium citrate.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-sodium-citrate"
+      ]
+    },
+    "fb32efbd-ec41-5a6c-9d7f-696036c96fa3": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "citric acid"
+      ],
+      "rationale": "Food-grade citric acid used for tartness and acidity adjustment. Hydration state is unspecified; distinct from sodium citrate and other food acids.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-citric"
+      ]
+    },
+    "3739a7c4-3868-5ab4-8723-2d468b6e50f5": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "malic acid"
+      ],
+      "rationale": "Food-grade malic acid used for tartness and acidity adjustment. Stereoisomer composition is unspecified; distinct from citric and tartaric acids.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-malic"
+      ]
+    },
+    "ded1ca1d-90f3-5e39-a684-d41f1d9693fe": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "tartaric acid"
+      ],
+      "rationale": "Food-grade tartaric acid used for acidity adjustment. Physical grade is unspecified; distinct from cream of tartar, a potassium salt, and from malic acid.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-tartaric"
+      ]
+    },
+    "917e111f-8e9d-5bfa-906c-56e8c1411232": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "ascorbic acid"
+      ],
+      "rationale": "Food-grade ascorbic acid used as an antioxidant and flour-treatment ingredient. Not a vitamin supplement blend; distinct from citric acid and ascorbate salts.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-ascorbic"
+      ]
+    },
+    "a8742223-5624-5d0a-b801-91c7bd3552e0": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "glucono delta-lactone"
+      ],
+      "rationale": "Food-grade glucono delta-lactone used as a gradual acidifier and coagulant. Grade is unspecified; distinct from gluconate salts and pre-acidified mixtures.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-gdl",
+        "molecular-additive-identities"
+      ]
+    },
+    "567ebf40-4fa3-5267-ba3b-6c921baa2935": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "trehalose"
+      ],
+      "rationale": "Food-grade trehalose sugar used for sweetness, bulk and texture. Hydration state is unspecified; distinct from sucrose, fructose and dextrose.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-sugars"
+      ]
+    },
+    "8dbbf7d3-d23a-5531-b150-188c9e4d5fb7": {
+      "category": "molecular_ingredients",
+      "observed_names": [
+        "glycerin"
+      ],
+      "rationale": "Food-grade glycerol used as a humectant and texture ingredient. Feedstock is unspecified; distinct from glyceride emulsifiers and glycerol-containing blends.",
+      "definition_basis": "Original curated cooking definition reviewed for the stated product family, source wording and existing identity scope. Commercial examples do not certify every possible formulation or fixed nutrient content.",
+      "public_evidence": [
+        "molecular-glycerin",
+        "molecular-additive-identities"
+      ]
     }
   },
   "reviewed_names": {
@@ -5053,6 +6328,258 @@
       "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
       "related_ids": []
     },
+    "sodium alginate": {
+      "action": "add",
+      "canonical_id": "0f195098-74ca-5f3f-a207-5729ff5d6513",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "calcium chloride": {
+      "action": "add",
+      "canonical_id": "89281097-754f-55be-842a-ea199563b447",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "calcium lactate": {
+      "action": "add",
+      "canonical_id": "b0155a76-6c06-552d-ac40-8fc92c0cbe46",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "calcium lactate gluconate": {
+      "action": "add",
+      "canonical_id": "53dfeacd-dd62-5c9f-be1f-4c1a02490f88",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "carrageenan": {
+      "action": "add",
+      "canonical_id": "5b5e8c55-1f43-5aa5-bbb7-58f1f3701e1d",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "kappa carrageenan": {
+      "action": "add",
+      "canonical_id": "69684a83-576f-51d0-9949-4421ca48b474",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "iota carrageenan": {
+      "action": "add",
+      "canonical_id": "199550bf-4952-5979-933f-e731fa1dc403",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "lambda carrageenan": {
+      "action": "add",
+      "canonical_id": "3cb66890-d63e-597d-87de-cd4717994bc9",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "gellan gum": {
+      "action": "add",
+      "canonical_id": "57cc766f-d2e6-5df7-b7c5-80285609a3ae",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "high-acyl gellan gum": {
+      "action": "add",
+      "canonical_id": "121b4ce5-cdf4-5b53-926a-9354a8dc8b66",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "low-acyl gellan gum": {
+      "action": "add",
+      "canonical_id": "3ac435d6-d655-5c86-bd2b-8f8d6566432c",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "methylcellulose": {
+      "action": "add",
+      "canonical_id": "f56433f3-ba71-51da-b4d8-6265f9d81bdd",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "sodium carboxymethylcellulose": {
+      "action": "add",
+      "canonical_id": "10c971ad-e809-5b22-b0df-064dee8737ea",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "hydroxypropyl methylcellulose": {
+      "action": "add",
+      "canonical_id": "3fe4b2b9-33a3-50ab-8cd2-bd0e416d54fb",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "high-methoxyl pectin": {
+      "action": "add",
+      "canonical_id": "2b08d6d4-4ee1-53f8-b3d7-e5c1f0eaf9d4",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "rapid-set high-methoxyl pectin": {
+      "action": "add",
+      "canonical_id": "b8ae77bf-c504-55fb-94ec-b3bfbee6d422",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "slow-set high-methoxyl pectin": {
+      "action": "add",
+      "canonical_id": "afd1f685-ffc4-53e0-a50d-6f1cd5b70869",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "low-methoxyl pectin": {
+      "action": "add",
+      "canonical_id": "fbe7193d-f761-5b9d-ae97-5f04287ce27d",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "amidated low-methoxyl pectin": {
+      "action": "add",
+      "canonical_id": "e3e2928c-6bc3-559b-a435-9af1ddf4dd72",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "nh nappage pectin blend": {
+      "action": "add",
+      "canonical_id": "2e2edfc0-c898-5144-af7e-3c9fa3222b38",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "soy lecithin": {
+      "action": "add",
+      "canonical_id": "539ff440-773d-54b0-93e1-9e677a95ca92",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "powdered soy lecithin": {
+      "action": "add",
+      "canonical_id": "458d7209-c6fe-50c1-8a5a-05d8b35857a7",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "sunflower lecithin": {
+      "action": "add",
+      "canonical_id": "a724fddb-dbcf-5cde-a0a1-fe0e58888c66",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "powdered sunflower lecithin": {
+      "action": "add",
+      "canonical_id": "3abb67af-1b3e-502c-ad37-b34aae46f909",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "sucrose fatty-acid esters": {
+      "action": "add",
+      "canonical_id": "d7e935c1-a9e7-50df-934f-42bc506ff2dd",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "mono- and diglyceride emulsifier blend": {
+      "action": "add",
+      "canonical_id": "f885c588-1dc6-5560-9793-603db2cfb542",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "tapioca maltodextrin": {
+      "action": "add",
+      "canonical_id": "2cf1964a-60a6-5c35-a2b1-7f81a24864b4",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "fat-powdering tapioca maltodextrin": {
+      "action": "add",
+      "canonical_id": "2d9c1bf5-ecd6-54eb-af8c-bf9ebbd37912",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "wheat dextrin": {
+      "action": "add",
+      "canonical_id": "e5e594cc-bbaf-5444-9955-b8e0fd70d667",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "resistant wheat dextrin": {
+      "action": "add",
+      "canonical_id": "a20718e3-0dad-5b61-a07d-c52a8db7f918",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "inulin": {
+      "action": "add",
+      "canonical_id": "72afe2e1-48df-527c-bbdb-2ffe5877979d",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "polydextrose": {
+      "action": "add",
+      "canonical_id": "92e830df-52c2-5b54-93ed-99cd2407f0ee",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "transglutaminase preparation": {
+      "action": "add",
+      "canonical_id": "f7cf0f08-1a73-5b48-aa80-5f9a1bcdac3d",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "pectinase preparation": {
+      "action": "add",
+      "canonical_id": "3836ed54-03ca-5b2f-baf3-8e3bdff506ac",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "sodium citrate": {
+      "action": "add",
+      "canonical_id": "5e83bca9-f0c1-53d5-82ef-f63a759e0561",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "citric acid": {
+      "action": "add",
+      "canonical_id": "fb32efbd-ec41-5a6c-9d7f-696036c96fa3",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "malic acid": {
+      "action": "add",
+      "canonical_id": "3739a7c4-3868-5ab4-8723-2d468b6e50f5",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "tartaric acid": {
+      "action": "add",
+      "canonical_id": "ded1ca1d-90f3-5e39-a684-d41f1d9693fe",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "ascorbic acid": {
+      "action": "add",
+      "canonical_id": "917e111f-8e9d-5bfa-906c-56e8c1411232",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "glucono delta-lactone": {
+      "action": "add",
+      "canonical_id": "a8742223-5624-5d0a-b801-91c7bd3552e0",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "trehalose": {
+      "action": "add",
+      "canonical_id": "567ebf40-4fa3-5267-ba3b-6c921baa2935",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
+    "glycerin": {
+      "action": "add",
+      "canonical_id": "8dbbf7d3-d23a-5531-b150-188c9e4d5fb7",
+      "note": "Reviewed cooking material; explicitly preserves the named form and formulation. No automatic assignment to a source recipe.",
+      "related_ids": []
+    },
     "thin spaghetti": {
       "action": "reuse",
       "canonical_id": "bddd954c-0336-4085-b604-72d987902615",
@@ -5465,6 +6992,36 @@
       "action": "reuse",
       "canonical_id": "88734962-8bef-499b-b49c-d2a04f7fb52b",
       "note": "Sweet/sticky rice flour names denote the existing flour made from glutinous rice, distinct from ordinary rice flour. No specific brand, cultivar or milling process is implied.",
+      "related_ids": []
+    },
+    "crystalline fructose": {
+      "action": "reuse",
+      "canonical_id": "7cc7e247-5726-44b8-a72c-629706e4d3c6",
+      "note": "Existing definition explicitly denotes dried, ground, high-purity fructose. Correct the spelling on the same UUID and retain its old name; do not merge with generic fructose or fructose syrup.",
+      "related_ids": []
+    },
+    "fructose powder": {
+      "action": "reuse",
+      "canonical_id": "7cc7e247-5726-44b8-a72c-629706e4d3c6",
+      "note": "Existing definition explicitly denotes dried, ground, high-purity fructose. Correct the spelling on the same UUID and retain its old name; do not merge with generic fructose or fructose syrup.",
+      "related_ids": []
+    },
+    "powdered fructose": {
+      "action": "reuse",
+      "canonical_id": "7cc7e247-5726-44b8-a72c-629706e4d3c6",
+      "note": "Existing definition explicitly denotes dried, ground, high-purity fructose. Correct the spelling on the same UUID and retain its old name; do not merge with generic fructose or fructose syrup.",
+      "related_ids": []
+    },
+    "crystalline fructose powder": {
+      "action": "reuse",
+      "canonical_id": "7cc7e247-5726-44b8-a72c-629706e4d3c6",
+      "note": "Existing definition explicitly denotes dried, ground, high-purity fructose. Correct the spelling on the same UUID and retain its old name; do not merge with generic fructose or fructose syrup.",
+      "related_ids": []
+    },
+    "crystaline fructose": {
+      "action": "reuse",
+      "canonical_id": "7cc7e247-5726-44b8-a72c-629706e4d3c6",
+      "note": "Retain the legacy spelling as a searchable alias after correcting the preferred label on the same UUID.",
       "related_ids": []
     },
     "adobo sauce": {
@@ -6006,6 +7563,321 @@
       "captured_on": "2026-10-26",
       "capture_kind": "https_response_body",
       "note": "Reviewed food material, milling form or lexical equivalence. Definitions are original; no brand aliases, substitution ratios, health claims, nutrient associations or exact source mappings are imported."
+    },
+    "molecular-additive-identities": {
+      "url": "https://www.gov.uk/government/publications/approved-additives-and-e-numbers/approved-additives-and-e-numbers",
+      "final_url": "https://www.gov.uk/government/publications/approved-additives-and-e-numbers/approved-additives-and-e-numbers",
+      "sha256": "b780732545e319c0e918b0ad859a24748ca208bdcc4a5314c020962a74181b8b",
+      "title": "Approved additives and E numbers - GOV.UK",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-alginate": {
+      "url": "https://modernistpantry.com/products/sodium-alginate.html",
+      "final_url": "https://modernistpantry.com/products/sodium-alginate.html",
+      "sha256": "fc8bb859d53833154c66d333be729ae4552d219b74c42eca7c42c4e2e857c3c9",
+      "title": "Sodium Alginate - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-ascorbic": {
+      "url": "https://modernistpantry.com/products/ascorbic-acid.html",
+      "final_url": "https://modernistpantry.com/products/ascorbic-acid.html",
+      "sha256": "5265a75077fbfe90cd387985ed1dbbdfde8c1ab45a20f015b49fb54b56f098c4",
+      "title": "Ascorbic Acid - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-calcium-chloride": {
+      "url": "https://modernistpantry.com/products/calcium-chloride.html",
+      "final_url": "https://modernistpantry.com/products/calcium-chloride.html",
+      "sha256": "94cca99a7818b9317ea0fda50bb07b14d871e04f750303e4c7aa77cf94f7df83",
+      "title": "Calcium Chloride - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-calcium-lactate": {
+      "url": "https://modernistpantry.com/products/calcium-lactate.html",
+      "final_url": "https://modernistpantry.com/products/calcium-lactate.html",
+      "sha256": "d1f91b5f5785c0d0b19aed751e06db4acf2f99b56c94c321f68bb588509478ec",
+      "title": "Calcium Lactate - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-calcium-lactate-gluconate": {
+      "url": "https://modernistpantry.com/products/calcium-lactate-gluconate.html",
+      "final_url": "https://modernistpantry.com/products/calcium-lactate-gluconate.html",
+      "sha256": "a83e2ef69fb2343b72193e277894476aa345369794e65d8f7bbb372032888c1b",
+      "title": "Calcium Lactate Gluconate - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-citric": {
+      "url": "https://modernistpantry.com/products/citric-acid.html",
+      "final_url": "https://modernistpantry.com/products/citric-acid.html",
+      "sha256": "96d170b61e80995f571e9a5569775f6ca2913fe7edc5229d8b833613065ef2f8",
+      "title": "Citric Acid - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-cmc": {
+      "url": "https://modernistpantry.com/products/carboxymethyl-cellulose-cmc.html",
+      "final_url": "https://modernistpantry.com/products/carboxymethyl-cellulose-cmc.html",
+      "sha256": "0d6f7c21d92f63957c5787aa73f5622901463db492a5c838d54fbba18de15829",
+      "title": "Carboxymethyl Cellulose (CMC) - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-fat-powdering": {
+      "url": "https://modernistpantry.com/products/n-zorbit-m-tapioca-maltodextrin.html",
+      "final_url": "https://modernistpantry.com/products/n-zorbit-m-tapioca-maltodextrin.html",
+      "sha256": "d18e320585cb5ca2418e13e3060baaff152e46218b3fdd50c336141fa8aa39aa",
+      "title": "N-Zorbit M - Tapioca Maltodextrin - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-fibers": {
+      "url": "https://smingredients.com/products/fibers/",
+      "final_url": "https://smingredients.com/products/fibers/",
+      "sha256": "c364fc8dc50f541c919d63116d6b4d4882c2ca44ce01e5ffe184e7c7c7b4a797",
+      "title": "Fibers | SMI",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-gdl": {
+      "url": "https://en.wikipedia.org/wiki/Glucono_delta-lactone",
+      "final_url": "https://en.wikipedia.org/wiki/Glucono_delta-lactone",
+      "sha256": "5e567933069d95c82850d15474912e63c2d957519201e0fc72c4254026c12eac",
+      "title": "Glucono-δ-lactone - Wikipedia",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-gellan-high": {
+      "url": "https://modernistpantry.com/products/gellan-gum-lt100-high-acyl-gellan-gum.html",
+      "final_url": "https://modernistpantry.com/products/gellan-gum-lt100-high-acyl-gellan-gum.html",
+      "sha256": "cb3ef6d76256a5c0d392bb881d7c7ccf2c6c62cd3eb6ba09628e25697932db4d",
+      "title": "Gellan Gum LT100 - High Acyl Gellan Gum - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-gellan-low": {
+      "url": "https://modernistpantry.com/products/gellan-gum-f-low-acyl-gellan-gum.html",
+      "final_url": "https://modernistpantry.com/products/gellan-gum-f-low-acyl-gellan-gum.html",
+      "sha256": "263192edb7c668c477c9e527ee7e46d438a309cb98a527724a7e9c5a54da9600",
+      "title": "Gellan Gum F - Low Acyl Gellan Gum - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-glycerin": {
+      "url": "https://specialingredients.co.uk/collections/vegetable-glycerine",
+      "final_url": "https://specialingredients.co.uk/collections/vegetable-glycerine",
+      "sha256": "2b2798fcf00748d59c5efec1f493e472348482624943ef58c9d58089629d83f2",
+      "title": "Vegetable Glycerine (E422) | Food Grade | Special Ingredients",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-hpmc": {
+      "url": "https://modernistpantry.com/products/methocel-f50-food-grade.html",
+      "final_url": "https://modernistpantry.com/products/methocel-f50-food-grade.html",
+      "sha256": "bebb846812b9b3f81dab14cc448d50f76d6aead8bd11fe89cc46ffd4b9880c70",
+      "title": "Methocel®  F50 Food Grade - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-iota": {
+      "url": "https://modernistpantry.com/products/iota-carrageenan.html",
+      "final_url": "https://modernistpantry.com/products/iota-carrageenan.html",
+      "sha256": "089346db6a9a74c1c48a289cceb67c8c49aa31048dc3a76a0ac01ea94210882d",
+      "title": "Iota Carrageenan - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-kappa": {
+      "url": "https://modernistpantry.com/products/kappa-carrageenan.html",
+      "final_url": "https://modernistpantry.com/products/kappa-carrageenan.html",
+      "sha256": "791c6839b1f2f81f6f96405d626a8a8fe970303288f307ce49d68140b772128e",
+      "title": "Kappa Carrageenan - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-lambda": {
+      "url": "https://modernistpantry.com/products/lambda-carrageenan.html",
+      "final_url": "https://modernistpantry.com/products/lambda-carrageenan.html",
+      "sha256": "f271b6fb27a3a0fa0d307e17548b7faf8b35aa4486c2adebea9e1c5f9cf4130f",
+      "title": "Lambda Carrageenan - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-malic": {
+      "url": "https://modernistpantry.com/products/malic-acid.html",
+      "final_url": "https://modernistpantry.com/products/malic-acid.html",
+      "sha256": "4664fba999ace56a823db99de82772291cf41a2cffdb860ebf9d38e22a355285",
+      "title": "Malic Acid - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-methylcellulose": {
+      "url": "https://modernistpantry.com/products/methylcellulose-lv-low-viscosity.html",
+      "final_url": "https://modernistpantry.com/products/methylcellulose-lv-low-viscosity.html",
+      "sha256": "72fac98edb4863676aca90859a7af055010c3c9a04001f737a27f6c7126ba24c",
+      "title": "Methylcellulose LV (Low Viscosity) - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-pectin-hm": {
+      "url": "https://modernistpantry.com/products/slow-set-high-methoxyl-hm-pectin.html",
+      "final_url": "https://modernistpantry.com/products/slow-set-high-methoxyl-hm-pectin.html",
+      "sha256": "3642dc294a385205091ff90c900c01c1e0147e07ac27362ecacd10a062b89ca1",
+      "title": "Slow Set High Methoxyl (HM) Pectin - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-pectin-lm": {
+      "url": "https://modernistpantry.com/products/low-methoxyl-lm-pectin.html",
+      "final_url": "https://modernistpantry.com/products/low-methoxyl-lm-pectin.html",
+      "sha256": "efe40462ef32d84c8052eeba663bd7efe18da9775215827ab8d5f6a642f267aa",
+      "title": "Low Methoxyl (LM) Pectin - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-pectin-lma": {
+      "url": "https://en.wikipedia.org/wiki/Pectin",
+      "final_url": "https://en.wikipedia.org/wiki/Pectin",
+      "sha256": "c9412d4215950ebc1bcace44bf4c93ebebd6d57879509dd50596050b675026ce",
+      "title": "Pectin - Wikipedia",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-pectin-nh": {
+      "url": "https://www.sosa.cat/en/product/pectin-nh/",
+      "final_url": "https://www.sosa.cat/en/product/pectin-nh/",
+      "sha256": "7f4ba81b6eb4db6c25f05ccb1192b80cfa203664d85b78f7201133686d9e8b32",
+      "title": "PECTIN NH - Sosa",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-pectin-rapid": {
+      "url": "https://modernistpantry.com/products/rapid-set-high-methoxyl-hm-pectin.html",
+      "final_url": "https://modernistpantry.com/products/rapid-set-high-methoxyl-hm-pectin.html",
+      "sha256": "cc5c2bf79aa0ff6ea460b57e326c5e84a9be4a75f5d9e8b6a74e51208ba9fbb8",
+      "title": "Rapid Set High Methoxyl (HM) Pectin - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-pectinase": {
+      "url": "https://modernistpantry.com/products/pectinex-ultra-sp-l.html",
+      "final_url": "https://modernistpantry.com/products/pectinex-ultra-sp-l.html",
+      "sha256": "bfa69017c029d82063bd4a33de76a9cc6fbf48291785513f005bc4c161ae5df6",
+      "title": "Pectinex Ultra SP-L - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-resistant-wheat-dextrin": {
+      "url": "https://www.foodonline.com/doc/nutriose-soluble-fiber-0001",
+      "final_url": "https://www.foodonline.com/doc/nutriose-soluble-fiber-0001",
+      "sha256": "744a9a296c53b862b35a49e09a38c4d222fa245ae47dd3d207b6a707a051b9d0",
+      "title": "NUTRIOSE® Soluble Fiber",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-sodium-citrate": {
+      "url": "https://specialingredients.co.uk/products/sodium-citrate-buffer-salt-250kg",
+      "final_url": "https://specialingredients.co.uk/products/sodium-citrate-buffer-salt-250kg",
+      "sha256": "69ed4d067fc3b17dca5655a737d123a6add325b167468cd10905dd7ed12ab5ef",
+      "title": "Sodium Citrate ( Buffer Salt ) 250kg — Special Ingredients",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-soy-lecithin": {
+      "url": "https://modernistpantry.com/products/soy-lecithin-powder.html",
+      "final_url": "https://modernistpantry.com/products/soy-lecithin-powder.html",
+      "sha256": "766dc40c805139d59b36c92cf2b22d650026a3399c32303bb179fd7fb99d6df2",
+      "title": "Soy Lecithin Powder - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-sucrose-esters": {
+      "url": "https://specialingredients.co.uk/collections/sucrose-ester/products/sucrose-ester-powder-e473-25-kg",
+      "final_url": "https://specialingredients.co.uk/collections/sucrose-ester/products/sucrose-ester-powder-e473-25-kg",
+      "sha256": "b88eb511458f366b719cf741fc9acd2fc0e007e52c11cee1b50ba666a60bd652",
+      "title": "Sucrose Ester Powder | 25 KG Sucrose Ester Powder - E473 — Special Ingredients",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-sugars": {
+      "url": "https://www.sosa.cat/en/product-category/technical-sugars/technical-sugars-and-sweeteners/",
+      "final_url": "https://www.sosa.cat/en/product-category/technical-sugars/technical-sugars-and-sweeteners/",
+      "sha256": "03fcb575d172c10558a68a35ae18bce8f8a07f29a4df663bb8bb16f022649879",
+      "title": "Technical Sugars and Sweeteners - Sosa",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-sunflower-lecithin": {
+      "url": "https://specialingredients.co.uk/products/sunflower-lecithin-powder-e322",
+      "final_url": "https://specialingredients.co.uk/products/sunflower-lecithin-powder-e322",
+      "sha256": "d2528f3f9d694e5646a423c8050d15deb9d7a2a2116f6d14fca71f4c78f13ddd",
+      "title": "Sunflower Lecithin | 250 G Sunflower Lecithin Powder - E322 — Special Ingredients",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-tartaric": {
+      "url": "https://modernistpantry.com/products/tartaric-acid.html",
+      "final_url": "https://modernistpantry.com/products/tartaric-acid.html",
+      "sha256": "f28039e5f07b2beec54f080d48f037401d3322e27a2821b8025e91fd03cd4b02",
+      "title": "Tartaric Acid - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-transglutaminase": {
+      "url": "https://modernistpantry.com/products/moo-gloo-ti-transglutaminase.html",
+      "final_url": "https://modernistpantry.com/products/moo-gloo-ti-transglutaminase.html",
+      "sha256": "e66478433e5fdf5f947a9287c8cc8607244f5f1c1cfe4179aa67888e73d96963",
+      "title": "Moo Gloo TI Transglutaminase - Modernist Pantry, LLC",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
+    },
+    "molecular-wheat-dextrin": {
+      "url": "https://www.roquette.com/health-pharma/consumer-healthcare-product-catalog/nutriose-fb-06-wheat-dextrin",
+      "final_url": "https://www.roquette.com/health-pharma/consumer-healthcare-product-catalog/nutriose-fb-06-wheat-dextrin",
+      "sha256": "6bef5937293da5e7d86f3a070a10a3930874dfeca700a5c1870bb8c5b5a8b79d",
+      "title": "NUTRIOSE® FB 06 - WHEAT DEXTRIN",
+      "captured_on": "2026-10-26",
+      "capture_kind": "https_response_body",
+      "note": "Reviewed food-grade identity, material family or explicit formulation. Original definitions import no producer prose, dosing, health or jurisdictional claims. Grade, carrier and activity remain unspecified unless explicitly named; no brand aliases or inferred external mappings."
     }
   },
   "context_rows": {}

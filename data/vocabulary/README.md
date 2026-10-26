@@ -1,9 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **13,490 active ingredients**: the original 100 curated entries,
+The seed contains **13,532 active ingredients**: the original 100 curated entries,
 10,025 active FoodOn-derived cooking/pantry entries, 2,548 active Wikidata additions,
-104 USDA additions and 713 subsequently curated cooking-material definitions.
+104 USDA additions and 755 subsequently curated cooking-material definitions.
 Another **85 identities** are retained as retired: 60 from the original deployment
 review, 21 from the ingredient-scope cleanup and four from the final definition review.
 Every original ID, description and prior searchable label/alias is preserved,
@@ -122,15 +122,17 @@ The ledger is `adapters/ingredient-final-gap-fill.json`; totals at that stage ar
 
 The subsequent [next-sample gap fill](../../scripts/vocabulary/GAPS.md#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
 reviews all 58 candidate phrases from another 5,000-occurrence sample and adds
-**129 definitions and 348 aliases** (281 on new entries, 67 on 33 existing
+**171 definitions and 438 aliases** (367 on new entries, 71 on 34 existing
 identities). It covers useful related forms of tofu skin, yogurt, plant drinks,
 stocks/broths, preserved pantry components, flavoring oils, seasonings and named
 wine/rum styles. Existing filbert/hazelnut, spaghettini, casing and other synonym
 identities are reused. Eleven underspecified source phrases retain explicit
-qualified choices rather than forced aliases. Current totals are **13,490 active,
-85 retired and 9,655 active aliases**. The forward ledger is
+qualified choices rather than forced aliases. Current totals are **13,532 active,
+85 retired and 9,745 active aliases**. The forward ledger is
 `adapters/ingredient-next-gap-fill.json`; every previous definition, UUID, status,
-source association and existing alias is retained. The four-source manifest is
+source association and existing alias is retained. One recorded spelling
+correction changes `crystaline fructose` to `crystalline fructose`, retaining
+the old label as an alias on the same UUID. The four-source manifest is
 unchanged, and authored recipes are not rewritten.
 
 The plant-milk follow-up adds hazelnut, macadamia, walnut, pecan, Brazil nut,
@@ -145,6 +147,14 @@ and Chinese water-chestnut starches. Explicit milling forms and extracted starch
 retain their distinctions. Tapioca/cassava/manioc starch names reuse the existing
 tapioca ID; sweet/sticky rice flour names reuse glutinous rice flour. This is a
 separate user-requested expansion, outside the frozen recipe-sample score.
+
+The molecular-ingredient follow-up adds 42 food-grade materials: alginate and
+calcium salts; carrageenan/gellan subtypes; cellulose thickeners; specialized
+pectins; lecithins and emulsifiers; dextrins/fibers; enzyme preparations; food
+acids, trehalose and glycerin. Generic entries retain unspecified grades and
+formulations; explicit powder forms, resistant dextrin and fat-powdering carrier
+grades remain separate. Existing crystalline fructose gains powder aliases.
+Liquid nitrogen, dry ice, carbon dioxide and nitrous oxide are excluded.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.
