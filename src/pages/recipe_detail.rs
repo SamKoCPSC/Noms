@@ -2791,6 +2791,9 @@ fn RecipeDetailContents(id: String) -> Element {
                 Card {
                     div { class: "recipe-detail__ingredients-section",
                         h2 { class: "recipe-detail__section-title", "Ingredients" }
+                        super::recipe_pantry::RecipePantryCheck {
+                            ingredients: recipe.ingredients.clone(),
+                        }
                         ul { class: "recipe-detail__list",
                             for ing in &recipe.ingredients {
                                 li { class: "recipe-detail__list-item",

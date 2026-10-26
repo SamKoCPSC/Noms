@@ -74,3 +74,16 @@
 @media (prefers-reduced-motion: reduce) {
     .recipe-detail * { scroll-behavior: auto; }
 }
+
+/* Read-only pantry inspector, using the recipe's existing soft surfaces. */
+.recipe-pantry { margin: 0 0 20px; padding: 4px 16px; border-radius: 18px; background: var(--surface); box-shadow: var(--elevation-inset); }
+.recipe-pantry__toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 48px; border: 0; background: none; color: var(--text-primary); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.recipe-pantry__content { padding: 8px 0 16px; display: grid; gap: 14px; }
+.recipe-pantry__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.recipe-pantry__controls label { font-weight: 700; }
+.recipe-pantry__controls select { flex: 1 1 150px; min-width: 0; max-width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.recipe-pantry__controls select:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+.recipe-pantry__hint { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 8px 0; }
+.recipe-pantry__verdict { font-weight: 800; font-size: 18px; margin: 0 0 12px; }
+.recipe-pantry__ingredients { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.recipe-pantry__ingredient { padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); line-height: 1.5; overflow-wrap: anywhere; }
