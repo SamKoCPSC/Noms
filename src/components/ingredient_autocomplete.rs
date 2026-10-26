@@ -4,9 +4,15 @@ use uuid::Uuid;
 
 #[component]
 pub fn IngredientAutocomplete(
-    index: usize,
+    #[props(default)] index: usize,
     value: String,
     oninput: EventHandler<(String, Option<Uuid>)>,
+    #[props(default)] id: Option<String>,
+    #[props(default)] accessible_name: Option<String>,
+    #[props(default = "Ingredient name".into())] placeholder: String,
+    #[props(default)] maxlength: Option<i64>,
+    #[props(default)] required: bool,
+    #[props(default)] disabled: bool,
 ) -> Element {
     let mut query = use_signal(String::new);
     let mut open = use_signal(|| false);
@@ -50,8 +56,13 @@ pub fn IngredientAutocomplete(
         && result
             .as_ref()
             .is_some_and(|(q, rows)| q == &value && rows.is_none());
-    let expanded = open() && !suggestions.is_empty();
-    let list_id = format!("ingredient-suggestions-{index}");
+    let expanded = !disabled && open() && !suggestions.is_empty();
+    let list_id = id.as_ref().map_or_else(
+        || format!("ingredient-suggestions-{index}"),
+        |id| format!("{id}-suggestions"),
+    );
+    let accessible_name =
+        accessible_name.unwrap_or_else(|| format!("Ingredient {} name", index + 1));
     let active_id = active()
         .filter(|i| expanded && *i < suggestions.len())
         .map(|i| format!("{list_id}-{i}"));
@@ -60,16 +71,20 @@ pub fn IngredientAutocomplete(
         document::Stylesheet { href: asset!("/assets/ingredient-autocomplete.css") }
         div { class: "ingredient-autocomplete",
             input {
+                id,
                 class: "neumo-inset input input--shared",
                 r#type: "text",
-                aria_label: "Ingredient {index + 1} name",
+                aria_label: accessible_name,
                 role: "combobox",
                 aria_autocomplete: "list",
                 aria_expanded: expanded,
                 aria_controls: list_id.clone(),
                 aria_activedescendant: active_id,
                 autocomplete: "off",
-                placeholder: "Ingredient name",
+                placeholder,
+                maxlength,
+                required,
+                disabled,
                 value: value.clone(),
                 onfocus: move |_| {
                     open.set(true);
@@ -105,6 +120,12 @@ pub fn IngredientAutocomplete(
                                 active.set(None);
                             }
                         }
+                        Key::Escape if expanded => {
+                            event.prevent_default();
+                            event.stop_propagation();
+                            open.set(false);
+                            active.set(None);
+                        }
                         Key::Escape | Key::Tab => { open.set(false); active.set(None); }
                         _ => {}
                     }
@@ -136,7 +157,7 @@ pub fn IngredientAutocomplete(
                     }
                 }
             }
-            if open() && unavailable {
+            if !disabled && open() && unavailable {
                 span { class: "ingredient-autocomplete__hint", role: "status", "Suggestions unavailable. You can still enter any ingredient." }
             }
         }

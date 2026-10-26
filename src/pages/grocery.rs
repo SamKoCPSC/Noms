@@ -65,6 +65,7 @@ pub fn GroceryListDetail(id: String) -> Element {
 
 #[component]
 fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let form_account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let navigator = use_navigator();
@@ -572,20 +573,17 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                     });
                                                 }
                                             },
-                                            label {
-
-                                                span {
-                                                    class: "sr-only",
-                                                    "Item name"
-                                                }
-                                                input {
-                                                    class: "neumo-inset input input--shared",
+                                            div { class: "grocery-add-name",
+                                                label { class: "sr-only", r#for: "grocery-add-name", "Item name" }
+                                                crate::components::ingredient_autocomplete::IngredientAutocomplete {
+                                                    id: "grocery-add-name",
+                                                    accessible_name: "Item name",
                                                     placeholder: "Add an item…",
                                                     required: true,
                                                     maxlength: 500,
                                                     value: add_fields().name,
                                                     disabled: disabled || pending_add().is_some(),
-                                                    oninput: move |e| add_fields.write().name = e.value(),
+                                                    oninput: move |(name, _)| add_fields.write().name = name,
                                                 }
                                             }
                                             label {
@@ -844,14 +842,14 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                         r#for: "grocery-edit-name",
                                         "Ingredient / item name"
                                     }
-                                    input {
+                                    crate::components::ingredient_autocomplete::IngredientAutocomplete {
                                         id: "grocery-edit-name",
-                                        class: "neumo-inset input input--shared",
+                                        accessible_name: "Ingredient / item name",
                                         required: true,
                                         maxlength: 500,
                                         disabled: busy(),
                                         value: edit_fields().name,
-                                        oninput: move |e| edit_fields.write().name = e.value(),
+                                        oninput: move |(name, _)| edit_fields.write().name = name,
                                     }
                                     div {
                                         class: "grocery-edit-amounts",
@@ -1099,6 +1097,7 @@ fn recipe_reference(text: &str) -> Option<Uuid> {
 
 #[component]
 pub fn GroceryListNew() -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let form_account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let navigator = use_navigator();
@@ -1561,19 +1560,16 @@ pub fn GroceryListNew() -> Element {
                                     manual.write().push(fields);
                                     entry.set(ItemFields::default());
                                 },
-                                label {
-
-                                    span {
-                                        class: "sr-only",
-                                        "Item name"
-                                    }
-                                    input {
-                                        class: "neumo-inset input input--shared",
+                                div { class: "grocery-add-name",
+                                    label { class: "sr-only", r#for: "grocery-new-item-name", "Item name" }
+                                    crate::components::ingredient_autocomplete::IngredientAutocomplete {
+                                        id: "grocery-new-item-name",
+                                        accessible_name: "Item name",
                                         placeholder: "Add an item…",
                                         value: entry().name,
                                         maxlength: 500,
                                         disabled: frozen,
-                                        oninput: move |e| entry.write().name = e.value(),
+                                        oninput: move |(name, _)| entry.write().name = name,
                                     }
                                 }
                                 label {
