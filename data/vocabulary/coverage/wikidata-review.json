@@ -1,0 +1,902 @@
+[
+  {
+    "number": 1,
+    "ingredient": "chickpea",
+    "status": "E",
+    "source_id": "Q21156930",
+    "url": "https://www.wikidata.org/wiki/Q21156930",
+    "reason": "Edible chickpea seed item.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 2,
+    "ingredient": "gochujang",
+    "status": "E",
+    "source_id": "Q699637",
+    "url": "https://www.wikidata.org/wiki/Q699637",
+    "reason": "Specific Korean chili paste.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 3,
+    "ingredient": "garlic",
+    "status": "E",
+    "source_id": "Q21546392",
+    "url": "https://www.wikidata.org/wiki/Q21546392",
+    "reason": "Garlic culinary ingredient rather than Allium sativum taxon.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 4,
+    "ingredient": "garlic powder",
+    "status": "E",
+    "source_id": "Q10716334",
+    "url": "https://www.wikidata.org/wiki/Q10716334",
+    "reason": "Garlic powder.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 5,
+    "ingredient": "garlic paste",
+    "status": "R",
+    "source_id": "Q21546392",
+    "url": "https://www.wikidata.org/wiki/Q21546392",
+    "reason": "Garlic ingredient found; paste-specific item not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 6,
+    "ingredient": "chili pepper",
+    "status": "E",
+    "source_id": "Q165199",
+    "url": "https://www.wikidata.org/wiki/Q165199",
+    "reason": "Chili pepper ingredient.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 7,
+    "ingredient": "tomato",
+    "status": "E",
+    "source_id": "Q20638126",
+    "url": "https://www.wikidata.org/wiki/Q20638126",
+    "reason": "Tomato fruit; Q23501 is the plant and its deprecated food statement points here.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 8,
+    "ingredient": "olive oil",
+    "status": "E",
+    "source_id": "Q93165",
+    "url": "https://www.wikidata.org/wiki/Q93165",
+    "reason": "Olive oil; redirected duplicate IDs must be resolved.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 9,
+    "ingredient": "soy sauce",
+    "status": "E",
+    "source_id": "Q229385",
+    "url": "https://www.wikidata.org/wiki/Q229385",
+    "reason": "Soy sauce.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 10,
+    "ingredient": "salt",
+    "status": "E",
+    "source_id": "Q11254",
+    "url": "https://www.wikidata.org/wiki/Q11254",
+    "reason": "Table salt rather than the general chemical class salt.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 11,
+    "ingredient": "tahini",
+    "status": "E",
+    "source_id": "Q383389",
+    "url": "https://www.wikidata.org/wiki/Q383389",
+    "reason": "Tehina/tahini sesame paste; Q1251144 redirects here.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 12,
+    "ingredient": "sumac",
+    "status": "E",
+    "source_id": "Q16131953",
+    "url": "https://www.wikidata.org/wiki/Q16131953",
+    "reason": "Sumac spice, distinct from Rhus plants.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 13,
+    "ingredient": "rice vinegar",
+    "status": "E",
+    "source_id": "Q1849012",
+    "url": "https://www.wikidata.org/wiki/Q1849012",
+    "reason": "Rice vinegar.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 14,
+    "ingredient": "smoked paprika",
+    "status": "R",
+    "source_id": "Q3127593",
+    "url": "https://www.wikidata.org/wiki/Q3127593",
+    "reason": "Paprika found; smoked preparation not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 15,
+    "ingredient": "black sesame seeds",
+    "status": "R",
+    "source_id": "Q12000036",
+    "url": "https://www.wikidata.org/wiki/Q12000036",
+    "reason": "Sesame seed is broader than the black seed variety.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 16,
+    "ingredient": "doenjang",
+    "status": "E",
+    "source_id": "Q1196289",
+    "url": "https://www.wikidata.org/wiki/Q1196289",
+    "reason": "Specific Korean doenjang.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 17,
+    "ingredient": "gochugaru",
+    "status": "R",
+    "source_id": "Q48189338",
+    "url": "https://www.wikidata.org/wiki/Q48189338",
+    "reason": "This item is Korean chili pepper, not processed gochugaru; a secondary site conflates them.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 18,
+    "ingredient": "perilla leaf",
+    "status": "E",
+    "source_id": "Q27650144",
+    "url": "https://www.wikidata.org/wiki/Q27650144",
+    "reason": "Perilla leaf found by following the plant's source-of relation.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 19,
+    "ingredient": "saeujeot",
+    "status": "E",
+    "source_id": "Q843252",
+    "url": "https://www.wikidata.org/wiki/Q843252",
+    "reason": "Specific salted shrimp jeotgal.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 20,
+    "ingredient": "cheonggukjang",
+    "status": "E",
+    "source_id": "Q1071614",
+    "url": "https://www.wikidata.org/wiki/Q1071614",
+    "reason": "Cheonggukjang seasoning.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 21,
+    "ingredient": "white miso",
+    "status": "R",
+    "source_id": "Q235169",
+    "url": "https://www.wikidata.org/wiki/Q235169",
+    "reason": "Miso parent found; white-miso-specific item not yet confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 22,
+    "ingredient": "kombu",
+    "status": "E",
+    "source_id": "Q11261547",
+    "url": "https://www.wikidata.org/wiki/Q11261547",
+    "reason": "Edible kombu kelp; similarly named disambiguation item rejected.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 23,
+    "ingredient": "katsuobushi",
+    "status": "E",
+    "source_id": "Q113739",
+    "url": "https://www.wikidata.org/wiki/Q113739",
+    "reason": "Dried smoked fermented skipjack katsuobushi.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 24,
+    "ingredient": "shio koji",
+    "status": "E",
+    "source_id": "Q11428977",
+    "url": "https://www.wikidata.org/wiki/Q11428977",
+    "reason": "Shio koji, located through the Japanese Wikipedia item link.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 25,
+    "ingredient": "umeboshi",
+    "status": "E",
+    "source_id": "Q1045417",
+    "url": "https://www.wikidata.org/wiki/Q1045417",
+    "reason": "Pickled umeboshi.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 26,
+    "ingredient": "doubanjiang",
+    "status": "E",
+    "source_id": "Q3273096",
+    "url": "https://www.wikidata.org/wiki/Q3273096",
+    "reason": "Specific doubanjiang paste.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 27,
+    "ingredient": "douchi",
+    "status": "E",
+    "source_id": "Q3242685",
+    "url": "https://www.wikidata.org/wiki/Q3242685",
+    "reason": "Douchi salted fermented black soybeans.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 28,
+    "ingredient": "Shaoxing wine",
+    "status": "E",
+    "source_id": "Q175245",
+    "url": "https://www.wikidata.org/wiki/Q175245",
+    "reason": "Shaoxing wine.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 29,
+    "ingredient": "Sichuan pepper",
+    "status": "E",
+    "source_id": "Q756800",
+    "url": "https://www.wikidata.org/wiki/Q756800",
+    "reason": "Sichuan pepper culinary spice, not only Zanthoxylum species.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 30,
+    "ingredient": "Chinese black vinegar",
+    "status": "R",
+    "source_id": "Q4922497",
+    "url": "https://www.wikidata.org/wiki/Q4922497",
+    "reason": "Informal Asian black-vinegar group is broader than scoped Chinese grain vinegar.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 31,
+    "ingredient": "galangal",
+    "status": "R",
+    "source_id": "Q734727",
+    "url": "https://www.wikidata.org/wiki/Q734727",
+    "reason": "Galangal rhizome group spans several plants, broader than scoped greater galangal.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 32,
+    "ingredient": "makrut lime leaf",
+    "status": "E",
+    "source_id": "Q67202802",
+    "url": "https://www.wikidata.org/wiki/Q67202802",
+    "reason": "Kaffir lime leaf ingredient corresponds to makrut lime leaf.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 33,
+    "ingredient": "lemongrass",
+    "status": "R",
+    "source_id": "Q33913",
+    "url": "https://www.wikidata.org/wiki/Q33913",
+    "reason": "Plant and a leaf item found; specific culinary stalk not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 34,
+    "ingredient": "culantro",
+    "status": "R",
+    "source_id": "Q1146782",
+    "url": "https://www.wikidata.org/wiki/Q1146782",
+    "reason": "Eryngium foetidum plant found; edible leaf/herb item not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 35,
+    "ingredient": "padaek",
+    "status": "E",
+    "source_id": "Q6853367",
+    "url": "https://www.wikidata.org/wiki/Q6853367",
+    "reason": "Lao padaek condiment, not generic fish sauce.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 36,
+    "ingredient": "belacan",
+    "status": "R",
+    "source_id": "Q1127705",
+    "url": "https://www.wikidata.org/wiki/Q1127705",
+    "reason": "Generic shrimp paste groups regional preparations.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 37,
+    "ingredient": "candlenut",
+    "status": "E",
+    "source_id": "Q104821775",
+    "url": "https://www.wikidata.org/wiki/Q104821775",
+    "reason": "Kukui nut/candlenut food item linked from the plant.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 38,
+    "ingredient": "tempeh",
+    "status": "E",
+    "source_id": "Q120096",
+    "url": "https://www.wikidata.org/wiki/Q120096",
+    "reason": "Tempeh soy food, not the place of the same name.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 39,
+    "ingredient": "buah keluak",
+    "status": "E",
+    "source_id": "Q12512536",
+    "url": "https://www.wikidata.org/wiki/Q12512536",
+    "reason": "Buah keluak seed, not only Pangium edule tree.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 40,
+    "ingredient": "torch ginger flower",
+    "status": "R",
+    "source_id": "Q3442435",
+    "url": "https://www.wikidata.org/wiki/Q3442435",
+    "reason": "Torch ginger plant found; edible flower-bud ingredient not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 41,
+    "ingredient": "bagoong alamang",
+    "status": "R",
+    "source_id": "Q1127705",
+    "url": "https://www.wikidata.org/wiki/Q1127705",
+    "reason": "Bagoong alamang redirects/maps to broader shrimp paste in the observed results.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 42,
+    "ingredient": "calamansi",
+    "status": "R",
+    "source_id": "Q849387",
+    "url": "https://www.wikidata.org/wiki/Q849387",
+    "reason": "Calamansi item conflates plant nothospecies and fruit; needs a reviewed food mapping.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 43,
+    "ingredient": "annatto seed",
+    "status": "R",
+    "source_id": "Q425902",
+    "url": "https://www.wikidata.org/wiki/Q425902",
+    "reason": "Annatto coloring/condiment mixture is not specifically the whole seed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 44,
+    "ingredient": "banana ketchup",
+    "status": "E",
+    "source_id": "Q3907811",
+    "url": "https://www.wikidata.org/wiki/Q3907811",
+    "reason": "Banana ketchup condiment.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 45,
+    "ingredient": "pili nut",
+    "status": "E",
+    "source_id": "Q104188819",
+    "url": "https://www.wikidata.org/wiki/Q104188819",
+    "reason": "Pili nut seed item linked from Canarium ovatum.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 46,
+    "ingredient": "asafoetida",
+    "status": "E",
+    "source_id": "Q16530385",
+    "url": "https://www.wikidata.org/wiki/Q16530385",
+    "reason": "Asafoetida resin spice, not only the plant.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 47,
+    "ingredient": "ajwain",
+    "status": "R",
+    "source_id": "Q413254",
+    "url": "https://www.wikidata.org/wiki/Q413254",
+    "reason": "Ajwain plant found; distinct culinary seed item not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 48,
+    "ingredient": "amchur",
+    "status": "E",
+    "source_id": "Q2015681",
+    "url": "https://www.wikidata.org/wiki/Q2015681",
+    "reason": "Amchoor dried unripe mango powder.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 49,
+    "ingredient": "kokum",
+    "status": "R",
+    "source_id": "Q2095514",
+    "url": "https://www.wikidata.org/wiki/Q2095514",
+    "reason": "Kokum alias belongs to Garcinia indica plant; dried rind not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 50,
+    "ingredient": "goraka",
+    "status": "R",
+    "source_id": "Q18187249",
+    "url": "https://www.wikidata.org/wiki/Q18187249",
+    "reason": "Garcinia gummi-gutta plant found, not dried goraka rind.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 51,
+    "ingredient": "dried lime",
+    "status": "E",
+    "source_id": "Q460570",
+    "url": "https://www.wikidata.org/wiki/Q460570",
+    "reason": "Dried/black lime ingredient.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 52,
+    "ingredient": "barberry",
+    "status": "E",
+    "source_id": "Q139555604",
+    "url": "https://www.wikidata.org/wiki/Q139555604",
+    "reason": "Edible barberry fruit item linked from Berberis vulgaris.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 53,
+    "ingredient": "blue fenugreek",
+    "status": "R",
+    "source_id": "Q164849",
+    "url": "https://www.wikidata.org/wiki/Q164849",
+    "reason": "Blue fenugreek plant, not an explicitly scoped culinary spice product.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 54,
+    "ingredient": "tklapi",
+    "status": "E",
+    "source_id": "Q2906012",
+    "url": "https://www.wikidata.org/wiki/Q2906012",
+    "reason": "Georgian fruit leather used as tklapi.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 55,
+    "ingredient": "kashk",
+    "status": "R",
+    "source_id": "Q1113301",
+    "url": "https://www.wikidata.org/wiki/Q1113301",
+    "reason": "Kurt/kashk umbrella combines fermented dairy products; scoped Iranian kashk needs review.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 56,
+    "ingredient": "bulgur",
+    "status": "E",
+    "source_id": "Q250432",
+    "url": "https://www.wikidata.org/wiki/Q250432",
+    "reason": "Bulgur food; redirects resolved.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 57,
+    "ingredient": "freekeh",
+    "status": "E",
+    "source_id": "Q771079",
+    "url": "https://www.wikidata.org/wiki/Q771079",
+    "reason": "Freekeh cereal food; redirects resolved.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 58,
+    "ingredient": "pomegranate molasses",
+    "status": "E",
+    "source_id": "Q108946643",
+    "url": "https://www.wikidata.org/wiki/Q108946643",
+    "reason": "Boiled-down pomegranate juice condiment.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 59,
+    "ingredient": "mahlab",
+    "status": "E",
+    "source_id": "Q465554",
+    "url": "https://www.wikidata.org/wiki/Q465554",
+    "reason": "Mahleb spice from cherry kernels.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 60,
+    "ingredient": "Aleppo pepper",
+    "status": "E",
+    "source_id": "Q486606",
+    "url": "https://www.wikidata.org/wiki/Q486606",
+    "reason": "Aleppo pepper culinary type.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 61,
+    "ingredient": "harissa",
+    "status": "E",
+    "source_id": "Q966327",
+    "url": "https://www.wikidata.org/wiki/Q966327",
+    "reason": "Harissa chili paste, not Lebanese settlement Harissa.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 62,
+    "ingredient": "preserved lemon",
+    "status": "E",
+    "source_id": "Q2723408",
+    "url": "https://www.wikidata.org/wiki/Q2723408",
+    "reason": "Preserved lemon condiment.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 63,
+    "ingredient": "ras el hanout",
+    "status": "E",
+    "source_id": "Q1067261",
+    "url": "https://www.wikidata.org/wiki/Q1067261",
+    "reason": "Ras el hanout blend.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 64,
+    "ingredient": "smen",
+    "status": "E",
+    "source_id": "Q2397413",
+    "url": "https://www.wikidata.org/wiki/Q2397413",
+    "reason": "Smen fermented butter.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 65,
+    "ingredient": "bsissa",
+    "status": "R",
+    "source_id": "Q2527136",
+    "url": "https://www.wikidata.org/wiki/Q2527136",
+    "reason": "Bsissa prepared food found; dry cereal-pulse mix identity needs review.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 66,
+    "ingredient": "teff",
+    "status": "E",
+    "source_id": "Q103205493",
+    "url": "https://www.wikidata.org/wiki/Q103205493",
+    "reason": "Teff seed item linked from the plant.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 67,
+    "ingredient": "berbere",
+    "status": "E",
+    "source_id": "Q818763",
+    "url": "https://www.wikidata.org/wiki/Q818763",
+    "reason": "Berbere spice blend, not Berber people or language.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 68,
+    "ingredient": "mitmita",
+    "status": "E",
+    "source_id": "Q1762278",
+    "url": "https://www.wikidata.org/wiki/Q1762278",
+    "reason": "Mitmita blend.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 69,
+    "ingredient": "niter kibbeh",
+    "status": "E",
+    "source_id": "Q2697883",
+    "url": "https://www.wikidata.org/wiki/Q2697883",
+    "reason": "Niter kibbeh seasoned clarified butter.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 70,
+    "ingredient": "korarima",
+    "status": "R",
+    "source_id": "Q4689432",
+    "url": "https://www.wikidata.org/wiki/Q4689432",
+    "reason": "Aframomum corrorima plant found; culinary spice material not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 71,
+    "ingredient": "egusi",
+    "status": "E",
+    "source_id": "Q10771593",
+    "url": "https://www.wikidata.org/wiki/Q10771593",
+    "reason": "Egusi seed type, not egusi soup.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 72,
+    "ingredient": "iru",
+    "status": "E",
+    "source_id": "Q137835655",
+    "url": "https://www.wikidata.org/wiki/Q137835655",
+    "reason": "Iru condiment item linked from the specific Wikipedia page; English description is empty.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 73,
+    "ingredient": "ogiri",
+    "status": "E",
+    "source_id": "Q7080074",
+    "url": "https://www.wikidata.org/wiki/Q7080074",
+    "reason": "Ogiri fermented oilseed seasoning.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 74,
+    "ingredient": "grains of paradise",
+    "status": "E",
+    "source_id": "Q84574093",
+    "url": "https://www.wikidata.org/wiki/Q84574093",
+    "reason": "Grains of paradise spice seed, not just the source plant.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 75,
+    "ingredient": "fonio",
+    "status": "R",
+    "source_id": "Q12439809",
+    "url": "https://www.wikidata.org/wiki/Q12439809",
+    "reason": "Fonio common-name group spans grasses; distinct grain food item not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 76,
+    "ingredient": "baobab fruit powder",
+    "status": "R",
+    "source_id": "Q3360594",
+    "url": "https://www.wikidata.org/wiki/Q3360594",
+    "reason": "Baobab fruit found; powder preparation not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 77,
+    "ingredient": "mopane worm",
+    "status": "R",
+    "source_id": "Q311788",
+    "url": "https://www.wikidata.org/wiki/Q311788",
+    "reason": "Gonimbrasia belina organism item is broader than edible caterpillar stage/product.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 78,
+    "ingredient": "amaranth leaf",
+    "status": "R",
+    "source_id": "Q156344",
+    "url": "https://www.wikidata.org/wiki/Q156344",
+    "reason": "Amaranthus genus found; edible leaves as a food material not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 79,
+    "ingredient": "moringa leaf",
+    "status": "R",
+    "source_id": "Q234193",
+    "url": "https://www.wikidata.org/wiki/Q234193",
+    "reason": "Moringa plant with seed/oil/fruit products; leaf food item not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 80,
+    "ingredient": "Bambara groundnut",
+    "status": "R",
+    "source_id": "Q338219",
+    "url": "https://www.wikidata.org/wiki/Q338219",
+    "reason": "Bambara groundnut plant found, not distinct edible seed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 81,
+    "ingredient": "masa harina",
+    "status": "R",
+    "source_id": "Q1006089",
+    "url": "https://www.wikidata.org/wiki/Q1006089",
+    "reason": "Masa item is corn dough and includes harina alias; dry flour not distinguished.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 82,
+    "ingredient": "epazote",
+    "status": "R",
+    "source_id": "Q640032",
+    "url": "https://www.wikidata.org/wiki/Q640032",
+    "reason": "Dysphania ambrosioides plant found; culinary herb material not separately confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 83,
+    "ingredient": "huitlacoche",
+    "status": "R",
+    "source_id": "Q1430040",
+    "url": "https://www.wikidata.org/wiki/Q1430040",
+    "reason": "Corn smut organism/disease item needs separation from edible galls.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 84,
+    "ingredient": "achiote paste",
+    "status": "E",
+    "source_id": "Q7302262",
+    "url": "https://www.wikidata.org/wiki/Q7302262",
+    "reason": "Recado rojo/achiote seasoning paste.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 85,
+    "ingredient": "chipotle pepper",
+    "status": "E",
+    "source_id": "Q860808",
+    "url": "https://www.wikidata.org/wiki/Q860808",
+    "reason": "Smoke-dried jalapeno chipotle.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 86,
+    "ingredient": "aji amarillo",
+    "status": "E",
+    "source_id": "Q61413777",
+    "url": "https://www.wikidata.org/wiki/Q61413777",
+    "reason": "Aji amarillo culinary type, rather than all Capsicum baccatum.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 87,
+    "ingredient": "huacatay",
+    "status": "R",
+    "source_id": "Q599870",
+    "url": "https://www.wikidata.org/wiki/Q599870",
+    "reason": "Tagetes minuta plant found; culinary huacatay herb material not confirmed.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 88,
+    "ingredient": "chuño",
+    "status": "E",
+    "source_id": "Q2352129",
+    "url": "https://www.wikidata.org/wiki/Q2352129",
+    "reason": "Freeze-dried chuno potato.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 89,
+    "ingredient": "rocoto pepper",
+    "status": "E",
+    "source_id": "Q104006555",
+    "url": "https://www.wikidata.org/wiki/Q104006555",
+    "reason": "Rocoto fruit item linked from Capsicum pubescens.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 90,
+    "ingredient": "tucupi",
+    "status": "E",
+    "source_id": "Q491222",
+    "url": "https://www.wikidata.org/wiki/Q491222",
+    "reason": "Tucupi cassava sauce.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 91,
+    "ingredient": "saffron",
+    "status": "E",
+    "source_id": "Q25434",
+    "url": "https://www.wikidata.org/wiki/Q25434",
+    "reason": "Saffron spice, not saffron crocus plant.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 92,
+    "ingredient": "caper",
+    "status": "E",
+    "source_id": "Q3229775",
+    "url": "https://www.wikidata.org/wiki/Q3229775",
+    "reason": "Caper edible flower bud, not caper bush.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 93,
+    "ingredient": "caraway seed",
+    "status": "E",
+    "source_id": "Q21155816",
+    "url": "https://www.wikidata.org/wiki/Q21155816",
+    "reason": "Caraway seeds.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 94,
+    "ingredient": "rye flour",
+    "status": "E",
+    "source_id": "Q10658708",
+    "url": "https://www.wikidata.org/wiki/Q10658708",
+    "reason": "Rye flour; redirects resolved.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 95,
+    "ingredient": "lingonberry",
+    "status": "E",
+    "source_id": "Q12339956",
+    "url": "https://www.wikidata.org/wiki/Q12339956",
+    "reason": "Lingonberry fruit, not Vaccinium vitis-idaea plant.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 96,
+    "ingredient": "ackee",
+    "status": "R",
+    "source_id": "Q102828166",
+    "url": "https://www.wikidata.org/wiki/Q102828166",
+    "reason": "Ackee fruit item does not specifically distinguish prepared edible aril.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 97,
+    "ingredient": "allspice",
+    "status": "E",
+    "source_id": "Q1963621",
+    "url": "https://www.wikidata.org/wiki/Q1963621",
+    "reason": "Allspice spice item, not Pimenta dioica plant.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 98,
+    "ingredient": "Scotch bonnet pepper",
+    "status": "E",
+    "source_id": "Q466854",
+    "url": "https://www.wikidata.org/wiki/Q466854",
+    "reason": "Scotch bonnet culinary pepper cultivar, not the mushroom.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 99,
+    "ingredient": "taro",
+    "status": "E",
+    "source_id": "Q134452914",
+    "url": "https://www.wikidata.org/wiki/Q134452914",
+    "reason": "Taro root/corm food item linked from Colocasia esculenta.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  },
+  {
+    "number": 100,
+    "ingredient": "coconut milk",
+    "status": "E",
+    "source_id": "Q841779",
+    "url": "https://www.wikidata.org/wiki/Q841779",
+    "reason": "Coconut milk, not coconut water.",
+    "method": "Public item pages, indexed search, redirects and source-of/sitelink traversal; API confirmation pending"
+  }
+]

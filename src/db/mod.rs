@@ -3953,6 +3953,75 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(privileges, (true, false, false, true, false, true, false));
+        let vocabulary_privileges: (bool, bool, bool) = sqlx::query_as(
+            "SELECT has_table_privilege('noms_runtime','vocabulary_entries','SELECT'), \
+             has_table_privilege('noms_runtime','vocabulary_entries','INSERT,UPDATE,DELETE'), \
+             has_table_privilege('noms_runtime','vocabulary_seed_runs','INSERT')",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(vocabulary_privileges, (true, false, false));
+
+        let seeds: noms::vocabulary::SeedFile =
+            serde_json::from_str(include_str!("../../data/vocabulary/ingredients.json")).unwrap();
+        let sources: noms::vocabulary::SourceManifest =
+            serde_json::from_str(include_str!("../../data/vocabulary/sources.json")).unwrap();
+        noms::vocabulary::store::seed(&pool, &seeds, &sources, false)
+            .await
+            .unwrap();
+        let ingredient_id = seeds.entries[0].id;
+        let user = insert_user(
+            &pool,
+            "runtime_popularity",
+            "Runtime popularity",
+            "runtime_popularity@example.test",
+            None,
+        )
+        .await
+        .unwrap();
+        let mut connection = pool.acquire().await.unwrap();
+        sqlx::query("SET ROLE noms_runtime")
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        let callable: bool = sqlx::query_scalar("SELECT has_function_privilege(current_user,'maintain_ingredient_recipe_counts()','EXECUTE')")
+            .fetch_one(&mut *connection).await.unwrap();
+        assert!(!callable);
+        let recipe_id: Uuid = sqlx::query_scalar("INSERT INTO recipes (user_id,title,ingredients,visibility) VALUES ($1,'Runtime count test',$2,'public') RETURNING id")
+            .bind(user.id).bind(serde_json::json!([{"vocabulary_id":ingredient_id}]))
+            .fetch_one(&mut *connection).await.unwrap();
+        let count: i64 =
+            sqlx::query_scalar("SELECT recipe_count FROM vocabulary_entries WHERE id=$1")
+                .bind(ingredient_id)
+                .fetch_one(&mut *connection)
+                .await
+                .unwrap();
+        assert_eq!(count, 1, "runtime recipe write runs the owner-only trigger");
+        assert!(
+            sqlx::query("UPDATE vocabulary_entries SET recipe_count=99 WHERE id=$1")
+                .bind(ingredient_id)
+                .execute(&mut *connection)
+                .await
+                .is_err()
+        );
+        sqlx::query("DELETE FROM recipes WHERE id=$1")
+            .bind(recipe_id)
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        let count: i64 =
+            sqlx::query_scalar("SELECT recipe_count FROM vocabulary_entries WHERE id=$1")
+                .bind(ingredient_id)
+                .fetch_one(&mut *connection)
+                .await
+                .unwrap();
+        assert_eq!(count, 0);
+        sqlx::query("RESET ROLE")
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        drop(connection);
 
         sqlx::query("CREATE ROLE unsafe_runtime LOGIN SUPERUSER")
             .execute(&pool)

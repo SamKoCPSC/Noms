@@ -13,6 +13,7 @@ fn snapshot() -> CollectionSnapshot {
         cook_time_minutes: Some(25),
         servings: Some(2),
         ingredients: vec![crate::types::RecipeIngredient {
+            vocabulary_id: None,
             amount: "½".into(),
             unit: "cup".into(),
             name: "beans".into(),

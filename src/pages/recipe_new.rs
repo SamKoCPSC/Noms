@@ -899,6 +899,7 @@ pub fn RecipeNew() -> Element {
     // ── Ingredient helpers ──────────────────────────────────────────────
     let on_add_ingredient = move |_| {
         ingredients.write().push(RecipeIngredient {
+            vocabulary_id: None,
             amount: String::new(),
             unit: String::new(),
             name: String::new(),
@@ -1256,13 +1257,14 @@ pub fn RecipeNew() -> Element {
                                         },
                                     }
                                 }
-                                // Name
-                                Input {
-                            accessible_name: "Ingredient {idx + 1} name",
+                                // Name: suggestions never constrain custom text.
+                                crate::components::ingredient_autocomplete::IngredientAutocomplete {
+                                    index: idx,
                                     value: ingredients()[idx].name.clone(),
-                                    placeholder: "Ingredient name",
-                                    oninput: move |v| {
-                                        ingredients.write()[idx].name = v;
+                                    oninput: move |(name, vocabulary_id)| {
+                                        let mut rows = ingredients.write();
+                                        rows[idx].name = name;
+                                        rows[idx].vocabulary_id = vocabulary_id;
                                     },
                                 }
                                 // Remove

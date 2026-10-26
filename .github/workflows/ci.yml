@@ -199,6 +199,9 @@ jobs:
           python3 -m unittest discover -s docker/codex-cloud -p 'test_*.py' -v
           bash -n docker/codex-cloud/cloud.sh docker/codex-cloud/app-entrypoint.sh
 
+      - name: Verify offline vocabulary adapters
+        run: python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py' -v
+
       - name: Verify pinned deployment artifacts
         run: ./scripts/check-deployment-artifacts.sh
 
@@ -212,6 +215,9 @@ jobs:
   # using scripts/check-schema-plan.sh.
   schema-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     # Only run on pull requests (not pushes to branches without a PR)
     if: github.event_name == 'pull_request'
     steps:
@@ -308,7 +314,7 @@ jobs:
             --auto-approve
 
       - name: Post migration plan as PR comment
-        if: steps.schema-changed.outputs.changed == 'true'
+        if: steps.schema-changed.outputs.changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405
         with:
           path: /tmp/migration-plan.json

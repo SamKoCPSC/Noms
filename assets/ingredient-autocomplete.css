@@ -1,0 +1,9 @@
+.ingredient-autocomplete { position: relative; flex: 1; min-width: 0; }
+.ingredient-autocomplete > input { width: 100%; }
+.ingredient-autocomplete__list { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; list-style: none; padding: var(--space-xs); margin: var(--space-xs) 0 0; max-height: 20rem; overflow-y: auto; background: var(--overlay-opaque); border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.ingredient-autocomplete__list button { display: flex; width: 100%; padding: var(--space-sm); text-align: left; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); cursor: pointer; font: inherit; }
+.ingredient-autocomplete__list button:hover, .ingredient-autocomplete__list button[aria-selected="true"] { background: var(--surface); outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.ingredient-autocomplete__hint { color: var(--text-secondary); font-size: .8rem; }
+@media (max-width: 760px) {
+    .ingredient-autocomplete { flex-basis: 160px; }
+}

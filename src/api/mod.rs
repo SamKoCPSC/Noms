@@ -8,6 +8,8 @@ pub mod search;
 
 pub mod upload;
 
+pub mod vocabulary;
+
 #[cfg(feature = "server")]
 pub mod recipe_archive;
 

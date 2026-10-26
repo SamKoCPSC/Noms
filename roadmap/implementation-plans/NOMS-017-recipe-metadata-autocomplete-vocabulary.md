@@ -59,7 +59,7 @@ Adding a value to a repeatable dimension does not replace existing values. Editi
 - Use the same input workflow for suggested and custom values. Do not introduce separate canonical and miscellaneous authoring paths.
 - Store authored text independently of any optional vocabulary reference. Selecting a suggestion can populate its displayed label; typing an alias must not trigger a silent replacement of the author's text.
 - Accept values absent from the vocabulary. Users do not need moderation approval, vocabulary connectivity, or a successful lookup to save a recipe.
-- Suggest matching maintained entries and the author's previously used values. The ranking and presentation of these sources remain to be specified.
+- Initially suggest maintained entries only. Personal-history suggestions are deferred; custom values remain valid without recognition.
 - Editing linked text must re-evaluate or clear its reference; a stale reference must not remain attached to a value with a different meaning.
 - Do not automatically link ambiguous matches. Any automatic exact or alias recognition must use an explicit, tested matching policy and preserve the entered text.
 - Keep freeform recipe tags separate from these named metadata fields; do not silently reclassify existing tags.
@@ -67,7 +67,7 @@ Adding a value to a repeatable dimension does not replace existing values. Editi
 
 ### User values and vocabulary maintenance
 
-- Custom values are ordinary recipe metadata, not a separately governed taxonomy class. They work immediately and can be reused through personal suggestions.
+- Custom values are ordinary recipe metadata, not a separately governed taxonomy class. They work immediately. Personal suggestions are deferred from the initial delivery.
 - Private recipe values may inform only that author's suggestions; they must not leak into global suggestions, public usage counts, or public curation candidates.
 - Public recipe values may be searched and displayed with their recipes without first becoming maintained vocabulary entries or global autocomplete suggestions.
 - Common values from public recipes can become candidates for maintained suggestions. Frequency alone must not automatically publish a new suggestion or establish an alias relationship.
@@ -78,7 +78,7 @@ Adding a value to a repeatable dimension does not replace existing values. Editi
 
 ### Vocabulary seed data and source ingestion
 
-- Maintain vocabulary seed values as declarative, version-controlled files in the repository, with one independently validated file per dimension. Time data describes derived category rules rather than freely assignable labels.
+- Maintain vocabulary seed values as declarative, version-controlled files in the repository, with one independently validated file per dimension. Time category labels and rules will instead be small constants and a pure function in shared Rust code, outside the seed dataset; boundaries and incomplete-time behavior remain to be decided.
 - Each suggestion entry includes its committed stable identifier, dimension, label, aliases, optional locale data and description, lifecycle state, and source and attribution metadata.
 - FoodOn is the leading candidate source for ingredient suggestions and selected culinary terms from the preceding research. Confirm coverage for each dimension rather than assuming one dataset supplies all seven; difficulty suggestions and time rules can be defined by Noms.
 - Treat external datasets as inputs to a suggestion vocabulary, not as a taxonomy to enforce on recipes. Import only terms useful for recipe authoring, keeping scientific or industrial terms out of default suggestions where inappropriate.
@@ -88,7 +88,7 @@ Adding a value to a repeatable dimension does not replace existing values. Editi
 - Production autocomplete reads the local vocabulary and does not depend on live third-party APIs. Source updates are reviewed diffs, not automatic changes to recipes or global suggestions.
 - Validate identifiers, dimensions, cardinality rules, references, duplicate entries, alias ambiguity, lifecycle transitions, and required attribution. Apply seeds with an idempotent loader that never overwrites recipe text or personal values.
 - Removing an entry from a seed file must not silently delete referenced data. Use explicit retirement or replacement behavior and retain safe fallback display from recipe text.
-- The serialization format, repository directory, initial vocabulary size, and source selections per dimension remain to be finalized. JSONL is a candidate, not a decided format.
+- The initial ingredient slice uses versioned JSON in `data/vocabulary/ingredients.json`, with a separate `sources.json` manifest and PostgreSQL runtime tables. Initial vocabulary size and source selections for further expansion remain to be finalized.
 
 ### Search and filtering
 
@@ -172,3 +172,58 @@ Each slice must be deployable with mixed old/new data and provide evidence that 
 - [ ] Text search, recognized-value filters, facets, ranking, indexing, and performance targets are specified.
 - [ ] Acceptance tests prove custom values save without vocabulary lookup, unknown references remain readable, stale links are cleared, and private values do not leak.
 - [ ] Test-first checkpoints, compatibility expectations, release gates, and NOMS-018 handoff requirements are defined.
+
+## Initial ingredient implementation slice
+
+The first slice provides the declarative PostgreSQL schema, an explicit
+`seed-vocabulary` CLI with dry-run and transactional updates, and maintained
+English ingredient autocomplete in new/edit recipe forms. See
+[`data/vocabulary/README.md`](../../data/vocabulary/README.md) for the seed contract
+and loading procedure. Optional ingredient IDs travel with authored text in
+existing JSON drafts and snapshots; editing the name clears the UI reference.
+The maintained seed includes 100 curated ingredients plus the FoodOn expansion
+described below, retaining the original fifteen IDs. Source assessments use a
+fixed 100-ingredient international benchmark under `data/vocabulary/coverage`.
+Other metadata dimensions, additional source adapters, vocabulary-aware portable
+export policy and personal suggestions remain future work.
+
+Ingredient suggestions also rank prefix matches by a maintained `recipe_count`
+on the canonical row. Only current public published recipes contribute, once per
+ingredient per recipe; private/unlisted recipes and drafts do not influence global
+popularity. A transactional database trigger maintains counts across publication,
+edits, visibility changes, restores, and deletions. The deployment-only
+`reconcile-vocabulary-counts` CLI backfills or repairs counts; seeds preserve them.
+Exact label and alias matches retain priority over popularity, and the UI remains
+label only. See the vocabulary README for rollout and concurrency details.
+
+For current implementation state, verification and the completed USDA
+benchmark review, read the
+[dated session handoff](../handoffs/NOMS-017-ingredient-vocabulary-2026-10-21.md).
+The [coverage report](../../data/vocabulary/coverage/README.md) distinguishes
+27/100 generic USDA matches from 34 additional branded-only products. The
+three-source union is 84/100 with generic USDA evidence, or 91/100 including
+products; these research candidates have not been promoted to seed mappings.
+
+The initial [FoodOn adapter](../../scripts/vocabulary/README.md) now extracts a
+pinned local OWL file into review candidates and builds complete canonical
+seed/source files from approved decisions. Existing IDs/text remain stable and
+source synonyms retain their scopes. Full-snapshot extraction, 20 offline
+regressions and the actual Rust seed CLI validation passed. The durable pilot
+review records 50 mappings (28 exact, 8 broader, 12 narrower, 2 related) and
+preserves all 100 existing identities/texts. The pilot initially left the maintained seed unchanged.
+The generated pilot and a cumin-seed import probe were subsequently loaded into
+the disposable development DB (101 entries, 51 mappings). Verified dry-run
+rollback, idempotency, and the browser flow through mock sign-in, alias lookup,
+keyboard/mouse selection, canonical UUID autosave, reload, and free-text fallback
+all passed. The [repeatable UI check](../../scripts/vocabulary/browser-smoke.py)
+requires a live local stack and loaded bundle; no provenance-management UI is included.
+
+The subsequent cooking-focused expansion is now promoted: **10,148 active entries**
+(100 curated plus 10,048 imported), with 60 staged UUIDs retained retired.
+All prior development IDs remain in the maintained seed, resolving the pilot's
+startup-seed constraint. The selection policy, original baseline, UUID/review
+ledger are versioned under `data/vocabulary/adapters/foodon-cooking-*`.
+The adapter guide records seed counts; generated summaries, source annotations
+and complete hold queues stay outside Git. This is policy-based
+screening with explicit exceptions; unresolved semantic overlaps can still need
+editorial consolidation. The coverage study remains the fixed 100-entry benchmark.

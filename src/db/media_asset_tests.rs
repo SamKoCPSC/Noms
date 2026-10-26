@@ -70,6 +70,7 @@ fn snapshot(title: &str, images: Vec<RecipeImage>, steps: Vec<RecipeStep>) -> di
         cook_time_minutes: None,
         servings: None,
         ingredients: vec![RecipeIngredient {
+            vocabulary_id: None,
             amount: "1".to_string(),
             unit: "cup".to_string(),
             name: "beans".to_string(),
