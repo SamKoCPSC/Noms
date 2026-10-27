@@ -14,6 +14,7 @@ from fill_gaps import checksum, encoded, SECOND_SAMPLE_POLICY, GROCERY_POLICY, F
 from foodon import ROOT, normalize, require, validate
 
 DEFAULT_POLICY = ROOT / 'data/vocabulary/adapters/ingredient-label-review.json'
+READABLE_POLICY = ROOT / 'data/vocabulary/adapters/ingredient-readable-label-review.json'
 
 
 def apply_review(seed, sources, policy):
@@ -22,9 +23,17 @@ def apply_review(seed, sources, policy):
             checksum(sources) == policy['base_sources_checksum'], 'Stale label-review baseline')
     require(not validate(seed, sources), 'Invalid label-review baseline')
     changes, holds = policy['changes'], policy['holds']
-    expected = {e['id'] for e in seed['entries'] if e['status'] == 'active' and '(' in e['label']}
+    if 'reviewed_ids' in policy:
+        reviewed = policy['reviewed_ids']
+        active_ids = {e['id'] for e in seed['entries'] if e['status'] == 'active'}
+        require(isinstance(reviewed, list) and reviewed and
+                len(reviewed) == len(set(reviewed)) and set(reviewed) <= active_ids,
+                'Explicit label review needs unique active IDs')
+        expected = set(reviewed)
+    else:
+        expected = {e['id'] for e in seed['entries'] if e['status'] == 'active' and '(' in e['label']}
     require(not set(changes) & set(holds) and set(changes) | set(holds) == expected,
-            'Every active parenthetical label needs exactly one review decision')
+            'Every reviewed label needs exactly one review decision')
     result = copy.deepcopy(seed)
     for entry in result['entries']:
         ident = entry['id']
@@ -79,9 +88,14 @@ def restore_baseline(result, policy=None):
     return base
 
 
+def maintained_next_gap_stage(result):
+    """Recover the next-sample stage before the later readable-label review."""
+    return restore_baseline(result, json.loads(READABLE_POLICY.read_text()))
+
+
 def maintained_final_gap_stage(result):
-    """Verify/remove the next-sample grocery expansion without changing old pins."""
-    return restore_gap_baseline(result, json.loads(NEXT_GAP_POLICY.read_text()))
+    """Verify/remove the readable-label and next-sample layers without changing old pins."""
+    return restore_gap_baseline(maintained_next_gap_stage(result), json.loads(NEXT_GAP_POLICY.read_text()))
 
 
 def maintained_grocery_stage(result):

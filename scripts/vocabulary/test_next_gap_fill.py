@@ -13,7 +13,8 @@ class NextGapFillTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy=json.loads(gaps.NEXT_GAP_POLICY.read_text())
-        cls.seed=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.maintained=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.seed=rename_labels.maintained_next_gap_stage(cls.maintained)
         cls.sources=json.loads((gaps.ROOT/'data/vocabulary/sources.json').read_text())
         cls.base=gaps.restore_baseline(cls.seed,cls.policy)
         cls.entries={e['id']:e for e in cls.seed['entries']}
@@ -32,7 +33,7 @@ class NextGapFillTest(unittest.TestCase):
         self.assertEqual(summary['aliases_on_new_entries'],367)
         self.assertEqual(summary['labels_renamed'],1)
         self.assertEqual(self.policy['retirements'],{})
-        self.assertEqual(rename_labels.maintained_final_gap_stage(self.seed),self.base)
+        self.assertEqual(rename_labels.maintained_final_gap_stage(self.maintained),self.base)
         self.assertEqual(gaps.checksum(self.sources),self.policy['base_sources_checksum'])
         self.assertEqual(validate(self.seed,self.sources),[])
         for old in self.base['entries']:

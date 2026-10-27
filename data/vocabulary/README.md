@@ -127,7 +127,7 @@ identities). It covers useful related forms of tofu skin, yogurt, plant drinks,
 stocks/broths, preserved pantry components, flavoring oils, seasonings and named
 wine/rum styles. Existing filbert/hazelnut, spaghettini, casing and other synonym
 identities are reused. Eleven underspecified source phrases retain explicit
-qualified choices rather than forced aliases. Current totals are **13,532 active,
+qualified choices rather than forced aliases. Totals at that stage are **13,532 active,
 85 retired and 9,745 active aliases**. The forward ledger is
 `adapters/ingredient-next-gap-fill.json`; every previous definition, UUID, status,
 source association and existing alias is retained. One recorded spelling
@@ -155,6 +155,17 @@ acids, trehalose and glycerin. Generic entries retain unspecified grades and
 formulations; explicit powder forms, resistant dextrin and fat-powdering carrier
 grades remain separate. Existing crystalline fructose gains powder aliases.
 Liquid nitrogen, dry ice, carbon dioxide and nitrous oxide are excluded.
+
+The subsequent [readable-label review](../../scripts/vocabulary/LABELS.md#readable-label-follow-up-2026-10-27)
+renames **475 ingredients** into ordinary cooking word order, including the
+dried chicken egg forms, named cheeses, juices, herbs and processing qualifiers.
+It promotes **139 existing aliases** to preferred labels and retains every old
+label, adding **336 searchable aliases** overall. The **1,017 other flagged
+labels** retain their wording because of name ownership, unclear definitions or
+meaningful technical detail. All IDs, descriptions, statuses, source mappings and
+recipe text remain unchanged. Current totals are **13,532 active, 85 retired and
+10,081 active aliases**. The separate forward ledger is
+`adapters/ingredient-readable-label-review.json`; prior curation pins remain frozen.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

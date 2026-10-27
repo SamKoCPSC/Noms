@@ -1,7 +1,8 @@
 # Reviewed cooking-material gaps
 
 Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
-are **13,532 active, 85 retired and 9,745 active aliases**. Earlier stage counts,
+and [readable-label follow-up](LABELS.md#readable-label-follow-up-2026-10-27)
+are **13,532 active, 85 retired and 10,081 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -687,7 +688,7 @@ are not a before/after score against earlier studies. Titles, quantities, method
 and individual recipe URLs are absent from the source and are not invented.
 
 The user-approved curation adds **171 ingredients and 438 aliases**: 367 aliases
-on the new entries and 71 on 34 existing identities. Current totals become
+on the new entries and 71 on 34 existing identities. Totals at that stage become
 **13,532 active, 85 retired and 9,745 active aliases**. All 13,446 prior records,
 including retired identities, retain their exact fields except approved alias
 suffixes and one recorded spelling correction retaining its old searchable name.
@@ -939,3 +940,9 @@ at `/workspace/flour-starch-expansion`.
 The molecular follow-up's capture metadata, new-entry CSV, replay and local
 verification artifacts are external at `/workspace/molecular-ingredient-expansion`.
 The maintained repository seed and ledger include all follow-ups.
+
+The later [readable-label maintenance](LABELS.md#readable-label-follow-up-2026-10-27)
+changes 475 display names, without adding/merging/retiring ingredients. Its
+separate ledger retains every old searchable name and restores this next-sample
+stage exactly before historical tests. The counts and checksums in this section
+remain the frozen pre-label output; current aliases are listed at the top.
