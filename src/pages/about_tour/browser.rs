@@ -60,6 +60,7 @@ struct State {
     generation: u32,
     models_ready: bool,
     assembly: super::assembly::Playback,
+    office_arrival: super::assembly::OfficeArrival,
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
     loading_phrases: Option<gloo_timers::callback::Interval>,
@@ -137,6 +138,7 @@ pub fn start() -> Result<(), JsValue> {
         generation: 0,
         models_ready: false,
         assembly: super::assembly::Playback::default(),
+        office_arrival: super::assembly::OfficeArrival::default(),
         gate: Gate::Open,
         loading_timeout: None,
         loading_phrases: None,
@@ -789,6 +791,9 @@ impl State {
             self.width / self.height.max(1.),
             self.pointer,
         );
+        if !self.gate.blocked() {
+            self.office_arrival.advance(camera.progress, dt);
+        }
         let active = (camera.progress + 0.5).floor().clamp(0., 3.) as usize;
         if self.active != active {
             self.active = active;
@@ -862,10 +867,15 @@ impl State {
                 motion,
                 self.width <= 700.,
                 self.assembly.frame(),
+                self.office_arrival.frame(),
             );
             let _ = self.canvas.set_attribute(
                 "data-assembly-frame",
                 &format!("{:.3}", self.assembly.frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-office-assembly-frame",
+                &format!("{:.3}", self.office_arrival.frame()),
             );
             self.frames += 1;
             let _ = self
@@ -907,6 +917,7 @@ impl State {
         self.initial_alignment > 0
             || motion
             || (!self.gate.blocked() && !self.assembly.finished())
+            || (!self.gate.blocked() && self.office_arrival.animating())
             || self.gate != previous_gate
             || self.gate == Gate::Presenting
             || (self.target - self.progress).abs() > 0.0004

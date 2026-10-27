@@ -443,6 +443,7 @@ impl Renderer {
         motion: bool,
         mobile: bool,
         assembly_frame: f32,
+        office_frame: f32,
     ) {
         let gl = &self.gl;
         gl.use_program(Some(&self.program));
@@ -501,7 +502,8 @@ impl Renderer {
                 self.draw_diorama(
                     model,
                     if i == 0 { &self.kitchen } else { &self.office },
-                    if i == 0 { assembly_frame } else { 160. },
+                    if i == 0 { assembly_frame } else { office_frame },
+                    i == 1,
                 );
                 continue;
             }
@@ -639,10 +641,14 @@ impl Renderer {
             );
         }
     }
-    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32) {
+    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32, office: bool) {
         for draw in &diorama.draws {
             let p = &draw.part;
-            let t = super::assembly::amount(frame, p.start, p.end);
+            let t = if office {
+                super::assembly::office_amount(frame, p.start, p.end)
+            } else {
+                super::assembly::amount(frame, p.start, p.end)
+            };
             if t <= 0. {
                 continue;
             }
@@ -682,6 +688,7 @@ impl Renderer {
                 0.,
                 false,
                 mobile,
+                160.,
                 160.,
             );
         }
