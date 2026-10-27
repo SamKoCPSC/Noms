@@ -932,8 +932,8 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                             } else {
                                 div { class: "grocery-state neumo-raised",
                                     PantryIcon { kind: "home" }
-                                    h1 { "A pantry of your own." }
-                                    p { "Keep track of your ingredients, wherever you cook." }
+                                    h1 { "Organize your virtual pantry" }
+                                    p { "Keep track of what ingredients you have on hand and make finding recipes easier." }
                                     Link {
                                         to: Route::PantryNew {},
                                         class: "btn btn-primary",
