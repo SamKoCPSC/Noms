@@ -22,6 +22,8 @@ pub(crate) struct RuntimeConfig {
     mode: DeploymentMode,
     base_url: String,
     cookie_domain: Option<String>,
+    staging_login: Option<crate::auth::staging::StagingLoginConfig>,
+    staging_environment: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -62,6 +64,54 @@ impl RuntimeConfig {
     where
         F: Fn(&str) -> Option<String>,
     {
+        let staging_enabled = match lookup("NOMS_STAGING_LOGIN_ENABLED").as_deref() {
+            None | Some("") | Some("false") => false,
+            Some("true") => true,
+            _ => {
+                return Err(ConfigError::new(
+                    "NOMS_STAGING_LOGIN_ENABLED",
+                    "must be true or false",
+                ))
+            }
+        };
+        let staging_environment = crate::auth::staging::is_approved_environment(&lookup);
+        let staging_login = if staging_enabled {
+            if !staging_environment || lookup("NOMS_ENV").as_deref() == Some("local") {
+                return Err(ConfigError::new(
+                    "NOMS_STAGING_LOGIN_ENABLED",
+                    "allowed only in the approved staging service, environment and origin",
+                ));
+            }
+            if normalized_cookie_domain(lookup("COOKIE_DOMAIN"))?.is_some() {
+                return Err(ConfigError::new(
+                    "COOKIE_DOMAIN",
+                    "must be unset for staging test login",
+                ));
+            }
+            let secret = required(&lookup, "NOMS_STAGING_LOGIN_SECRET")?;
+            if secret.len() != 64 || !secret.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return Err(ConfigError::new(
+                    "NOMS_STAGING_LOGIN_SECRET",
+                    "must contain 64 random hexadecimal characters",
+                ));
+            }
+            if secret == lookup("SESSION_SECRET").unwrap_or_default() {
+                return Err(ConfigError::new(
+                    "NOMS_STAGING_LOGIN_SECRET",
+                    "must differ from SESSION_SECRET",
+                ));
+            }
+            let unique = secret.bytes().collect::<HashSet<_>>();
+            if unique.len() < 12 {
+                return Err(ConfigError::new(
+                    "NOMS_STAGING_LOGIN_SECRET",
+                    "must have sufficient character diversity",
+                ));
+            }
+            Some(crate::auth::staging::StagingLoginConfig::new(&secret))
+        } else {
+            None
+        };
         let local_requested = lookup("NOMS_ENV").as_deref() == Some("local");
         let railway_deployment = ["RAILWAY_ENVIRONMENT_ID", "RAILWAY_PROJECT_ID"]
             .into_iter()
@@ -86,6 +136,8 @@ impl RuntimeConfig {
                 mode,
                 base_url: base_url.trim_end_matches('/').to_string(),
                 cookie_domain: normalized_cookie_domain(lookup("COOKIE_DOMAIN"))?,
+                staging_login,
+                staging_environment,
             });
         }
 
@@ -154,7 +206,17 @@ impl RuntimeConfig {
             mode,
             base_url: base_url.trim_end_matches('/').to_string(),
             cookie_domain: normalized_cookie_domain(lookup("COOKIE_DOMAIN"))?,
+            staging_login,
+            staging_environment,
         })
+    }
+
+    pub(crate) fn staging_login(&self) -> Option<&crate::auth::staging::StagingLoginConfig> {
+        self.staging_login.as_ref()
+    }
+
+    pub(crate) fn staging_environment(&self) -> bool {
+        self.staging_environment
     }
 
     pub(crate) fn mode(&self) -> DeploymentMode {
@@ -427,6 +489,93 @@ mod tests {
                 "https://media.noms.example.com".into(),
             ),
         ])
+    }
+
+    fn staging_environment() -> HashMap<String, String> {
+        let mut environment = valid_production_environment();
+        for (key, value) in [
+            (
+                "RAILWAY_ENVIRONMENT_ID",
+                "196c1b53-86cd-451f-81d0-aaf9cadc2e9a",
+            ),
+            ("RAILWAY_PROJECT_ID", "8f16a6e9-6089-4088-9307-8ca7c29b12e2"),
+            ("RAILWAY_SERVICE_ID", "199b610b-f88e-4c4d-a9f1-6120cbf3d1ae"),
+            ("BASE_URL", "https://staging.nomsrecipes.com"),
+            ("NOMS_STAGING_LOGIN_ENABLED", "true"),
+            (
+                "NOMS_STAGING_LOGIN_SECRET",
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            ),
+        ] {
+            environment.insert(key.into(), value.into());
+        }
+        environment
+    }
+
+    #[test]
+    fn staging_login_requires_exact_deployment_and_secret_and_is_redacted() {
+        let valid = staging_environment();
+        let config = load(&valid).unwrap();
+        assert!(config.staging_environment());
+        assert!(config.staging_login().is_some());
+        assert!(!format!("{config:?}").contains(&valid["NOMS_STAGING_LOGIN_SECRET"]));
+        assert!(config.hsts_enabled());
+        for key in [
+            "RAILWAY_ENVIRONMENT_ID",
+            "RAILWAY_PROJECT_ID",
+            "RAILWAY_SERVICE_ID",
+            "BASE_URL",
+            "NOMS_STAGING_LOGIN_SECRET",
+        ] {
+            let mut environment = valid.clone();
+            environment.remove(key);
+            assert!(load(&environment).is_err(), "missing {key}");
+            environment.insert(key.into(), "wrong".into());
+            assert!(load(&environment).is_err(), "wrong {key}");
+        }
+        for (key, value) in [
+            ("BASE_URL", "https://nomsrecipes.com"),
+            ("BASE_URL", "https://noms-staging.up.railway.app"),
+            ("BASE_URL", "https://staging.nomsrecipes.com.evil.test"),
+            ("BASE_URL", "https://staging.nomsrecipes.com/path"),
+            ("NOMS_ENV", "local"),
+            ("COOKIE_DOMAIN", ".nomsrecipes.com"),
+            ("NOMS_STAGING_LOGIN_ENABLED", "1"),
+            (
+                "NOMS_STAGING_LOGIN_SECRET",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            ),
+        ] {
+            let mut environment = valid.clone();
+            environment.insert(key.into(), value.into());
+            assert!(load(&environment).is_err(), "{key}={value}");
+        }
+        let mut environment = valid.clone();
+        environment.insert(
+            "SESSION_SECRET".into(),
+            environment["NOMS_STAGING_LOGIN_SECRET"].clone(),
+        );
+        assert!(load(&environment).is_err());
+    }
+
+    #[test]
+    fn staging_login_defaults_off_in_all_deployments_and_disabled_flag_needs_no_secret() {
+        let production = load(&valid_production_environment()).unwrap();
+        assert!(!production.staging_environment());
+        assert!(production.staging_login().is_none());
+        let local = load(&HashMap::from([("NOMS_ENV".into(), "local".into())])).unwrap();
+        assert!(local.staging_login().is_none());
+        let mut environment = staging_environment();
+        environment.remove("NOMS_STAGING_LOGIN_SECRET");
+        for flag in [None, Some("false")] {
+            environment.remove("NOMS_STAGING_LOGIN_ENABLED");
+            if let Some(flag) = flag {
+                environment.insert("NOMS_STAGING_LOGIN_ENABLED".into(), flag.into());
+            }
+            let config = load(&environment).unwrap();
+            assert!(config.staging_environment());
+            assert!(config.staging_login().is_none());
+        }
     }
 
     fn load(environment: &HashMap<String, String>) -> Result<RuntimeConfig, String> {

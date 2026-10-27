@@ -66,6 +66,23 @@ if grep -Fq "$project_secret_fixture" "$test_root/project-secret.out"; then
     exit 1
 fi
 
+# The staging login credential must be detected independently of other keys.
+git -C "$fixture_repo" rm --quiet --cached production.env
+printf 'NOMS_STAGING_LOGIN_SECRET=%s\n' "$project_secret_fixture" > "$fixture_repo/staging.env"
+git -C "$fixture_repo" add staging.env
+if NOMS_SECRET_SCAN_ROOT="$fixture_repo" "$repo_root/scripts/check-tracked-secrets.sh" \
+    >"$test_root/staging-secret.out" 2>&1; then
+    echo "staging login credentials must fail validation" >&2
+    exit 1
+fi
+grep -q 'staging.env' "$test_root/staging-secret.out"
+if grep -Fq "$project_secret_fixture" "$test_root/staging-secret.out"; then
+    echo "staging credential scan must not print discovered values" >&2
+    exit 1
+fi
+printf '%s\n' 'NOMS_STAGING_LOGIN_SECRET=$STAGING_SECRET' > "$fixture_repo/staging.env"
+NOMS_SECRET_SCAN_ROOT="$fixture_repo" "$repo_root/scripts/check-tracked-secrets.sh"
+
 "$repo_root/scripts/check-deployment-artifacts.sh"
 deployment_fixture="$test_root/deployment-fixture"
 mkdir -p "$deployment_fixture"
