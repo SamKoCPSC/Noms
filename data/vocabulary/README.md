@@ -157,20 +157,23 @@ grades remain separate. Existing crystalline fructose gains powder aliases.
 Liquid nitrogen, dry ice, carbon dioxide and nitrous oxide are excluded.
 
 The subsequent [readable-label review](../../scripts/vocabulary/LABELS.md#readable-label-follow-up-2026-10-27)
-renames **476 ingredients** into ordinary cooking word order, including the
+renames **488 ingredients** into ordinary cooking word order, including the
 dried chicken egg forms, named cheeses, juices, herbs and processing qualifiers.
 It promotes **139 existing aliases** to preferred labels and retains every old
-label, adding **337 searchable aliases** overall. The **1,016 other flagged
+label, adding **349 searchable aliases** overall. The **1,009 held
 labels** retain their wording because of name ownership, unclear definitions or
 meaningful technical detail. All IDs, descriptions, statuses, source mappings and
 recipe text remain unchanged. Current totals are **13,532 active, 85 retired and
-10,082 active aliases**. The separate forward ledger is
+10,094 active aliases**. The separate forward ledger is
 `adapters/ingredient-readable-label-review.json`; prior curation pins remain frozen.
 
 The user-approved berry follow-up changes `berry (impregnated with sugar)` to
 `sweetened berries`, retaining both upstream names as aliases. The separate
 [awkward-language review](../../scripts/vocabulary/AWKWARD_LABELS.md) records
-36 further candidates; those labels remain unchanged pending individual review.
+36 further candidates. The 12 approved wording replacements are now applied;
+the remaining 24 definition, name-ownership and scope candidates are unchanged.
+Five of these 12 approved ingredients extend the original 1,492-ID review scope,
+bringing the ledger's explicit scope to 1,497 IDs.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

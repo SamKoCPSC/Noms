@@ -5,7 +5,7 @@
   "base_commit": "ec68a2b3d00c3cfe7ba518d73e1f09766375d930",
   "base_seed_checksum": "4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571",
   "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
-  "expected_output_checksum": "b96e406b3dd413c3433488222ba3892040c4f5139f0b3782f5c45b6be3678a47",
+  "expected_output_checksum": "3de52f891231718606912b69dd80eaf4dd304d86ac5ea9b9eb2051599618b483",
   "criterion": "User-authorized readable display names after the full lexical audit. Preserve every UUID, definition, status, source association and exact old searchable name. Retain species, parts, maturity, processing, formulation and form. Promote existing owned aliases. Hold name conflicts and unclear definitions. No merges, retirements, recipe rewrites, new ingredients or production rollout.",
   "audit": {
     "seed_sha256": "4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571",
@@ -1507,7 +1507,12 @@
     "ff9b4b2f-533f-4578-b923-a39b4b0a2182",
     "ffc4642b-e99d-4674-8cf0-8753de7c7355",
     "ffd92784-aff8-4c20-8e05-84f4b23ebfb7",
-    "ffe0111d-5e19-4d44-bf16-1f91c8f207f1"
+    "ffe0111d-5e19-4d44-bf16-1f91c8f207f1",
+    "ab3d3a90-0fee-49bf-80a0-e1ff2f89d754",
+    "186287a2-419d-459e-b4b5-62a406c3dd39",
+    "6f2b6f80-abfe-4f49-8f8b-eb1e8c578b7e",
+    "74b349ff-691d-4667-80a3-2dd3def54713",
+    "ad3e1586-8b97-49b7-8576-1319d6d78b95"
   ],
   "changes": {
     "b7eeb505-096f-4e04-9ec9-4cfca71e3730": {
@@ -4503,6 +4508,78 @@
       "before": "berry (impregnated with sugar)",
       "after": "sweetened berries",
       "reason": "User-approved conventional cooking name. FOODON_03316906 SIREN annotation specifies whole berries, not heat-treated, with sugar or sugar syrup added; do not infer drying, candying or a specific maceration technique. Keep the exact upstream label and existing plural alias searchable."
+    },
+    "46fd4ccd-d211-42db-ba5d-a2a61f64ab23": {
+      "before": "beverage powder for home preparation of drinks",
+      "after": "powdered drink mix",
+      "reason": "User-approved wording follow-up. Source annotation identifies a dry beverage base; keep unspecified drink type. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "2b7bee5c-764e-412d-9822-5b9ac1a65642": {
+      "before": "drink mix for the preparation of alcoholic beverage",
+      "after": "alcoholic drink mix",
+      "reason": "User-approved wording follow-up. Means a mix used to prepare an alcoholic drink, not necessarily a mix already containing alcohol. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "ab3d3a90-0fee-49bf-80a0-e1ff2f89d754": {
+      "before": "beverage syrup cola type",
+      "after": "cola syrup",
+      "reason": "User-approved wording follow-up. Retain syrup form; do not turn into a ready-to-drink cola. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "6e7b7a62-ad7f-4e98-abbe-cb4422ffcfd7": {
+      "before": "savoury sauce dry preparation",
+      "after": "dry savory sauce mix",
+      "reason": "User-approved wording follow-up. Existing definition explicitly describes a dry preparation for making savory sauces. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "186287a2-419d-459e-b4b5-62a406c3dd39": {
+      "before": "candy with ground nutmeats",
+      "after": "candy with ground nuts",
+      "reason": "User-approved wording follow-up. Keep ground nuts and candy formulation. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "6f2b6f80-abfe-4f49-8f8b-eb1e8c578b7e": {
+      "before": "spring roll pastry case",
+      "after": "spring roll wrappers",
+      "reason": "User-approved wording follow-up. Keep the spring-roll wrapper identity; do not infer wheat versus rice formulation. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "053393af-0f18-45ca-be13-a5ff9f360871": {
+      "before": "wonton pastry (case)",
+      "after": "wonton wrappers",
+      "reason": "User-approved wording follow-up. FoodOn supplies the exact synonym wonton wrapper; the plural replacement has no other active name owner. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "5c2137dc-c8b5-4c2b-804b-bd73aa043326": {
+      "before": "vegetable juice (gassed)",
+      "after": "carbonated vegetable juice",
+      "reason": "User-approved wording follow-up. FoodOn SIREN explicitly specifies carbonated; not generic aeration or packaging gas. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "c1795bb3-629c-48f3-a7f8-2dc15f2c31c3": {
+      "before": "fish roe (salt treated)",
+      "after": "salted fish roe",
+      "reason": "User-approved wording follow-up. Source annotation specifies salt added; keep distinct from unsalted or sugar-treated roe. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "fa946697-fd50-4365-9668-864f64bbb960": {
+      "before": "fish roe (sugar treated)",
+      "after": "sweetened fish roe",
+      "reason": "User-approved wording follow-up. Source specifies sugar or sugar syrup added; do not infer candied or dried roe. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "74b349ff-691d-4667-80a3-2dd3def54713": {
+      "before": "english walnut meat",
+      "after": "shelled English walnuts",
+      "reason": "User-approved wording follow-up. Existing definition says pieces of walnut without shell; retain the English walnut type. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
+    },
+    "ad3e1586-8b97-49b7-8576-1319d6d78b95": {
+      "before": "water in sealed container",
+      "after": "packaged water",
+      "reason": "User-approved wording follow-up. Do not narrow an unspecified sealed container to bottles only. Preserve all prior searchable names and the existing ingredient identity.",
+      "category": "approved_awkward_wording"
     }
   },
   "holds": {
@@ -4666,12 +4743,6 @@
       "label": "beverage containing caffeine",
       "reason": "A relation such as made with/containing may describe a different formulation; retain unless a verified shorter equivalent is available.",
       "category": "retain_meaningful_detail"
-    },
-    "46fd4ccd-d211-42db-ba5d-a2a61f64ab23": {
-      "label": "beverage powder for home preparation of drinks",
-      "reason": "Food-form wording lead; confirm whether the source defines a more restricted beverage class.",
-      "category": "definition_review_with_wording_lead",
-      "draft_label": "powdered drink mix"
     },
     "45f5a347-beef-4225-af03-4ed7cf20753b": {
       "label": "beverage syrup concentrate",
@@ -6292,11 +6363,6 @@
       "reason": "Part, cultivar, species or maturity may affect the recipe; do not remove it simply to shorten the name.",
       "category": "retain_meaningful_detail"
     },
-    "2b7bee5c-764e-412d-9822-5b9ac1a65642": {
-      "label": "drink mix for the preparation of alcoholic beverage",
-      "reason": "Concentration, refinement, physical form or processing may be meaningful; the trigger alone does not justify renaming.",
-      "category": "manual_wording_or_definition_review"
-    },
     "c5840da4-c7c0-4a5e-aa97-5d875f5bc32a": {
       "label": "drum (fish)",
       "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
@@ -6565,16 +6631,6 @@
     },
     "0a911791-4dc1-45b8-8647-0cdacc46b487": {
       "label": "fish paste (phillipine)",
-      "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
-      "category": "manual_wording_or_definition_review"
-    },
-    "c1795bb3-629c-48f3-a7f8-2dc15f2c31c3": {
-      "label": "fish roe (salt treated)",
-      "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
-      "category": "manual_wording_or_definition_review"
-    },
-    "fa946697-fd50-4365-9668-864f64bbb960": {
-      "label": "fish roe (sugar treated)",
       "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
       "category": "manual_wording_or_definition_review"
     },
@@ -8710,11 +8766,6 @@
       "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
       "category": "manual_wording_or_definition_review"
     },
-    "6e7b7a62-ad7f-4e98-abbe-cb4422ffcfd7": {
-      "label": "savoury sauce dry preparation",
-      "reason": "Concentration, refinement, physical form or processing may be meaningful; the trigger alone does not justify renaming.",
-      "category": "retain_meaningful_detail"
-    },
     "4544c120-2365-4e3d-96d6-eca73a91e019": {
       "label": "scallop (sea)",
       "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
@@ -9466,11 +9517,6 @@
       "reason": "A relation such as made with/containing may describe a different formulation; retain unless a verified shorter equivalent is available.",
       "category": "retain_meaningful_detail"
     },
-    "5c2137dc-c8b5-4c2b-804b-bd73aa043326": {
-      "label": "vegetable juice (gassed)",
-      "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
-      "category": "manual_wording_or_definition_review"
-    },
     "5ec5dc9c-9d30-46b2-8940-e8bdabc76df3": {
       "label": "vegetable juice concentrate",
       "reason": "Concentration, refinement, physical form or processing may be meaningful; the trigger alone does not justify renaming.",
@@ -9689,11 +9735,6 @@
       "reason": "Part, cultivar, species or maturity may affect the recipe; do not remove it simply to shorten the name.",
       "category": "retain_meaningful_detail"
     },
-    "053393af-0f18-45ca-be13-a5ff9f360871": {
-      "label": "wonton pastry (case)",
-      "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
-      "category": "manual_wording_or_definition_review"
-    },
     "27b8915a-ebb7-4cb1-90dd-7818ba83885c": {
       "label": "yak (domestic) milk",
       "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
@@ -9719,5 +9760,16 @@
       "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
       "category": "manual_wording_or_definition_review"
     }
+  },
+  "followup_review": {
+    "reviewed_on": "2026-10-27",
+    "basis": "User approval of the twelve wording candidates in scripts/vocabulary/AWKWARD_LABELS.md. These include five active IDs beyond the original 1,492-ID lexical scope. No definition, name-conflict or scope candidates are changed.",
+    "additional_reviewed_ids": [
+      "ab3d3a90-0fee-49bf-80a0-e1ff2f89d754",
+      "186287a2-419d-459e-b4b5-62a406c3dd39",
+      "6f2b6f80-abfe-4f49-8f8b-eb1e8c578b7e",
+      "74b349ff-691d-4667-80a3-2dd3def54713",
+      "ad3e1586-8b97-49b7-8576-1319d6d78b95"
+    ]
   }
 }

@@ -2,7 +2,7 @@
 
 Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
 and [readable-label follow-up](LABELS.md#readable-label-follow-up-2026-10-27)
-are **13,532 active, 85 retired and 10,082 active aliases**. Earlier stage counts,
+are **13,532 active, 85 retired and 10,094 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -942,7 +942,7 @@ verification artifacts are external at `/workspace/molecular-ingredient-expansio
 The maintained repository seed and ledger include all follow-ups.
 
 The later [readable-label maintenance](LABELS.md#readable-label-follow-up-2026-10-27)
-changes 476 display names, without adding/merging/retiring ingredients. Its
+changes 488 display names, without adding/merging/retiring ingredients. Its
 separate ledger retains every old searchable name and restores this next-sample
 stage exactly before historical tests. The counts and checksums in this section
 remain the frozen pre-label output; current aliases are listed at the top.

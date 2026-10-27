@@ -8,12 +8,15 @@ source mapping stay unchanged. Both `berry (impregnated with sugar)` and
 The pinned [FoodOn entry FOODON_03316906](https://purl.obolibrary.org/obo/FOODON_03316906)
 has SIREN annotations for whole berries, not heat-treated, with sugar or sugar
 syrup added. The name does not imply drying, candying or a particular maceration
-technique. This amendment moves that ID from hold to change in the current PR's
-readable-label ledger: **476 renames, 1,016 holds, 139 alias promotions and 337 net
-new aliases**. Current totals are **13,532 active, 85 retired and 10,082 aliases**.
+technique. The berry amendment moved that ID from hold to change. The user then
+approved the 12 wording replacements below, all now applied in the current PR's
+readable-label ledger: **488 renames, 1,009 holds, 139 alias promotions and 349 net
+new aliases**. Current totals are **13,532 active, 85 retired and 10,094 aliases**.
+Five approved IDs extend the original 1,492-ID scope to 1,497 reviewed IDs; seven
+move from hold to change. No ingredient IDs, definitions or source mappings change.
 Earlier curation-stage pins and the original 475-rename download stay frozen.
 
-## Further candidates, unchanged
+## Follow-up review
 
 A fresh lexical screen inspects all **13,617 preferred labels**, including all
 **13,532 active ingredients**. Patterns flag **564 active labels** for obsolete or
@@ -23,12 +26,12 @@ labels and are not a count of errors. Manual review yields the **36 candidates**
 below, with proposed names checked against every active preferred label and alias.
 This is a targeted screen, not a guarantee of finding every awkward expression.
 
-Only the berry label has been changed in this follow-up. Suggested names below
-still need individual approval; none authorizes a merge between ingredient IDs.
+The berry label and the 12 approved wording replacements are now changed.
+The other 24 candidates remain unchanged; none of these decisions merges IDs.
 
-### Twelve wording candidates
+### Twelve applied wording changes
 
-| Current label | Suggested wording | Meaning to preserve |
+| Prior label | New primary label | Meaning preserved |
 | --- | --- | --- |
 | beverage powder for home preparation of drinks | powdered drink mix | Dry base, drink type unspecified |
 | drink mix for the preparation of alcoholic beverage | alcoholic drink mix | A mix for preparing alcoholic drinks; may not itself contain alcohol |
@@ -92,19 +95,23 @@ remain useful. A technical word alone is not grounds for changing ingredient sco
 ## Evidence and verification
 
 The amended seed checksum is
-`b96e406b3dd413c3433488222ba3892040c4f5139f0b3782f5c45b6be3678a47`.
+`3de52f891231718606912b69dd80eaf4dd304d86ac5ea9b9eb2051599618b483`.
 The four-source checksum remains
 `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`.
 The existing label builder replays the amended ledger from the unchanged
 `ec68a2b3d00c3cfe7ba518d73e1f09766375d930` input and restores that baseline exactly.
 All 135 vocabulary Python tests pass, including canonical validation, collision
 checks, historical-stage restoration and preservation of every exact old name.
-The berry's old and new names resolve to its original UUID in the canonical data.
-This amendment has not been seeded into the local or production database.
+The old and new names of all 12 approved entries and the berry resolve to their
+original UUIDs in the canonical data. All 24 pending entries remain unchanged.
+These amendments have not been seeded into the local or production database.
 
 External artifacts at `/workspace/vocabulary-awkward-language-review` contain the
 reproducible read-only screen, every label, the 564 flagged labels, all 36 curated
 candidates with UUIDs/conflicting owners/definitions, the pinned upstream source
-annotations, full current seed and verification log. Raw audits remain outside
+annotations, the berry-stage seed and verification log. Those discovery artifacts
+remain frozen. The current 12-wording update, before/after seed, approved decisions
+and verification log are at `/workspace/vocabulary-awkward-wording-update`.
+Raw audits remain outside
 the repository; only this compact review, the amended ledger/seed and related
 tests/documentation are maintained here.
