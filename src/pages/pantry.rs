@@ -746,6 +746,19 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                         }
                                     }
                                 }
+                                if disabled {
+                                    section { class: "pantry-cookable neumo-raised",
+                                        h2 { "What can I cook?" }
+                                        p { role: "status", "Updating pantry…" }
+                                    }
+                                } else {
+                                    super::pantry_recipes::PantryRecipes {
+                                        key: "{p.id}:{p.revision}:{refresh}",
+                                        pantry_id: p.id,
+                                        revision: p.revision,
+                                        on_retry: move |_| refresh += 1,
+                                    }
+                                }
                                 if edit_open() {
                                     SharedModal {
                                         aria_labelledby: "pantry-profile-title",

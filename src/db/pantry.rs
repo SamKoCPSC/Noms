@@ -67,7 +67,7 @@ pub async fn summaries(pool: &PgPool, owner: Uuid) -> Result<Vec<PantrySummary>,
         })
         .collect()
 }
-async fn load(
+pub(super) async fn load(
     conn: &mut PgConnection,
     owner: Uuid,
     id: Uuid,
