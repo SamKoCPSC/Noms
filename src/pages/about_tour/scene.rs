@@ -652,17 +652,14 @@ impl Renderer {
             if t <= 0. {
                 continue;
             }
-            let sc = 0.85 + 0.15 * t;
+            let pose = super::assembly::arrival_pose(p.pivot, p.offset, t, office);
             let local = mul(
                 translate(
-                    p.pivot[0] + p.offset[0] * (1. - t),
-                    p.pivot[1] + p.offset[1] * (1. - t),
-                    p.pivot[2] + p.offset[2] * (1. - t),
+                    pose.translation[0],
+                    pose.translation[1],
+                    pose.translation[2],
                 ),
-                mul(
-                    scale(sc, sc, sc),
-                    translate(-p.pivot[0], -p.pivot[1], -p.pivot[2]),
-                ),
+                scale(pose.scale, pose.scale, pose.scale),
             );
             self.gl.depth_mask(p.opacity >= 1.);
             self.draw(
