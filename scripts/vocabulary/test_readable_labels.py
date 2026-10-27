@@ -12,7 +12,8 @@ class ReadableLabelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy=json.loads(labels.READABLE_POLICY.read_text())
-        cls.seed=json.loads((ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.maintained=json.loads((ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.seed=labels.maintained_readable_stage(cls.maintained)
         cls.sources=json.loads((ROOT/'data/vocabulary/sources.json').read_text())
         cls.base=labels.restore_baseline(cls.seed,cls.policy)
         cls.entries={e['id']:e for e in cls.seed['entries']}
@@ -23,7 +24,7 @@ class ReadableLabelTest(unittest.TestCase):
     def test_exact_replay_restore_and_current_totals(self):
         self.assertEqual(checksum(self.base),'4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571')
         self.assertEqual(labels.apply_review(self.base,self.sources,self.policy),self.seed)
-        self.assertEqual(labels.maintained_next_gap_stage(self.seed),self.base)
+        self.assertEqual(labels.maintained_next_gap_stage(self.maintained),self.base)
         self.assertEqual(validate(self.seed,self.sources),[])
         self.assertEqual(len(self.policy['changes']),488)
         self.assertEqual(len(self.policy['holds']),1009)

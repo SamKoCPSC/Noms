@@ -163,7 +163,7 @@ It promotes **139 existing aliases** to preferred labels and retains every old
 label, adding **349 searchable aliases** overall. The **1,009 held
 labels** retain their wording because of name ownership, unclear definitions or
 meaningful technical detail. All IDs, descriptions, statuses, source mappings and
-recipe text remain unchanged. Current totals are **13,532 active, 85 retired and
+recipe text remain unchanged. At that stage totals are **13,532 active, 85 retired and
 10,094 active aliases**. The separate forward ledger is
 `adapters/ingredient-readable-label-review.json`; prior curation pins remain frozen.
 
@@ -171,9 +171,18 @@ The user-approved berry follow-up changes `berry (impregnated with sugar)` to
 `sweetened berries`, retaining both upstream names as aliases. The separate
 [awkward-language review](../../scripts/vocabulary/AWKWARD_LABELS.md) records
 36 further candidates. The 12 approved wording replacements are now applied;
-the remaining 24 definition, name-ownership and scope candidates are unchanged.
+the subsequent kitchen-suitability review resolves the remaining 24 candidates.
 Five of these 12 approved ingredients extend the original 1,492-ID review scope,
 bringing the ledger's explicit scope to 1,497 IDs.
+
+The [kitchen-suitability review](../../scripts/vocabulary/KITCHEN_REVIEW.md)
+keeps `shumai wrappers`, `liver spread` and `peeled nuts` under natural names and
+retires 21 unsuitable or redundant selections, including cattle-feed grains,
+corn for degermination and the regulatory classification reference. Retired
+UUIDs and definitions remain available for existing recipe references; they
+are excluded from active search and the client catalogue. No recipe IDs are
+reassigned. Current totals are **13,511 active, 106 retired and 10,088 active
+aliases**. The separate ledger is `adapters/ingredient-kitchen-suitability-review.json`.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

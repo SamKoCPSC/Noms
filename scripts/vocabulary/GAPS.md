@@ -2,7 +2,8 @@
 
 Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
 and [readable-label follow-up](LABELS.md#readable-label-follow-up-2026-10-27)
-are **13,532 active, 85 retired and 10,094 active aliases**. Earlier stage counts,
+and [kitchen-suitability review](KITCHEN_REVIEW.md) are **13,511 active, 106 retired
+and 10,088 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope

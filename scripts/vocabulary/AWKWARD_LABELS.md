@@ -1,5 +1,11 @@
 # Awkward ingredient wording review (2026-10-27)
 
+The [completed kitchen-suitability review](KITCHEN_REVIEW.md) now resolves all
+24 remaining candidates below: three retained under natural names and 21 retired
+from active suggestions. This document preserves the discovery questions and
+earlier wording-stage verification; current decisions and counts are in that
+follow-up. No candidates from this list remain pending.
+
 The user approved changing `berry (impregnated with sugar)` to **sweetened berries**.
 UUID `cf96958f-b8e3-4fb8-9450-d7f82d86f183`, description, status, provenance and
 source mapping stay unchanged. Both `berry (impregnated with sugar)` and
@@ -27,7 +33,8 @@ below, with proposed names checked against every active preferred label and alia
 This is a targeted screen, not a guarantee of finding every awkward expression.
 
 The berry label and the 12 approved wording replacements are now changed.
-The other 24 candidates remain unchanged; none of these decisions merges IDs.
+At that stage the other 24 candidates remained unchanged. Their final decisions
+are now recorded in the kitchen-suitability review; no decisions merge IDs.
 
 ### Twelve applied wording changes
 

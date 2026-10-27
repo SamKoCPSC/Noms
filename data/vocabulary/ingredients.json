@@ -18096,7 +18096,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -29462,7 +29462,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -32695,7 +32695,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -37028,7 +37028,7 @@
       ],
       "description": "The group includes any type of Canned/tinned meat, i.e. a cooked meat products sealed into cans and characterised by a long shelf-life at room temperature. They can be possibly spiced, made of whole muscle cuts, ground meat or minced meat, salted and with a spreadable or sliceable consistency. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. The eventual removal of not edible parts is unspecified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.[https://en.wikipedia.org/wiki/Potted_meat_food_product] and [https://www.google.co.uk/search?tbm=isch&q=Canned-tinned meat]",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -52828,7 +52828,7 @@
       ],
       "description": "A chicken thigh that has been debonned.",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -52852,7 +52852,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -52876,7 +52876,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -52978,7 +52978,7 @@
       ],
       "description": "A chicken thigh that has been skinned and debonned.",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -66011,7 +66011,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -66032,7 +66032,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -67563,7 +67563,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -72981,7 +72981,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -78597,7 +78597,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -114222,7 +114222,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -130521,7 +130521,7 @@
       ],
       "description": "A rosette of a lettuce plant (Lactuca sativa).",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -132841,9 +132841,10 @@
     },
     {
       "id": "502ce9e7-ea99-4e46-b512-88e20721cb3e",
-      "label": "liver based spreadable-textured specialities",
+      "label": "liver spread",
       "aliases": [
-        "liver based spreadable textured specialities"
+        "liver based spreadable textured specialities",
+        "liver based spreadable-textured specialities"
       ],
       "description": "The group includes any type of liver-based spreadable/textured specialities. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. The eventual removal of not edible parts is unspecified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.[https://en.wikipedia.org/wiki/Paté] and [https://www.google.co.uk/search?tbm=isch&q=Liver spreadable specialities]",
       "locale": "en",
@@ -141450,7 +141451,7 @@
       ],
       "description": "The group includes any type of meat based spreadable-textured specialities. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. The eventual removal of not edible parts is unspecified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.[https://en.wikipedia.org/wiki/Paté] and [https://www.google.co.uk/search?tbm=isch&q=spreadable meat specialities]",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -154217,8 +154218,11 @@
     },
     {
       "id": "be9c9fbe-addb-4596-87a2-cfe9fb7237bc",
-      "label": "nut meat",
-      "aliases": [],
+      "label": "peeled nuts",
+      "aliases": [
+        "nut meat",
+        "peeled nut"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -185978,7 +185982,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -202188,8 +202192,13 @@
     },
     {
       "id": "10a962f4-2c13-4675-b569-59c74014f6b4",
-      "label": "shiu my pastry case",
-      "aliases": [],
+      "label": "shumai wrappers",
+      "aliases": [
+        "shiu my pastry case",
+        "shumai wrapper",
+        "siu mai wrappers",
+        "siu mai wrapper"
+      ],
       "description": "",
       "locale": "en",
       "status": "active",
@@ -214310,7 +214319,7 @@
       "aliases": [],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -219299,7 +219308,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -231634,7 +231643,7 @@
       "aliases": [],
       "description": "Food and Drugs, title 21, Code of Federal Regulations. Original food classification in LanguaL.",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",
@@ -232852,7 +232861,7 @@
       ],
       "description": "",
       "locale": "en",
-      "status": "active",
+      "status": "retired",
       "source_mappings": [
         {
           "source": "foodon",

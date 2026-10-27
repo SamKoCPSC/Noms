@@ -217,3 +217,12 @@ Audit artifacts remain at `/workspace/vocabulary-readable-label-audit`, with the
 original frozen download `/workspace/noms-vocabulary-readability-audit.zip`.
 Update decisions, full seed, replay, old/new CSV and verification artifacts are
 external at `/workspace/vocabulary-readable-label-update`.
+
+## Kitchen suitability follow-up
+
+The later [kitchen-suitability review](KITCHEN_REVIEW.md) resolves all 24 remaining
+awkward-language candidates with three natural-name changes and 21 retirements.
+It uses a separate ledger after this frozen 488-rename stage.
+`maintained_readable_stage` verifies and reverses that layer before the tests in
+this section. Current totals are 13,511 active, 106 retired and 10,088 active
+aliases; the readable-label counts and checksums above remain historical pins.

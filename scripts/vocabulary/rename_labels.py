@@ -15,6 +15,7 @@ from foodon import ROOT, normalize, require, validate
 
 DEFAULT_POLICY = ROOT / 'data/vocabulary/adapters/ingredient-label-review.json'
 READABLE_POLICY = ROOT / 'data/vocabulary/adapters/ingredient-readable-label-review.json'
+KITCHEN_POLICY = ROOT / 'data/vocabulary/adapters/ingredient-kitchen-suitability-review.json'
 
 
 def apply_review(seed, sources, policy):
@@ -88,9 +89,14 @@ def restore_baseline(result, policy=None):
     return base
 
 
+def maintained_readable_stage(result):
+    """Recover the frozen readable-label stage before kitchen suitability review."""
+    return restore_gap_baseline(result, json.loads(KITCHEN_POLICY.read_text()))
+
+
 def maintained_next_gap_stage(result):
     """Recover the next-sample stage before the later readable-label review."""
-    return restore_baseline(result, json.loads(READABLE_POLICY.read_text()))
+    return restore_baseline(maintained_readable_stage(result), json.loads(READABLE_POLICY.read_text()))
 
 
 def maintained_final_gap_stage(result):
