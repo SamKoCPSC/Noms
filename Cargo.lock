@@ -4434,6 +4434,7 @@ dependencies = [
  "dioxus-web",
  "flate2",
  "futures-channel",
+ "futures-util",
  "gloo-net",
  "gloo-timers",
  "ipnet",

@@ -36,32 +36,59 @@ impl PantryCheck {
 }
 
 pub fn check_pantry(ingredients: &[RecipeIngredient], entries: &[PantryEntry]) -> PantryCheck {
-    // Availability is an explicit user choice. Do not use PantryEntry::usable(),
-    // which also excludes recorded zero amounts that may no longer be current.
-    let available: HashSet<String> = entries
-        .iter()
-        .filter(|entry| entry.kind == PantryKind::Ingredient && entry.stock.available)
-        .map(|entry| entry.stock.fields.name.to_lowercase())
-        .collect();
-    let mut seen = HashSet::new();
-    let ingredients = ingredients
-        .iter()
-        .filter_map(|ingredient| {
-            let name = ingredient.name.to_lowercase();
-            if !seen.insert(name.clone()) {
-                return None;
+    PantryMatcher::new(entries).check(ingredients)
+}
+
+/// Reuse one presence index when checking a library against the same pantry.
+pub struct PantryMatcher {
+    available: HashSet<String>,
+}
+impl PantryMatcher {
+    pub fn new(entries: &[PantryEntry]) -> Self {
+        // Availability is an explicit user choice. Do not use PantryEntry::usable(),
+        // which also excludes recorded zero amounts that may no longer be current.
+        let available = entries
+            .iter()
+            .filter(|entry| entry.kind == PantryKind::Ingredient && entry.stock.available)
+            .map(|entry| entry.stock.fields.name.to_lowercase())
+            .collect();
+        Self { available }
+    }
+
+    /// Empty ingredient lists cannot establish that a recipe is cookable.
+    #[cfg(feature = "server")]
+    pub fn matches_names<'a>(&self, names: impl IntoIterator<Item = &'a str>) -> bool {
+        let mut any = false;
+        for name in names {
+            any = true;
+            if !self.available.contains(&name.to_lowercase()) {
+                return false;
             }
-            Some(IngredientCheck {
-                name: ingredient.name.clone(),
-                status: if available.contains(&name) {
-                    IngredientStatus::Available
-                } else {
-                    IngredientStatus::Missing
-                },
+        }
+        any
+    }
+
+    pub fn check(&self, ingredients: &[RecipeIngredient]) -> PantryCheck {
+        let mut seen = HashSet::new();
+        let ingredients = ingredients
+            .iter()
+            .filter_map(|ingredient| {
+                let name = ingredient.name.to_lowercase();
+                if !seen.insert(name.clone()) {
+                    return None;
+                }
+                Some(IngredientCheck {
+                    name: ingredient.name.clone(),
+                    status: if self.available.contains(&name) {
+                        IngredientStatus::Available
+                    } else {
+                        IngredientStatus::Missing
+                    },
+                })
             })
-        })
-        .collect();
-    PantryCheck { ingredients }
+            .collect();
+        PantryCheck { ingredients }
+    }
 }
 
 #[cfg(test)]

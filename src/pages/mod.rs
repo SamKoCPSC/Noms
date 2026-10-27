@@ -1,4 +1,5 @@
 mod pantry;
+mod pantry_recipes;
 pub use pantry::{Pantry, PantryDetail, PantryNew};
 mod grocery;
 pub use grocery::{GroceryListDetail, GroceryListNew, GroceryLists};

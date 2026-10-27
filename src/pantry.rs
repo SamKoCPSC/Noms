@@ -8,6 +8,14 @@ pub const MAX_PROFILES: usize = 100;
 pub const MAX_INGREDIENTS: usize = 1_000;
 pub const MAX_EQUIPMENT: usize = 200;
 pub const MAX_PAYLOAD: usize = 2 * 1024 * 1024;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PantryRecipePage {
+    pub pantry_id: Uuid,
+    pub pantry_revision: i64,
+    pub recipes: Vec<crate::types::RecipeCardSummary>,
+    pub next_cursor: Option<String>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PantryKind {
     Ingredient,
