@@ -56,9 +56,9 @@ struct State {
     time: f32,
     frames: u64,
     initial_alignment: u8,
-    kitchen_requested: bool,
+    models_requested: bool,
     generation: u32,
-    kitchen_ready: bool,
+    models_ready: bool,
     assembly: super::assembly::Playback,
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
@@ -133,9 +133,9 @@ pub fn start() -> Result<(), JsValue> {
         time: 0.,
         frames: 0,
         initial_alignment: 3,
-        kitchen_requested: false,
+        models_requested: false,
         generation: 0,
-        kitchen_ready: false,
+        models_ready: false,
         assembly: super::assembly::Playback::default(),
         gate: Gate::Open,
         loading_timeout: None,
@@ -147,7 +147,7 @@ pub fn start() -> Result<(), JsValue> {
         if let Some(s) = weak.upgrade() {
             s.borrow_mut().raf = None;
             let again = s.borrow_mut().tick(time);
-            maybe_load_kitchen(&s);
+            maybe_load_models(&s);
             arm_loading_timers(&s);
             if again {
                 schedule(&s)
@@ -183,8 +183,8 @@ pub fn start() -> Result<(), JsValue> {
         if s.reduced {
             s.renderer = None;
             s.generation += 1;
-            s.kitchen_requested = false;
-            s.kitchen_ready = false;
+            s.models_requested = false;
+            s.models_ready = false;
         } else if s.renderer.is_none() {
             s.renderer = Renderer::new(s.canvas.clone(), &s.doc).ok();
         }
@@ -278,8 +278,8 @@ pub fn start() -> Result<(), JsValue> {
         let i = s.active.min(3);
         s.renderer = None;
         s.generation += 1;
-        s.kitchen_requested = false;
-        s.kitchen_ready = false;
+        s.models_requested = false;
+        s.models_ready = false;
         s.apply_mode();
         s.navigate(i, false, false);
     });
@@ -309,59 +309,90 @@ pub fn stop() {
         }
     });
 }
-fn maybe_load_kitchen(state: &StateRef) {
-    let (url, image_urls, generation) = {
+fn maybe_load_models(state: &StateRef) {
+    let (requests, generation) = {
         let mut s = state.borrow_mut();
-        if !s.flying || s.reduced || s.kitchen_requested {
+        if !s.flying || s.reduced || s.models_requested {
             return;
         }
-        let Some(url) = s.root.get_attribute("data-kitchen-url") else {
-            return;
-        };
-        s.kitchen_requested = true;
-        let _ = s.root.set_attribute("data-kitchen-state", "loading");
-        (
-            url,
-            [
-                s.root
-                    .get_attribute("data-kitchen-laptop-url")
-                    .unwrap_or_default(),
-                s.root
-                    .get_attribute("data-kitchen-cookbook-url")
-                    .unwrap_or_default(),
-            ],
-            s.generation,
-        )
+        let requests = [
+            (
+                "kitchen",
+                ["data-kitchen-laptop-url", "data-kitchen-cookbook-url"].as_slice(),
+            ),
+            (
+                "office",
+                [
+                    "data-office-left-url",
+                    "data-office-right-url",
+                    "data-office-gpu-url",
+                    "data-office-cpu-url",
+                ]
+                .as_slice(),
+            ),
+        ]
+        .into_iter()
+        .map(|(name, images)| {
+            let url = s
+                .root
+                .get_attribute(&format!("data-{name}-url"))
+                .unwrap_or_default();
+            let images = images
+                .iter()
+                .map(|key| s.root.get_attribute(key).unwrap_or_default())
+                .collect::<Vec<_>>();
+            let _ = s
+                .root
+                .set_attribute(&format!("data-{name}-state"), "loading");
+            (url, images)
+        })
+        .collect::<Vec<_>>();
+        s.models_requested = true;
+        (requests, s.generation)
     };
     let weak = Rc::downgrade(state);
     wasm_bindgen_futures::spawn_local(async move {
         let result = async {
-            let response = gloo_net::http::Request::get(&url)
-                .send()
-                .await
-                .map_err(|_| JsValue::from_str("Kitchen request failed"))?;
-            if !response.ok() {
-                return Err(JsValue::from_str("Kitchen unavailable"));
-            }
-            let bytes = response
-                .binary()
-                .await
-                .map_err(|_| JsValue::from_str("Kitchen download failed"))?;
-            if let Some(state) = weak.upgrade() {
-                let s = state.borrow();
-                if s.generation != generation {
+            let mut models = Vec::new();
+            for (url, image_urls) in requests {
+                let current = weak
+                    .upgrade()
+                    .ok_or_else(|| JsValue::from_str("Tour closed"))?;
+                if current.borrow().generation != generation {
                     return Err(JsValue::from_str("Tour changed"));
                 }
+                drop(current);
+                let response = gloo_net::http::Request::get(&url)
+                    .send()
+                    .await
+                    .map_err(|_| JsValue::from_str("About model request failed"))?;
+                if !response.ok() {
+                    return Err(JsValue::from_str("About model unavailable"));
+                }
+                let bytes = response
+                    .binary()
+                    .await
+                    .map_err(|_| JsValue::from_str("About model download failed"))?;
+                let current = weak
+                    .upgrade()
+                    .ok_or_else(|| JsValue::from_str("Tour closed"))?;
+                if current.borrow().generation != generation {
+                    return Err(JsValue::from_str("Tour changed"));
+                }
+                drop(current);
+                let data = super::gltf::decode(&bytes).map_err(|e| JsValue::from_str(&e))?;
+                let mut images = Vec::new();
+                for url in image_urls {
+                    let image = web_sys::HtmlImageElement::new()?;
+                    image.set_src(&url);
+                    images.push(image);
+                }
+                for image in &images {
+                    wasm_bindgen_futures::JsFuture::from(image.decode()).await?;
+                }
+                models.push((data, images));
             }
-            let data = super::gltf::decode(&bytes).map_err(|e| JsValue::from_str(&e))?;
-            let mut images = Vec::new();
-            for url in image_urls {
-                let image = web_sys::HtmlImageElement::new()?;
-                image.set_src(&url);
-                wasm_bindgen_futures::JsFuture::from(image.decode()).await?;
-                images.push(image);
-            }
-            Ok::<_, JsValue>((data, [images.remove(0), images.remove(0)]))
+            Ok::<_, JsValue>((models.remove(0), models.remove(0)))
         }
         .await;
         if let Some(state) = weak.upgrade() {
@@ -370,18 +401,22 @@ fn maybe_load_kitchen(state: &StateRef) {
                 return;
             }
             let loaded = match result {
-                Ok((data, images)) => s
-                    .renderer
-                    .as_mut()
-                    .is_some_and(|r| r.upload_kitchen(&data, &images).is_ok()),
+                Ok(((kitchen, kitchen_images), (office, office_images))) => {
+                    s.renderer.as_mut().is_some_and(|r| {
+                        r.upload_models(&kitchen, &kitchen_images, &office, &office_images)
+                            .is_ok()
+                    })
+                }
                 Err(_) => false,
             };
-            let _ = s.root.set_attribute(
-                "data-kitchen-state",
-                if loaded { "ready" } else { "failed" },
-            );
+            for name in ["kitchen", "office"] {
+                let _ = s.root.set_attribute(
+                    &format!("data-{name}-state"),
+                    if loaded { "ready" } else { "failed" },
+                );
+            }
             if loaded {
-                s.kitchen_ready = true;
+                s.models_ready = true;
                 if s.flying {
                     s.gate = Gate::Warming;
                     s.sync_gate();
@@ -509,11 +544,15 @@ impl State {
     fn reading_fallback(&mut self) {
         let i = self.active.min(3);
         self.generation += 1;
-        self.kitchen_ready = false;
-        self.kitchen_requested = false;
+        self.models_ready = false;
+        self.models_requested = false;
         self.renderer = None;
         self.manual_read = true;
-        let _ = self.root.set_attribute("data-kitchen-state", "failed");
+        for name in ["kitchen", "office"] {
+            let _ = self
+                .root
+                .set_attribute(&format!("data-{name}-state"), "failed");
+        }
         self.apply_mode();
         self.navigate(i, false, false);
     }
@@ -558,6 +597,10 @@ impl State {
     fn apply_mode(&mut self) {
         let was_flying = self.flying;
         self.flying = self.renderer.is_some() && !self.reduced && !self.manual_read;
+        if was_flying && !self.flying && !self.models_ready {
+            self.generation += 1;
+            self.models_requested = false;
+        }
         {
             let body = &self.root;
             body.set_class_name(if self.flying {
@@ -602,7 +645,7 @@ impl State {
             let _ = panel.remove_attribute("aria-hidden");
         }
         if self.flying && !was_flying {
-            self.gate = if self.kitchen_ready {
+            self.gate = if self.models_ready {
                 Gate::Warming
             } else {
                 Gate::Waiting
@@ -808,7 +851,7 @@ impl State {
         }
         if let Some(r) = &self.renderer {
             if self.gate == Gate::Warming
-                && !r.warm_kitchen(self.width / self.height.max(1.), self.width <= 700.)
+                && !r.warm_models(self.width / self.height.max(1.), self.width <= 700.)
             {
                 self.reading_fallback();
                 return true;

@@ -51,6 +51,24 @@ fn about_renders_the_four_approved_chapters_and_readable_fallback() {
     assert!(html.contains("loading=\"lazy\""));
     let opening = html.split("id=\"panel-1\"").next().unwrap();
     assert!(opening.contains("kitchen-fallback"));
+    let reason = html
+        .split("id=\"panel-1\"")
+        .nth(1)
+        .unwrap()
+        .split("id=\"panel-2\"")
+        .next()
+        .unwrap();
+    assert!(reason.contains("office-fallback"));
+    assert!(reason.contains("Sam’s office"));
+    for attribute in [
+        "data-office-url",
+        "data-office-left-url",
+        "data-office-right-url",
+        "data-office-gpu-url",
+        "data-office-cpu-url",
+    ] {
+        assert!(html.contains(attribute));
+    }
     let creator = html
         .split("id=\"panel-2\"")
         .nth(1)

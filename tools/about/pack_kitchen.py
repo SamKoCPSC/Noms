@@ -1,7 +1,9 @@
 """Quantize the grouped, vertex-colored Blender GLB (standard KHR_mesh_quantization)."""
 import json,struct,sys
 from pathlib import Path
-out=Path(sys.argv[1]);path=out/'sams-kitchen.glb';raw=path.read_bytes();jl=struct.unpack_from('<I',raw,12)[0];d=json.loads(raw[20:20+jl]);binary=raw[28+jl:]
+out=Path(sys.argv[1]);model=sys.argv[2] if len(sys.argv)>2 else 'kitchen'
+if model not in ('kitchen','office'):raise SystemExit('Expected kitchen or office')
+path=out/f'sams-{model}.glb';raw=path.read_bytes();jl=struct.unpack_from('<I',raw,12)[0];d=json.loads(raw[20:20+jl]);binary=raw[28+jl:]
 if d.get('extensionsRequired'):raise SystemExit('Expected unquantized Blender export')
 def accessor(index):
  a=d['accessors'][index];v=d['bufferViews'][a['bufferView']];off=v.get('byteOffset',0)+a.get('byteOffset',0);w={'VEC3':3,'VEC4':4,'SCALAR':1,'VEC2':2}[a['type']];fmt={5126:'f',5125:'I',5123:'H',5121:'B'}[a['componentType']];values=list(struct.unpack_from('<'+fmt*(a['count']*w),binary,off));return [v/65535 for v in values]if a.get('normalized')and fmt=='H' else [v/255 for v in values]if a.get('normalized')and fmt=='B' else values
@@ -23,7 +25,9 @@ for p,positions in zip(ps,allpos):
  if metadata['texture']:
   uv=accessor(p['attributes']['TEXCOORD_0']);attributes['TEXCOORD_0']=attr([max(0,min(65535,round(v*65535)))for v in uv],2,5123,'H',True)
  primitives.append({'attributes':attributes,'indices':attr(indices,1,5125,'I'),'mode':4,'material':len(materials)})
- materials.append({'name':metadata['name'],'extras':{'assembly':metadata},'pbrMetallicRoughness':{'metallicFactor':0,'roughnessFactor':.65},'doubleSided':True})
-doc={'asset':{'version':'2.0','generator':'Noms Blender web exporter revision 13'},'extensionsUsed':['KHR_mesh_quantization'],'extensionsRequired':['KHR_mesh_quantization'],'scene':0,'scenes':[{'nodes':[0]}],'nodes':[{'mesh':0,'name':"Sam's recipe manager kitchen",'translation':mins,'scale':[extent]*3}],'meshes':[{'primitives':primitives}],'materials':materials,'accessors':accessors,'bufferViews':views,'buffers':[{'byteLength':len(buf)}]}
+ material={'name':metadata['name'],'extras':{'assembly':metadata},'pbrMetallicRoughness':{'metallicFactor':0,'roughnessFactor':.65},'doubleSided':True}
+ if metadata.get('opacity',1)<1:material.update(alphaMode='BLEND');material['pbrMetallicRoughness']['baseColorFactor']=[1,1,1,metadata['opacity']]
+ materials.append(material)
+doc={'asset':{'version':'2.0','generator':f'Noms Blender {model} web exporter'},'extensionsUsed':['KHR_mesh_quantization'],'extensionsRequired':['KHR_mesh_quantization'],'scene':0,'scenes':[{'nodes':[0]}],'nodes':[{'mesh':0,'name':f"Sam's {model}",'translation':mins,'scale':[extent]*3}],'meshes':[{'primitives':primitives}],'materials':materials,'accessors':accessors,'bufferViews':views,'buffers':[{'byteLength':len(buf)}]}
 js=json.dumps(doc,separators=(',',':')).encode();js+=b' '*((-len(js))%4);buf+=b'\0'*((-len(buf))%4);packed=struct.pack('<III',0x46546c67,2,12+8+len(js)+8+len(buf))+struct.pack('<II',len(js),0x4e4f534a)+js+struct.pack('<II',len(buf),0x004e4942)+buf;path.write_bytes(packed)
-budget=json.loads((out/'kitchen-budget.json').read_text());budget.update(glb_bytes=len(packed),position_quantum=extent/65535,quantization='KHR_mesh_quantization',materials=len(materials));(out/'kitchen-budget.json').write_text(json.dumps(budget,indent=2));print(budget)
+budget=json.loads((out/f'{model}-budget.json').read_text());budget.update(glb_bytes=len(packed),position_quantum=extent/65535,quantization='KHR_mesh_quantization',materials=len(materials));(out/f'{model}-budget.json').write_text(json.dumps(budget,indent=2));print(budget)
