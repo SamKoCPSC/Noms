@@ -5,7 +5,7 @@
   "base_commit": "ec68a2b3d00c3cfe7ba518d73e1f09766375d930",
   "base_seed_checksum": "4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571",
   "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
-  "expected_output_checksum": "7eee963a2fc28ffd6c56065d8022f6eab99341344158c1b25171c830de2a175f",
+  "expected_output_checksum": "b96e406b3dd413c3433488222ba3892040c4f5139f0b3782f5c45b6be3678a47",
   "criterion": "User-authorized readable display names after the full lexical audit. Preserve every UUID, definition, status, source association and exact old searchable name. Retain species, parts, maturity, processing, formulation and form. Promote existing owned aliases. Hold name conflicts and unclear definitions. No merges, retirements, recipe rewrites, new ingredients or production rollout.",
   "audit": {
     "seed_sha256": "4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571",
@@ -4498,6 +4498,11 @@
       "after": "sheep milk yogurt",
       "reason": "Retain the named milk source; ordinary adjective-first yogurt naming.",
       "category": "catalogue_inversion"
+    },
+    "cf96958f-b8e3-4fb8-9450-d7f82d86f183": {
+      "before": "berry (impregnated with sugar)",
+      "after": "sweetened berries",
+      "reason": "User-approved conventional cooking name. FOODON_03316906 SIREN annotation specifies whole berries, not heat-treated, with sugar or sugar syrup added; do not infer drying, candying or a specific maceration technique. Keep the exact upstream label and existing plural alias searchable."
     }
   },
   "holds": {
@@ -4639,11 +4644,6 @@
     },
     "74aa1aec-3dc1-46e4-9e63-f326b1e273a1": {
       "label": "beer, strong",
-      "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
-      "category": "manual_wording_or_definition_review"
-    },
-    "cf96958f-b8e3-4fb8-9450-d7f82d86f183": {
-      "label": "berry (impregnated with sugar)",
       "reason": "Retain pending individual definition/wording review; a lexical flag alone does not justify changing the name.",
       "category": "manual_wording_or_definition_review"
     },

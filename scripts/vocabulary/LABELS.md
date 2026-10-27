@@ -113,10 +113,10 @@ trailing modifiers, packaging/use language and malformed punctuation. The
 external audit records 608 draft names; 123 collide with names owned by other
 active IDs. A lexical flag is a review lead, not proof that a label is wrong.
 
-The user-approved follow-up changes **475 preferred labels**. **139 existing
+The user-approved follow-up changes **476 preferred labels**. **139 existing
 aliases** become preferred names; all previous preferred labels become aliases.
-There are **336 additional active aliases**, yielding **13,532 active, 85 retired
-and 10,081 active aliases**. No ingredients are added, merged or retired. Every
+There are **337 additional active aliases**, yielding **13,532 active, 85 retired
+and 10,082 active aliases**. No ingredients are added, merged or retired. Every
 UUID, description, source association, status and authored recipe field is
 preserved. The explicit ledger is
 [`ingredient-readable-label-review.json`](../../data/vocabulary/adapters/ingredient-readable-label-review.json).
@@ -133,6 +133,7 @@ preserved. The explicit ledger is
 | yoghurt, goat milk | goat milk yogurt |
 | mussel shell off, raw) | raw shelled mussels |
 | spelt flour, medium | semi-refined spelt flour |
+| berry (impregnated with sugar) | sweetened berries |
 
 These are per-ID decisions, not a blanket comma inversion. The egg white/yolk
 definitions specify dried forms without limiting every product to powder, so
@@ -142,7 +143,7 @@ powder; semi-refined spelt and the leafy part of black nightshade are supported
 by the existing definitions. Names already present as aliases are promoted with
 their exact wording so no prior searchable string is removed.
 
-**1,017 flagged labels remain unchanged.** They include conflicting names such
+**1,016 flagged labels remain unchanged.** They include conflicting names such
 as `cheese, brie`, `juice, apple` and `milk powder, skimmed`; unclear source or
 classification terms; and useful established names such as cocoa mass, soy
 protein concentrate, liquid coffee concentrate, refined olive oil, passion fruit
@@ -157,7 +158,7 @@ other formulation distinctions are retained.
 The separate review follows commit `ec68a2b3d00c3cfe7ba518d73e1f09766375d930`:
 
 - Input seed: `4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571`
-- Output seed: `7eee963a2fc28ffd6c56065d8022f6eab99341344158c1b25171c830de2a175f`
+- Output seed: `b96e406b3dd413c3433488222ba3892040c4f5139f0b3782f5c45b6be3678a47`
 - Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
 
 Obtain the input seed/sources from that commit in a fresh external directory:
@@ -180,7 +181,15 @@ this layer before the next-sample tests; all earlier ledgers and checksums stay
 unchanged. Only compact decisions, maintained data, tests and documentation are
 committed; raw audits and downloads remain external.
 
-All **135 vocabulary Python tests** pass. Replay is byte-for-byte identical, and
+The initial 475-rename iteration produced seed checksum
+`7eee963a2fc28ffd6c56065d8022f6eab99341344158c1b25171c830de2a175f`.
+The deployment, Rust and browser evidence below belongs to that frozen iteration;
+the subsequent berry-only amendment is separately described in
+[the awkward-language review](AWKWARD_LABELS.md). It updates this current PR's
+readable-label ledger while preserving every earlier curation stage and pin.
+
+For that initial iteration, all **135 vocabulary Python tests** pass.
+Replay is byte-for-byte identical, and
 the Rust validator accepts all **13,617 records/four sources without warnings**.
 The restarted local mock-auth app's normal startup seed applies **475 updates**,
 with zero additions/retirements/source updates. A subsequent dry run makes no

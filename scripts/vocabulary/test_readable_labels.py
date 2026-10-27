@@ -25,13 +25,13 @@ class ReadableLabelTest(unittest.TestCase):
         self.assertEqual(labels.apply_review(self.base,self.sources,self.policy),self.seed)
         self.assertEqual(labels.maintained_next_gap_stage(self.seed),self.base)
         self.assertEqual(validate(self.seed,self.sources),[])
-        self.assertEqual(len(self.policy['changes']),475)
-        self.assertEqual(len(self.policy['holds']),1017)
+        self.assertEqual(len(self.policy['changes']),476)
+        self.assertEqual(len(self.policy['holds']),1016)
         self.assertEqual(len(self.policy['reviewed_ids']),1492)
         self.assertEqual(sum('promoted_alias_index' in d for d in self.policy['changes'].values()),139)
         self.assertEqual(sum(e['status']=='active' for e in self.seed['entries']),13532)
         self.assertEqual(sum(e['status']=='retired' for e in self.seed['entries']),85)
-        self.assertEqual(sum(len(e['aliases']) for e in self.seed['entries'] if e['status']=='active'),10081)
+        self.assertEqual(sum(len(e['aliases']) for e in self.seed['entries'] if e['status']=='active'),10082)
 
     def test_every_old_name_identity_and_unreviewed_record_is_preserved(self):
         self.assertEqual([e['id'] for e in self.seed['entries']],[e['id'] for e in self.base['entries']])
@@ -61,6 +61,7 @@ class ReadableLabelTest(unittest.TestCase):
             ('mints, dry','dried mint'),
             ('spelt flour, medium','semi-refined spelt flour'),
             ('nightshade, black','black nightshade leaves'),
+            ('berry (impregnated with sugar)','sweetened berries'),
         ]:
             ident=self.oldlabels[old]
             self.assertEqual(self.entries[ident]['label'],new)

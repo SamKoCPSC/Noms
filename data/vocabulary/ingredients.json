@@ -19673,9 +19673,10 @@
     },
     {
       "id": "cf96958f-b8e3-4fb8-9450-d7f82d86f183",
-      "label": "berry (impregnated with sugar)",
+      "label": "sweetened berries",
       "aliases": [
-        "berries (impregnated with sugar)"
+        "berries (impregnated with sugar)",
+        "berry (impregnated with sugar)"
       ],
       "description": "",
       "locale": "en",
