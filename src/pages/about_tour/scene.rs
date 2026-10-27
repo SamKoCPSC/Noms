@@ -16,16 +16,16 @@ void main(){vec4 w=u_model*vec4(a_pos,1.0);v_world=w.xyz;v_normal=normalize(u_no
 const FRAGMENT: &str = r#"
 precision mediump float;
 uniform vec4 u_color; uniform vec3 u_eye; uniform sampler2D u_texture;
-uniform float u_textured; uniform float u_shadow; uniform float u_reveal; uniform float u_kitchen;
+uniform float u_textured; uniform float u_shadow; uniform float u_reveal; uniform float u_diorama;
 varying vec3 v_normal; varying vec3 v_world; varying vec2 v_uv; varying vec4 v_color;
-// The glTF kitchen palette is scene-linear; display encoding happens after lighting.
+// The glTF diorama palettes are scene-linear; display encoding happens after lighting.
 vec3 display_srgb(vec3 c){
  c=max(c,vec3(0.0));
  return mix(c*12.92,1.055*pow(c,vec3(1.0/2.4))-0.055,step(vec3(0.0031308),c));
 }
 // AgX approximation adapted from three.js (MIT); see assets/about/THIRD_PARTY_LICENSES.txt.
 // Blender's AgX display treatment softens bright ivory without shifting orange into yellow.
-vec3 kitchen_agx(vec3 color){
+vec3 diorama_agx(vec3 color){
  const mat3 to2020=mat3(0.627404,0.069097,0.0163916,0.329283,0.919540,0.0880132,0.0433136,0.0113612,0.895595);
  const mat3 toSRGB=mat3(1.660491,-0.124550,-0.018151,-0.587641,1.132900,-0.100579,-0.072850,-0.008349,1.118730);
  const mat3 inset=mat3(0.8566271533,0.1373189729,0.1118982130,0.0951212405,0.7612419906,0.0767994186,0.0482516061,0.1014390365,0.8113023684);
@@ -44,7 +44,7 @@ void main(){
  vec3 n=normalize(v_normal);vec3 light=normalize(vec3(-3.0,7.0,5.0));
  float diffuse=max(dot(n,light),0.0);float hemi=n.y*0.5+0.5;
  vec3 base=u_color.rgb*v_color.rgb;if(u_textured>0.5)base*=texture2D(u_texture,v_uv).rgb;
- if(u_kitchen>0.5){
+ if(u_diorama>0.5){
   // Neutral studio fill keeps the master's terracotta, peach, ivory and oak distinct.
   if(u_textured>0.5){
    vec3 tex=texture2D(u_texture,v_uv).rgb;
@@ -56,7 +56,7 @@ void main(){
   vec3 halfway=normalize(light+normalize(u_eye-v_world));
   float spec=pow(max(dot(n,halfway),0.0),48.0)*0.025;
   vec3 radiance=base*illumination*2.00+vec3(spec);
-  gl_FragColor=vec4(display_srgb(kitchen_agx(radiance)),u_color.a);
+  gl_FragColor=vec4(display_srgb(diorama_agx(radiance)),u_color.a);
   return;
  }
  vec3 lighting=vec3(0.44,0.45,0.39)+vec3(0.47,0.45,0.39)*diffuse+vec3(0.13)*hemi;
@@ -70,9 +70,14 @@ struct Mesh {
     count: i32,
     colored: bool,
 }
-struct KitchenDraw {
+struct DioramaDraw {
     mesh: Mesh,
-    part: super::gltf::KitchenPart,
+    part: super::gltf::DioramaPart,
+}
+#[derive(Default)]
+struct Diorama {
+    draws: Vec<DioramaDraw>,
+    texture_base: usize,
 }
 struct Uniforms {
     model: WebGlUniformLocation,
@@ -83,7 +88,7 @@ struct Uniforms {
     textured: WebGlUniformLocation,
     shadow: WebGlUniformLocation,
     reveal: WebGlUniformLocation,
-    kitchen: WebGlUniformLocation,
+    diorama: WebGlUniformLocation,
 }
 pub struct Renderer {
     gl: Gl,
@@ -98,7 +103,8 @@ pub struct Renderer {
     grid: Mesh,
     arch: Mesh,
     textures: Vec<WebGlTexture>,
-    kitchen: Vec<KitchenDraw>,
+    kitchen: Diorama,
+    office: Diorama,
     a_pos: u32,
     a_normal: u32,
     a_uv: u32,
@@ -143,7 +149,7 @@ impl Renderer {
             textured: uniform("u_textured")?,
             shadow: uniform("u_shadow")?,
             reveal: uniform("u_reveal")?,
-            kitchen: uniform("u_kitchen")?,
+            diorama: uniform("u_diorama")?,
         };
         let a_pos = gl.get_attrib_location(&program, "a_pos") as u32;
         let a_normal = gl.get_attrib_location(&program, "a_normal") as u32;
@@ -177,30 +183,29 @@ impl Renderer {
             grid,
             arch,
             textures,
-            kitchen: vec![],
+            kitchen: Diorama::default(),
+            office: Diorama::default(),
             a_pos,
             a_normal,
             a_uv,
             a_color,
         })
     }
-    pub fn upload_kitchen(
+    fn upload_diorama(
         &mut self,
-        data: &super::gltf::KitchenMesh,
-        images: &[HtmlImageElement; 2],
-    ) -> Result<(), JsValue> {
+        data: &super::gltf::DioramaMesh,
+        images: &[HtmlImageElement],
+    ) -> Result<Diorama, JsValue> {
+        if data.parts.iter().any(|part| part.texture > images.len()) {
+            return Err(JsValue::from_str("Missing diorama texture"));
+        }
+        let mut diorama = Diorama {
+            draws: Vec::new(),
+            texture_base: self.textures.len(),
+        };
         for image in images {
             self.textures.push(image_texture(&self.gl, image)?);
         }
-        let _ = self.canvas.set_attribute(
-            "data-kitchen-groups",
-            &data
-                .parts
-                .iter()
-                .map(|p| p.name.as_str())
-                .collect::<Vec<_>>()
-                .join(","),
-        );
         for part in &data.parts {
             let mut model = mesh(
                 &self.gl,
@@ -208,10 +213,36 @@ impl Renderer {
             )?;
             model.count = part.count as i32;
             model.colored = true;
-            self.kitchen.push(KitchenDraw {
+            diorama.draws.push(DioramaDraw {
                 mesh: model,
                 part: part.clone(),
             });
+        }
+        // Draw glazing last and without depth writes, exposing the PC interior.
+        diorama
+            .draws
+            .sort_by(|a, b| b.part.opacity.total_cmp(&a.part.opacity));
+        Ok(diorama)
+    }
+    pub fn upload_models(
+        &mut self,
+        kitchen: &super::gltf::DioramaMesh,
+        kitchen_images: &[HtmlImageElement],
+        office: &super::gltf::DioramaMesh,
+        office_images: &[HtmlImageElement],
+    ) -> Result<(), JsValue> {
+        self.kitchen = self.upload_diorama(kitchen, kitchen_images)?;
+        self.office = self.upload_diorama(office, office_images)?;
+        for (name, data) in [("kitchen", kitchen), ("office", office)] {
+            let _ = self.canvas.set_attribute(
+                &format!("data-{name}-groups"),
+                &data
+                    .parts
+                    .iter()
+                    .map(|p| p.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(","),
+            );
         }
         Ok(())
     }
@@ -277,7 +308,7 @@ impl Renderer {
         gl.uniform1f(Some(&self.uniforms.shadow), if shadow { 1. } else { 0. });
         gl.uniform1f(Some(&self.uniforms.reveal), reveal);
         gl.uniform1f(
-            Some(&self.uniforms.kitchen),
+            Some(&self.uniforms.diorama),
             if mesh.colored { 1. } else { 0. },
         );
         if let Some(i) = texture {
@@ -443,45 +474,35 @@ impl Renderer {
             };
             // Each arch belongs to the world; the camera flies through it en route.
             self.draw(&self.arch, root, color, None, false, 2.);
-            if i == 0 {
+            if i <= 1 {
                 let ratio = self.canvas.width() as f32 / self.canvas.height().max(1) as f32;
-                let (x, y, sc) = if mobile {
+                let short_mobile = self.canvas.get_bounding_client_rect().height() < 600.;
+                let (x, y, sc) = if mobile && i == 1 {
+                    if short_mobile {
+                        (0., 3.1, 0.28)
+                    } else {
+                        (0., 3.25, 0.33)
+                    }
+                } else if mobile {
                     (0., 2.7, 0.34)
                 } else {
                     (ratio * 2.35, -1.45, 0.78)
                 };
-                let model = mul(root, transform([x, y, -11.7], [0.58, -0.62, 0.], [sc; 3]));
-                for draw in &self.kitchen {
-                    let p = &draw.part;
-                    let t = super::assembly::amount(assembly_frame, p.start, p.end);
-                    if t <= 0. {
-                        continue;
-                    }
-                    let sc = 0.85 + 0.15 * t;
-                    let local = mul(
-                        translate(
-                            p.pivot[0] + p.offset[0] * (1. - t),
-                            p.pivot[1] + p.offset[1] * (1. - t),
-                            p.pivot[2] + p.offset[2] * (1. - t),
-                        ),
-                        mul(
-                            scale(sc, sc, sc),
-                            translate(-p.pivot[0], -p.pivot[1], -p.pivot[2]),
-                        ),
-                    );
-                    self.draw(
-                        &draw.mesh,
-                        mul(model, local),
-                        [1., 1., 1., 1.],
-                        if p.texture > 0 {
-                            Some(4 + p.texture)
-                        } else {
-                            None
-                        },
-                        false,
-                        2.,
-                    );
-                }
+                let pose = if i == 0 {
+                    transform([x, y, -11.7], [0.58, -0.62, 0.], [sc; 3])
+                } else {
+                    // Turn the room before pitching it, keeping vertical walls upright.
+                    mul(
+                        translate(x, y, -11.7),
+                        mul(rx(0.58), mul(ry(0.62), scale(sc, sc, sc))),
+                    )
+                };
+                let model = mul(root, pose);
+                self.draw_diorama(
+                    model,
+                    if i == 0 { &self.kitchen } else { &self.office },
+                    if i == 0 { assembly_frame } else { 160. },
+                );
                 continue;
             }
             // The creator now has its own placeholder exhibit; the kitchen belongs to the idea.
@@ -618,11 +639,52 @@ impl Renderer {
             );
         }
     }
-    /// Render every kitchen group behind the curtain and wait for GPU completion.
-    /// This compiles the textured draw path even for direct links to later stops.
-    pub fn warm_kitchen(&self, aspect: f32, mobile: bool) -> bool {
-        let camera = flight::camera(0., aspect, [0.; 2]);
-        self.render(&camera, 0., false, mobile, 160.);
+    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32) {
+        for draw in &diorama.draws {
+            let p = &draw.part;
+            let t = super::assembly::amount(frame, p.start, p.end);
+            if t <= 0. {
+                continue;
+            }
+            let sc = 0.85 + 0.15 * t;
+            let local = mul(
+                translate(
+                    p.pivot[0] + p.offset[0] * (1. - t),
+                    p.pivot[1] + p.offset[1] * (1. - t),
+                    p.pivot[2] + p.offset[2] * (1. - t),
+                ),
+                mul(
+                    scale(sc, sc, sc),
+                    translate(-p.pivot[0], -p.pivot[1], -p.pivot[2]),
+                ),
+            );
+            self.gl.depth_mask(p.opacity >= 1.);
+            self.draw(
+                &draw.mesh,
+                mul(model, local),
+                [1., 1., 1., p.opacity],
+                if p.texture > 0 {
+                    Some(diorama.texture_base + p.texture - 1)
+                } else {
+                    None
+                },
+                false,
+                2.,
+            );
+        }
+        self.gl.depth_mask(true);
+    }
+    /// Warm both rooms, including prints and transparent PC surfaces, before entry.
+    pub fn warm_models(&self, aspect: f32, mobile: bool) -> bool {
+        for stop in [0., 1.] {
+            self.render(
+                &flight::camera(stop, aspect, [0.; 2]),
+                0.,
+                false,
+                mobile,
+                160.,
+            );
+        }
         self.gl.finish();
         self.error() == Gl::NO_ERROR
     }
@@ -643,7 +705,7 @@ impl Drop for Renderer {
         ] {
             self.gl.delete_buffer(Some(&m.buffer));
         }
-        for draw in &self.kitchen {
+        for draw in self.kitchen.draws.iter().chain(&self.office.draws) {
             self.gl.delete_buffer(Some(&draw.mesh.buffer));
         }
         for t in &self.textures {
@@ -962,7 +1024,7 @@ fn texture(gl: &Gl, doc: &Document, kind: usize) -> Result<WebGlTexture, JsValue
 fn image_texture(gl: &Gl, image: &HtmlImageElement) -> Result<WebGlTexture, JsValue> {
     let tex = gl
         .create_texture()
-        .ok_or_else(|| JsValue::from_str("No kitchen texture"))?;
+        .ok_or_else(|| JsValue::from_str("No diorama texture"))?;
     gl.bind_texture(Gl::TEXTURE_2D, Some(&tex));
     // glTF UVs have their origin at the top of the supplied print image.
     gl.pixel_storei(Gl::UNPACK_FLIP_Y_WEBGL, 0);

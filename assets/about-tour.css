@@ -22,8 +22,8 @@
 .about-tour :is(.lead,.detail){color:var(--text-secondary)}
 .about-tour :is(h1,h2){font-family:var(--font-display)}
 .about-tour.is-flight .story-panel{max-height:calc(100svh - var(--tour-top) - var(--tour-bottom) - 240px)}
-.about-tour .kitchen-fallback{margin:0 0 24px}.about-tour .kitchen-fallback img{width:100%;height:auto;border-radius:20px}
-.about-tour.is-flight .kitchen-fallback{display:none}
+.about-tour .kitchen-fallback,.about-tour .office-fallback{margin:0 0 24px}.about-tour .kitchen-fallback img,.about-tour .office-fallback img{width:100%;height:auto;border-radius:20px}
+.about-tour.is-flight .kitchen-fallback,.about-tour.is-flight .office-fallback{display:none}
 .app-shell:has(.about-tour.is-flight)>.footer{display:none}
 .app-shell:has(.about-tour.is-flight)>.main-content{padding-top:0;padding-bottom:0}
 @media(max-width:767px){.about-tour{--tour-top:82px}.about-tour .site-header{height:50px;padding-inline:18px}.about-tour .tour-brand{font-size:17px}.about-tour .journey-caption{display:none}.about-tour.is-flight .story-panel{max-height:calc(100svh - var(--tour-top) - 290px)}.about-tour .story{margin-top:70px}.about-tour.is-flight .story{margin-top:0}}
@@ -59,3 +59,5 @@ html:has(.about-tour.is-flight){scrollbar-gutter:stable}
 @media print{.about-tour .tour-loader{display:none!important}}
 
 @media(max-height:500px){.about-tour.is-flight[data-entry-state=loading] .tour-loader{padding:12px}.about-tour .tour-loader-card{padding:18px 24px}.about-tour .tour-loader-card .eyebrow{display:none}.about-tour .tour-loader-card h2{font-size:26px;margin:0 0 8px}.about-tour #tour-loading-status{font-size:13px;min-height:0}.about-tour #tour-loader-read{min-height:40px;padding-block:8px}.about-tour .tour-loader-track{margin-block:10px}}
+
+@media(max-width:700px) and (min-height:650px){.about-tour.is-flight #panel-1{max-height:calc(100svh - var(--tour-top) - 345px)}}
