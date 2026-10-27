@@ -443,6 +443,7 @@ impl Renderer {
         motion: bool,
         mobile: bool,
         assembly_frame: f32,
+        office_frame: f32,
     ) {
         let gl = &self.gl;
         gl.use_program(Some(&self.program));
@@ -501,7 +502,8 @@ impl Renderer {
                 self.draw_diorama(
                     model,
                     if i == 0 { &self.kitchen } else { &self.office },
-                    if i == 0 { assembly_frame } else { 160. },
+                    if i == 0 { assembly_frame } else { office_frame },
+                    i == 1,
                 );
                 continue;
             }
@@ -639,24 +641,25 @@ impl Renderer {
             );
         }
     }
-    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32) {
+    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32, office: bool) {
         for draw in &diorama.draws {
             let p = &draw.part;
-            let t = super::assembly::amount(frame, p.start, p.end);
+            let t = if office {
+                super::assembly::office_amount(frame, p.start, p.end)
+            } else {
+                super::assembly::amount(frame, p.start, p.end)
+            };
             if t <= 0. {
                 continue;
             }
-            let sc = 0.85 + 0.15 * t;
+            let pose = super::assembly::arrival_pose(p.pivot, p.offset, t, office);
             let local = mul(
                 translate(
-                    p.pivot[0] + p.offset[0] * (1. - t),
-                    p.pivot[1] + p.offset[1] * (1. - t),
-                    p.pivot[2] + p.offset[2] * (1. - t),
+                    pose.translation[0],
+                    pose.translation[1],
+                    pose.translation[2],
                 ),
-                mul(
-                    scale(sc, sc, sc),
-                    translate(-p.pivot[0], -p.pivot[1], -p.pivot[2]),
-                ),
+                scale(pose.scale, pose.scale, pose.scale),
             );
             self.gl.depth_mask(p.opacity >= 1.);
             self.draw(
@@ -682,6 +685,7 @@ impl Renderer {
                 0.,
                 false,
                 mobile,
+                160.,
                 160.,
             );
         }
