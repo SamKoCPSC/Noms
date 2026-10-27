@@ -5776,3 +5776,5 @@ dialog.shared-modal::backdrop { background: transparent; }
 #session-retained-page[hidden] [popover] {
     display: none !important;
 }
+
+.staging-environment-banner{padding:10px 20px;margin:0 20px 16px;border:1px solid var(--warning-ink);border-radius:12px;background:var(--overlay-opaque);color:var(--text-primary);font-weight:700;text-align:center}
