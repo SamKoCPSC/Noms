@@ -1,0 +1,2732 @@
+{
+  "schema_version": 1,
+  "dimension": "equipment",
+  "status": "editorial_review_draft",
+  "created_date": "2026-10-28",
+  "origin": "Manually curated Noms list; no automatic ontology imports or exact source mappings.",
+  "policy": [
+    "Equipment for home cooking, baking, drinks, preservation and useful regional recipes. Commonness varies by cuisine.",
+    "Categories group the review; they do not imply substitution or inheritance.",
+    "Avoid exhaustive brand, size and capacity variants. Retain common forms with functional distinctions, including cake-pan shapes and mini muffin pans.",
+    "Aliases are editorial suggestions for review, not quantitative compatibility or safety guarantees.",
+    "Related disposable supplies remain a separate scope for review. No production seed or recipe data is changed."
+  ],
+  "ambiguous_search_terms": {
+    "spatula": [
+      "flexible spatula",
+      "turner",
+      "offset spatula",
+      "fish spatula"
+    ],
+    "mixer": [
+      "stand mixer",
+      "hand mixer"
+    ],
+    "herb chopper": [
+      "mezzaluna",
+      "mini food chopper"
+    ],
+    "cleaver": [
+      "meat cleaver",
+      "Chinese vegetable cleaver"
+    ],
+    "pressure cooker": [
+      "stovetop pressure cooker",
+      "electric pressure cooker"
+    ],
+    "meat thermometer": [
+      "instant-read thermometer",
+      "leave-in probe thermometer"
+    ],
+    "pastry cutter": [
+      "pastry blender",
+      "pastry wheel",
+      "cookie cutter"
+    ],
+    "dough scraper": [
+      "bench scraper",
+      "bowl scraper"
+    ],
+    "grater": [
+      "box grater",
+      "rasp grater",
+      "rotary cheese grater"
+    ],
+    "baking mat": [
+      "silicone baking mat",
+      "pastry mat"
+    ]
+  },
+  "entries": [
+    {
+      "label": "chef's knife",
+      "aliases": [
+        "chef knife"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "paring knife",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "utility knife",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "bread knife",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "boning knife",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fillet knife",
+      "aliases": [
+        "filet knife"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "carving knife",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "meat cleaver",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Heavy blade for chopping through suitable meat and bones; distinct from a Chinese vegetable cleaver."
+    },
+    {
+      "label": "Chinese vegetable cleaver",
+      "aliases": [
+        "cai dao"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Thin slicing/chopping blade; distinct from a heavy meat cleaver."
+    },
+    {
+      "label": "santoku knife",
+      "aliases": [
+        "santoku"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "nakiri knife",
+      "aliases": [
+        "nakiri"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "mezzaluna",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "oyster knife",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "kitchen shears",
+      "aliases": [
+        "kitchen scissors"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "poultry shears",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cutting board",
+      "aliases": [
+        "chopping board"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "mandoline",
+      "aliases": [
+        "mandolin slicer"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "vegetable peeler",
+      "aliases": [
+        "peeler"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "julienne peeler",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fish scaler",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "herb scissors",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "knife sharpener",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Abrasive sharpening device; do not treat honing as equivalent."
+    },
+    {
+      "label": "honing rod",
+      "aliases": [
+        "honing steel"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Maintains/aligns an edge; distinct from abrasive sharpening tools."
+    },
+    {
+      "label": "whetstone",
+      "aliases": [
+        "sharpening stone"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cooking spoon",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "carving fork",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "wooden spoon",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "slotted spoon",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ladle",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "slotted ladle",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "turner",
+      "aliases": [
+        "flipper"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fish spatula",
+      "aliases": [
+        "fish slice"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Thin, slotted, flexible lifting blade for delicate foods."
+    },
+    {
+      "label": "flexible spatula",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Flexible mixing and scraping tool; distinct from a turner used to lift food."
+    },
+    {
+      "label": "cooking tongs",
+      "aliases": [
+        "kitchen tongs"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "whisk",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "flat whisk",
+      "aliases": [
+        "roux whisk"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "rotary egg beater",
+      "aliases": [
+        "manual egg beater"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "spider strainer",
+      "aliases": [
+        "spider skimmer"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "mesh skimmer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "potato masher",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "potato ricer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "food mill",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "mortar and pestle",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "box grater",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "rasp grater",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Fine rasp-style grater; use generic names rather than a trademark as primary label."
+    },
+    {
+      "label": "rotary cheese grater",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "nutmeg grater",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "zester",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Channel-style citrus zest tool; distinct from a fine rasp grater."
+    },
+    {
+      "label": "citrus reamer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "citrus press",
+      "aliases": [
+        "lemon squeezer"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "apple corer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pineapple corer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "apple slicer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cherry pitter",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "melon baller",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ice cream scoop",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "portion scoop",
+      "aliases": [
+        "cookie scoop",
+        "disher"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "spaghetti server",
+      "aliases": [
+        "spaghetti spoon",
+        "pasta server"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "egg slicer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "egg separator",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "garlic press",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "garlic peeler",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "meat tenderizer",
+      "aliases": [
+        "meat mallet"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "vegetable spiralizer",
+      "aliases": [
+        "spiralizer"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "nutcracker",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "funnel",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "can opener",
+      "aliases": [
+        "tin opener"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "bottle opener",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "corkscrew",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "jar opener",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "baster",
+      "aliases": [
+        "turkey baster"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "marinade injector",
+      "aliases": [
+        "meat injector"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "oil sprayer",
+      "aliases": [],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fat separator",
+      "aliases": [
+        "gravy separator"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pastry brush",
+      "aliases": [
+        "basting brush"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "General food-safe brush; specify heat-resistant material for hot basting."
+    },
+    {
+      "label": "bench scraper",
+      "aliases": [
+        "bench knife"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Rigid workbench tool for dividing dough and moving ingredients."
+    },
+    {
+      "label": "bowl scraper",
+      "aliases": [
+        "flexible dough scraper"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Flexible tool shaped to scrape dough or batter from bowls."
+    },
+    {
+      "label": "mixing bowl",
+      "aliases": [],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "heatproof bowl",
+      "aliases": [],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "colander",
+      "aliases": [],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fine-mesh sieve",
+      "aliases": [
+        "fine-mesh strainer"
+      ],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "drum sieve",
+      "aliases": [
+        "tamis"
+      ],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "chinois",
+      "aliases": [],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "flour sifter",
+      "aliases": [],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "salad spinner",
+      "aliases": [],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "vegetable brush",
+      "aliases": [],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "kitchen scale",
+      "aliases": [
+        "kitchen scales"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "precision scale",
+      "aliases": [],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": "Fine-resolution scale for small ingredient quantities; distinct from an ordinary kitchen scale."
+    },
+    {
+      "label": "measuring jug",
+      "aliases": [
+        "measuring pitcher"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "measuring cup",
+      "aliases": [
+        "measuring cups"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "measuring spoon",
+      "aliases": [
+        "measuring spoons"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "instant-read thermometer",
+      "aliases": [
+        "instant read thermometer"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": "Inserted briefly for a reading; do not assume it can remain in an oven."
+    },
+    {
+      "label": "leave-in probe thermometer",
+      "aliases": [
+        "oven-safe probe thermometer"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": "Probe intended to remain in food during cooking."
+    },
+    {
+      "label": "oven thermometer",
+      "aliases": [],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "refrigerator thermometer",
+      "aliases": [
+        "fridge thermometer"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "candy thermometer",
+      "aliases": [
+        "sugar thermometer"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": "High-temperature sugar thermometer. Confirm suitable range for hot oil before using for deep frying."
+    },
+    {
+      "label": "infrared thermometer",
+      "aliases": [],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "kitchen timer",
+      "aliases": [
+        "cooking timer"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pastry ruler",
+      "aliases": [],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "saucepan",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "stockpot",
+      "aliases": [
+        "stock pot"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "frying pan",
+      "aliases": [
+        "frypan",
+        "skillet"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Generic frying pan. Specify nonstick or cast iron when material matters."
+    },
+    {
+      "label": "nonstick frying pan",
+      "aliases": [
+        "non-stick frying pan"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Nonstick cooking surface; retained separately when release characteristics matter."
+    },
+    {
+      "label": "cast-iron skillet",
+      "aliases": [
+        "cast iron frying pan"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Heavy heat-retaining skillet, typically seasoned; retained separately from generic frying pans."
+    },
+    {
+      "label": "sauté pan",
+      "aliases": [
+        "saute pan"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "saucier",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "wok",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "griddle",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "grill pan",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "Dutch oven",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "braiser",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "roasting pan",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "roasting rack",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "baking dish",
+      "aliases": [
+        "casserole dish"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "stovetop pressure cooker",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Pressure vessel heated on a separate burner."
+    },
+    {
+      "label": "double boiler",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Two nested vessels for indirect heating; distinct from a general water bath."
+    },
+    {
+      "label": "bain-marie",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Heated water-bath equipment or setup; distinct from two nested double-boiler vessels."
+    },
+    {
+      "label": "frying basket",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "egg poacher",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "egg ring",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "steaming rack",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "steamer basket",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "bamboo steamer",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fish kettle",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "preserving pan",
+      "aliases": [
+        "jam pan"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fondue pot",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "crepe pan",
+      "aliases": [
+        "crêpe pan"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "omelet pan",
+      "aliases": [
+        "omelette pan"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "paella pan",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tagine",
+      "aliases": [
+        "tajine"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "karahi",
+      "aliases": [
+        "kadai"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tawa",
+      "aliases": [
+        "tava"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "comal",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "donabe",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "dolsot",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tamagoyaki pan",
+      "aliases": [
+        "Japanese omelet pan"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cataplana",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "clay cooking pot",
+      "aliases": [],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "baking sheet",
+      "aliases": [
+        "baking tray",
+        "sheet pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cookie sheet",
+      "aliases": [
+        "rimless baking sheet"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Rimless or minimally rimmed baking sheet; distinct from a rimmed tray for liquids or roasting."
+    },
+    {
+      "label": "cake pan",
+      "aliases": [
+        "cake tin"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "round cake pan",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "square cake pan",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "rectangular cake pan",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "loaf pan",
+      "aliases": [
+        "loaf tin",
+        "bread pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "muffin pan",
+      "aliases": [
+        "muffin tin",
+        "cupcake pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "mini muffin pan",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "springform pan",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "Bundt pan",
+      "aliases": [
+        "Bundt cake pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Decorative fluted ring pan; distinct from a straight-sided tube pan."
+    },
+    {
+      "label": "tube pan",
+      "aliases": [
+        "angel food cake pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tart pan",
+      "aliases": [
+        "tart tin",
+        "quiche tin"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pie dish",
+      "aliases": [
+        "pie plate",
+        "pie pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "soufflé dish",
+      "aliases": [
+        "souffle dish"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ramekin",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pudding basin",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pizza pan",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pizza screen",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "baking stone",
+      "aliases": [
+        "pizza stone"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Stone or ceramic baking surface; distinct from a steel surface."
+    },
+    {
+      "label": "baking steel",
+      "aliases": [
+        "pizza steel"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Steel baking surface with different heat transfer from a baking stone."
+    },
+    {
+      "label": "cooling rack",
+      "aliases": [
+        "wire cooling rack"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "silicone baking mat",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "bread cloche",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "proofing basket",
+      "aliases": [
+        "banneton",
+        "bread proofing basket"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "baker's couche",
+      "aliases": [
+        "proofing cloth"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "bread lame",
+      "aliases": [
+        "lame"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "rolling pin",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pastry mat",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pastry board",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pastry blender",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pastry docker",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "dough whisk",
+      "aliases": [
+        "Danish dough whisk"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "chocolate mold",
+      "aliases": [
+        "chocolate mould"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "gelatin mold",
+      "aliases": [
+        "jelly mold",
+        "jelly mould"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pastry wheel",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cookie cutter",
+      "aliases": [
+        "biscuit cutter"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cookie press",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "piping bag",
+      "aliases": [
+        "pastry bag"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "piping tip",
+      "aliases": [
+        "piping nozzle",
+        "pastry tip"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "offset spatula",
+      "aliases": [
+        "offset palette knife"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cake leveler",
+      "aliases": [
+        "cake leveller"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cake ring",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cake decorating turntable",
+      "aliases": [
+        "cake turntable"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "icing smoother",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cake board",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pie weights",
+      "aliases": [
+        "baking beans"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pie bird",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "proofing box",
+      "aliases": [
+        "dough proofer"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "blender",
+      "aliases": [
+        "countertop blender"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "immersion blender",
+      "aliases": [
+        "stick blender",
+        "hand blender"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Wand-style blade blender; distinct from a hand mixer with beaters."
+    },
+    {
+      "label": "food processor",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "mini food chopper",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "stand mixer",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Countertop mixer with a fixed bowl/stand."
+    },
+    {
+      "label": "hand mixer",
+      "aliases": [
+        "handheld mixer"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Handheld electric beaters; distinct from a stand mixer or immersion blender."
+    },
+    {
+      "label": "spice grinder",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "coffee grinder",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "grain mill",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "wet grinder",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "meat grinder",
+      "aliases": [
+        "mincer"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "meat slicer",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "juicer",
+      "aliases": [
+        "juice extractor"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "electric kettle",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "rice cooker",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "electric egg cooker",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "slow cooker",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "multicooker",
+      "aliases": [
+        "multi-cooker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Appliance supporting several cooking modes; not a synonym for every pressure cooker."
+    },
+    {
+      "label": "electric pressure cooker",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Self-heating pressure appliance; distinct from stovetop equipment."
+    },
+    {
+      "label": "air fryer",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "deep fryer",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "toaster",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "waffle maker",
+      "aliases": [
+        "waffle iron"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "sandwich toaster",
+      "aliases": [
+        "toastie maker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Typically seals or shapes toasties; distinct from an open-sided sandwich press."
+    },
+    {
+      "label": "panini press",
+      "aliases": [
+        "sandwich press"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Presses/grills sandwiches between heated plates; distinct from a sealing sandwich toaster."
+    },
+    {
+      "label": "crepe maker",
+      "aliases": [
+        "crêpe maker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "popcorn maker",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ice cream maker",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "food dehydrator",
+      "aliases": [
+        "dehydrator"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "yogurt maker",
+      "aliases": [
+        "yoghurt maker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "soy milk maker",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "bread machine",
+      "aliases": [
+        "breadmaker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "sous vide immersion circulator",
+      "aliases": [
+        "sous-vide circulator"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "vacuum sealer",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "electric food steamer",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "electric griddle",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "electric skillet",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "electric grill",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "milk frother",
+      "aliases": [],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "oven",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "convection oven",
+      "aliases": [
+        "fan oven"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "microwave oven",
+      "aliases": [
+        "microwave"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "toaster oven",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "steam oven",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "combi steam oven",
+      "aliases": [
+        "combination steam oven"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": "Supports both steam and convection modes; distinct from steam-only ovens."
+    },
+    {
+      "label": "cooktop",
+      "aliases": [
+        "hob"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "induction cooktop",
+      "aliases": [
+        "induction hob"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "portable burner",
+      "aliases": [
+        "portable hot plate"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pizza oven",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "broiler",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "barbecue grill",
+      "aliases": [
+        "BBQ grill"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "smoker",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "camping stove",
+      "aliases": [
+        "camp stove"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tandoor",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "kitchen torch",
+      "aliases": [
+        "cooking torch",
+        "culinary blowtorch"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": "Food preparation torch; match fuel and equipment to intended use."
+    },
+    {
+      "label": "refrigerator",
+      "aliases": [
+        "fridge"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "freezer",
+      "aliases": [],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pasta machine",
+      "aliases": [
+        "pasta maker"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pasta drying rack",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ravioli stamp",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ravioli mold",
+      "aliases": [
+        "ravioli mould"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pizza cutter",
+      "aliases": [
+        "pizza wheel"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pizza peel",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tortilla press",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "dumpling press",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "rice paddle",
+      "aliases": [
+        "shamoji"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cooking chopsticks",
+      "aliases": [
+        "saibashi"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "sushi rolling mat",
+      "aliases": [
+        "makisu"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "sushi press",
+      "aliases": [
+        "oshizushi mold"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "sushi rice tub",
+      "aliases": [
+        "hangiri"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "onigiri mold",
+      "aliases": [
+        "onigiri mould"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "idli stand",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "idli steamer",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "appam pan",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "takoyaki pan",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "poffertjes pan",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "aebleskiver pan",
+      "aliases": [
+        "ebelskiver pan"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "couscous steamer",
+      "aliases": [
+        "couscoussier"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "suribachi",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "molcajete",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "metate",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "drip coffee maker",
+      "aliases": [
+        "filter coffee maker"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "espresso machine",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "French press",
+      "aliases": [
+        "cafetiere",
+        "cafetière"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "moka pot",
+      "aliases": [
+        "stovetop espresso pot"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pour-over coffee dripper",
+      "aliases": [
+        "pour over coffee dripper"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "coffee percolator",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "gooseneck kettle",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "teapot",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tea infuser",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "tea strainer",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "matcha whisk",
+      "aliases": [
+        "chasen"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "milk frothing pitcher",
+      "aliases": [
+        "milk steaming pitcher"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "espresso tamper",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "espresso knock box",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cocktail shaker",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "bar spoon",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "jigger",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "muddler",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cocktail strainer",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ice crusher",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ice cube tray",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ice scoop",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "ice pick",
+      "aliases": [],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cream whipper",
+      "aliases": [
+        "whipping siphon",
+        "whipped cream dispenser"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "soda maker",
+      "aliases": [
+        "carbonator"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "food storage container",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "canning jar",
+      "aliases": [
+        "preserving jar"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Use a suitable jar and closure for the chosen preservation method."
+    },
+    {
+      "label": "fermentation jar",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fermentation crock",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "fermentation airlock",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Allows fermentation gas release while limiting air entry."
+    },
+    {
+      "label": "fermentation weight",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "water-bath canner",
+      "aliases": [
+        "water bath canner"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pressure canner",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Designed for pressure canning. Do not alias to a pressure cooker or assume equivalent canning capability."
+    },
+    {
+      "label": "canning rack",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "jar lifter",
+      "aliases": [
+        "canning tongs"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "canning funnel",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "canning bubble remover",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "magnetic lid lifter",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "salad dressing shaker",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "butter mold",
+      "aliases": [
+        "butter mould"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "oven mitt",
+      "aliases": [
+        "oven glove"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pot holder",
+      "aliases": [
+        "potholder"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "trivet",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "splatter screen",
+      "aliases": [
+        "splatter guard"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "pot lid",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "stovetop heat diffuser",
+      "aliases": [
+        "simmering plate"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "kitchen towel",
+      "aliases": [
+        "tea towel"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "apron",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "cut-resistant glove",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": "Helps protect during slicing/grating; not heat protection."
+    },
+    {
+      "label": "heat-resistant cooking glove",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": "Heat protection; not interchangeable with a cut-resistant glove."
+    },
+    {
+      "label": "spoon rest",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "skewer",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "grill basket",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "rotisserie spit",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "grill brush",
+      "aliases": [],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": ""
+    },
+    {
+      "label": "parchment paper",
+      "aliases": [
+        "baking paper"
+      ],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "aluminium foil",
+      "aliases": [
+        "aluminum foil",
+        "tin foil"
+      ],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "plastic wrap",
+      "aliases": [
+        "cling film",
+        "cling wrap"
+      ],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "cheesecloth",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "kitchen twine",
+      "aliases": [
+        "butcher's twine",
+        "cooking twine"
+      ],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "butcher paper",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "wax paper",
+      "aliases": [
+        "waxed paper"
+      ],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "cupcake liner",
+      "aliases": [
+        "muffin liner",
+        "cupcake case"
+      ],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "coffee filter",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "vacuum sealer bag",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "freezer bag",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "roasting bag",
+      "aliases": [
+        "oven bag"
+      ],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "paper towel",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "toothpick",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "smoking wood chips",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    },
+    {
+      "label": "grilling plank",
+      "aliases": [],
+      "category": "Related kitchen supplies",
+      "scope": "related_supply",
+      "note": ""
+    }
+  ]
+}

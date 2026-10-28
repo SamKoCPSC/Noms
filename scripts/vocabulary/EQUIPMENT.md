@@ -4,6 +4,28 @@ This stage extracts and evaluates candidates. It does not create an equipment
 seed, assign Noms vocabulary UUIDs, approve aliases, or write to a database.
 See the [dated evaluation](../../docs/equipment-vocabulary-evaluation-2026-10-28.md).
 
+## Manual curation alternative
+
+`data/vocabulary/research/equipment/manual-equipment-draft.json` is a separate,
+manually authored review draft: 323 equipment names across twelve categories,
+16 separately scoped kitchen supplies, and 158 proposed alternative names.
+It covers everyday equipment and practical baking, beverage, preservation and
+regional cooking tools. It replaces neither the pinned research evidence nor a
+production seed. Source entity mappings and Noms UUIDs are intentionally absent.
+
+Categories organize review only. The draft keeps functional distinctions such
+as stand/hand mixers, blenders/immersion blenders, pressure canners/pressure
+cookers, and flexible spatulas/turners. Generic searches such as `mixer`,
+`spatula`, `cleaver` and `meat thermometer` have multiple candidate targets;
+they are not bound to one narrower tool as aliases. Sizes and capacities are
+not exhaustively enumerated. Common functional forms such as cake-pan shapes
+and mini muffin pans remain explicit.
+
+CSV, JSON and plain-list exports are generated outside Git for user review.
+Preferred labels and proposed aliases were checked for normalized collisions;
+CSV/JSON row counts, scopes and aliases round-trip without losing information.
+The draft is not loaded by the runtime or ingredient seed command.
+
 ## Maintained review inputs
 
 `data/vocabulary/research/equipment/` contains:
