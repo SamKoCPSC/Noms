@@ -34,13 +34,13 @@ done
 # not have reliable global prefixes. Inspect assignment-shaped lines and allow
 # only the exact development placeholders documented in .env.local.example or
 # environment/reference substitutions. Report filenames, never values.
-assignment_pattern='^[[:space:]]*(-[[:space:]]*)?(export[[:space:]]+)?"?(SESSION_SECRET|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_SECRET|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY)"?[[:space:]]*[:=]'
+assignment_pattern='^[[:space:]]*(-[[:space:]]*)?(export[[:space:]]+)?"?(SESSION_SECRET|NOMS_STAGING_LOGIN_SECRET|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_SECRET|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY)"?[[:space:]]*[:=]'
 mapfile -t assignment_files < <(
     git -C "$scan_root" grep -I -l -E "$assignment_pattern" -- . 2>/dev/null || true
 )
 for assignment_file in "${assignment_files[@]}"; do
     if perl -ne '
-        if (/^\s*(?:-\s*)?(?:export\s+)?"?(SESSION_SECRET|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_SECRET|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY)"?\s*[:=]\s*(.*)$/) {
+        if (/^\s*(?:-\s*)?(?:export\s+)?"?(SESSION_SECRET|NOMS_STAGING_LOGIN_SECRET|GOOGLE_CLIENT_SECRET|GITHUB_CLIENT_SECRET|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY)"?\s*[:=]\s*(.*)$/) {
             my ($name, $value) = ($1, $2);
             $value =~ s/\s+#.*$//;
             $value =~ s/^\s+|\s+$//g;

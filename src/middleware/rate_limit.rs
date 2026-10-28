@@ -478,6 +478,9 @@ fn make_503_response() -> Response<Body> {
 /// `/auth/logout`, `/dashboard`), allowing them to pass through without
 /// rate limiting.
 fn categorize_path(path: &str) -> Option<EndpointCategory> {
+    if path == "/auth/staging/session" {
+        return Some(EndpointCategory::Start);
+    }
     let segments: Vec<&str> = path.split('/').collect();
     // /auth/{provider}/{action} => ["", "auth", "{provider}", "{action}"]
     if segments.len() != 4 {
@@ -867,6 +870,10 @@ mod tests {
 
     #[test]
     fn test_categorize_path_start() {
+        assert_eq!(
+            categorize_path("/auth/staging/session"),
+            Some(EndpointCategory::Start)
+        );
         assert_eq!(
             categorize_path("/auth/google/start"),
             Some(EndpointCategory::Start)

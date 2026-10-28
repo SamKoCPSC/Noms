@@ -21,6 +21,9 @@ pub fn AppLayout() -> Element {
             Navbar { theme }
             main {
                 class: "main-content bg-gradient-animated",
+                if try_use_context::<crate::auth::staging_context::StagingEnvironment>().unwrap_or_default().0 {
+                    div { class: "staging-environment-banner", role: "note", "Staging environment — test data only" }
+                }
                 AuthRefresh {}
                 SessionPage {}
             }

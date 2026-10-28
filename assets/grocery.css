@@ -372,6 +372,9 @@
 .grocery-add-row>* {
     min-width:0;
 }
+.grocery-add-name .ingredient-autocomplete__list {
+    min-width:min(280px,calc(100vw - 80px));
+}
 .grocery-add-row input {
     width:100%;
     min-width:0;
@@ -820,7 +823,7 @@
         grid-template-columns:minmax(0,1fr) minmax(0,1fr) 58px;
         gap:8px;
     }
-    .grocery-add-row>label:first-child {
+    .grocery-add-row>label:first-child,.grocery-add-row>.grocery-add-name {
         grid-column:1/-1;
     }
     .grocery-tools {

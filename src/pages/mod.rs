@@ -1,4 +1,5 @@
 mod pantry;
+mod pantry_recipes;
 pub use pantry::{Pantry, PantryDetail, PantryNew};
 mod grocery;
 pub use grocery::{GroceryListDetail, GroceryListNew, GroceryLists};
@@ -27,6 +28,7 @@ mod recipe_import;
 mod recipe_import_mapping;
 mod recipe_json_controls;
 mod recipe_new;
+mod recipe_pantry;
 mod recipe_version_graph;
 pub(crate) mod search;
 mod settings;

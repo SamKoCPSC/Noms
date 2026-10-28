@@ -36,7 +36,7 @@ async def main(args):
     if path.startswith('/api/'+name):
      api_paths[name]=path
   page.on('request',record_route)
-  await page.goto(base+'/kitchen/pantry',wait_until='networkidle');await expect(page.locator('h1')).to_have_text('A pantry of your own.')
+  await page.goto(base+'/kitchen/pantry',wait_until='networkidle');await expect(page.locator('h1')).to_have_text('Organize your virtual pantry')
   await page.goto(base+'/kitchen/pantry/new',wait_until='networkidle')
   await page.get_by_role('button',name='Create pantry',exact=True).click();await expect(page.locator('[role=alert]').first).to_contain_text('Pantry name')
   await page.get_by_label('Pantry name',exact=True).fill('Home pantry')

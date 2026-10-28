@@ -25,7 +25,7 @@ pub(crate) fn state() -> Signal<ClientState> {
     VOCABULARY.signal()
 }
 
-/// Called once by each editor, not by each ingredient row.
+/// Called once by each ingredient-entry page, not by each ingredient row.
 pub(crate) fn use_editor_vocabulary() {
     let shared = state();
     use_effect(move || {

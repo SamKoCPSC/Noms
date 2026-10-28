@@ -15,6 +15,7 @@ pub mod diff;
 pub mod grocery;
 mod media_assets;
 pub mod pantry;
+pub mod pantry_recipes;
 mod versioning;
 
 #[cfg(test)]
@@ -8260,5 +8261,7 @@ mod tests {
 #[cfg(test)]
 mod grocery_tests;
 
+#[cfg(test)]
+mod pantry_recipes_tests;
 #[cfg(test)]
 mod pantry_tests;

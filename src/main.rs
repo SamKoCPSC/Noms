@@ -241,7 +241,10 @@ async fn build_application_router() -> axum::Router {
 
     // The two endpoint classes deliberately have independent in-memory windows.
     // Each application replica owns its own limiter and cleanup task.
-    let oauth_router = build_oauth_router(state);
+    let mut oauth_router = build_oauth_router(state);
+    if let Some(config) = runtime_config.staging_login() {
+        oauth_router = oauth_router.layer(axum::Extension(config.clone()));
+    }
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
         loop {
@@ -252,6 +255,9 @@ async fn build_application_router() -> axum::Router {
 
     oauth_router
         .merge(dioxus_router)
+        .layer(axum::Extension(auth::staging_context::StagingEnvironment(
+            runtime_config.staging_environment(),
+        )))
         .layer(axum::Extension(auth::local_origin::LocalCanonicalOrigin(
             runtime_config.local_loopback_origin(),
         )))
@@ -314,7 +320,13 @@ fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClien
 
 #[cfg(feature = "server")]
 fn build_oauth_router(state: auth::oauth::AppState) -> axum::Router {
+    let pool = state.pool.clone();
     axum::Router::new()
+        .route(
+            "/auth/staging/session",
+            axum::routing::post(auth::staging::create_test_session),
+        )
+        .layer(axum::Extension(pool))
         .route(
             "/auth/{provider}/start",
             axum::routing::get(auth::oauth::start_handler),
@@ -549,6 +561,8 @@ fn main() {
 fn App() -> Element {
     // dx serve rewrites Host before proxying to Axum. Hydrate the configured
     // local origin, not a forwarded header, so the browser can converge too.
+    let staging_environment = use_server_cached(auth::staging_context::from_fullstack);
+    provide_context(staging_environment);
     let local_origin = use_server_cached(auth::local_origin::from_fullstack);
     provide_context(local_origin.clone());
     use_effect(move || {

@@ -17,6 +17,27 @@ const KITCHEN_POSTER: Asset = asset!(
     "/assets/about/sams-kitchen.webp",
     manganis::AssetOptions::builder()
 );
+const OFFICE_MODEL: Asset = asset!("/assets/about/sams-office.glb");
+const OFFICE_LEFT: Asset = asset!(
+    "/assets/about/office-editor-left.webp",
+    manganis::AssetOptions::builder()
+);
+const OFFICE_RIGHT: Asset = asset!(
+    "/assets/about/office-editor-right.webp",
+    manganis::AssetOptions::builder()
+);
+const OFFICE_GPU: Asset = asset!(
+    "/assets/about/office-rtx4090.webp",
+    manganis::AssetOptions::builder()
+);
+const OFFICE_CPU: Asset = asset!(
+    "/assets/about/office-intel-core.webp",
+    manganis::AssetOptions::builder()
+);
+const OFFICE_POSTER: Asset = asset!(
+    "/assets/about/sams-office.webp",
+    manganis::AssetOptions::builder()
+);
 pub(super) const LOADING_PHRASES: [&str; 100] = [
     "The cookies are baking…",
     "The steak is defrosting…",
@@ -148,6 +169,7 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,
+       "data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
         onmounted: move |_| {
           #[cfg(target_arch="wasm32")]
           if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
@@ -156,9 +178,9 @@ pub fn About() -> Element {
       div{class:"tour-loader-card",
        div{class:"tour-loader-book",aria_hidden:"true",span{}span{}span{}}
        span{class:"eyebrow","ABOUT NOMS"}
-       h2{id:"tour-loader-title","Getting the kitchen ready"}
+       h2{id:"tour-loader-title","Setting the scene"}
        p{id:"tour-loading-status",aria_hidden:"true","{LOADING_PHRASES[0]}"}
-       span{class:"sr-only",role:"status",aria_live:"polite","Loading the kitchen. The tour will open when it is ready."}
+       span{class:"sr-only",role:"status",aria_live:"polite","Loading the 3D story. The tour will open when it is ready."}
        div{class:"tour-loader-track",aria_hidden:"true",span{}}
        button{id:"tour-loader-read",r#type:"button","Click here if the page takes too long to load"}
       }
@@ -181,6 +203,7 @@ pub fn About() -> Element {
         div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","0{i+1}"}}
         if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
         if i==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
+        if i==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
         for (j, paragraph) in CONTENT[i].iter().enumerate() {p{class:if j==0{"lead"}else{"detail"},"{paragraph}"}}
         if i==3 {div{class:"values",span{"Key features free"}span{"No intrusive ads"}span{"Your data stays yours"}}}
         a{class:"next-link",href:if i<3{format!("#{}",IDS[i+1])}else{"#idea".into()},

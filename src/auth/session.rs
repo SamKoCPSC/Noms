@@ -170,7 +170,10 @@ fn now_secs() -> u64 {
 ///
 /// Inserts a row into the `sessions` table, then returns a compact JWT
 /// with `sub = session_id`. The JWT is valid for [`SESSION_LIFETIME_SECS`] seconds.
-pub async fn create_session(pool: &PgPool, user_id: Uuid) -> Result<String, SessionError> {
+pub async fn create_session(
+    pool: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
+    user_id: Uuid,
+) -> Result<String, SessionError> {
     let secret = read_secret()?;
     let now = chrono::Utc::now();
     let expires_at = now + chrono::Duration::seconds(SESSION_LIFETIME_SECS as i64);

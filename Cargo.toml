@@ -40,7 +40,9 @@ unicode-normalization = "0.1"
 dashmap = { version = "6", optional = true }
 ipnet = { version = "2", optional = true }
 sha2 = "0.10"
+subtle = { version = "2", optional = true }
 flate2 = { version = "1", optional = true }
+futures-util = { version = "0.3", optional = true }
 wasm-bindgen = "0.2"
 futures-channel = "0.3"
 
@@ -88,6 +90,8 @@ server  = [
     "dashmap",
     "ipnet",
     "dep:flate2",
+    "dep:futures-util",
+    "dep:subtle",
     "serde_jcs",
     "dep:zip",
     "dep:base64",

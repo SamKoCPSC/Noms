@@ -1,4 +1,4 @@
-# About tour kitchen
+# About tour models
 
 Web derivative of Sam's approved **revision 13** Blender kitchen. The editable master and source renders remain on the [model review page](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c); this directory contains the production derivative, not the native master.
 
@@ -23,11 +23,35 @@ python tools/about/prepare_kitchen_images.py /path/to/revision-13 assets/about
 
 The exporter preserves radial/rim geometry, uses gentler simplification on other surfaces, evaluates rounded edges, joins the diorama while retaining assembly identity per face and bakes subtle contact shading into the material palette at mesh corners. The packer removes unused attributes and quantizes positions, normals and colors. Manganis may re-encode the print images during bundling; verification compares their decoded pixels with the approved source artwork. The two printed surfaces retain quantized UVs and reference local WebP images at runtime. Assembly metadata stores group names, world-space pivots, incoming offsets, and native start/end frames in glTF Y-up coordinates. The app reads this deliberately small GLB contract in Rust; arbitrary third-party GLBs are not supported by this loader.
 
+## Office
+
+The second stop uses Sam's approved **revision 10** office from the [office model review](https://chatgpt.com/space/page_65be16eb77f08191a6d3faeb22138385). The native master remains separate from the application. Its SHA-256 is recorded in `office-budget.json`.
+
+- `sams-office.glb`: 240,691 triangles, 16 assemblies, 24 draw calls and 7,341,688 bytes. Quantized position steps are approximately 0.095 mm in source units.
+- `office-editor-left.webp`, `office-editor-right.webp`, `office-rtx4090.webp`, and `office-intel-core.webp`: the approved editor and packaging artwork on the actual modeled print surfaces.
+- `sams-office.webp`: the approved 960px still for reading mode, reduced motion and graphics fallbacks.
+- `office-geometry-audit.json`: per-object evaluated and exported triangle counts. All chair-weave strands and separate keycaps remain present. The corrected thumb buttons and their surrounding recesses are preserved without decimation.
+
+The exporter evaluates the master, simplifies in an isolated scene, and exports only that scene. Contact shading excludes glazing so the PC interior remains visible. Transparent surfaces retain opacity metadata and render after opaque geometry without writing depth. Both rooms use the same scene-linear lighting and display treatment.
+
+```sh
+blender -b /path/to/office-revision-10/sams-project-room.blend --threads 5 \
+  --python tools/about/export_office.py -- /tmp/noms-office-web
+python tools/about/pack_kitchen.py /tmp/noms-office-web office
+cp /tmp/noms-office-web/sams-office.glb assets/about/
+cp /tmp/noms-office-web/{office-budget.json,office-geometry-audit.json} assets/about/
+python tools/about/prepare_office_images.py /path/to/office-revision-10 assets/about
+```
+
 ## Runtime
 
-`src/pages/about_tour` ports the approved first-person Rust/WebGL prototype into the Dioxus About route. Semantic HTML contains all four complete chapters before enhancement. The camera and floating panels share the same projection, scoped beneath the existing app navbar. The kitchen is fetched from the local Manganis asset URL at the opening stop after WebGL enhancement. The 3D tour now loads the kitchen and its print textures on entry, including direct chapter links. A loading curtain locks document scrolling and makes the covered tour controls inert until all assets are uploaded, every kitchen group has been rendered once with GPU completion, and an additional frame has presented. It then opens automatically at the requested chapter. Other routes, initial reading view and reduced motion do not fetch the model or print textures.
+`src/pages/about_tour` ports the approved first-person Rust/WebGL prototype into the Dioxus About route. Semantic HTML contains all four complete chapters before enhancement. The camera and floating panels share the same projection, scoped beneath the existing app navbar. Both models and their six print textures load from local Manganis URLs on entry, including direct chapter links. A loading curtain locks document scrolling and makes covered controls inert until all assets are uploaded, both rooms have rendered with GPU completion, and an additional frame has presented. It opens at the requested chapter. Other routes, initial reading view and reduced motion do not fetch model or print assets. Leaving the loading tour invalidates pending work before another model can start downloading or upload to an obsolete renderer.
 
-After the loading curtain closes, the kitchen plays a three-second fly-in once per route visit, independently of scrolling. Frames 40–160 assemble appliances, island, food, recipe book and laptop, then all parts remain in their final positions. The floor, room and counters are complete at first paint. Mobile starts with ambient drift paused but still plays the intro; rendering stops when it finishes unless the camera is moving. Hidden tabs suspend playback. Scrolling or switching to reading view never resets it, and direct links to later chapters skip the unseen intro. All chapter steps are 160svh, with no extra opening assembly segment. Native scrolling continues to move the camera between chapters. Ambient pause stops continuous rendering after the intro without disabling scroll input. Pause/read controls, reduced-motion changes, WebGL/context-loss fallbacks and route unmounting stop rendering or dispose resources. Restoring graphics rebuilds the scene and reloads the kitchen if needed. Reading mode uses the lazy still image.
+After the loading curtain closes, the kitchen plays a three-second fly-in once per route visit, independently of scrolling. Frames 40–160 assemble appliances, island, food, recipe book and laptop, then all parts remain in their final positions. The floor, room and counters are complete at first paint. Mobile starts with ambient drift paused but still plays the intro; rendering stops when it finishes unless the camera is moving. Hidden tabs suspend playback. Scrolling or switching to reading view never resets it, and direct links to later chapters skip the unseen intro. All chapter steps are 160svh, with no extra opening assembly segment. Native scrolling continues to move the camera between chapters. Ambient pause stops continuous rendering after the intro without disabling scroll input. Pause/read controls, reduced-motion changes, WebGL/context-loss fallbacks and route unmounting stop rendering or dispose resources. Restoring graphics rebuilds the scene and reloads both rooms if needed. Reading mode uses the lazy still image.
+
+The office at the second stop plays its own three-second entrance the first time the camera approaches from either direction, including direct `#why` entry. The room shell is present immediately; windows, furniture, monitors, PC, chair and accessories arrive using the approved assembly timing. Scroll triggers the entrance once and does not scrub or reverse it. The office remains assembled on later visits to the stop. Reading view, hidden tabs and the loading curtain suspend playback; ambient pause does not prevent the entrance. A settled, paused tour stops rendering. Its lazy still appears in the second reading-mode chapter.
+
+Both entrances remap the authored offsets into the open sides of each room: front/right for the kitchen and front/left for the office. Every moving group has an inward horizontal approach with a restrained upward lift. Shared pivots keep prints and glazing attached to their parent assemblies; final positions and scales are unchanged. Geometry-based tests sample both exported models throughout the entrance to verify that moving bounds never extend farther into either wall than their final mounted position.
 
 The loader preserves linear glTF vertex colors until fragment lighting. The kitchen uses neutral studio fill and an AgX tone-mapping approximation, followed by sRGB display encoding, to bring its terracotta, peach, cream and oak closer to the Blender master. The tour's green atmospheric fog does not tint the kitchen. This remains a lightweight web lighting approximation rather than the master's Cycles render. The other tour objects keep their existing lighting. See `THIRD_PARTY_LICENSES.txt` for the tone-mapping attribution.
 
@@ -42,4 +66,4 @@ cargo test --locked --no-default-features --features server pages::about
 cargo test --locked --no-default-features --features server pages::marketing_contract_tests
 ```
 
-The GLB contract test checks the delivered mesh/file budget, finite geometry preservation of all 18 assembly groups and both printed UV surfaces, and preservation of the color palette. Browser verification should cover all four stops, automatic opening assembly without scrolling, settled geometry during forward/backward scrolling, creator panel scrolling, opening/direct-fragment loading, mobile idle rendering, route exit/re-entry, reduced motion, graphics and image failure, context recovery, and desktop/mobile screenshots. Do not commit browser validation screenshots to the application or PR.
+The GLB contract tests check both file/mesh budgets, finite geometry, the 18 kitchen and 16 office assemblies, all six printed UV surfaces, transparent PC panels, preserved mouse controls, and the color palette. Browser verification should cover all four stops, automatic opening assembly without scrolling, settled geometry during forward/backward scrolling, creator panel scrolling, opening/direct-fragment loading, one-time office approach/direct-entry/reverse-approach arrivals, mobile idle rendering, route exit/re-entry, reduced motion, graphics and image failure, context recovery, and desktop/mobile screenshots. Do not commit browser validation screenshots to the application or PR.

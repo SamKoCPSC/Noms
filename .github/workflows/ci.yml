@@ -211,6 +211,9 @@ jobs:
       - name: Verify deployment preparation and seeding
         run: python3 scripts/tests/test-deployment-seeding.py
 
+      - name: Verify staging session setup helper
+        run: python3 scripts/tests/test-staging-session.py
+
   # Schema drift detection and destructive change blocking.
   # Runs on PRs that modify migrations/schema.sql or migrations/extensions.sql.
   # Uses pgschema to generate a plan against the staging database, then

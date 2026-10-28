@@ -6,6 +6,7 @@ use crate::auth::account_binding::{
 };
 use crate::auth::context::AuthContext;
 use crate::components::base::{LoadingSpinner, SharedModal};
+use crate::components::ingredient_autocomplete::IngredientAutocomplete;
 use crate::components::AuthRequired;
 use crate::pantry::*;
 use crate::Route;
@@ -17,7 +18,7 @@ fn feedback(error: &ServerFnError) -> String {
         .unwrap_or_else(|| error.to_string())
 }
 #[cfg(target_arch = "wasm32")]
-fn saved_selection(owner: Uuid) -> Option<Uuid> {
+pub(super) fn saved_selection(owner: Uuid) -> Option<Uuid> {
     let storage = web_sys::window()?.local_storage().ok()??;
     Uuid::parse_str(
         &storage
@@ -27,10 +28,10 @@ fn saved_selection(owner: Uuid) -> Option<Uuid> {
     .ok()
 }
 #[cfg(not(target_arch = "wasm32"))]
-fn saved_selection(_owner: Uuid) -> Option<Uuid> {
+pub(super) fn saved_selection(_owner: Uuid) -> Option<Uuid> {
     None
 }
-fn remember_selection(owner: Uuid, id: Option<Uuid>) {
+pub(super) fn remember_selection(owner: Uuid, id: Option<Uuid>) {
     #[cfg(target_arch = "wasm32")]
     if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) {
         let key = format!("noms-pantry-selection-{owner}");
@@ -87,14 +88,14 @@ fn PantryFieldsInput(
 ) -> Element {
     rsx! {
         label { r#for: "{prefix}-name", "Ingredient name" }
-        input {
+        IngredientAutocomplete {
             id: "{prefix}-name",
-            class: "input input--shared neumo-inset",
+            accessible_name: "Ingredient name",
             value: "{fields().name}",
             maxlength: 500,
             required: true,
             disabled,
-            oninput: move |e| fields.write().name = e.value(),
+            oninput: move |(name, _)| fields.write().name = name,
         }
 
         div { class: "pantry-amount-fields",
@@ -279,6 +280,7 @@ fn PantryEditor(
 }
 #[component]
 fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let nav = use_navigator();
@@ -744,6 +746,19 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                         }
                                     }
                                 }
+                                if disabled {
+                                    section { class: "pantry-cookable neumo-raised",
+                                        h2 { "What can I cook?" }
+                                        p { role: "status", "Updating pantry…" }
+                                    }
+                                } else {
+                                    super::pantry_recipes::PantryRecipes {
+                                        key: "{p.id}:{p.revision}:{refresh}",
+                                        pantry_id: p.id,
+                                        revision: p.revision,
+                                        on_retry: move |_| refresh += 1,
+                                    }
+                                }
                                 if edit_open() {
                                     SharedModal {
                                         aria_labelledby: "pantry-profile-title",
@@ -917,8 +932,8 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                             } else {
                                 div { class: "grocery-state neumo-raised",
                                     PantryIcon { kind: "home" }
-                                    h1 { "A pantry of your own." }
-                                    p { "Keep track of your ingredients, wherever you cook." }
+                                    h1 { "Organize your virtual pantry" }
+                                    p { "Keep track of what ingredients you have on hand and make finding recipes easier." }
                                     Link {
                                         to: Route::PantryNew {},
                                         class: "btn btn-primary",
@@ -949,17 +964,17 @@ fn PantryQuickAdd(
                     on_add.call(fields());
                 }
             },
-            label {
-
-                span { class: "sr-only", "Ingredient name" }
-                input {
-                    class: "input input--shared neumo-inset",
+            div { class: "grocery-add-name",
+                label { class: "sr-only", r#for: "pantry-add-name", "Ingredient name" }
+                IngredientAutocomplete {
+                    id: "pantry-add-name",
+                    accessible_name: "Ingredient name",
                     placeholder: "Add an ingredient…",
                     value: "{fields().name}",
                     disabled: disabled || frozen,
                     maxlength: 500,
                     required: true,
-                    oninput: move |e| fields.write().name = e.value(),
+                    oninput: move |(name, _)| fields.write().name = name,
                 }
             }
 
@@ -1004,6 +1019,7 @@ fn PantryQuickAdd(
 }
 #[component]
 pub fn PantryNew() -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let nav = use_navigator();
