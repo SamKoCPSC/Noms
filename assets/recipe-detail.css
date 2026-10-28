@@ -87,3 +87,7 @@
 .recipe-pantry__verdict { font-weight: 800; font-size: 18px; margin: 0 0 12px; }
 .recipe-pantry__ingredients { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .recipe-pantry__ingredient { padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); line-height: 1.5; overflow-wrap: anywhere; }
+
+.recipe-ingredient-alternatives { margin: 8px 0 4px 20px; padding-left: 16px; color: var(--text-secondary); font-size: .9em; overflow-wrap: anywhere; }
+.recipe-ingredient-alternatives li + li { margin-top: 6px; }
+.mobile-ingredient > span { min-width: 0; overflow-wrap: anywhere; }

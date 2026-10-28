@@ -19,6 +19,7 @@ fn draft_payload(title: &str) -> crate::db::diff::RecipeDraftPayload {
                 amount: "1".to_string(),
                 unit: "cup".to_string(),
                 name: "stock".to_string(),
+                ..Default::default()
             }],
             instructions: vec![RecipeStep {
                 text: "Simmer".to_string(),

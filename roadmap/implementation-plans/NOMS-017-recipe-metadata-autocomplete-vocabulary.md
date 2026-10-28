@@ -228,3 +228,7 @@ The adapter guide records seed counts; generated summaries, source annotations
 and complete hold queues stay outside Git. This is policy-based
 screening with explicit exceptions; unresolved semantic overlaps can still need
 editorial consolidation. The coverage study remains the fixed 100-entry benchmark.
+
+## Structured recipe ingredient options
+
+The follow-up [ingredient authoring slice](recipe-ingredient-options.md) adds optional status, separate before/after text, and substitutes with independent quantities and vocabulary references. Pantry and grocery behavior remains unchanged in that slice.

@@ -409,9 +409,31 @@ mod tests {
                 name: name.into(),
                 amount: amount.into(),
                 unit: unit.into(),
+                ..Default::default()
             }],
         }
     }
+    #[test]
+    fn ingredient_options_leave_grocery_generation_unchanged() {
+        let mut input = recipe("Rice", "1", "cup", Some(2), Some(4));
+        input.ingredients[0].optional = true;
+        input.ingredients[0].text_before = "Acme".into();
+        input.ingredients[0].text_after = "rinsed".into();
+        input.ingredients[0]
+            .substitutes
+            .push(crate::types::RecipeIngredient {
+                name: "Lentils".into(),
+                amount: "300".into(),
+                unit: "g".into(),
+                ..Default::default()
+            });
+        let list = build_requirements(&[input]).unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].fields.name, "Rice");
+        assert_eq!(list[0].fields.amount, "2");
+        assert_eq!(list[0].fields.unit, "cup");
+    }
+
     #[test]
     fn serving_aware_exact_unit_matching_and_provenance() {
         let list = build_requirements(&[

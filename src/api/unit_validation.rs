@@ -18,6 +18,16 @@ pub(super) fn ingredients(rows: &mut [RecipeIngredient]) -> Result<(), ServerFnE
                 noms::units::INVALID_UNIT
             ))
         })?;
+        for (sub_index, substitute) in row.substitutes.iter_mut().enumerate() {
+            unit(&mut substitute.unit).map_err(|_| {
+                ServerFnError::new(format!(
+                    "Ingredient {}, substitution {}: {}",
+                    index + 1,
+                    sub_index + 1,
+                    noms::units::INVALID_UNIT
+                ))
+            })?;
+        }
     }
     Ok(())
 }
@@ -25,7 +35,10 @@ pub(super) fn ingredients(rows: &mut [RecipeIngredient]) -> Result<(), ServerFnE
 /// A stored legacy draft must be saved through the authoring boundary before
 /// publication. Do not silently modify an immutable snapshot or old recipe.
 pub(super) fn saved_ingredients(rows: &[RecipeIngredient]) -> Result<(), ServerFnError> {
-    for row in rows {
+    for row in rows
+        .iter()
+        .flat_map(|row| std::iter::once(row).chain(row.substitutes.iter()))
+    {
         let canonical = noms::units::canonicalize(&row.unit).map_err(ServerFnError::new)?;
         if row.unit != canonical {
             return Err(ServerFnError::new(
@@ -48,6 +61,7 @@ mod tests {
             name: "Flour".into(),
             amount: "1/2".into(),
             unit: "grammes".into(),
+            ..Default::default()
         }];
         ingredients(&mut rows).unwrap();
         assert_eq!(rows[0].unit, "g");
@@ -68,6 +82,41 @@ mod tests {
             rows[0].unit = blank.into();
             assert!(ingredients(&mut rows).is_err());
             assert!(saved_ingredients(&rows).is_err());
+        }
+    }
+
+    #[test]
+    fn substitution_units_follow_the_same_authoring_policy() {
+        let mut rows = vec![RecipeIngredient {
+            name: "Flour".into(),
+            unit: "g".into(),
+            substitutes: vec![RecipeIngredient {
+                name: "Oat flour".into(),
+                amount: "1/2".into(),
+                unit: "grammes".into(),
+                optional: true,
+                text_before: "Acme".into(),
+                text_after: ", sifted".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }];
+        assert!(saved_ingredients(&rows).is_err());
+        ingredients(&mut rows).unwrap();
+        let substitute = &rows[0].substitutes[0];
+        assert_eq!(substitute.unit, "g");
+        assert_eq!(
+            substitute.display_line(&substitute.amount),
+            "1/2 g Acme Oat flour, sifted (optional)"
+        );
+        saved_ingredients(&rows).unwrap();
+        for invalid in ["", "pinch", "gramm"] {
+            rows[0].substitutes[0].unit = invalid.into();
+            assert!(saved_ingredients(&rows).is_err());
+            assert!(ingredients(&mut rows)
+                .unwrap_err()
+                .to_string()
+                .contains("Ingredient 1, substitution 1"));
         }
     }
 }

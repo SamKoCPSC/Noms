@@ -74,6 +74,7 @@ fn snapshot(title: &str, images: Vec<RecipeImage>, steps: Vec<RecipeStep>) -> di
             amount: "1".to_string(),
             unit: "cup".to_string(),
             name: "beans".to_string(),
+            ..Default::default()
         }],
         instructions,
         equipment: Vec::new(),

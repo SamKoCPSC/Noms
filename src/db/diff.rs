@@ -256,6 +256,7 @@ mod tests {
                 amount: "2".to_string(),
                 unit: "cups".to_string(),
                 name: "beans".to_string(),
+                ..Default::default()
             }],
             instructions: vec![RecipeStep {
                 text: "Cook".to_string(),
@@ -303,6 +304,7 @@ mod tests {
             amount: "1".to_string(),
             unit: "tsp".to_string(),
             name: "salt".to_string(),
+            ..Default::default()
         });
         new.instructions[0].sub_steps[0].text = "Stir gently".to_string();
         new.tags = vec!["weeknight".into()];
@@ -330,6 +332,7 @@ mod tests {
             amount: "1".into(),
             unit: "cup".into(),
             name: "rice".into(),
+            ..Default::default()
         });
         let mut new = old.clone();
         new.ingredients.reverse();

@@ -30,9 +30,10 @@ pub const MAX_RECIPE_COMMENTARY_CHARS: usize = 10_000;
 pub const MAX_RECIPE_TAGS: usize = 50;
 pub const MAX_RECIPE_TAG_CHARS: usize = 100;
 pub const MAX_RECIPE_INGREDIENTS: usize = 200;
-pub const MAX_INGREDIENT_AMOUNT_CHARS: usize = 64;
-pub const MAX_INGREDIENT_UNIT_CHARS: usize = 64;
-pub const MAX_INGREDIENT_NAME_CHARS: usize = 500;
+pub use crate::types::{
+    MAX_INGREDIENT_AMOUNT_CHARS, MAX_INGREDIENT_MODIFIER_CHARS, MAX_INGREDIENT_NAME_CHARS,
+    MAX_INGREDIENT_SUBSTITUTES, MAX_INGREDIENT_UNIT_CHARS,
+};
 pub const MAX_RECIPE_STEPS: usize = 200;
 pub const MAX_RECIPE_STEP_DEPTH: usize = 8;
 pub const MAX_RECIPE_STEP_TEXT_CHARS: usize = 5_000;
@@ -349,9 +350,17 @@ pub fn validate_recipe_editor(
             .any(|tag| !chars_within(tag, MAX_RECIPE_TAG_CHARS))
         || editor.ingredients.len() > MAX_RECIPE_INGREDIENTS
         || editor.ingredients.iter().any(|ingredient| {
-            !chars_within(&ingredient.amount, MAX_INGREDIENT_AMOUNT_CHARS)
-                || !chars_within(&ingredient.unit, MAX_INGREDIENT_UNIT_CHARS)
-                || !chars_within(&ingredient.name, MAX_INGREDIENT_NAME_CHARS)
+            !ingredient_fields_within_limits(ingredient)
+                || ingredient.substitutes.len() > MAX_INGREDIENT_SUBSTITUTES
+                || ingredient.substitutes.iter().any(|substitute| {
+                    !ingredient_fields_within_limits(substitute)
+                        || !substitute.substitutes.is_empty()
+                        || (mode == RecipeValidationMode::Publish
+                            && substitute.name.trim().is_empty())
+                })
+                || (mode == RecipeValidationMode::Publish
+                    && !ingredient.substitutes.is_empty()
+                    && ingredient.name.trim().is_empty())
         })
         || editor.equipment.len() > MAX_RECIPE_EQUIPMENT
         || editor.instructions.len() > MAX_RECIPE_STEPS
@@ -432,6 +441,14 @@ pub fn validate_recipe_editor(
         return Err(SecurityLimitError::InvalidRecipePayload);
     }
     Ok(())
+}
+
+fn ingredient_fields_within_limits(ingredient: &crate::types::RecipeIngredient) -> bool {
+    chars_within(&ingredient.amount, MAX_INGREDIENT_AMOUNT_CHARS)
+        && chars_within(&ingredient.unit, MAX_INGREDIENT_UNIT_CHARS)
+        && chars_within(&ingredient.name, MAX_INGREDIENT_NAME_CHARS)
+        && chars_within(&ingredient.text_before, MAX_INGREDIENT_MODIFIER_CHARS)
+        && chars_within(&ingredient.text_after, MAX_INGREDIENT_MODIFIER_CHARS)
 }
 
 /// Apply the same bounds to the canonical database snapshot representation.
@@ -908,6 +925,42 @@ mod tests {
             .is_ok());
     }
 
+    #[test]
+    fn ingredient_options_validate_substitutes_modifiers_and_publication_names() {
+        let mut editor = valid_editor();
+        editor.ingredients[0].optional = true;
+        editor.ingredients[0].text_before = "brand".into();
+        editor.ingredients[0].text_after = "finely chopped".into();
+        editor.ingredients[0].substitutes = vec![RecipeIngredient::default()];
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Draft).is_ok());
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Publish).is_err());
+        editor.ingredients[0].substitutes[0].name = "broth".into();
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Publish).is_ok());
+        let valid = editor.clone();
+        editor.ingredients[0].substitutes[0].text_after =
+            "x".repeat(MAX_INGREDIENT_MODIFIER_CHARS + 1);
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Draft).is_err());
+        editor = valid.clone();
+        editor.ingredients[0].text_before = "x".repeat(MAX_INGREDIENT_MODIFIER_CHARS + 1);
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Draft).is_err());
+        editor = valid.clone();
+        editor.ingredients[0].substitutes[0].amount = "x".repeat(MAX_INGREDIENT_AMOUNT_CHARS + 1);
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Draft).is_err());
+        editor = valid.clone();
+        editor.ingredients[0].substitutes[0]
+            .substitutes
+            .push(RecipeIngredient::default());
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Draft).is_err());
+        editor = valid.clone();
+        editor.ingredients[0].substitutes =
+            vec![valid.ingredients[0].substitutes[0].clone(); MAX_INGREDIENT_SUBSTITUTES];
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Publish).is_ok());
+        editor.ingredients[0]
+            .substitutes
+            .push(RecipeIngredient::default());
+        assert!(validate_recipe_editor(&editor, RecipeValidationMode::Draft).is_err());
+    }
+
     fn valid_editor() -> RecipeEditorState {
         RecipeEditorState {
             title: "Weeknight soup".to_string(),
@@ -918,6 +971,7 @@ mod tests {
                 amount: "1".to_string(),
                 unit: "cup".to_string(),
                 name: "stock".to_string(),
+                ..Default::default()
             }],
             instructions: vec![RecipeStep {
                 text: "Simmer".to_string(),
@@ -974,6 +1028,7 @@ mod tests {
                 amount: "a".repeat(MAX_INGREDIENT_AMOUNT_CHARS),
                 unit: "u".repeat(MAX_INGREDIENT_UNIT_CHARS),
                 name: "n".repeat(MAX_INGREDIENT_NAME_CHARS),
+                ..Default::default()
             })
             .collect();
         editor.instructions = nested_steps(MAX_RECIPE_STEP_DEPTH);
@@ -1021,6 +1076,7 @@ mod tests {
                 amount: "1".to_string(),
                 unit: "cup".to_string(),
                 name: "stock".to_string(),
+                ..Default::default()
             })
             .collect();
         assert!(validate_recipe_editor(&editor, RecipeValidationMode::Draft).is_err());

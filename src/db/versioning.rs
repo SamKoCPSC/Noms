@@ -326,10 +326,27 @@ fn recipe_snapshot_decoded_heap_bytes(snapshot: &RecipeSnapshot) -> Result<usize
             .ok_or(DbError::ResourceLimitExceeded(label))?,
         label,
     )?;
-    for ingredient in &snapshot.ingredients {
-        for value in [&ingredient.amount, &ingredient.unit, &ingredient.name] {
+    let mut ingredients: Vec<_> = snapshot.ingredients.iter().collect();
+    while let Some(ingredient) = ingredients.pop() {
+        for value in [
+            &ingredient.amount,
+            &ingredient.unit,
+            &ingredient.name,
+            &ingredient.text_before,
+            &ingredient.text_after,
+        ] {
             checked_decoded_heap_add(&mut total, value.capacity(), label)?;
         }
+        checked_decoded_heap_add(
+            &mut total,
+            ingredient
+                .substitutes
+                .capacity()
+                .checked_mul(std::mem::size_of::<crate::types::RecipeIngredient>())
+                .ok_or(DbError::ResourceLimitExceeded(label))?,
+            label,
+        )?;
+        ingredients.extend(ingredient.substitutes.iter());
     }
     checked_decoded_heap_add(
         &mut total,
@@ -4722,6 +4739,7 @@ mod tests {
                     amount: "1".into(),
                     unit: "cup".into(),
                     name: "beans".into(),
+                    ..Default::default()
                 }],
                 instructions: vec![crate::types::RecipeStep {
                     text: "Cook".into(),
@@ -6080,13 +6098,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn ingredient_vocabulary_survives_drafts_forks_and_restored_history() {
+    async fn ingredient_options_survive_drafts_forks_and_restored_history() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let user = owner(&pool, "vocabulary-history").await;
         let mut original = snapshot("Vocabulary recipe", "public");
         let id = Uuid::new_v4();
         original.content.ingredients[0].name = "chickpea".into();
         original.content.ingredients[0].vocabulary_id = Some(id);
+        original.content.ingredients[0].optional = true;
+        original.content.ingredients[0].text_before = "Acme".into();
+        original.content.ingredients[0].text_after = "drained and rinsed".into();
+        original.content.ingredients[0]
+            .substitutes
+            .push(crate::types::RecipeIngredient {
+                vocabulary_id: Some(Uuid::new_v4()),
+                name: "white beans".into(),
+                amount: "400".into(),
+                unit: "g".into(),
+                text_before: "cooked".into(),
+                text_after: "and cooled".into(),
+                optional: true,
+                ..Default::default()
+            });
         let draft = create_new_recipe_draft(&pool, user.id, &original)
             .await
             .unwrap();
@@ -6100,7 +6133,7 @@ mod tests {
         let published = publish_recipe_draft(&pool, draft.id, user.id, None)
             .await
             .unwrap();
-        assert_eq!(published.ingredients[0].vocabulary_id, Some(id));
+        assert_eq!(published.ingredients, original.content.ingredients);
         let fork_owner = owner(&pool, "vocabulary-fork").await;
         let fork = create_fork_draft(&pool, published.id, fork_owner.id, None)
             .await
@@ -6109,7 +6142,15 @@ mod tests {
             fork.decoded_snapshot().unwrap().content.ingredients[0].vocabulary_id,
             Some(id)
         );
+        assert_eq!(
+            fork.decoded_snapshot().unwrap().content.ingredients,
+            original.content.ingredients
+        );
         let mut edited = original.content.clone();
+        edited.ingredients[0].optional = false;
+        edited.ingredients[0].substitutes.clear();
+        edited.ingredients[0].text_before.clear();
+        edited.ingredients[0].text_after.clear();
         edited.ingredients[0].name = "grandma's spice mix".into();
         edited.ingredients[0].vocabulary_id = None;
         publish_snapshot(&pool, published.id, user.id, 1, &edited, None)
@@ -6118,6 +6159,7 @@ mod tests {
         let restored = restore_recipe_version(&pool, published.id, user.id, 1, 2)
             .await
             .unwrap();
+        assert_eq!(restored.ingredients, original.content.ingredients);
         assert_eq!(restored.ingredients[0].name, "chickpea");
         assert_eq!(restored.ingredients[0].vocabulary_id, Some(id));
         let versions = get_recipe_versions(&pool, published.id).await.unwrap();

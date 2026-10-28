@@ -247,6 +247,7 @@ mod server {
                     amount: "1 ½".into(),
                     unit: "cups".into(),
                     name: "beans".into(),
+                    ..Default::default()
                 }],
                 instructions: vec![RecipeStep {
                     text: "Cook".into(),
@@ -284,6 +285,27 @@ mod server {
 
         fn resign(file: &mut RecipeFile) {
             file.snapshot_digest = digest(&file.snapshot).unwrap();
+        }
+
+        #[test]
+        fn ingredient_options_round_trip_in_portable_json() {
+            let mut recipe = recipe();
+            recipe.ingredients[0].optional = true;
+            recipe.ingredients[0].text_before = "brand".into();
+            recipe.ingredients[0].text_after = "drained".into();
+            recipe.ingredients[0].substitutes.push(RecipeIngredient {
+                name: "lentils".into(),
+                amount: "300".into(),
+                unit: "g".into(),
+                text_before: "cooked".into(),
+                text_after: "and cooled".into(),
+                optional: true,
+                vocabulary_id: Some(Uuid::new_v4()),
+                ..Default::default()
+            });
+            let json = export_recipe(&recipe, vec![]).unwrap();
+            let (_, restored) = parse_recipe(&json).unwrap();
+            assert_eq!(restored.ingredients, recipe.ingredients);
         }
 
         #[test]

@@ -545,6 +545,7 @@ pub(crate) fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapsh
             amount: "1".to_string(),
             unit: "cup".to_string(),
             name: "test ingredient".to_string(),
+            ..Default::default()
         }],
         instructions: vec![crate::types::RecipeStep {
             text: "Test instruction".to_string(),

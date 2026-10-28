@@ -610,6 +610,7 @@ mod layout_tests {
                 amount: "2".into(),
                 unit: "cups".into(),
                 name: "water".into(),
+                ..Default::default()
             }];
             rsx! {
                 super::RecipeScaler { ingredients: ingredients.clone() }
@@ -1386,20 +1387,6 @@ fn RecipeScaler(
     let scaled_cook = calculator.read().scaled_cook_time();
     let show_scaled = (current_multiplier - 1.0).abs() > 0.001;
 
-    // Pre-compute display strings for scaled ingredients (rsx! can't handle multi-arg format strings)
-    let scaled_ingredient_display: Vec<String> = scaled_ingredients
-        .iter()
-        .map(|ing| {
-            if !ing.unit.is_empty() {
-                format!("- {} {} {}", ing.amount, ing.unit, ing.name)
-            } else if !ing.amount.is_empty() {
-                format!("- {} {}", ing.amount, ing.name)
-            } else {
-                format!("- {}", ing.name)
-            }
-        })
-        .collect();
-
     // Pre-computed option labels for target ingredient select
     let option_labels: Vec<String> = refs
         .iter()
@@ -1428,7 +1415,7 @@ fn RecipeScaler(
                 ul { class: "recipe-detail__list",
                     for (index, ingredient) in scaled_ingredients.iter().enumerate() {
                         li { class: "recipe-detail__list-item",
-                            label { class: "mobile-ingredient", r#for: "{scaler_id}-check-{index}", input { id: "{scaler_id}-check-{index}", r#type: "checkbox", aria_label: "Mark {ingredient.name} prepared" } span { "{ingredient.amount} {ingredient.unit} {ingredient.name}" } }
+                            super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: RecipeIngredient { amount: ingredient.amount.clone(), unit: ingredient.unit.clone(), name: ingredient.name.clone(), ..ingredients[index].clone() }, multiplier: current_multiplier, control_id: "{scaler_id}-check-{index}" }
                         }
                     }
                 }
@@ -1584,12 +1571,12 @@ fn RecipeScaler(
                                 display: "flex",
                                 flex_direction: "column",
                                 gap: "var(--space-xs)",
-                                for text in &scaled_ingredient_display {
+                                for (index, ingredient) in scaled_ingredients.iter().enumerate() {
                                     li {
                                         padding: "var(--space-xs) var(--space-sm)",
                                         font_size: "14px",
                                         color: "var(--text-primary)",
-                                        "{text}"
+                                        super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: RecipeIngredient { amount: ingredient.amount.clone(), unit: ingredient.unit.clone(), name: ingredient.name.clone(), ..ingredients[index].clone() }, multiplier: current_multiplier, checkable: false }
                                     }
                                 }
                             }
@@ -2797,7 +2784,7 @@ fn RecipeDetailContents(id: String) -> Element {
                         ul { class: "recipe-detail__list",
                             for ing in &recipe.ingredients {
                                 li { class: "recipe-detail__list-item",
-                                    label { class: "mobile-ingredient", input { r#type: "checkbox", aria_label: "Mark {ing.name} prepared" } span { "{ing.amount} {ing.unit} {ing.name}" } }
+                                    super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: ing.clone() }
                                 }
                             }
                         }
@@ -3360,7 +3347,7 @@ fn RecipeVersionDetailContents(id: String, version_number: i32) -> Element {
                         ul { class: "recipe-detail__list",
                             for ingredient in &editor.ingredients {
                                 li { class: "recipe-detail__list-item",
-                                    label { class: "mobile-ingredient", input { r#type: "checkbox", aria_label: "Mark {ingredient.name} prepared" } span { "{ingredient.amount} {ingredient.unit} {ingredient.name}" } }
+                                    super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: ingredient.clone() }
                                 }
                             }
                         }
@@ -3559,7 +3546,7 @@ fn MobileRecipeReader(
                         div { class: "mobile-cooking-photos", for image in &flat[current().min(count - 1)].photos { MobileCookingPhoto { image: image.clone() } } }
                     }
                     details { class: "neumo-card", summary { "Ingredients · original quantities" }
-                        for ingredient in &ingredients { label { class: "mobile-ingredient", input { r#type: "checkbox", aria_label: "Mark {ingredient.name} prepared" } span { "{ingredient.amount} {ingredient.unit} {ingredient.name}" } } }
+                        for ingredient in &ingredients { super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: ingredient.clone() } }
                     }
                     div { class: "mobile-recipe-bar",
                         button { r#type: "button", class: "btn btn-secondary touch-target", disabled: current() == 0, onclick: move |_| { let index = current(); current.set(index.saturating_sub(1)); }, "Previous" }
