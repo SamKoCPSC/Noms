@@ -9,7 +9,7 @@ pub struct Unit {
 }
 
 pub const MAX_SUGGESTIONS: usize = 8;
-pub const INVALID_UNIT: &str = "Choose a supported weight or volume unit, or leave the unit blank.";
+pub const INVALID_UNIT: &str = "A supported weight or volume unit is required.";
 
 // Unqualified regional aliases offer multiple choices. The first (US) choice is
 // the explicit default on confirmation, shared by UI completion and API aliases.
@@ -239,9 +239,6 @@ pub fn canonicalize(value: &str) -> Result<&'static str, &'static str> {
     if value.chars().count() > 64 || value.contains('\0') {
         return Err(INVALID_UNIT);
     }
-    if value.trim().is_empty() {
-        return Ok("");
-    }
     let query = normalize(value);
     UNITS
         .iter()
@@ -257,7 +254,7 @@ pub fn canonicalize(value: &str) -> Result<&'static str, &'static str> {
 }
 
 /// Closing a nonblank query confirms the active match, or the first match.
-/// Empty inputs remain unitless and unmatched text remains visible for correction.
+/// Blank/unmatched text needs correction; never assign a unit to an untyped amount.
 pub fn completion(query: &str, active: Option<usize>) -> Option<&'static Unit> {
     if query.trim().is_empty() && active.is_none() {
         return None;
@@ -342,11 +339,13 @@ mod tests {
             ("fl. oz.", "US fl oz"),
             ("UK pints", "Imperial pt"),
             ("oz", "oz"),
-            ("  ", ""),
         ] {
             assert_eq!(canonicalize(query), Ok(saved));
         }
         for query in [
+            "",
+            "   ",
+            "\t\n",
             "gra",
             "mi",
             "cups metric",

@@ -1,7 +1,7 @@
 # Precise ingredient unit suggestions
 
 Recipe creation/editing, pantry creation/editing and grocery creation/editing
-share an optional client-side combobox. Its 24 suggestions are bundled in
+share a required client-side unit combobox. Its 24 suggestions are bundled in
 `src/units.rs`; no vocabulary table, network lookup, manifest or cache is needed.
 
 | Family | Suggested measures |
@@ -28,9 +28,9 @@ can reverse the qualifier order, for example `cups metric`.
 
 The menu uses single-line options in a scrollable panel capped at 10rem.
 Enter, Tab, Escape and blur confirm a nonblank query's active result, defaulting
-to its first result. Explicit pointer selections win. Empty inputs remain empty
-for unitless quantities unless an option is explicitly selected with the arrows;
-unmatched text stays visible with a validation message.
+to its first result. Explicit pointer selections win. Blank inputs and unmatched
+text require correction. An empty field is never silently assigned grams;
+authors must select a measure and enter the corresponding amount.
 Partially typed queries stay local until confirmation and cannot leak into
 autosave. Invalid committed units pause recipe autosave and fail client form
 validation, so they cannot leave draft creation in an unconfirmed state.
@@ -39,16 +39,18 @@ New authoring requests accept supported units only. Full names, plural names,
 punctuation variants and complete aliases normalize to the same saved labels as
 the UI default. The API rejects partial queries, unknown strings, counts,
 containers and approximate measures such as `pinch`, `can` or `packet`.
-Blank units remain valid. Validation occurs before database writes for recipe
+Blank and whitespace-only units are invalid. Whole portions such as eggs need
+a measured quantity, for example `100 g` rather than `2` with no unit; the app
+does not guess a conversion. Validation occurs before database writes for recipe
 create/update, draft create/save/publication, JSON import and manual pantry/
 grocery creation and field edits. Multi-item validation failures write nothing.
 
 No schema or stored-data migration is involved. Historical records, exports,
 version restoration, pantry copies and recipe-generated grocery provenance keep
 their original data. Saving edited fields with an unsupported legacy unit
-requires choosing a supported unit or clearing it. Existing draft publication
-requires a prior save with standardized units. Amounts and numeric conversion
-rules are unchanged.
+requires choosing a supported unit, including for legacy blank units. Existing
+draft publication requires a prior save with standardized units. Amounts and
+numeric conversion rules are unchanged.
 
 The control supports arrows, Enter, Escape and Tab, retains form length/disabled
 constraints, exposes combobox/listbox semantics and uses the ingredient menu

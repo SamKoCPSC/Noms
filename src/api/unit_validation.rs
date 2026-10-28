@@ -64,5 +64,10 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Ingredient 1"));
+        for blank in ["", "   ", "\t\n"] {
+            rows[0].unit = blank.into();
+            assert!(ingredients(&mut rows).is_err());
+            assert!(saved_ingredients(&rows).is_err());
+        }
     }
 }

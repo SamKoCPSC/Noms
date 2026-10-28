@@ -114,6 +114,9 @@ async def main(args):
             other = page.get_by_role("combobox", name="Ingredient 2 unit", exact=True)
             assert await unit.get_attribute("aria-controls") != await other.get_attribute("aria-controls")
             await expect(other).to_have_value("")
+            await expect(other).to_have_attribute("aria-invalid", "false")
+            await page.get_by_role("combobox", name="Ingredient 2 name", exact=True).fill("Eggs")
+            await page.get_by_label("Ingredient 2 amount", exact=True).fill("100")
             await other.focus()
             await other.press("ArrowUp")
             active_id = await other.get_attribute("aria-activedescendant")
@@ -127,10 +130,19 @@ async def main(args):
             await other.fill("")
             await other.press("Tab")
             await expect(other).to_have_value("")
+            await expect(other).to_have_attribute("aria-invalid", "true")
+            await expect(other).to_have_attribute("aria-required", "true")
+            await choose(unit, "grams", "gram", "g")
+            await page.get_by_label("Recipe name", exact=True).fill("Units draft " + suffix)
+            await page.get_by_role("button", name="Save Draft", exact=True).click()
+            await expect(page.get_by_text("A supported weight or volume unit is required.", exact=True)).not_to_have_count(0)
+            await page.get_by_role("button", name="Publish Recipe", exact=True).click()
+            await expect(page.get_by_text("A supported weight or volume unit is required.", exact=True)).not_to_have_count(0)
+            await choose(other, "grams", "gram", "g")
             await unit.fill("family measure")
             await unit.press("Tab")
             await expect(unit).to_have_attribute("aria-invalid", "true")
-            await expect(page.get_by_role("alert").filter(has_text="supported weight or volume")).to_be_visible()
+            await expect(page.locator(".unit-autocomplete__error").filter(has_text="supported weight or volume")).to_be_visible()
             await asyncio.sleep(2.5)
             await expect(page.get_by_text("Could not confirm draft creation", exact=False)).to_have_count(0)
             await unit.fill("milliliters")
@@ -142,7 +154,8 @@ async def main(args):
             await page.reload(wait_until="networkidle")
             unit = page.get_by_role("combobox", name="Ingredient 1 unit", exact=True)
             await expect(unit).to_have_value("mL")
-            await expect(page.get_by_role("combobox", name="Ingredient 2 unit", exact=True)).to_have_value("")
+            await expect(page.get_by_role("combobox", name="Ingredient 2 unit", exact=True)).to_have_value("g")
+            await expect(page.get_by_label("Ingredient 2 amount", exact=True)).to_have_value("100")
             await choose(unit, "milliliters", "millilitre", "mL", method="mouse")
             await asyncio.sleep(3)
             await page.reload(wait_until="networkidle")
@@ -178,6 +191,11 @@ async def main(args):
             await add.get_by_role("combobox", name="Ingredient name", exact=True).fill("Unit test rice")
             await add.get_by_label("Amount", exact=True).fill("3")
             unit = add.get_by_role("combobox", name="Unit", exact=True)
+            await unit.focus()
+            await unit.press("Tab")
+            await expect(unit).to_have_attribute("aria-invalid", "true")
+            await add.get_by_role("button", name="Add ingredient", exact=True).click()
+            await expect(page.locator(".pantry-draft-row")).to_have_count(0)
             await choose(unit, "cups metric", "metric cup (250 mL)", "metric cup")
             await expect(page.locator(".pantry-draft-row")).to_have_count(0)
             await add.get_by_role("button", name="Add ingredient", exact=True).click()
@@ -202,6 +220,12 @@ async def main(args):
             add = page.locator("form.grocery-add-row")
             await add.get_by_role("combobox", name="Item name", exact=True).fill("Unit test sugar")
             await add.get_by_label("Amount", exact=True).fill("4")
+            unit = add.get_by_role("combobox", name="Unit", exact=True)
+            await unit.focus()
+            await unit.press("Tab")
+            await expect(unit).to_have_attribute("aria-invalid", "true")
+            await add.get_by_role("button", name="Add", exact=True).click()
+            await expect(page.locator(".grocery-draft-row")).to_have_count(0)
             await choose(add.get_by_role("combobox", name="Unit", exact=True), "fl. oz.", "US fluid ounce", "US fl oz", method="touch")
             await add.get_by_role("button", name="Add", exact=True).click()
             await page.get_by_role("button", name="Create list", exact=True).click()
@@ -246,6 +270,15 @@ async def main(args):
                 assert not response.ok and "supported weight or volume" in text, (name, response.status, text)
                 assert fingerprint() == before, (name, "rejected request changed stored data")
 
+            async def rejects_blank(name, payload, path):
+                for blank in ["", " \t "]:
+                    changed = copy.deepcopy(payload)
+                    target = changed
+                    for key in path[:-1]:
+                        target = target[key]
+                    target[path[-1]] = blank
+                    await rejected(name, changed)
+
             row = {"name": "API unit ingredient", "amount": "1/2", "unit": "grams"}
             editor = {"title": "API units " + suffix, "description": None, "commentary": None,
                       "prep_time_minutes": None, "cook_time_minutes": None, "servings": 2,
@@ -255,24 +288,39 @@ async def main(args):
             bad["ingredients"].append({**row, "unit": "pinch"})
             await rejected("create_recipe_draft", {"expected_account_id": owner, "editor": bad})
             await rejected("create_recipe", {"expected_account_id": owner, **bad})
+            await rejects_blank("create_recipe_draft", {"expected_account_id": owner, "editor": editor},
+                                ["editor", "ingredients", 0, "unit"])
+            await rejects_blank("create_recipe", {"expected_account_id": owner, **editor}, ["ingredients", 0, "unit"])
             response = await api("create_recipe_draft", {"expected_account_id": owner, "editor": editor})
             assert response.ok, await response.text()
             draft = await response.json()
             assert draft["editor"]["ingredients"][0]["unit"] == "g"
             await rejected("save_recipe_draft", {"expected_account_id": owner, "draft_id": draft["id"],
                                                 "expected_revision": draft["revision"], "editor": bad})
+            await rejects_blank("save_recipe_draft", {"expected_account_id": owner, "draft_id": draft["id"],
+                                "expected_revision": draft["revision"], "editor": editor}, ["editor", "ingredients", 0, "unit"])
             edited = copy.deepcopy(editor)
             edited["ingredients"][0]["unit"] = "UK pints"
             response = await api("save_recipe_draft", {"expected_account_id": owner, "draft_id": draft["id"],
                                  "expected_revision": draft["revision"], "editor": edited})
             assert response.ok, await response.text()
             assert (await response.json())["editor"]["ingredients"][0]["unit"] == "Imperial pt"
+            # Simulate a private legacy draft from before required units. The
+            # publication boundary must reject it without publishing a recipe.
+            sql = "UPDATE recipe_drafts SET snapshot = jsonb_set(snapshot, '{ingredients,0,unit}', '\"\"'::jsonb) WHERE id = :'draft'::uuid RETURNING snapshot#>>'{ingredients,0,unit}' = '';"
+            seeded = subprocess.run(["docker", "exec", "-i", args.instance + "-postgres-1", "psql", "-U", "noms", "-d", "noms",
+                                     "-Atq", "-v", "ON_ERROR_STOP=1", "-v", "draft=" + str(uuid.UUID(draft["id"]))],
+                                    input=sql, text=True, capture_output=True, check=True)
+            assert seeded.stdout.strip() == "t", "Legacy draft must actually contain a blank unit"
+            await rejected("publish_recipe_draft", {"expected_account_id": owner, "draft_id": draft["id"], "notes": None})
             response = await api("create_recipe", {"expected_account_id": owner, **editor})
             assert response.ok, await response.text()
             created_recipe = await response.json()
             assert created_recipe["ingredients"][0]["unit"] == "g"
             await rejected("update_recipe", {"expected_account_id": owner, "recipe_id": created_recipe["id"],
                                              "ingredients": bad["ingredients"]})
+            await rejects_blank("update_recipe", {"expected_account_id": owner, "recipe_id": created_recipe["id"],
+                                "ingredients": [row]}, ["ingredients", 0, "unit"])
             response = await api("update_recipe", {"expected_account_id": owner, "recipe_id": created_recipe["id"],
                                  "ingredients": [{**row, "unit": "liters"}]})
             assert response.ok, await response.text()
@@ -280,6 +328,11 @@ async def main(args):
 
             pantry_id = pantry_url.rsplit("/", 1)[1]
             stock = {"fields": row, "available": True}
+            await rejects_blank("create_kitchen", {"expected_account_id": owner, "request": {
+                "request_id": str(uuid.uuid4()), "name": "Blank units", "note": "", "copy": None,
+                "ingredients": [stock, stock], "equipment": []}}, ["request", "ingredients", 1, "fields", "unit"])
+            await rejects_blank("add_pantry_entry", {"expected_account_id": owner, "profile_id": pantry_id,
+                "kind": "Ingredient", "request_id": str(uuid.uuid4()), "stock": stock}, ["stock", "fields", "unit"])
             await rejected("create_kitchen", {"expected_account_id": owner, "request": {
                 "request_id": str(uuid.uuid4()), "name": "Invalid units", "note": "", "copy": None,
                 "ingredients": [stock, {"fields": {**row, "unit": "can"}, "available": True}], "equipment": []}})
@@ -292,11 +345,19 @@ async def main(args):
             kitchen = await (await api("get_kitchen", {"expected_account_id": owner, "id": pantry_id})).json()
             item = next(x for x in kitchen["entries"] if x["stock"]["fields"]["name"] == row["name"])
             assert item["stock"]["fields"]["unit"] == "g"
+            await rejects_blank("update_pantry_entry", {"expected_account_id": owner, "profile_id": pantry_id,
+                "kind": "Ingredient", "item_id": item["id"], "expected_revision": item["revision"],
+                "change": {"Fields": row}}, ["change", "Fields", "unit"])
             await rejected("update_pantry_entry", {"expected_account_id": owner, "profile_id": pantry_id,
                 "kind": "Ingredient", "item_id": item["id"], "expected_revision": item["revision"],
                 "change": {"Fields": {**row, "unit": "packet"}}})
 
             grocery_id = grocery_url.rsplit("/", 1)[1]
+            await rejects_blank("create_grocery_list", {"expected_account_id": owner, "request": {
+                "request_id": str(uuid.uuid4()), "name": "Blank units", "note": "", "recipes": [],
+                "manual_items": [row, row]}}, ["request", "manual_items", 1, "unit"])
+            await rejects_blank("add_grocery_item", {"expected_account_id": owner, "list_id": grocery_id,
+                "request_id": str(uuid.uuid4()), "fields": row}, ["fields", "unit"])
             await rejected("create_grocery_list", {"expected_account_id": owner, "request": {
                 "request_id": str(uuid.uuid4()), "name": "Invalid units", "note": "", "recipes": [],
                 "manual_items": [row, {**row, "unit": "to taste"}]}})
@@ -308,6 +369,9 @@ async def main(args):
             grocery = await (await api("get_grocery_list", {"expected_account_id": owner, "list_id": grocery_id})).json()
             item = next(x for x in grocery["items"] if x["fields"]["name"] == row["name"])
             assert item["fields"]["unit"] == "metric cup"
+            await rejects_blank("update_grocery_item", {"expected_account_id": owner, "list_id": grocery_id,
+                "item_id": item["id"], "expected_revision": item["revision"], "change": {"Fields": row}},
+                ["change", "Fields", "unit"])
             await rejected("update_grocery_item", {"expected_account_id": owner, "list_id": grocery_id,
                 "item_id": item["id"], "expected_revision": item["revision"],
                 "change": {"Fields": {**row, "unit": "boxes"}}})
@@ -315,11 +379,12 @@ async def main(args):
             response = await api("export_recipe_json", {"recipe_id": created_recipe["id"]})
             assert response.ok, await response.text()
             portable = json.loads(await response.json())
-            portable["snapshot"]["ingredients"][0]["unit"] = "not a measure"
-            encoded = json.dumps(portable["snapshot"], sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
-            portable["snapshot_digest"] = "sha256:" + hashlib.sha256(encoded).hexdigest()
-            await rejected("import_recipe_json", {"expected_account_id": owner, "json": json.dumps(portable),
-                                                   "available_external_urls": []})
+            for invalid in ["not a measure", "", " \t "]:
+                portable["snapshot"]["ingredients"][0]["unit"] = invalid
+                encoded = json.dumps(portable["snapshot"], sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+                portable["snapshot_digest"] = "sha256:" + hashlib.sha256(encoded).hexdigest()
+                await rejected("import_recipe_json", {"expected_account_id": owner, "json": json.dumps(portable),
+                                                       "available_external_urls": []})
             portable["snapshot"]["ingredients"][0]["unit"] = "grammes"
             encoded = json.dumps(portable["snapshot"], sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
             portable["snapshot_digest"] = "sha256:" + hashlib.sha256(encoded).hexdigest()
@@ -333,7 +398,7 @@ async def main(args):
             assert not response.ok
             assert fingerprint() == before
             await anonymous.close()
-            passed("direct recipe/draft/import, pantry and grocery APIs standardize aliases, reject invalid units atomically and require authentication")
+            passed("direct recipe/draft/import, pantry and grocery APIs reject blank/whitespace units atomically, block legacy draft publication, standardize aliases and require authentication")
 
             for url, field_name, scope, artifact in [
                 (base + "/recipes/new", "Ingredient 1 unit", None, "recipe"),
@@ -368,7 +433,7 @@ async def main(args):
             passed("compact recipe/pantry/grocery menus fit four viewport widths with 32px desktop / 44px coarse-pointer options")
             assert not [url for url in requests if re.search(r"/api/(?:unit_suggestions|vocabulary/units)", url)], "Unit suggestions must not make API calls"
             assert not errors, errors
-            assert not set(autosaved_units) & {"pinch", "dash", "handful", "clove", "can", "packet", "family measure"}, autosaved_units
+            assert not set(autosaved_units) & {"", " \t ", "pinch", "dash", "handful", "clove", "can", "packet", "family measure"}, autosaved_units
             result = {"passed": checks, "page_errors": errors, "unit_api_requests": 0}
             (args.output / "result.json").write_text(json.dumps(result, indent=2) + "\n")
             print(json.dumps(result), flush=True)

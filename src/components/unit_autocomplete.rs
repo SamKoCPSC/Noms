@@ -15,12 +15,16 @@ pub fn UnitAutocomplete(
     let mut open = use_signal(|| false);
     let mut active = use_signal(|| None::<usize>);
     let mut editing = use_signal(|| value.clone());
+    let mut confirmed = use_signal(|| false);
     // Parent resets (add-row, switching records, save responses) still win when
     // not editing. Partial queries must not enter recipe autosave requests.
     use_effect(use_reactive(
         (&value, &disabled),
         move |(value, disabled)| {
             if disabled || !*open.peek() {
+                if value != *editing.peek() {
+                    confirmed.set(false);
+                }
                 editing.set(value);
             }
             if disabled {
@@ -61,13 +65,16 @@ pub fn UnitAutocomplete(
             |unit| unit.label.into(),
         );
         editing.set(committed.clone());
+        confirmed.set(true);
         oninput.call(committed);
         open.set(false);
         active.set(None);
     };
     let suggestions = noms::units::suggestions(&editing());
     let expanded = !disabled && open() && !suggestions.is_empty();
-    let invalid = !open() && noms::units::canonicalize(&editing()).is_err();
+    let invalid = !open()
+        && (confirmed() || !editing().is_empty())
+        && noms::units::canonicalize(&editing()).is_err();
     let list_id = format!("{id}-suggestions");
     let error_id = format!("{id}-error");
     let described_by = invalid.then(|| error_id.clone());
@@ -90,6 +97,7 @@ pub fn UnitAutocomplete(
                 aria_controls: list_id.clone(),
                 aria_activedescendant: active_id,
                 aria_invalid: invalid,
+                aria_required: true,
                 aria_describedby: described_by,
                 autocomplete: "off",
                 placeholder,

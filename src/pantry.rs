@@ -261,7 +261,7 @@ mod tests {
         fields.unit = "metric cups".into();
         assert!(fields.validate_input(PantryKind::Ingredient).is_ok());
         fields.unit.clear();
-        assert!(fields.validate_input(PantryKind::Ingredient).is_ok());
+        assert!(fields.validate_input(PantryKind::Ingredient).is_err());
         assert!(fields.validate_input(PantryKind::Equipment).is_err());
     }
     #[test]

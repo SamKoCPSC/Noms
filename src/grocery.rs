@@ -387,7 +387,7 @@ mod tests {
         fields.unit = "grams".into();
         assert!(fields.validate_input().is_ok());
         fields.unit.clear();
-        assert!(fields.validate_input().is_ok());
+        assert!(fields.validate_input().is_err());
     }
     fn recipe(
         name: &str,

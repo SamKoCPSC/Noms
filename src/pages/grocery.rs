@@ -1601,7 +1601,7 @@ pub fn GroceryListNew() -> Element {
                             }
                             p {
                                 class: "grocery-muted",
-                                "Amounts and units are optional. Add food, household supplies, or anything else."
+                                "Choose a weight or volume unit for each item. Enter whole portions as measured quantities."
                             }
                         }
                         label {
