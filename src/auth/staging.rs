@@ -16,6 +16,10 @@ pub(crate) const ORIGIN: &str = "https://staging.nomsrecipes.com";
 // an existing normal account by a client-supplied ID, username or email.
 const TEST_USER_ID: uuid::Uuid = uuid::Uuid::from_u128(0x38d6fd8a_1ec5_4791_b782_51ea46e11c7c);
 
+pub(crate) fn has_valid_secret_format(secret: &str) -> bool {
+    (32..=512).contains(&secret.len()) && secret.bytes().all(|byte| byte.is_ascii_graphic())
+}
+
 pub(crate) fn is_approved_environment(lookup: &impl Fn(&str) -> Option<String>) -> bool {
     lookup("RAILWAY_ENVIRONMENT_ID").as_deref() == Some(ENVIRONMENT_ID)
         && lookup("RAILWAY_PROJECT_ID").as_deref() == Some(PROJECT_ID)
@@ -49,7 +53,7 @@ impl StagingLoginConfig {
         let Some(secret) = value.strip_prefix("Bearer ") else {
             return false;
         };
-        if secret.len() != 64 {
+        if !has_valid_secret_format(secret) {
             return false;
         }
         let actual: [u8; 32] = Sha256::digest(secret.as_bytes()).into();

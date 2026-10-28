@@ -1,7 +1,50 @@
 use super::*;
 use axum::{body::Body, http::Request, routing::post, Router};
 use tower::ServiceExt;
-const SECRET: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+// Public synthetic Base64 fixture, not a deployment credential.
+const SECRET: &str = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+
+#[test]
+fn staging_login_matches_supported_secret_formats_exactly() {
+    let minimum = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
+    let maximum = minimum.repeat(16);
+    for secret in [
+        SECRET,
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdef-",
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+/abcd==",
+        minimum,
+        maximum.as_str(),
+    ] {
+        let config = StagingLoginConfig::new(secret);
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            format!("Bearer {secret}").parse().unwrap(),
+        );
+        assert!(config.accepts(&headers));
+        for invalid in [
+            format!("Bearer {}", &secret[1..]),
+            format!("Bearer z{}", &secret[1..]),
+            format!("Bearer {secret} "),
+            format!("Bearer {secret}\t"),
+            format!("Bearer {}", "a".repeat(513)),
+            format!("bearer {secret}"),
+        ] {
+            headers.insert(header::AUTHORIZATION, invalid.parse().unwrap());
+            assert!(!config.accepts(&headers));
+        }
+        headers.insert(
+            header::AUTHORIZATION,
+            format!("Bearer {secret}").parse().unwrap(),
+        );
+        headers.append(
+            header::AUTHORIZATION,
+            format!("Bearer {secret}").parse().unwrap(),
+        );
+        assert!(!config.accepts(&headers));
+    }
+}
 
 fn router(pool: sqlx::PgPool, enabled: bool) -> Router {
     let router = Router::new()

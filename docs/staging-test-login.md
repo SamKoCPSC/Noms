@@ -42,9 +42,15 @@ OAuth client settings remain required by startup configuration.
 
 ## Credentials and requests
 
-Configure `NOMS_STAGING_LOGIN_SECRET` as an independently generated 32-byte random
-secret encoded as 64 hexadecimal characters, for example using `openssl rand -hex
-32` in a trusted secret-management workflow. Store it in the staging service and
+Configure `NOMS_STAGING_LOGIN_SECRET` as an independently generated random token
+of 32 to 512 printable ASCII characters without spaces, tabs or line breaks.
+Hexadecimal, Base64 (including `+`, `/` and `=` padding), and URL-safe tokens are
+accepted as opaque strings; the app does not decode or normalize them. For example,
+generate 32 random bytes with `openssl rand -base64 32` or `openssl rand -hex 32`
+in a trusted secret-management workflow. Keep at least 12 distinct characters,
+use a different value from `SESSION_SECRET`, and configure the exact same token in
+Railway and Codex. Existing 64-character hexadecimal secrets continue to work.
+Store it in the staging service and
 Codex's approved secret bindings; do not paste its value into chat, source files,
 URLs, shell arguments or logs. Keep the flag false until deployment and the Codex
 credential binding are ready. Runtime/tool-required approvals still apply.
