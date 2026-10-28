@@ -373,18 +373,18 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let on_save_draft = move |_| {
         #[cfg(target_arch = "wasm32")]
         {
-            if ingredients()
-                .iter()
-                .any(|row| noms::units::canonicalize(&row.unit).is_err())
-            {
-                form_error.set(Some(noms::units::INVALID_UNIT.into()));
-                return;
-            }
             if is_loading()
                 || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
                 || busy()
                 || step_photo_upload_count() > 0
             {
+                return;
+            }
+            if ingredients()
+                .iter()
+                .any(|row| noms::units::canonicalize(&row.unit).is_err())
+            {
+                form_error.set(Some(noms::units::INVALID_UNIT.into()));
                 return;
             }
             if draft_id().is_none() {
