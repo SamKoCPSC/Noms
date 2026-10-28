@@ -1,7 +1,9 @@
 # Reviewed cooking-material gaps
 
-Current maintained totals after the [final gap fill](#final-gap-fill-and-pantry-expansion-2026-10-26)
-are **13,361 active, 85 retired and 9,307 active aliases**. Earlier stage counts,
+Current maintained totals after the [next-sample gap fill](#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
+and [readable-label follow-up](LABELS.md#readable-label-follow-up-2026-10-27)
+and [kitchen-suitability review](KITCHEN_REVIEW.md) are **13,511 active, 106 retired
+and 10,088 active aliases**. Earlier stage counts,
 source studies and checksums below remain frozen.
 
 The first curation layer follows the immutable FoodOn, Wikidata, USDA and alias/scope
@@ -663,3 +665,285 @@ at `/workspace/vocabulary-final-gap-fill`. Download
 pages, browser/session data and private draft contents remain outside Git and the
 portable bundle. No Details field, source/nutrient ingestion, parser/ranking
 change, automatic recipe assignment or production rollout is included.
+
+## Next-sample gap fill and grocery expansion (2026-10-26)
+
+A fresh outcome-blind draw selects **5,000 ingredient occurrences**, 250 from
+each of 20 cuisine labels in the same checksum-pinned 39,774-profile
+Yummly/Kaggle corpus. It excludes all 6,375 recipe IDs and exact normalized
+ingredient-set fingerprints from the three earlier studies. The result contains
+**1,237 normalized names from 4,143 previously unused profiles**: 242 names new to
+prior name-level reviews, and 101 new even to all previous full-profile ingredient
+contexts. The fixed seed is `noms-next-ingredient-gap-5000-2026-10-26-v2`.
+Independent selection replay reproduces every occurrence. This is a new sample
+from the historical snapshot, not a fresh crawl or 5,000 unique ingredients.
+
+Against the preceding complete seed, explicit definition review finds 26 likely
+missing-material names and 32 qualified-form/product cases: **58 phrases affecting
+67 occurrences**. Another 265 occurrences contain ambiguity, brands, malformed
+wording or grouped/components; these are not counted as proven material gaps.
+Existing definitions represent 4,668/5,000 occurrences (93.36%) under this review.
+A few older broad mappings are reassessed to preserve plain/nonfat yogurt,
+white sesame, dry breadcrumbs and black-treacle qualifiers, so these percentages
+are not a before/after score against earlier studies. Titles, quantities, methods
+and individual recipe URLs are absent from the source and are not invented.
+
+The user-approved curation adds **171 ingredients and 438 aliases**: 367 aliases
+on the new entries and 71 on 34 existing identities. Totals at that stage become
+**13,532 active, 85 retired and 9,745 active aliases**. All 13,446 prior records,
+including retired identities, retain their exact fields except approved alias
+suffixes and one recorded spelling correction retaining its old searchable name.
+Source descriptors and source mappings are unchanged; all new entries
+have curated origin, original descriptions and no inferred external mappings.
+The explicit ledger is `data/vocabulary/adapters/ingredient-next-gap-fill.json`.
+
+### Material boundaries and reuse
+
+- Fresh/dried tofu skin, raw/cooked lamb sausage, unspiced tarako/spicy mentaiko,
+  dried mung-bean starch noodles and wasabi seasoning/pure wasabi powder keep
+  consequential processing and formulation distinctions.
+- Plain nonfat and plain Greek yogurt retain flavor/fat qualifications. Similar
+  additions include unsweetened almond/oat/soy/cashew/coconut drinking beverages
+  and barista oat milk; coconut drinking milk is not canned culinary coconut milk.
+- Veal stock, white/brown veal stock, veal broth, bone-broth styles and existing
+  demi-glace remain separate. Canned chicken broth does not imply low sodium or
+  interchangeability with stock, dry bouillon or a concentrate.
+- Pantry components include candied ginger, dry/plain-dry breadcrumbs, condensed
+  tomato soup, refried black beans, raw crescent dough/baked crescent rolls,
+  baked/frozen pound cake, gumbo vegetable blends and specified tomato packings.
+- Truffle oils/pastes, food-grade flavoring oils, dried/ground guajillo, ground
+  Sichuan pepper, coarse sparkling/sanding sugar, named sherries, port styles and
+  spiced/amber rum retain useful product distinctions. Concentrations, exact
+  formulas and substitution ratios are not inferred from brands.
+- Roasted hazelnut forms reuse the existing dry-/oil-roasted filbert UUIDs.
+  Thin spaghetti reuses spaghettini, artichoke bottom reuses the FoodOn exact
+  heart synonym, and familiar sheep/beef/collagen casing names reuse their IDs.
+  Existing tarako, lemon oil, cream sherry and white balsamic vinegar are retained.
+
+All 58 discovery phrases have an explicit outcome. Forty-seven use reviewed new
+material definitions; **11 remain source-ambiguous with usable qualified choices**:
+`baking spray`, `crescent rolls`, `fideos`, `lamb sausage`, `natural peanut butter`,
+`roasted hazelnuts`, `wasabi powder`, `diced tomatoes in juice`, `chinese rose wine`,
+`mung bean noodles` and `pork and beans`. Their omissions do not become assumptions
+about flour content, baking state, shape, roasting method, plant base or packing.
+Qualified searchable aliases offer the choices without claiming a single raw
+phrase is equivalent to all of them. No source recipe is automatically assigned
+an ID. The separate green-tomato maturity and chrysanthemum-species review leads
+remain outside this addition; existing definitions/statuses are not silently fixed.
+
+Pinned FoodOn/Wikidata/USDA leads, current definitions, sampled ingredient wording
+and public culinary/producer references support the review. References include
+[Just One Cookbook's mitsuba](https://www.justonecookbook.com/mitsuba/),
+[mentaiko](https://www.justonecookbook.com/mentaiko/) and
+[matcha](https://www.justonecookbook.com/green-tea-powder-matcha/) guides,
+[The Ginger People](https://gingerpeople.com/products/fiji-crystallized-ginger/),
+[PAM baking spray](https://www.pamcookingspray.com/products/baking),
+[Smucker's natural peanut butter](https://www.smuckers.com/peanut-butter/natural),
+[Pictsweet gumbo vegetables](https://pictsweetfarms.com/product/vegetables-for-gumbo/frozen/steamables/)
+and the [sherry regulatory council](https://www.sherry.wine/sherry-wine).
+Capture types and hashes distinguish real response bodies, frozen ingredient
+contexts, canonical baseline JSON and retained source-lead extracts. Commercial
+examples are family/form evidence, not certification of every possible formula,
+exact source equivalence, brand aliases or nutrient values. Raw pages, full
+provider catalogs and copyrighted recipe methods remain external.
+
+### Less-common plant-milk follow-up
+
+The user requested additional less-common plant bases in the same unmerged PR.
+This follow-up adds **16 entries and 43 aliases** beyond the initial 102-entry
+round: hazelnut, macadamia, walnut, pecan, Brazil nut, flaxseed, sesame, sunflower
+seed, pumpkin seed, quinoa, buckwheat, amaranth, teff, millet and lupin milks, plus
+**unsweetened tiger-nut milk**. Base-only definitions leave sweetening, flavoring,
+fortification and exact formulation unspecified; these are milk alternatives,
+not oils, butters, seeds or teas. Fortified/unsweetened variants are not generated
+without explicit ingredient definitions.
+
+The existing **spelt drink** explicitly describes a milk substitute and gains
+`spelt milk`/`spelt beverage` aliases. Existing **horchata de chufa** explicitly
+includes sweetening and gains qualified sweetened-tiger-nut aliases; it stays
+separate from unsweetened tiger-nut milk. Neither receives a new UUID, and the
+unqualified `tiger nut milk` phrase is not forced into either sweetness state.
+
+The public [plant-milk review](https://pmc.ncbi.nlm.nih.gov/articles/PMC5069255/),
+[plant-base overview](https://en.wikipedia.org/wiki/Plant_milk),
+[macadamia producer](https://www.milkadamia.com/) and
+[tiger-nut preparation reference](https://www.alphafoodie.com/homemade-tiger-nut-milk-horchata-de-chufa/)
+support type/processing review. Captured facts inform original descriptions;
+upstream prose, nutrition, medical/allergen claims and brand formulas are not
+imported. The ledger records this as a separate user-requested checklist, not
+new findings or improved coverage from the frozen 5,000-occurrence sample.
+
+### Flour and starch follow-up
+
+The user requested the identified non-molecular-gastronomy gaps, including
+khorasan flour, in the same unmerged PR. This follow-up adds **11 ingredients
+and 25 aliases** beyond the plant-milk stage: 20 aliases on the new entries,
+plus five on two existing identities.
+
+- Teff, einkorn wheat, emmer wheat, lupin and tiger-nut flours.
+- Khorasan wheat flour with unspecified refinement, plus distinct white and
+  wholemeal khorasan wheat flours. An unspecified flour is not assigned either
+  milling state. The Kamut trademark is not used as a generic alias.
+- Sweet-potato, mung-bean and Chinese water-chestnut starches. Extracted starch
+  is not whole-root/whole-bean flour or a prepared noodle/cake. Bare water-chestnut
+  flour is not assigned, since species and whether it denotes flour or starch
+  require context; singhara/water-caltrop flour remains separate.
+
+Existing **tapioca** explicitly denotes extracted cassava starch and gains
+`tapioca starch`, `cassava starch` and `manioc starch`. The separate legacy
+tapioca-flour ID is preserved; no duplicate UUID is added and no legacy IDs are
+merged. Existing **glutinous rice flour** gains `sweet rice flour` and
+`sticky rice flour`, remaining distinct from ordinary rice flour.
+
+The ledger pins public captures from [Jovial's einkorn FAQ](https://jovialfoods.com/pages/faqs),
+[Shipton Mill's emmer flour](https://www.shipton-mill.com/products/organic-emmer-wholemeal-flour-414),
+[Cotswold wholegrain khorasan](https://cotswoldflour.com/products/matthews-stoneground-wholegrain-khorosan-flour),
+[Khorasan Mills' white flour](https://www.khorasanmills.com/products/khorasan-white-flour-compare-to-kamut%C2%AE-brand-flour-5lb-14-00-25lb-49-50),
+[a tiger-nut flour producer](https://www.tigernuts.com/products/tigernuts-flour/),
+[the Asian flour/starch glossary](https://thewoksoflife.com/chinese-ingredients-glossary/rice-grains-and-flours/)
+and [a starch characterization study](https://www.mdpi.com/2304-8158/9/2/182),
+plus flour/khorasan/lupin overviews. These inform original material definitions;
+producer formulas, health claims and substitution ratios are not imported.
+Failed captures and a CAPTCHA response are excluded. Molecular-gastronomy
+additives and processing aids were deferred at this stage. This is a separate checklist,
+not a change to the frozen 5,000-occurrence sample or its coverage score.
+
+### Molecular-ingredient follow-up
+
+The user approved the proposed food ingredients and explicitly excluded
+preparation aids such as liquid nitrogen and dry ice. This follow-up adds
+**42 entries and 90 aliases**: 86 aliases on new entries and four on the existing
+crystalline-fructose identity. It covers:
+
+- Sodium alginate and three distinct calcium salts/materials.
+- Generic carrageenan plus kappa, iota and lambda types; generic gellan plus
+  high-acyl and low-acyl types; methylcellulose, sodium CMC and HPMC.
+- HM pectin with unspecified setting speed and separate rapid/slow-set forms,
+  LM pectin with unspecified amidation, explicit LMA pectin, and an NH nappage
+  pectin blend. NH is a formulated mixture, not an alias for every LMA pectin.
+- Soy and sunflower lecithins with unspecified form and separate powder forms;
+  sucrose fatty-acid esters and a mono-/diglyceride emulsifier blend.
+- Tapioca maltodextrin and a specifically fat-powdering grade; wheat dextrin and
+  resistant wheat dextrin; inulin and polydextrose.
+- Food-grade transglutaminase and pectinase preparations with activity, carrier
+  and accompanying proteins/enzymes unspecified.
+- Sodium citrate (the culinary trisodium salt), citric, malic, tartaric and
+  ascorbic acids, GDL, trehalose and glycerin.
+
+Producer captures include [Modernist Pantry](https://modernistpantry.com/categories/ingredients/gelation.html),
+[Sosa's NH pectin blend](https://www.sosa.cat/en/product/pectin-nh/),
+[Roquette's wheat dextrin](https://www.roquette.com/health-pharma/consumer-healthcare-product-catalog/nutriose-fb-06-wheat-dextrin),
+[SMI's fibers](https://smingredients.com/products/fibers/) and
+[Special Ingredients' lecithin](https://specialingredients.co.uk/products/sunflower-lecithin-powder-e322).
+Public reference captures support substance identities. Only accepted, topic-checked
+captures are recorded; failed URLs are excluded. Definitions are original and
+import no dosing, brand formulas, health claims or regulatory advice. Unknown
+grade/formulation does not establish interchangeability. Bare `Methocel`,
+`sour salt` and `meat glue` are not forced into an identity.
+
+The published `crystaline fructose` definition already specifies dried, ground,
+high-purity fructose. Its UUID, definition and source associations are preserved.
+The preferred label becomes **crystalline fructose**; `crystaline fructose`,
+`fructose powder`, `powdered fructose` and `crystalline fructose powder` are
+aliases. Generic fructose and syrups remain distinct. The optional
+`label_renames` ledger field pins the old/new spelling and rationale. The builder
+rejects stale targets, name collisions and corrections losing the old label;
+restoration reproduces the exact previous baseline and all historical pins.
+
+Liquid nitrogen, dry ice, carbon dioxide and nitrous oxide are excluded.
+Existing xanthan, agar, guar, locust-bean gum, gum arabic, gelatin and other
+covered materials are reused without duplicate entries. This separate
+user-requested checklist does not alter the frozen recipe-sample score.
+
+### Replay
+
+The preceding complete bundle is main commit
+`bd80fa349a2fe6231a4b42e0d4f9452354f0403d`:
+
+- Input seed: `0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45`
+- Output seed: `4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571`
+- Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
+
+Copy the preceding seed/source files from that commit into a fresh external
+folder, then run:
+
+```sh
+python3 scripts/vocabulary/fill_gaps.py \
+  --seed /tmp/next-gap-base/ingredients.json \
+  --sources /tmp/next-gap-base/sources.json \
+  --policy data/vocabulary/adapters/ingredient-next-gap-fill.json \
+  --output /tmp/next-gap-replay
+python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py'
+just seed-vocabulary --validate-only \
+  --file /tmp/next-gap-replay/ingredients.json \
+  --sources /tmp/next-gap-replay/sources.json
+```
+
+The builder never generates IDs or accesses the network. The ledger owns the
+new UUIDs; stale baselines, name shadowing and unreviewed rewrites are rejected.
+Historical-stage tests remove this explicit forward layer before checking their
+original pins; earlier ledgers and checksums remain unchanged.
+
+### Verification and scope
+
+All **129 Python tests** pass, including exact replay, existing-field preservation,
+source contracts, every candidate/checklist decision, qualified-search choices
+and recipe-significant identity boundaries. The Rust seed validator accepts
+**13,617 total records/four sources with no warnings**.
+
+On the local mock-auth deployment, dry runs roll back completely, cumulative
+loads add 171 entries/update 34 existing entries, and a second `--if-changed`
+run skips with no writes. Existing recipe, draft, version, source and mapping
+hashes are unchanged by the load. All **610 reviewed preferred/alias names** return
+the intended UUID first through the production SQL query. Chromium verifies
+catalog refresh from the previous 13,361-entry snapshot to 13,479 entries,
+qualified ingredient choices and six local searches without per-query server
+calls. The initial-round smoke verifies canonical UUID autosave/reload, clearing
+IDs on text edits, optional server fallback and 161 authenticated lookup checks.
+The plant-milk follow-up adds 21 browser checks covering all 16 types and five
+aliases, with no per-query server calls or new draft. One private synthetic draft
+was used by the initial smoke check; no recipe is published.
+
+The flour/starch follow-up verifies its own dry-run rollback, 11 additions/two
+alias-bearing updates, and a write-free fingerprinted repeat. All 36 new
+preferred/alias names pass Chromium checks without per-query server requests.
+The browser refreshes its real 13,479-entry cached catalog to 13,490 entries;
+there are no page errors or new drafts, and authored-row/source hashes remain
+unchanged after both the seed and browser checks.
+
+The molecular follow-up verifies dry-run rollback, 42 additions/one existing-ID
+update, and a write-free fingerprinted repeat. Chromium checks all 133 preferred/
+alias names in this follow-up, including the corrected/legacy fructose labels,
+without per-query server calls. Its real 13,490-entry cache refreshes to 13,532
+entries. Authored rows and source/mapping hashes remain unchanged.
+
+Replaying the unchanged 5,000-occurrence review increases represented materials
+**4,668 -> 4,724 (93.36% -> 94.48%)**, with no previously covered name losing its
+material. Eleven newly represented families retain source ambiguity; there are
+no unreviewed missing/partial phrases in this candidate queue. This is editorial
+material availability, not automatic recognition, substitution or a whole-recipe
+completeness score. No details field, schema/search rule or production deployment
+is introduced. A later merge uses the existing fingerprinted deployment seeder.
+
+Full discovery artifacts remain at `/workspace/ingredient-gap-next-5000`.
+The curation ledger, full canonical JSON/CSV, new-entry/alias lists and verification
+summaries are external at `/workspace/vocabulary-next-gap-fill`; the portable
+review archive is `/workspace/noms-vocabulary-next-gap-fill.zip`.
+
+The plant-milk-stage full seed is also available at
+`/workspace/plant-milk-expansion`; its archive is
+`/workspace/noms-plant-milk-vocabulary-update.zip`. The earlier 102-entry archive
+remains frozen as the initial-round snapshot. Both archives are historical
+snapshots; the maintained `data/vocabulary/ingredients.json` includes the later
+flour/starch update. Its research and local verification artifacts are external
+at `/workspace/flour-starch-expansion`.
+
+The molecular follow-up's capture metadata, new-entry CSV, replay and local
+verification artifacts are external at `/workspace/molecular-ingredient-expansion`.
+The maintained repository seed and ledger include all follow-ups.
+
+The later [readable-label maintenance](LABELS.md#readable-label-follow-up-2026-10-27)
+changes 488 display names, without adding/merging/retiring ingredients. Its
+separate ledger retains every old searchable name and restores this next-sample
+stage exactly before historical tests. The counts and checksums in this section
+remain the frozen pre-label output; current aliases are listed at the top.

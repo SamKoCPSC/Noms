@@ -1,7 +1,7 @@
 """Apply an explicit cooking-material review to its checksum-pinned preceding seed.
 
 No network, fuzzy identity inference, UUID generation or recipe rewrites.
-The ledger owns new UUIDs, reviewed alias suffixes and explicit status retirements.
+The ledger owns new UUIDs, reviewed alias suffixes, label corrections and retirements.
 """
 import argparse
 import collections
@@ -19,6 +19,7 @@ FOLLOWUP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-gap-followup.json'
 SECOND_SAMPLE_POLICY=ROOT/'data/vocabulary/adapters/ingredient-second-sample-gaps.json'
 GROCERY_POLICY=ROOT/'data/vocabulary/adapters/ingredient-grocery-gaps.json'
 FINAL_GAP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-final-gap-fill.json'
+NEXT_GAP_POLICY=ROOT/'data/vocabulary/adapters/ingredient-next-gap-fill.json'
 
 
 def encoded(value):
@@ -42,6 +43,11 @@ def restore_baseline(result,policy):
         if aliases:
             require(e['aliases'][-len(aliases):]==aliases,'Existing alias suffix differs from the ledger')
             e['aliases']=e['aliases'][:-len(aliases)]
+        rename=policy.get('label_renames',{}).get(e['id'])
+        if rename:
+            require(e['label']==rename['label'] and rename['reason'].strip(),
+                    'Corrected label differs from the ledger')
+            e['label']=rename['before_label']
         retirement=policy.get('retirements',{}).get(e['id'])
         if retirement:
             before=retirement['before']
@@ -73,6 +79,18 @@ def apply_review(seed,sources,policy):
         require(key not in names or names[key]==ident,f'Ingredient name shadows another identity: {name}')
         names[key]=ident
 
+    renames=policy.get('label_renames',{})
+    for ident,decision in renames.items():
+        require(ident in entries and entries[ident]['status']=='active' and ident not in retirements
+                and entries[ident]['label']==decision['before_label']
+                and decision['label'].strip()==decision['label'] and decision['label']
+                and normalize(decision['label'])!=normalize(decision['before_label'])
+                and decision['reason'].strip(), 'Unknown, stale or unexplained label correction')
+        retained=entries[ident]['aliases']+policy['alias_additions'].get(ident,{}).get('aliases',[])
+        require(decision['before_label'] in retained,'Label correction must retain the old label as an alias')
+        claim(decision['label'],ident)
+        entries[ident]['label']=decision['label']
+
     for entry in policy['additions']:
         ident=entry['id']
         require(valid_id(ident) and ident not in entries,'Duplicate or invalid new UUID')
@@ -87,7 +105,8 @@ def apply_review(seed,sources,policy):
     aliases_added=0
     for ident,decision in policy['alias_additions'].items():
         require(ident in entries and ident not in added and entries[ident]['status']=='active'
-                and entries[ident]['label']==decision['label'] and decision['note'].strip(),
+                and renames.get(ident,{}).get('before_label',entries[ident]['label'])==decision['label']
+                and decision['note'].strip(),
                 'Unknown, retired or stale existing alias target')
         entry=entries[ident];local={normalize(n) for n in [entry['label'],*entry['aliases']]}
         for alias in decision['aliases']:
@@ -116,10 +135,11 @@ def apply_review(seed,sources,policy):
                 'Invalid scoped context target')
     require(not validate(result,sources),'Ambiguous or invalid gap-review output')
     # Existing authored definitions, UUIDs, retired identities and source evidence
-    # are immutable except approved alias suffixes and explicit status retirements.
+    # are immutable except approved aliases, label corrections and retirements.
     for original,current in zip(seed['entries'],result['entries']):
         expected=copy.deepcopy(original)
         expected['aliases']+=policy['alias_additions'].get(original['id'],{}).get('aliases',[])
+        if original['id'] in renames:expected['label']=renames[original['id']]['label']
         if original['id'] in retirements:expected['status']='retired'
         require(current==expected,'Gap review rewrote an existing identity')
     summary=dict(added=len(added),aliases_added_to_existing=aliases_added,
@@ -128,6 +148,7 @@ def apply_review(seed,sources,policy):
                  active=sum(e['status']=='active' for e in result['entries']),
                  retired=sum(e['status']=='retired' for e in result['entries']),output_checksum=checksum(result))
     if retirements:summary['retired_by_review']=len(retirements)
+    if renames:summary['labels_renamed']=len(renames)
     return result,summary
 
 

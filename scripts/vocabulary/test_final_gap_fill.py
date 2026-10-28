@@ -13,7 +13,8 @@ class FinalGapFillTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.policy=json.loads(gaps.FINAL_GAP_POLICY.read_text())
-        cls.seed=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.maintained=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.seed=rename_labels.maintained_final_gap_stage(cls.maintained)
         cls.sources=json.loads((gaps.ROOT/'data/vocabulary/sources.json').read_text())
         cls.base=gaps.restore_baseline(cls.seed,cls.policy)
         cls.entries={e['id']:e for e in cls.seed['entries']}
@@ -28,7 +29,7 @@ class FinalGapFillTest(unittest.TestCase):
         self.assertEqual(gaps.checksum(self.base),'8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab')
         self.assertEqual((summary['added'],summary['retired_by_review'],summary['active'],summary['retired']),(133,4,13361,85))
         self.assertEqual(validate(self.seed,self.sources),[])
-        self.assertEqual(rename_labels.maintained_grocery_stage(self.seed),self.base)
+        self.assertEqual(rename_labels.maintained_grocery_stage(self.maintained),self.base)
         self.assertEqual(gaps.checksum(self.sources),self.policy['base_sources_checksum'])
         for old in self.base['entries']:
             expected=copy.deepcopy(old)

@@ -1,9 +1,9 @@
 # Maintained ingredient vocabulary
 
 `ingredients.json` is the reviewed source of truth for ingredient suggestions.
-The seed contains **13,361 active ingredients**: the original 100 curated entries,
+The seed contains **13,532 active ingredients**: the original 100 curated entries,
 10,025 active FoodOn-derived cooking/pantry entries, 2,548 active Wikidata additions,
-104 USDA additions and 584 subsequently curated cooking-material definitions.
+104 USDA additions and 755 subsequently curated cooking-material definitions.
 Another **85 identities** are retained as retired: 60 from the original deployment
 review, 21 from the ingredient-scope cleanup and four from the final definition review.
 Every original ID, description and prior searchable label/alias is preserved,
@@ -117,8 +117,72 @@ Four misleading source entries are retired with every historical field retained:
 ornamental sweet pea and its canned child, a grilled lamb-chop dish and a sweet
 raspberry-vinegar drink. Culinary names use the appropriate existing pea/lamb IDs
 and a separately defined cooking vinegar. No authored recipe is rewritten.
-The ledger is `adapters/ingredient-final-gap-fill.json`; current totals are
+The ledger is `adapters/ingredient-final-gap-fill.json`; totals at that stage are
 **13,361 active, 85 retired and 9,307 active aliases**, with the same four sources.
+
+The subsequent [next-sample gap fill](../../scripts/vocabulary/GAPS.md#next-sample-gap-fill-and-grocery-expansion-2026-10-26)
+reviews all 58 candidate phrases from another 5,000-occurrence sample and adds
+**171 definitions and 438 aliases** (367 on new entries, 71 on 34 existing
+identities). It covers useful related forms of tofu skin, yogurt, plant drinks,
+stocks/broths, preserved pantry components, flavoring oils, seasonings and named
+wine/rum styles. Existing filbert/hazelnut, spaghettini, casing and other synonym
+identities are reused. Eleven underspecified source phrases retain explicit
+qualified choices rather than forced aliases. Totals at that stage are **13,532 active,
+85 retired and 9,745 active aliases**. The forward ledger is
+`adapters/ingredient-next-gap-fill.json`; every previous definition, UUID, status,
+source association and existing alias is retained. One recorded spelling
+correction changes `crystaline fructose` to `crystalline fructose`, retaining
+the old label as an alias on the same UUID. The four-source manifest is
+unchanged, and authored recipes are not rewritten.
+
+The plant-milk follow-up adds hazelnut, macadamia, walnut, pecan, Brazil nut,
+flaxseed, sesame, sunflower seed, pumpkin seed, quinoa, buckwheat, amaranth, teff,
+millet and lupin milks, plus explicitly unsweetened tiger-nut milk. Existing
+spelt drink and sweetened horchata de chufa retain their IDs and gain qualified
+milk aliases. Base-only names do not assert an unsweetened or fortified formula.
+
+The flour/starch follow-up adds teff, einkorn, emmer, lupin and tiger-nut flours;
+generic, white and wholemeal khorasan wheat flours; and sweet-potato, mung-bean
+and Chinese water-chestnut starches. Explicit milling forms and extracted starches
+retain their distinctions. Tapioca/cassava/manioc starch names reuse the existing
+tapioca ID; sweet/sticky rice flour names reuse glutinous rice flour. This is a
+separate user-requested expansion, outside the frozen recipe-sample score.
+
+The molecular-ingredient follow-up adds 42 food-grade materials: alginate and
+calcium salts; carrageenan/gellan subtypes; cellulose thickeners; specialized
+pectins; lecithins and emulsifiers; dextrins/fibers; enzyme preparations; food
+acids, trehalose and glycerin. Generic entries retain unspecified grades and
+formulations; explicit powder forms, resistant dextrin and fat-powdering carrier
+grades remain separate. Existing crystalline fructose gains powder aliases.
+Liquid nitrogen, dry ice, carbon dioxide and nitrous oxide are excluded.
+
+The subsequent [readable-label review](../../scripts/vocabulary/LABELS.md#readable-label-follow-up-2026-10-27)
+renames **488 ingredients** into ordinary cooking word order, including the
+dried chicken egg forms, named cheeses, juices, herbs and processing qualifiers.
+It promotes **139 existing aliases** to preferred labels and retains every old
+label, adding **349 searchable aliases** overall. The **1,009 held
+labels** retain their wording because of name ownership, unclear definitions or
+meaningful technical detail. All IDs, descriptions, statuses, source mappings and
+recipe text remain unchanged. At that stage totals are **13,532 active, 85 retired and
+10,094 active aliases**. The separate forward ledger is
+`adapters/ingredient-readable-label-review.json`; prior curation pins remain frozen.
+
+The user-approved berry follow-up changes `berry (impregnated with sugar)` to
+`sweetened berries`, retaining both upstream names as aliases. The separate
+[awkward-language review](../../scripts/vocabulary/AWKWARD_LABELS.md) records
+36 further candidates. The 12 approved wording replacements are now applied;
+the subsequent kitchen-suitability review resolves the remaining 24 candidates.
+Five of these 12 approved ingredients extend the original 1,492-ID review scope,
+bringing the ledger's explicit scope to 1,497 IDs.
+
+The [kitchen-suitability review](../../scripts/vocabulary/KITCHEN_REVIEW.md)
+keeps `shumai wrappers`, `liver spread` and `peeled nuts` under natural names and
+retires 21 unsuitable or redundant selections, including cattle-feed grains,
+corn for degermination and the regulatory classification reference. Retired
+UUIDs and definitions remain available for existing recipe references; they
+are excluded from active search and the client catalogue. No recipe IDs are
+reassigned. Current totals are **13,511 active, 106 retired and 10,088 active
+aliases**. The separate ledger is `adapters/ingredient-kitchen-suitability-review.json`.
 
 The source coverage research still measures the original **100-ingredient**
 benchmark across 19 strata. Those percentages do not describe the expanded seed.

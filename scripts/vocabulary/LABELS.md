@@ -103,3 +103,126 @@ changing these preferred labels. `maintained_label_stage` verifies and removes
 that later layer before historical label tests; `restore_maintained_baseline`
 then recovers the original pre-label seed. The label review's pins and results
 above remain frozen; current counts are in the maintained vocabulary README.
+
+## Readable-label follow-up (2026-10-27)
+
+After the user identified confusing names such as `hen egg white, dried`, a full
+lexical audit screens **13,617 records: 13,532 active and 85 retired**. It flags
+1,492 active labels across catalogue commas, parenthetical/technical wording,
+trailing modifiers, packaging/use language and malformed punctuation. The
+external audit records 608 draft names; 123 collide with names owned by other
+active IDs. A lexical flag is a review lead, not proof that a label is wrong.
+
+The user-approved follow-up changes **488 preferred labels**. **139 existing
+aliases** become preferred names; all previous preferred labels become aliases.
+There are **349 additional active aliases**, yielding **13,532 active, 85 retired
+and 10,094 active aliases**. No ingredients are added, merged or retired. Every
+UUID, description, source association, status and authored recipe field is
+preserved. The explicit ledger is
+[`ingredient-readable-label-review.json`](../../data/vocabulary/adapters/ingredient-readable-label-review.json).
+
+| Prior label | Preferred label |
+| --- | --- |
+| hen egg mixed whole, dried | whole chicken egg powder |
+| hen egg white, dried | dried chicken egg whites |
+| hen egg yolk, dried | dried chicken egg yolks |
+| coffee ground, roasted | roasted ground coffee |
+| milk powder, full fat | full-fat milk powder |
+| cocoa beverage-preparation, powder | cocoa drink powder |
+| pate, chicken liver | chicken liver pate |
+| yoghurt, goat milk | goat milk yogurt |
+| mussel shell off, raw) | raw shelled mussels |
+| spelt flour, medium | semi-refined spelt flour |
+| berry (impregnated with sugar) | sweetened berries |
+
+These are per-ID decisions, not a blanket comma inversion. The egg white/yolk
+definitions specify dried forms without limiting every product to powder, so
+their labels retain that broader physical-form scope. The whole-egg definition
+explicitly describes powder. Cocoa drink powder stays distinct from cocoa
+powder; semi-refined spelt and the leafy part of black nightshade are supported
+by the existing definitions. Names already present as aliases are promoted with
+their exact wording so no prior searchable string is removed.
+
+**1,009 reviewed labels remain unchanged.** They include conflicting names such
+as `cheese, brie`, `juice, apple` and `milk powder, skimmed`; unclear source or
+classification terms; and useful established names such as cocoa mass, soy
+protein concentrate, liquid coffee concentrate, refined olive oil, passion fruit
+pulp, reconstituted milk and transglutaminase preparation. Two bovine labels are
+held because their definitions include yak/zebu/buffalo as well as cattle. No
+duplicate identities or source-scope problems are resolved by silently renaming
+them. Named species, edible parts, maturity, processing, concentration, fat and
+other formulation distinctions are retained.
+
+### Readable-label replay and verification
+
+The separate review follows commit `ec68a2b3d00c3cfe7ba518d73e1f09766375d930`:
+
+- Input seed: `4dbdc76d56668cc99f8ec57d941fe463a5861bc3c53f16202e179617b15b2571`
+- Output seed: `3de52f891231718606912b69dd80eaf4dd304d86ac5ea9b9eb2051599618b483`
+- Unchanged sources: `1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c`
+
+Obtain the input seed/sources from that commit in a fresh external directory:
+
+```sh
+python3 scripts/vocabulary/rename_labels.py \
+  --seed /tmp/readable-base/ingredients.json \
+  --sources /tmp/readable-base/sources.json \
+  --policy data/vocabulary/adapters/ingredient-readable-label-review.json \
+  --output /tmp/readable-replay
+python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py'
+```
+
+The label builder accepts an explicit, unique active-ID review scope for this
+later ledger; the original parenthetical-only review retains its old behavior.
+Every reviewed ID has exactly one change/hold. After the user approved the
+12 wording candidates in [the awkward-language review](AWKWARD_LABELS.md), five
+additional IDs extend the original 1,492-ID scope to 1,497 reviewed IDs. The
+other seven approved IDs move from hold to change. Every previous name stays
+searchable, including the singular `wonton wrapper` alias. The original audit's
+flag counts remain historical evidence, not the amended scope count.
+Stale seeds, incomplete decisions,
+retired/missing/duplicate scope IDs, name collisions, stale alias promotions and
+unreviewed field changes fail validation. `maintained_next_gap_stage` removes
+this layer before the next-sample tests; all earlier ledgers and checksums stay
+unchanged. Only compact decisions, maintained data, tests and documentation are
+committed; raw audits and downloads remain external.
+
+The initial 475-rename iteration produced seed checksum
+`7eee963a2fc28ffd6c56065d8022f6eab99341344158c1b25171c830de2a175f`.
+The deployment, Rust and browser evidence below belongs to that frozen iteration;
+the subsequent berry and 12-wording amendments are separately described in
+[the awkward-language review](AWKWARD_LABELS.md). It updates this current PR's
+readable-label ledger while preserving every earlier curation stage and pin.
+
+For that initial iteration, all **135 vocabulary Python tests** pass.
+Replay is byte-for-byte identical, and
+the Rust validator accepts all **13,617 records/four sources without warnings**.
+The restarted local mock-auth app's normal startup seed applies **475 updates**,
+with zero additions/retirements/source updates. A subsequent dry run makes no
+changes and rolls back completely; `--if-changed` then skips without writes.
+Recipe/draft/version and source/mapping hashes match the prior verified database
+snapshot, before and after browser checks.
+
+All **1,003 preferred/legacy labels and aliases on renamed IDs** return their
+original UUID first through the production SQL lookup. Chromium passes **950
+old/new full-label checks**, without per-query server calls, page errors or a new
+draft. Its cache refreshes despite the unchanged 13,532-entry count. A test-only
+route supplies the prior catalogue, reconstructed byte-for-byte with its known
+SHA-256 because restarting discarded the server's in-memory old snapshots; the
+override is removed before the real manifest/catalogue refresh. Search/ranking
+code is unchanged. Broad-prefix ordering can change with a new preferred label;
+full old names continue to identify the same ingredients.
+
+Audit artifacts remain at `/workspace/vocabulary-readable-label-audit`, with the
+original frozen download `/workspace/noms-vocabulary-readability-audit.zip`.
+Update decisions, full seed, replay, old/new CSV and verification artifacts are
+external at `/workspace/vocabulary-readable-label-update`.
+
+## Kitchen suitability follow-up
+
+The later [kitchen-suitability review](KITCHEN_REVIEW.md) resolves all 24 remaining
+awkward-language candidates with three natural-name changes and 21 retirements.
+It uses a separate ledger after this frozen 488-rename stage.
+`maintained_readable_stage` verifies and reverses that layer before the tests in
+this section. Current totals are 13,511 active, 106 retired and 10,088 active
+aliases; the readable-label counts and checksums above remain historical pins.

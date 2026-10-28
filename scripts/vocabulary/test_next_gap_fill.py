@@ -1,0 +1,275 @@
+"""Next-sample grocery curation, identity boundaries and historical replay."""
+import copy
+import hashlib
+import json
+import unittest
+
+import fill_gaps as gaps
+import rename_labels
+from foodon import normalize, validate
+
+
+class NextGapFillTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.policy=json.loads(gaps.NEXT_GAP_POLICY.read_text())
+        cls.maintained=json.loads((gaps.ROOT/'data/vocabulary/ingredients.json').read_text())
+        cls.seed=rename_labels.maintained_next_gap_stage(cls.maintained)
+        cls.sources=json.loads((gaps.ROOT/'data/vocabulary/sources.json').read_text())
+        cls.base=gaps.restore_baseline(cls.seed,cls.policy)
+        cls.entries={e['id']:e for e in cls.seed['entries']}
+        cls.original={e['id']:e for e in cls.base['entries']}
+        cls.labels={e['label']:e['id'] for e in cls.seed['entries'] if e['status']=='active'}
+        cls.names={normalize(n):e['id'] for e in cls.seed['entries'] if e['status']=='active'
+                   for n in [e['label'],*e['aliases']]}
+
+    def test_replay_retains_prior_definitions_with_reviewed_aliases_and_label_correction(self):
+        result,summary=gaps.apply_review(self.base,self.sources,self.policy)
+        self.assertEqual(result,self.seed)
+        self.assertEqual(summary['output_checksum'],self.policy['expected_output_checksum'])
+        self.assertEqual(gaps.checksum(self.base),'0b1bda94a192383da92a95ed6f0834c65024a088a2a0bc4618d43147e0c59f45')
+        self.assertEqual((summary['added'],summary['active'],summary['retired']),(171,13532,85))
+        self.assertEqual(summary['aliases_added_to_existing'],71)
+        self.assertEqual(summary['aliases_on_new_entries'],367)
+        self.assertEqual(summary['labels_renamed'],1)
+        self.assertEqual(self.policy['retirements'],{})
+        self.assertEqual(rename_labels.maintained_final_gap_stage(self.maintained),self.base)
+        self.assertEqual(gaps.checksum(self.sources),self.policy['base_sources_checksum'])
+        self.assertEqual(validate(self.seed,self.sources),[])
+        for old in self.base['entries']:
+            expected=copy.deepcopy(old)
+            expected['aliases']+=self.policy['alias_additions'].get(old['id'],{}).get('aliases',[])
+            if old['id'] in self.policy.get('label_renames',{}):
+                expected['label']=self.policy['label_renames'][old['id']]['label']
+            self.assertEqual(self.entries[old['id']],expected)
+
+    def test_all_58_candidates_and_every_expansion_choice_have_explicit_reviews(self):
+        research=self.policy['research']
+        original=research['original_candidates']
+        self.assertEqual(len(original),len(set(original)))
+        self.assertEqual(len(original),58)
+        self.assertEqual(hashlib.sha256(gaps.encoded(original)).hexdigest(),research['original_candidate_names_sha256'])
+        extras=[q for group in research['expansion_groups'].values() for q in group]
+        self.assertEqual(len(extras),research['expansion_checklist_names'])
+        self.assertEqual(len(extras),171)
+        self.assertEqual(hashlib.sha256(gaps.encoded(research['expansion_groups'])).hexdigest(),research['expansion_checklist_sha256'])
+        self.assertTrue({normalize(q) for q in original+extras}<=set(self.policy['reviewed_names']))
+        self.assertEqual(len(self.policy['reviewed_names']),research['candidate_names'])
+        self.assertEqual(self.policy['context_rows'],{})
+
+    def test_existing_synonyms_reuse_published_ids(self):
+        for query,label in [
+            ('thin spaghetti','spaghettini macaroni'),
+            ('balsamico bianco','white balsamic vinegar'),
+            ('artichoke bottoms','artichoke heart'),
+            ('dry-roasted hazelnuts','dry-roasted filbert nut'),
+            ('oil-roasted hazelnuts','oil-roasted filbert nut'),
+            ('pork blood','pig blood'),('pappadams','poppadum'),
+            ('flax seed meal','ground flaxseed'),
+            ('sheep casings','sheep intestine casing'),
+            ('edible collagen casings','edible collagen casing'),
+            ('nonfat evaporated milk','evaporated skim milk'),
+            ('spelt milk','spelt drink'),
+            ('sweetened tiger nut milk','horchata de chufa'),
+        ]:
+            ident=self.names[normalize(query)]
+            self.assertEqual(ident,self.labels[label])
+            self.assertIn(ident,self.original)
+            self.assertNotIn(ident,self.policy['entry_reviews'])
+
+    def test_processing_and_formulations_that_change_a_recipe_remain_separate(self):
+        for labels in [
+            ['tofu skin','fresh tofu skin','dried tofu skin','tofu'],
+            ['raw lamb sausage','cooked lamb sausage'],
+            ['mentaiko','tarako','cod roe'],
+            ['wasabi seasoning powder','pure wasabi powder','wasabi paste','wasabi root'],
+            ['plain nonfat yogurt','nonfat yogurt','nonfat plain Greek yogurt','plain low-fat yogurt'],
+            ['plain Greek yogurt','plain low-fat Greek yogurt','nonfat plain Greek yogurt'],
+            ['veal stock','white veal stock','brown veal stock','veal broth','veal demi-glace'],
+            ['canned chicken broth','chicken broth','canned low-sodium chicken broth'],
+            ['peanut-only peanut butter','peanut-and-salt peanut butter','unstabilized peanut butter','peanut butter'],
+            ['baked crescent rolls','crescent roll dough'],
+            ['dried breadcrumbs','plain dried breadcrumbs','fresh breadcrumbs','panko breadcrumbs','seasoned breadcrumbs'],
+            ['fresh Calimyrna figs','dried Calimyrna figs','Calimyrna figs'],
+            ['Oloroso sherry','Fino sherry','Amontillado sherry','cream sherry wine','Pedro Ximénez sherry'],
+            ['white truffle oil','black truffle oil','truffle paste','truffle sauce'],
+            ['unsweetened oat milk','barista oat milk','oat milk'],
+            ['unsweetened coconut beverage','coconut milk','coconut water'],
+            ['coarse sparkling sugar','sanding sugar','granulated sugar'],
+        ]:
+            self.assertEqual(len({self.labels[label] for label in labels}),len(labels),labels)
+
+    def test_ambiguous_source_wording_offers_choices_without_forced_aliases(self):
+        holds={q:d for q,d in self.policy['reviewed_names'].items() if d['action']=='hold'}
+        self.assertEqual(len(holds),11)
+        for q,d in holds.items():
+            self.assertIsNone(d['canonical_id'])
+            self.assertNotIn(q,self.names,q)
+            self.assertTrue(d['related_ids'])
+            self.assertTrue(all(self.entries[i]['status']=='active' for i in d['related_ids']))
+            self.assertTrue(any(normalize(name).startswith(q)
+                                for ident in d['related_ids']
+                                for name in [self.entries[ident]['label'],*self.entries[ident]['aliases']]),q)
+        self.assertEqual(set(holds['wasabi powder']['related_ids']),
+                         {self.labels['wasabi seasoning powder'],self.labels['pure wasabi powder']})
+        self.assertNotIn('spiced amber rum',self.names)
+        self.assertNotIn('Chinese rose wine'.lower(),self.names)
+        self.assertNotIn('spicy cod roe',self.names)
+
+    def test_less_common_plant_milk_bases_and_tiger_nut_sweetening_stay_distinct(self):
+        labels=['hazelnut milk','macadamia milk','walnut milk','pecan milk',
+                'Brazil nut milk','flaxseed milk','sesame milk','sunflower seed milk',
+                'pumpkin seed milk','quinoa milk','buckwheat milk','amaranth milk',
+                'teff milk','millet milk','lupin milk','unsweetened tiger nut milk']
+        self.assertEqual(set(labels),set(self.policy['research']['plant_milk_followup']['added_types']))
+        self.assertEqual(len({self.labels[label] for label in labels}),16)
+        self.assertNotEqual(self.labels['unsweetened tiger nut milk'],self.labels['horchata de chufa'])
+        self.assertEqual(self.names['filbert milk'],self.labels['hazelnut milk'])
+        self.assertEqual(self.names['linseed milk'],self.labels['flaxseed milk'])
+        self.assertEqual(self.names['pepita milk'],self.labels['pumpkin seed milk'])
+        self.assertEqual(self.names['lupine milk'],self.labels['lupin milk'])
+        for label in labels:
+            entry=self.entries[self.labels[label]]
+            self.assertEqual(entry['provenance']['origin'],'curated')
+            self.assertEqual(entry['source_mappings'],[])
+        # Base-only names do not invent an unsweetened or fortified formula.
+        for name in ['unsweetened hazelnut milk','unsweetened walnut milk',
+                     'fortified sesame milk','tiger nut milk']:
+            self.assertNotIn(name,self.names)
+
+    def test_new_definitions_are_curated_without_inferred_source_or_brand_mappings(self):
+        self.assertEqual(set(self.policy['entry_reviews']),{e['id'] for e in self.policy['additions']})
+        for entry in self.policy['additions']:
+            self.assertEqual(entry['source_mappings'],[])
+            self.assertEqual(entry['provenance'],dict(origin='curated',references=[]))
+            review=self.policy['entry_reviews'][entry['id']]
+            self.assertTrue(review['rationale'] and review['definition_basis'] and review['observed_names'])
+            self.assertTrue(review['public_evidence'])
+            for key in review['public_evidence']:
+                evidence=self.policy['public_evidence'][key]
+                self.assertTrue(evidence['url'].startswith('https://'))
+                self.assertEqual(len(evidence['sha256']),64)
+                self.assertTrue(evidence['capture_kind'])
+
+    def test_flour_species_milling_and_starch_boundaries_and_existing_alias_targets(self):
+        labels=['teff flour','einkorn wheat flour','emmer wheat flour','lupin flour',
+                'tiger nut flour','khorasan wheat flour','wholemeal khorasan wheat flour',
+                'white khorasan wheat flour','sweet potato starch','mung bean starch',
+                'water chestnut starch']
+        followup=self.policy['research']['flour_starch_followup']
+        self.assertEqual(set(labels),set(followup['added_types']))
+        self.assertEqual(len({self.labels[label] for label in labels}),11)
+        for pair in [
+            ('teff flour','teff grain'),('einkorn wheat flour','einkorn wheat grain'),
+            ('emmer wheat flour','emmer wheat grain'),('lupin flour','lupin seed'),
+            ('tiger nut flour','tigernuts'),('khorasan wheat flour','khorasan wheat grain'),
+            ('sweet potato starch','sweet potato'),('sweet potato starch','potato starch'),
+            ('mung bean starch','mung bean'),('mung bean starch','dried mung-bean starch noodles'),
+            ('water chestnut starch','chinese water chestnut'),
+            ('tapioca','cassava flour'),('glutinous rice flour','white rice flour'),
+        ]:
+            self.assertNotEqual(self.labels[pair[0]],self.labels[pair[1]],pair)
+        for query,label in [
+            ('tef flour','teff flour'),('einkorn flour','einkorn wheat flour'),
+            ('emmer flour','emmer wheat flour'),('lupine flour','lupin flour'),
+            ('chufa flour','tiger nut flour'),('khorasan flour','khorasan wheat flour'),
+            ('whole wheat khorasan flour','wholemeal khorasan wheat flour'),
+            ('refined khorasan flour','white khorasan wheat flour'),
+            ('green gram starch','mung bean starch'),
+            ('tapioca starch','tapioca'),('cassava starch','tapioca'),('manioc starch','tapioca'),
+            ('sweet rice flour','glutinous rice flour'),('sticky rice flour','glutinous rice flour'),
+        ]:
+            self.assertEqual(self.names[normalize(query)],self.labels[label])
+        for label in followup['existing_id_reuses']:
+            self.assertIn(self.labels[label],self.original)
+        # Bare flour wording does not establish an extracted starch or a species.
+        for query in ['water chestnut flour','singhara flour','mung bean flour',
+                      'sweet potato flour','kamut flour']:
+            self.assertNotIn(query,self.names)
+        # The flour follow-up remains frozen when a later checklist is added.
+        self.assertEqual(followup['added_types'],self.policy['research']['expansion_groups']['flours_and_starches'])
+
+    def test_molecular_formulations_remain_distinct_and_processing_aids_are_excluded(self):
+        labels=[
+            'sodium alginate','calcium chloride','calcium lactate','calcium lactate gluconate',
+            'carrageenan','kappa carrageenan','iota carrageenan','lambda carrageenan',
+            'gellan gum','high-acyl gellan gum','low-acyl gellan gum',
+            'methylcellulose','sodium carboxymethylcellulose','hydroxypropyl methylcellulose',
+            'high-methoxyl pectin','rapid-set high-methoxyl pectin','slow-set high-methoxyl pectin',
+            'low-methoxyl pectin','amidated low-methoxyl pectin','NH nappage pectin blend',
+            'soy lecithin','powdered soy lecithin','sunflower lecithin','powdered sunflower lecithin',
+            'sucrose fatty-acid esters','mono- and diglyceride emulsifier blend',
+            'tapioca maltodextrin','fat-powdering tapioca maltodextrin','wheat dextrin',
+            'resistant wheat dextrin','inulin','polydextrose','transglutaminase preparation',
+            'pectinase preparation','sodium citrate','citric acid','malic acid','tartaric acid',
+            'ascorbic acid','glucono delta-lactone','trehalose','glycerin',
+        ]
+        followup=self.policy['research']['molecular_followup']
+        self.assertEqual(set(labels),set(followup['added_types']))
+        self.assertEqual(len({self.labels[label] for label in labels}),42)
+        for label in labels:
+            self.assertNotIn(self.labels[label],self.original)
+        for group in [
+            ['carrageenan','kappa carrageenan','iota carrageenan','lambda carrageenan'],
+            ['gellan gum','high-acyl gellan gum','low-acyl gellan gum'],
+            ['methylcellulose','sodium carboxymethylcellulose','hydroxypropyl methylcellulose'],
+            ['pectin','powdered pectin','liquid pectin','high-methoxyl pectin',
+             'rapid-set high-methoxyl pectin','slow-set high-methoxyl pectin',
+             'low-methoxyl pectin','amidated low-methoxyl pectin','NH nappage pectin blend'],
+            ['soy lecithin','powdered soy lecithin','sunflower lecithin','powdered sunflower lecithin','soy lecithin spread'],
+            ['maltodextrin','tapioca maltodextrin','fat-powdering tapioca maltodextrin',
+             'dextrin','corn dextrin','wheat dextrin','resistant wheat dextrin'],
+            ['transglutaminase preparation','pectinase preparation','pectin'],
+            ['sodium citrate','citric acid'],['tartaric acid','cream of tartar'],
+            ['glycerin','diacylglycerol oil','mono- and diglyceride emulsifier blend'],
+        ]:
+            self.assertEqual(len({self.labels[label] for label in group}),len(group),group)
+        for alias,label in [
+            ('CMC','sodium carboxymethylcellulose'),('cellulose gum','sodium carboxymethylcellulose'),
+            ('HPMC','hydroxypropyl methylcellulose'),('NH pectin','NH nappage pectin blend'),
+            ('trisodium citrate','sodium citrate'),('GDL','glucono delta-lactone'),
+            ('glycerol','glycerin'),('soy lecithin powder','powdered soy lecithin'),
+        ]:
+            self.assertEqual(self.names[normalize(alias)],self.labels[label])
+        for query in followup['excluded_materials']+followup['unassigned_names']:
+            self.assertNotIn(normalize(query),self.names)
+        for label in ['transglutaminase preparation','pectinase preparation']:
+            self.assertIn('unspecified',self.entries[self.labels[label]]['description'])
+
+    def test_fructose_correction_preserves_id_definition_and_every_old_name(self):
+        ident=self.labels['crystalline fructose']
+        self.assertEqual(self.original[ident]['label'],'crystaline fructose')
+        for query in ['crystaline fructose','crystalline fructose','fructose powder',
+                      'powdered fructose','crystalline fructose powder']:
+            self.assertEqual(self.names[query],ident)
+        self.assertNotEqual(ident,self.labels['fructose'])
+        self.assertEqual(self.entries[ident]['description'],self.original[ident]['description'])
+        self.assertEqual(set(self.policy['label_renames']),{ident})
+
+    def test_label_correction_rejects_collisions_stale_targets_and_lost_old_names(self):
+        ident=self.labels['crystalline fructose']
+        for field,value,message in [('label','soy sauce','shadows'),
+                                    ('before_label','fructose','label correction')]:
+            policy=copy.deepcopy(self.policy)
+            policy['label_renames'][ident][field]=value
+            with self.assertRaisesRegex(ValueError,message):
+                gaps.apply_review(self.base,self.sources,policy)
+        policy=copy.deepcopy(self.policy)
+        policy['alias_additions'][ident]['aliases'].remove('crystaline fructose')
+        with self.assertRaisesRegex(ValueError,'retain the old label'):
+            gaps.apply_review(self.base,self.sources,policy)
+
+    def test_stale_inputs_and_alias_shadowing_are_rejected(self):
+        with self.assertRaisesRegex(ValueError,'Stale'):
+            gaps.apply_review(self.seed,self.sources,self.policy)
+        policy=copy.deepcopy(self.policy)
+        policy['additions'][0]['aliases'].append('soy sauce')
+        with self.assertRaisesRegex(ValueError,'shadows'):
+            gaps.apply_review(self.base,self.sources,policy)
+        changed=copy.deepcopy(self.seed)
+        changed['entries'][0]['description']='unreviewed definition rewrite'
+        with self.assertRaisesRegex(ValueError,'approved gap output'):
+            gaps.restore_baseline(changed,self.policy)
+
+
+if __name__=='__main__':unittest.main()
