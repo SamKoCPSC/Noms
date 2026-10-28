@@ -1,4 +1,4 @@
-//! Optional, local suggestions for precise cooking measures. No conversions or parsing.
+//! Shared precise-measurement suggestions and exact validation. No conversions.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Unit {
@@ -9,9 +9,10 @@ pub struct Unit {
 }
 
 pub const MAX_SUGGESTIONS: usize = 8;
+pub const INVALID_UNIT: &str = "Choose a supported weight or volume unit, or leave the unit blank.";
 
-// Unqualified regional aliases deliberately return multiple choices. Never infer
-// a cup/spoon/fluid-ounce standard from an abbreviation or the author's locale.
+// Unqualified regional aliases offer multiple choices. The first (US) choice is
+// the explicit default on confirmation, shared by UI completion and API aliases.
 const UNITS: &[Unit] = &[
     Unit {
         label: "g",
@@ -232,8 +233,44 @@ fn normalize(text: &str) -> String {
         .join(" ")
 }
 
+/// Validate complete names/aliases only. Prefixes and fuzzy guesses are never
+/// accepted by the API. Prefer an exact saved label before looking at aliases.
+pub fn canonicalize(value: &str) -> Result<&'static str, &'static str> {
+    if value.chars().count() > 64 || value.contains('\0') {
+        return Err(INVALID_UNIT);
+    }
+    if value.trim().is_empty() {
+        return Ok("");
+    }
+    let query = normalize(value);
+    UNITS
+        .iter()
+        .find(|unit| normalize(unit.label) == query)
+        .or_else(|| {
+            UNITS.iter().find(|unit| {
+                normalize(unit.name) == query
+                    || unit.aliases.iter().any(|alias| normalize(alias) == query)
+            })
+        })
+        .map(|unit| unit.label)
+        .ok_or(INVALID_UNIT)
+}
+
+/// Closing a nonblank query confirms the active match, or the first match.
+/// Empty inputs remain unitless and unmatched text remains visible for correction.
+pub fn completion(query: &str, active: Option<usize>) -> Option<&'static Unit> {
+    if query.trim().is_empty() && active.is_none() {
+        return None;
+    }
+    let matches = suggestions(query);
+    matches
+        .get(active.unwrap_or(0))
+        .or_else(|| matches.first())
+        .copied()
+}
+
 /// Exact aliases rank first, then prefixes; multiword queries allow word order
-/// changes. The author must choose a result; this never rewrites typed text.
+/// changes. Confirmation, rather than individual keystrokes, saves a result.
 pub fn suggestions(query: &str) -> Vec<&'static Unit> {
     if query.chars().count() > 64 {
         return Vec::new();
@@ -281,6 +318,50 @@ mod tests {
 
     fn labels(query: &str) -> Vec<&'static str> {
         suggestions(query).into_iter().map(|u| u.label).collect()
+    }
+
+    #[test]
+    fn confirmation_uses_first_match_unless_an_option_was_navigated() {
+        assert_eq!(completion("cups", None).unwrap().label, "US cup");
+        assert_eq!(completion("cups", Some(1)).unwrap().label, "metric cup");
+        assert_eq!(completion("gra", None).unwrap().label, "g");
+        assert_eq!(completion("metric cup", None).unwrap().label, "metric cup");
+        assert!(completion("", None).is_none());
+        assert!(completion("   ", None).is_none());
+        assert_eq!(completion("", Some(0)).unwrap().label, "g");
+        assert!(completion("not a measure", None).is_none());
+    }
+
+    #[test]
+    fn api_validation_accepts_complete_aliases_but_rejects_prefixes_and_custom_units() {
+        for (query, saved) in [
+            ("grammes", "g"),
+            ("lbs.", "lb"),
+            ("cups", "US cup"),
+            ("metric cups", "metric cup"),
+            ("fl. oz.", "US fl oz"),
+            ("UK pints", "Imperial pt"),
+            ("oz", "oz"),
+            ("  ", ""),
+        ] {
+            assert_eq!(canonicalize(query), Ok(saved));
+        }
+        for query in [
+            "gra",
+            "mi",
+            "cups metric",
+            "pinch",
+            "can",
+            "packet",
+            ".",
+            "<script>",
+            "g\0",
+        ] {
+            assert!(canonicalize(query).is_err(), "{query}");
+        }
+        for unit in UNITS {
+            assert_eq!(canonicalize(unit.label), Ok(unit.label));
+        }
     }
 
     #[test]

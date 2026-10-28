@@ -16,24 +16,45 @@ share an optional client-side combobox. Its 24 suggestions are bundled in
 Parenthetical sizes above explain the measures; the saved labels are `metric
 tsp`, `metric tbsp`, `metric cup` and `AU tbsp`. US cups mean customary cups;
 US pints, quarts and gallons are liquid measures. Generic queries such as `cups`
-and `tablespoons` offer the explicitly qualified choices without choosing a
-regional standard automatically. Weight ounces and fluid ounces remain distinct.
+and `tablespoons` offer the explicitly qualified choices. Confirming an
+unqualified query uses the first result (the US measure); an explicitly selected
+metric, Australian or Imperial option keeps that standard. Weight ounces and
+fluid ounces remain distinct.
 
 Aliases include common abbreviations, full names, plurals, US/UK spellings and
 punctuation variants: `grammes`, `milliliters`, `lbs.` and `fl. oz.`. At most eight
 results appear, starting with exact matches and then prefixes. Multiword queries
 can reverse the qualifier order, for example `cups metric`.
 
-The field stays free text. Only an explicit mouse/touch selection or active
-keyboard selection writes a preferred label. Loading, typing, tabbing away or
-saving does not rewrite a unit. Blank units and unusual custom measures still
-work. Approximate measures, counts and containers such as pinch, handful, clove
-or can are not suggested. Quantities, conversion rules, existing recipe data
-and grocery/pantry matching semantics are unchanged.
+The menu uses single-line options in a scrollable panel capped at 10rem.
+Enter, Tab, Escape and blur confirm a nonblank query's active result, defaulting
+to its first result. Explicit pointer selections win. Empty inputs remain empty
+for unitless quantities unless an option is explicitly selected with the arrows;
+unmatched text stays visible with a validation message.
+Partially typed queries stay local until confirmation and cannot leak into
+autosave. Invalid committed units pause recipe autosave and fail client form
+validation, so they cannot leave draft creation in an unconfirmed state.
+
+New authoring requests accept supported units only. Full names, plural names,
+punctuation variants and complete aliases normalize to the same saved labels as
+the UI default. The API rejects partial queries, unknown strings, counts,
+containers and approximate measures such as `pinch`, `can` or `packet`.
+Blank units remain valid. Validation occurs before database writes for recipe
+create/update, draft create/save/publication, JSON import and manual pantry/
+grocery creation and field edits. Multi-item validation failures write nothing.
+
+No schema or stored-data migration is involved. Historical records, exports,
+version restoration, pantry copies and recipe-generated grocery provenance keep
+their original data. Saving edited fields with an unsupported legacy unit
+requires choosing a supported unit or clearing it. Existing draft publication
+requires a prior save with standardized units. Amounts and numeric conversion
+rules are unchanged.
 
 The control supports arrows, Enter, Escape and Tab, retains form length/disabled
 constraints, exposes combobox/listbox semantics and uses the ingredient menu
-styles. Escape closes the suggestion list before an enclosing edit dialog.
+styles. Keyboard navigation scrolls the active option into view. Escape confirms
+and closes the suggestion list before an enclosing edit dialog. Touch targets
+remain at least 44px; desktop rows use 32px.
 
 ## Verification
 
@@ -47,5 +68,8 @@ The browser test needs a ready, isolated local mock-auth environment, Chromium,
 Playwright and Docker, and creates synthetic private fixtures. `--base-url` can
 provide an explicit loopback URL if runtime metadata is unavailable. It checks
 recipe/draft persistence, published-recipe edit controls, pantry/grocery unit
-round-trips, keyboard/mouse/touch, custom/blank values, regional ambiguity,
-distinct ounces, absence of unit API calls, and dropdown geometry at four widths.
+round-trips, keyboard/mouse/touch, default confirmation, blank values and invalid
+units, regional ambiguity, distinct ounces, absence of unit API calls, compact
+dropdown geometry at four widths, and direct authenticated API bypass attempts.
+Rejected API requests are checked against hashes of the stored recipe, draft,
+version, pantry and grocery rows to prove that no partial write occurred.

@@ -18,7 +18,7 @@ Noms is a full-stack recipe management and sharing platform that combines person
 - **Kitchen workspace** — Manage separate pantries and grocery lists in one place. Track ingredient amounts and availability, find owned and collected recipes with all ingredients available, check individual recipes against a selected pantry, or build independent shopping lists from accessible recipes and manual items with serving-aware quantities and recipe context. Optional ingredient-name suggestions support pantry and grocery entry alongside custom names and household supplies.
 - **Community interactions** — Public profiles, shareable links, likes, and comments
 - **Built-in calculator** — Easily scale recipes to specific proportions
-- **Precise unit suggestions** — Local weight and volume autocomplete in recipes, pantries and grocery lists, with full-name/plural aliases and explicit regional variants. Custom and blank units remain valid. See [unit suggestions](docs/ingredient-unit-autocomplete.md).
+- **Precise unit suggestions** — Compact local weight and volume autocomplete in recipes, pantries and grocery lists. Enter or closing a nonblank query confirms the first match unless another option was selected. APIs standardize recognized aliases and reject unsupported units; blank units remain valid. See [unit suggestions](docs/ingredient-unit-autocomplete.md).
 - **Public informational pages** — Server-rendered Home, About, and task-oriented How-to pages
 
 Built with **Rust** and **Dioxus**, Noms compiles to a single codebase that runs on the web, desktop, and mobile.

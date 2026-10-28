@@ -172,7 +172,7 @@ fn PantryEditor(
                         return;
                     }
                     let submitted = fields();
-                    if let Err(problem) = submitted.validate(kind) {
+                    if let Err(problem) = submitted.validate_input(kind) {
                         error.set(Some(problem));
                         return;
                     }
@@ -693,7 +693,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                             available: true,
                                                         },
                                                     ));
-                                                if let Err(problem) = stock.fields.validate(PantryKind::Ingredient) {
+                                                if let Err(problem) = stock.fields.validate_input(PantryKind::Ingredient) {
                                                     error.set(Some(problem));
                                                     return;
                                                 }
@@ -1037,7 +1037,7 @@ pub fn PantryNew() -> Element {
         if frozen {
             return;
         }
-        if let Err(problem) = fields.validate(PantryKind::Ingredient) {
+        if let Err(problem) = fields.validate_input(PantryKind::Ingredient) {
             error.set(Some(problem));
             return;
         }
@@ -1158,7 +1158,7 @@ pub fn PantryNew() -> Element {
                                         if !fields.name.is_empty() || !fields.amount.is_empty()
                                             || !fields.unit.is_empty()
                                         {
-                                            if let Err(problem) = fields.validate(PantryKind::Ingredient) {
+                                            if let Err(problem) = fields.validate_input(PantryKind::Ingredient) {
                                                 error.set(Some(problem));
                                                 return;
                                             }
@@ -1176,7 +1176,7 @@ pub fn PantryNew() -> Element {
                                             equipment: Vec::new(),
                                             copy: None,
                                         };
-                                        if let Err(problem) = request.validate() {
+                                        if let Err(problem) = request.validate_input() {
                                             error.set(Some(problem));
                                             return;
                                         }
@@ -1232,7 +1232,7 @@ pub fn PantryNew() -> Element {
                                     onsubmit: move |e| {
                                         e.prevent_default();
                                         let fields = edited();
-                                        if let Err(problem) = fields.validate(PantryKind::Ingredient) {
+                                        if let Err(problem) = fields.validate_input(PantryKind::Ingredient) {
                                             error.set(Some(problem));
                                             return;
                                         }

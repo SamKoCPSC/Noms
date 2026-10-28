@@ -1,4 +1,4 @@
-//! Precise unit suggestions are bundled locally; authored text remains optional.
+//! Compact local unit completion. Partial queries stay local until confirmed.
 use dioxus::prelude::*;
 
 #[component]
@@ -14,13 +14,67 @@ pub fn UnitAutocomplete(
 ) -> Element {
     let mut open = use_signal(|| false);
     let mut active = use_signal(|| None::<usize>);
-    let suggestions = noms::units::suggestions(&value);
+    let mut editing = use_signal(|| value.clone());
+    // Parent resets (add-row, switching records, save responses) still win when
+    // not editing. Partial queries must not enter recipe autosave requests.
+    use_effect(use_reactive(
+        (&value, &disabled),
+        move |(value, disabled)| {
+            if disabled || !*open.peek() {
+                editing.set(value);
+            }
+            if disabled {
+                open.set(false);
+                active.set(None);
+            }
+        },
+    ));
+    #[cfg(target_arch = "wasm32")]
+    use_effect(use_reactive((&id,), move |(id,)| {
+        if open() {
+            if let Some(position) = active() {
+                if let Some(element) = web_sys::window()
+                    .and_then(|w| w.document())
+                    .and_then(|d| d.get_element_by_id(&format!("{id}-suggestions-{position}")))
+                {
+                    let options = web_sys::ScrollIntoViewOptions::new();
+                    options.set_block(web_sys::ScrollLogicalPosition::Nearest);
+                    options.set_inline(web_sys::ScrollLogicalPosition::Nearest);
+                    element.scroll_into_view_with_scroll_into_view_options(&options);
+                }
+            }
+        }
+    }));
+    let mut confirm = move || {
+        if !open() {
+            return;
+        }
+        let text = editing();
+        let committed = noms::units::completion(&text, active()).map_or_else(
+            || {
+                if text.trim().is_empty() {
+                    String::new()
+                } else {
+                    text.clone()
+                }
+            },
+            |unit| unit.label.into(),
+        );
+        editing.set(committed.clone());
+        oninput.call(committed);
+        open.set(false);
+        active.set(None);
+    };
+    let suggestions = noms::units::suggestions(&editing());
     let expanded = !disabled && open() && !suggestions.is_empty();
+    let invalid = !open() && noms::units::canonicalize(&editing()).is_err();
     let list_id = format!("{id}-suggestions");
+    let error_id = format!("{id}-error");
+    let described_by = invalid.then(|| error_id.clone());
     let active_id = active()
         .filter(|i| expanded && *i < suggestions.len())
         .map(|i| format!("{list_id}-{i}"));
-    let keyboard_rows = suggestions.clone();
+    let count = suggestions.len();
     rsx! {
         document::Stylesheet { href: asset!("/assets/ingredient-autocomplete.css") }
         div {
@@ -35,20 +89,21 @@ pub fn UnitAutocomplete(
                 aria_expanded: expanded,
                 aria_controls: list_id.clone(),
                 aria_activedescendant: active_id,
+                aria_invalid: invalid,
+                aria_describedby: described_by,
                 autocomplete: "off",
                 placeholder,
                 maxlength,
                 disabled,
-                value,
+                value: editing(),
                 onfocus: move |_| { open.set(true); active.set(None); },
-                onblur: move |_| { open.set(false); active.set(None); },
+                onblur: move |_| confirm(),
                 oninput: move |event| {
+                    editing.set(event.value());
                     open.set(true);
                     active.set(None);
-                    oninput.call(event.value());
                 },
                 onkeydown: move |event| {
-                    let count = keyboard_rows.len();
                     match event.key() {
                         Key::ArrowDown if count > 0 => {
                             event.prevent_default();
@@ -61,20 +116,15 @@ pub fn UnitAutocomplete(
                             active.set(Some(active().map_or(count - 1, |i| (i + count - 1) % count)));
                         }
                         Key::Enter if open() => {
-                            if let Some(unit) = active().and_then(|i| keyboard_rows.get(i)) {
-                                event.prevent_default();
-                                oninput.call(unit.label.into());
-                                open.set(false);
-                                active.set(None);
-                            }
+                            event.prevent_default();
+                            confirm();
                         }
                         Key::Escape if expanded => {
                             event.prevent_default();
                             event.stop_propagation();
-                            open.set(false);
-                            active.set(None);
+                            confirm();
                         }
-                        Key::Escape | Key::Tab => { open.set(false); active.set(None); }
+                        Key::Escape | Key::Tab => confirm(),
                         _ => {}
                     }
                 },
@@ -91,21 +141,25 @@ pub fn UnitAutocomplete(
                                 aria_label: unit.name,
                                 aria_selected: active() == Some(position),
                                 tabindex: "-1",
+                                title: "{unit.name} — {unit.label}",
                                 onmousedown: move |event| event.prevent_default(),
                                 onclick: {
                                     let label = unit.label;
                                     move |_| {
+                                        editing.set(label.into());
                                         oninput.call(label.into());
                                         open.set(false);
                                         active.set(None);
                                     }
                                 },
-                                strong { "{unit.label}" }
                                 span { class: "unit-autocomplete__name", "{unit.name}" }
                             }
                         }
                     }
                 }
+            }
+            if invalid {
+                span { id: error_id, class: "unit-autocomplete__error", role: "alert", "{noms::units::INVALID_UNIT}" }
             }
         }
     }

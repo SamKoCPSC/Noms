@@ -554,7 +554,7 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                         return;
                                                     }
                                                     let fields = add_fields();
-                                                    if let Err(problem) = fields.validate() {
+                                                    if let Err(problem) = fields.validate_input() {
                                                         error.set(Some(problem));
                                                         return;
                                                     }
@@ -814,7 +814,7 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                             return;
                                         }
                                         let fields = edit_fields();
-                                        if let Err(problem) = fields.validate() {
+                                        if let Err(problem) = fields.validate_input() {
                                             error.set(Some(problem));
                                             return;
                                         }
@@ -1544,7 +1544,7 @@ pub fn GroceryListNew() -> Element {
                                         return;
                                     }
                                     let fields = entry();
-                                    if let Err(problem) = fields.validate() {
+                                    if let Err(problem) = fields.validate_input() {
                                         error.set(Some(problem));
                                         return;
                                     }
@@ -1697,7 +1697,7 @@ pub fn GroceryListNew() -> Element {
                                             }
                                         }
                                         if !unadded.name.is_empty() || !unadded.amount.is_empty() || !unadded.unit.is_empty() {
-                                            if let Err(problem) = unadded.validate() {
+                                            if let Err(problem) = unadded.validate_input() {
                                                 error.set(Some(problem));
                                                 return;
                                             }
@@ -1717,7 +1717,7 @@ pub fn GroceryListNew() -> Element {
                                                 .collect(),
                                             manual_items: extras,
                                         };
-                                        if let Err(problem) = request.validate() {
+                                        if let Err(problem) = request.validate_input() {
                                             error.set(Some(problem));
                                             return;
                                         }

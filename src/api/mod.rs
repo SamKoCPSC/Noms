@@ -8,6 +8,8 @@ pub mod search;
 
 pub mod upload;
 
+#[cfg(feature = "server")]
+mod unit_validation;
 pub mod vocabulary;
 #[cfg(feature = "server")]
 pub mod vocabulary_index;

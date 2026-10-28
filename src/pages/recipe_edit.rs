@@ -296,6 +296,15 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         {
             return;
         }
+        if editor
+            .ingredients
+            .iter()
+            .any(|row| noms::units::canonicalize(&row.unit).is_err())
+        {
+            let next_generation = *autosave_generation.peek() + 1;
+            autosave_generation.set(next_generation);
+            return;
+        }
         #[allow(unused_variables)]
         let Some(current_draft_id) = draft_id() else {
             return;
@@ -364,6 +373,13 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let on_save_draft = move |_| {
         #[cfg(target_arch = "wasm32")]
         {
+            if ingredients()
+                .iter()
+                .any(|row| noms::units::canonicalize(&row.unit).is_err())
+            {
+                form_error.set(Some(noms::units::INVALID_UNIT.into()));
+                return;
+            }
             if is_loading()
                 || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
                 || busy()
@@ -586,6 +602,13 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         }
 
         let ings = ingredients();
+        if ings
+            .iter()
+            .any(|row| noms::units::canonicalize(&row.unit).is_err())
+        {
+            form_error.set(Some(noms::units::INVALID_UNIT.into()));
+            return;
+        }
         if ings.is_empty() {
             form_error.set(Some("Add at least one ingredient".to_string()));
             return;

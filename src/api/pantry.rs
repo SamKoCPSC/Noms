@@ -67,6 +67,11 @@ pub async fn create_kitchen(
     request: PantryCreate,
 ) -> Result<PantryKitchen, ServerFnError> {
     let owner = actor(expected_account_id, true).await?;
+    let mut request = request;
+    request.validate_input().map_err(ServerFnError::new)?;
+    for stock in &mut request.ingredients {
+        super::unit_validation::unit(&mut stock.fields.unit)?;
+    }
     budget(crate::db::pantry::create(
         &crate::db::get_pool(),
         owner,
@@ -83,6 +88,14 @@ pub async fn add_pantry_entry(
     stock: PantryStock,
 ) -> Result<(), ServerFnError> {
     let owner = actor(expected_account_id, true).await?;
+    let mut stock = stock;
+    stock
+        .fields
+        .validate_input(kind)
+        .map_err(ServerFnError::new)?;
+    if kind == PantryKind::Ingredient {
+        super::unit_validation::unit(&mut stock.fields.unit)?;
+    }
     budget(crate::db::pantry::add(
         &crate::db::get_pool(),
         owner,
@@ -103,6 +116,13 @@ pub async fn update_pantry_entry(
     change: PantryChange,
 ) -> Result<(), ServerFnError> {
     let owner = actor(expected_account_id, true).await?;
+    let mut change = change;
+    if let PantryChange::Fields(fields) = &mut change {
+        fields.validate_input(kind).map_err(ServerFnError::new)?;
+        if kind == PantryKind::Ingredient {
+            super::unit_validation::unit(&mut fields.unit)?;
+        }
+    }
     budget(crate::db::pantry::change(
         &crate::db::get_pool(),
         owner,
