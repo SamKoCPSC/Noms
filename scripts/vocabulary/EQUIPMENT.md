@@ -7,8 +7,8 @@ See the [dated evaluation](../../docs/equipment-vocabulary-evaluation-2026-10-28
 ## Manual curation alternative
 
 `data/vocabulary/research/equipment/manual-equipment-draft.json` is a separate,
-manually authored review draft: 381 equipment names across twelve categories,
-16 separately scoped kitchen supplies, and 244 proposed alternative names.
+manually authored review draft: 427 equipment names across twelve categories,
+16 separately scoped kitchen supplies, and 316 proposed alternative names.
 It covers everyday equipment and practical baking, beverage, preservation and
 regional cooking tools. It replaces neither the pinned research evidence nor a
 production seed. Source entity mappings and Noms UUIDs are intentionally absent.
@@ -18,7 +18,21 @@ bakeware, chocolate/confectionery tools, regional cooking tools, cheesemaking,
 charcuterie, smoking, precision measurement and plating equipment. Functional
 forms such as pasta extruders and chamber vacuum sealers retain separate labels
 from generic pasta machines and vacuum sealers. Advanced tools are identified
-in their notes. The earlier regional-name alias-review queue remains separate.
+in their notes.
+
+A second gap review adds another 46 entries, 60 alternative names for those
+entries and 12 names for existing entries. These include pepper mills, cheese
+slicers, doughnut pans, coconut scrapers, string-hopper presses, paniyaram pans,
+oroshigane, stovetop kettles, tofu tools and specialist drink equipment.
+Paniyaram pans and oroshigane resolve two earlier regional-tool review items as
+distinct entries. Dosa-tawa naming remains covered by the broader tawa entry
+pending review rather than creating a duplicate.
+
+Nine further multi-target search rules cover sandwich makers, mouli, kettles,
+hand beaters, ravioli presses, skimmers, strainers, pastry scrapers and silicone
+spatulas. `Sugarcraft gun` is not assumed to mean cookie press, and lollipop
+molds are not assumed equivalent to chocolate molds; these two terms remain
+unresolved rather than being assigned potentially misleading aliases.
 
 Categories organize review only. The draft keeps functional distinctions such
 as stand/hand mixers, blenders/immersion blenders, pressure canners/pressure

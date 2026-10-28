@@ -55,6 +55,47 @@
     "baking mat": [
       "silicone baking mat",
       "pastry mat"
+    ],
+    "sandwich maker": [
+      "sandwich toaster",
+      "panini press"
+    ],
+    "mouli": [
+      "food mill",
+      "rotary cheese grater"
+    ],
+    "kettle": [
+      "electric kettle",
+      "stovetop kettle",
+      "gooseneck kettle"
+    ],
+    "hand beater": [
+      "hand mixer",
+      "rotary egg beater"
+    ],
+    "ravioli press": [
+      "ravioli stamp",
+      "ravioli mold"
+    ],
+    "skimmer": [
+      "mesh skimmer",
+      "spider strainer",
+      "slotted ladle"
+    ],
+    "strainer": [
+      "fine-mesh sieve",
+      "colander",
+      "chinois",
+      "cocktail strainer",
+      "tea strainer"
+    ],
+    "pastry scraper": [
+      "bench scraper",
+      "bowl scraper"
+    ],
+    "silicone spatula": [
+      "flexible spatula",
+      "turner"
     ]
   },
   "entries": [
@@ -196,7 +237,8 @@
     {
       "label": "vegetable peeler",
       "aliases": [
-        "peeler"
+        "peeler",
+        "potato peeler"
       ],
       "category": "Knives and cutting tools",
       "scope": "equipment",
@@ -286,6 +328,59 @@
       "category": "Knives and cutting tools",
       "scope": "equipment",
       "note": "Japanese chef-knife form."
+    },
+    {
+      "label": "cheese slicer",
+      "aliases": [
+        "cheese plane"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Plane-style slicer produces sheets of cheese rather than grated cheese."
+    },
+    {
+      "label": "cheese wire",
+      "aliases": [
+        "cheese cutting wire"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Wire cutter portions finished cheese; different from cutting curds during cheesemaking."
+    },
+    {
+      "label": "cheese knife",
+      "aliases": [],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Dedicated blade for cutting finished cheese during ingredient preparation; not a curd knife."
+    },
+    {
+      "label": "crinkle cutter",
+      "aliases": [
+        "crinkle knife",
+        "wavy cutter"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Handheld corrugated blade makes ridged vegetable slices."
+    },
+    {
+      "label": "clam knife",
+      "aliases": [
+        "clam shucking knife"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Thin shell-opening blade for clams; distinct from the stout oyster-opening blade."
+    },
+    {
+      "label": "channel knife",
+      "aliases": [
+        "citrus channel knife"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Cuts strips of citrus peel for twists rather than fine zest."
     },
     {
       "label": "cooking spoon",
@@ -539,7 +634,8 @@
       "label": "spaghetti server",
       "aliases": [
         "spaghetti spoon",
-        "pasta server"
+        "pasta server",
+        "pasta fork"
       ],
       "category": "Hand utensils and preparation tools",
       "scope": "equipment",
@@ -791,6 +887,43 @@
       "category": "Hand utensils and preparation tools",
       "scope": "equipment",
       "note": "Controlled dispensing for sauces, oils and plating."
+    },
+    {
+      "label": "pepper mill",
+      "aliases": [
+        "pepper grinder"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Adjustable burr mill for grinding pepper directly into food; useful specific form of the broad spice-grinder class."
+    },
+    {
+      "label": "French fry cutter",
+      "aliases": [
+        "French fry press"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Grid-blade press makes batches of uniform potato sticks."
+    },
+    {
+      "label": "coconut scraper",
+      "aliases": [
+        "coconut grater"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Scrapes coconut flesh from inside a split shell."
+    },
+    {
+      "label": "meat shredding claws",
+      "aliases": [
+        "meat claws",
+        "pulled pork claws"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Paired claw tools pull apart cooked meat."
     },
     {
       "label": "mixing bowl",
@@ -1108,7 +1241,9 @@
     },
     {
       "label": "roasting rack",
-      "aliases": [],
+      "aliases": [
+        "roasting pan rack"
+      ],
       "category": "Pots, pans and stovetop cookware",
       "scope": "equipment",
       "note": ""
@@ -1313,6 +1448,42 @@
       "category": "Pots, pans and stovetop cookware",
       "scope": "equipment",
       "note": "Cooking pot with separate broth compartments."
+    },
+    {
+      "label": "ttukbaegi",
+      "aliases": [
+        "ddukbaegi"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Korean earthenware cooking vessel for jjigae and steamed dishes; useful specific form rather than an alias for all clay pots."
+    },
+    {
+      "label": "handi",
+      "aliases": [
+        "handi pot"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Rounded, relatively narrow-mouthed vessel used for dishes such as dum biryani; may be metal or clay."
+    },
+    {
+      "label": "kazan",
+      "aliases": [
+        "kazan cauldron"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Deep, heavy cauldron used for plov and related Central Asian dishes; do not equate its shape or heat behavior with a wok."
+    },
+    {
+      "label": "steam juicer",
+      "aliases": [
+        "steam juice extractor"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Stacked steam-extraction vessel collects heat-extracted juice for preservation; distinct from mechanical juice extraction."
     },
     {
       "label": "baking sheet",
@@ -1571,7 +1742,9 @@
     },
     {
       "label": "pastry docker",
-      "aliases": [],
+      "aliases": [
+        "dough docker"
+      ],
       "category": "Bakeware and baking tools",
       "scope": "equipment",
       "note": ""
@@ -1606,7 +1779,9 @@
     },
     {
       "label": "pastry wheel",
-      "aliases": [],
+      "aliases": [
+        "dough wheel"
+      ],
       "category": "Bakeware and baking tools",
       "scope": "equipment",
       "note": ""
@@ -1713,7 +1888,8 @@
     {
       "label": "proofing box",
       "aliases": [
-        "dough proofer"
+        "dough proofer",
+        "bread proofer"
       ],
       "category": "Bakeware and baking tools",
       "scope": "equipment",
@@ -1885,6 +2061,98 @@
       "note": "Valve-controlled dispensing of batter, syrup or fillings."
     },
     {
+      "label": "doughnut pan",
+      "aliases": [
+        "donut pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Ring-shaped wells for baked doughnuts."
+    },
+    {
+      "label": "doughnut cutter",
+      "aliases": [
+        "donut cutter"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Cuts both the outer ring and center hole of doughnuts."
+    },
+    {
+      "label": "tart ring",
+      "aliases": [],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Bottomless ring supports tart pastry on a separate baking surface; distinct from a cake ring in depth and purpose."
+    },
+    {
+      "label": "pie crust shield",
+      "aliases": [
+        "pie crust protector"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Reusable cover protects the crust edge while the filling finishes baking."
+    },
+    {
+      "label": "pie crimper",
+      "aliases": [
+        "pie crust crimper"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Seals and decorates pastry seams; a cutting wheel alone need not crimp."
+    },
+    {
+      "label": "cake lifter",
+      "aliases": [
+        "cake lifting spatula"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Broad support plate transfers assembled cakes or cake layers."
+    },
+    {
+      "label": "flower nail",
+      "aliases": [
+        "icing flower nail"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Small rotating platform for piping icing flowers, not a cake support."
+    },
+    {
+      "label": "ice pop mold",
+      "aliases": [
+        "ice pop mould",
+        "popsicle mold",
+        "popsicle mould",
+        "ice lolly mold",
+        "ice lolly mould"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Molds hold sticks and shape frozen ice pops."
+    },
+    {
+      "label": "ice cream cone roller",
+      "aliases": [
+        "waffle cone roller"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Form wraps cooked wafer batter into cones; not a mold for baking or frying pastry horns."
+    },
+    {
+      "label": "crepe spreader",
+      "aliases": [
+        "crêpe spreader"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "T-shaped tool spreads thin batter across a hot crepe surface."
+    },
+    {
       "label": "blender",
       "aliases": [
         "countertop blender"
@@ -1964,7 +2232,8 @@
     {
       "label": "meat grinder",
       "aliases": [
-        "mincer"
+        "mincer",
+        "meat mincer"
       ],
       "category": "Countertop appliances",
       "scope": "equipment",
@@ -2241,6 +2510,53 @@
       "note": "Advanced specialist equipment. Processes frozen bases; distinct from a conventional churn-style ice cream maker."
     },
     {
+      "label": "raclette grill",
+      "aliases": [
+        "raclette maker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Tabletop grill with individual cheese-melting pans beneath the heating element."
+    },
+    {
+      "label": "mochi maker",
+      "aliases": [
+        "mochi machine"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Appliance pounds/kneads cooked glutinous rice; distinct from ordinary dough mixing."
+    },
+    {
+      "label": "thermal cooker",
+      "aliases": [
+        "retained-heat cooker",
+        "retained heat cooker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Insulated retained-heat cooker continues cooking off the heat source; not a powered slow cooker."
+    },
+    {
+      "label": "cotton candy machine",
+      "aliases": [
+        "cotton candy maker",
+        "candy floss machine"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Spins molten sugar into cotton candy."
+    },
+    {
+      "label": "chocolate melanger",
+      "aliases": [
+        "chocolate mélangeur"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Stone grinder refines chocolate particles; tempering controls crystal structure and does not replace refining."
+    },
+    {
       "label": "oven",
       "aliases": [],
       "category": "Ovens, heating and refrigeration",
@@ -2480,7 +2796,8 @@
     {
       "label": "sushi rolling mat",
       "aliases": [
-        "makisu"
+        "makisu",
+        "bamboo sushi mat"
       ],
       "category": "Pasta, dumpling and regional preparation tools",
       "scope": "equipment",
@@ -2498,7 +2815,8 @@
     {
       "label": "sushi rice tub",
       "aliases": [
-        "hangiri"
+        "hangiri",
+        "sushi mixing tub"
       ],
       "category": "Pasta, dumpling and regional preparation tools",
       "scope": "equipment",
@@ -2635,6 +2953,71 @@
       "note": "Extrudes dough through plates for sev and related snacks."
     },
     {
+      "label": "string hopper press",
+      "aliases": [
+        "idiyappam press",
+        "string hopper maker"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Extrudes fine rice-flour dough for steamed string hoppers/idiyappam; screen and dough requirements warrant a distinct functional label."
+    },
+    {
+      "label": "modak mold",
+      "aliases": [
+        "modak mould"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Shapes and closes filled modak into a pleated pointed form."
+    },
+    {
+      "label": "paniyaram pan",
+      "aliases": [
+        "appe pan",
+        "kuzhi paniyaram pan"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Regional multi-well pan for paniyaram/appe; well shape and depth can differ, so do not assert interchangeability with other ball-cake pans."
+    },
+    {
+      "label": "oroshigane",
+      "aliases": [
+        "oroshiki"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Japanese toothed grating surface produces a fine wet pulp, rather than the shreds from a rasp grater."
+    },
+    {
+      "label": "asanka",
+      "aliases": [],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Ridged earthenware grinding bowl used in Ghanaian cooking; useful regional form, not an alias for every mortar."
+    },
+    {
+      "label": "spaghetti chitarra",
+      "aliases": [
+        "pasta chitarra",
+        "chitarra pasta cutter"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Wire-strung frame cuts rolled pasta into strands; not a roller or extruder."
+    },
+    {
+      "label": "churro press",
+      "aliases": [
+        "churro maker",
+        "churros press"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Extrudes stiff dough through a shaped nozzle for churros; not an ordinary piping bag."
+    },
+    {
       "label": "drip coffee maker",
       "aliases": [
         "filter coffee maker"
@@ -2663,7 +3046,8 @@
     {
       "label": "moka pot",
       "aliases": [
-        "stovetop espresso pot"
+        "stovetop espresso pot",
+        "stovetop espresso maker"
       ],
       "category": "Coffee, tea and drink preparation",
       "scope": "equipment",
@@ -2701,7 +3085,9 @@
     },
     {
       "label": "tea infuser",
-      "aliases": [],
+      "aliases": [
+        "tea ball"
+      ],
       "category": "Coffee, tea and drink preparation",
       "scope": "equipment",
       "note": ""
@@ -2848,6 +3234,56 @@
       "note": "Phin-style metal coffee filter and brewing chamber."
     },
     {
+      "label": "stovetop kettle",
+      "aliases": [
+        "stovetop tea kettle",
+        "stove top kettle"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": "Kettle heated on a hob rather than by an integral electric element; gooseneck describes spout form, not heat source."
+    },
+    {
+      "label": "ice shaver",
+      "aliases": [
+        "ice shaving machine",
+        "shaved ice maker"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": "Shaves fine flakes for kakigori and shaved-ice desserts rather than crushing chunks."
+    },
+    {
+      "label": "soda siphon",
+      "aliases": [
+        "soda syphon",
+        "seltzer siphon"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": "Charged pressure bottle dispenses carbonated water; distinct from a countertop carbonator or cream whipper."
+    },
+    {
+      "label": "coffee siphon",
+      "aliases": [
+        "coffee syphon",
+        "siphon coffee maker",
+        "vacuum coffee maker"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": "Two-chamber vacuum brewing apparatus moves water under vapor pressure and draws it through a filter on cooling."
+    },
+    {
+      "label": "cold brew coffee maker",
+      "aliases": [
+        "cold brew maker"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": "Brewer for prolonged cold extraction, using immersion or slow dripping; useful specific form, even though a jar and sieve can also make cold brew."
+    },
+    {
       "label": "food storage container",
       "aliases": [],
       "category": "Preserving and food storage",
@@ -2857,7 +3293,8 @@
     {
       "label": "canning jar",
       "aliases": [
-        "preserving jar"
+        "preserving jar",
+        "Mason jar"
       ],
       "category": "Preserving and food storage",
       "scope": "equipment",
@@ -2993,6 +3430,50 @@
       "category": "Preserving and food storage",
       "scope": "equipment",
       "note": "Agitates cream to make butter."
+    },
+    {
+      "label": "tofu press",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Drains and compresses already-set tofu blocks; not automatically equivalent to a cheesemaking press."
+    },
+    {
+      "label": "tofu mold",
+      "aliases": [
+        "tofu mould"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Perforated forming box drains fresh soy curds during tofu making; different from pressing a finished tofu block."
+    },
+    {
+      "label": "sprouting jar",
+      "aliases": [
+        "seed sprouting jar"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Ventilated draining jar for rinsing and growing edible sprouts, rather than a fermentation airlock vessel."
+    },
+    {
+      "label": "fermentation tamper",
+      "aliases": [
+        "vegetable tamper",
+        "sauerkraut tamper"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Packs shredded vegetables into fermentation vessels; longer packing tool rather than a cocktail muddler."
+    },
+    {
+      "label": "terrine mold",
+      "aliases": [
+        "terrine mould"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Lidded mold for terrines and pates; should not be treated as an alias of an open bread pan."
     },
     {
       "label": "oven mitt",
