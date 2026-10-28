@@ -1,4 +1,4 @@
-//! One-time model arrivals, with scroll used only to trigger the office entrance.
+//! One-time model arrivals; scrolling triggers entrances without scrubbing them.
 const DURATION: f32 = 3.;
 #[derive(Default)]
 pub struct Playback {
@@ -18,16 +18,22 @@ impl Playback {
         40. + 120. * (self.elapsed / DURATION)
     }
 }
-#[derive(Default)]
-pub struct OfficeArrival {
+pub struct ChapterArrival {
     playback: Playback,
     started: bool,
+    chapter: f32,
 }
-impl OfficeArrival {
+impl ChapterArrival {
+    pub fn new(chapter: usize) -> Self {
+        Self {
+            playback: Playback::default(),
+            started: false,
+            chapter: chapter as f32,
+        }
+    }
     pub fn advance(&mut self, progress: f32, seconds: f32) {
-        // The office becomes visible as the camera approaches the second stop.
-        // Direct #why entry and approaching from either direction use the same trigger.
-        self.started |= (0.72..=1.28).contains(&progress);
+        // Direct chapter entry and approaches from either direction share a trigger.
+        self.started |= (self.chapter - 0.28..=self.chapter + 0.28).contains(&progress);
         if self.started {
             self.playback.advance(seconds);
         }
@@ -36,7 +42,7 @@ impl OfficeArrival {
         self.started && !self.playback.finished()
     }
     pub fn frame(&self) -> f32 {
-        // Office timing spans the entire authored sequence, unlike the kitchen intro.
+        // Later rooms use the entire authored sequence, unlike the kitchen intro.
         1. + 159. * (self.playback.elapsed / DURATION)
     }
 }
@@ -59,12 +65,26 @@ pub struct ArrivalPose {
     pub scale: f32,
     pub translation: [f32; 3],
 }
-pub fn arrival_pose(pivot: [f32; 3], authored: [f32; 3], t: f32, office: bool) -> ArrivalPose {
-    // glTF Y is up. Both rooms have a back wall at -Z; the kitchen's side
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Room {
+    Kitchen,
+    Office,
+    Potluck,
+}
+impl Room {
+    pub fn amount(self, frame: f32, start: f32, end: f32) -> f32 {
+        match self {
+            Self::Kitchen => amount(frame, start, end),
+            Self::Office | Self::Potluck => office_amount(frame, start, end),
+        }
+    }
+}
+pub fn arrival_pose(pivot: [f32; 3], authored: [f32; 3], t: f32, room: Room) -> ArrivalPose {
+    // glTF Y is up. All rooms have a back wall at -Z; the kitchen/potluck side
     // wall is at -X and the office's window wall is at +X. Enter diagonally
     // through the open front/side, including groups authored as vertical drops.
     let incoming = [
-        authored[0].abs().max(0.75) * if office { -1. } else { 1. },
+        authored[0].abs().max(0.75) * if room == Room::Office { -1. } else { 1. },
         (authored[1].abs() * 0.25).min(0.45),
         authored[2].abs().max(1.2),
     ];
@@ -122,7 +142,7 @@ mod tests {
 
     #[test]
     fn office_waits_for_approach_then_plays_independently_of_scroll() {
-        let mut office = OfficeArrival::default();
+        let mut office = ChapterArrival::new(1);
         office.advance(0., 60.);
         assert_eq!(office.frame(), 1.);
         assert!(!office.animating());
@@ -144,13 +164,36 @@ mod tests {
     #[test]
     fn office_direct_entry_and_reverse_approach_start_the_entrance() {
         for progress in [1., 1.2] {
-            let mut office = OfficeArrival::default();
+            let mut office = ChapterArrival::new(1);
             office.advance(2., 60.);
             assert_eq!(office.frame(), 1.);
             office.advance(progress, DURATION / 2.);
             assert_eq!(office.frame(), 80.5);
             assert!(office.animating());
         }
+    }
+
+    #[test]
+    fn philosophy_room_waits_for_its_chapter_and_never_replays() {
+        let mut arrival = ChapterArrival::new(3);
+        for progress in [0., 1., 2., 2.5] {
+            arrival.advance(progress, 10.);
+            assert_eq!(arrival.frame(), 1.);
+        }
+        arrival.advance(2.8, DURATION / 2.);
+        assert!(arrival.animating());
+        assert_eq!(arrival.frame(), 80.5);
+        arrival.advance(1., DURATION);
+        for progress in [3., 0., 3.] {
+            arrival.advance(progress, 1.);
+            assert_eq!(arrival.frame(), 160.);
+            assert!(!arrival.animating());
+        }
+        let mut direct = ChapterArrival::new(3);
+        direct.advance(3., DURATION);
+        assert_eq!(direct.frame(), 160.);
+        assert_eq!(Room::Potluck.amount(1., 1., 25.), 1.);
+        assert_eq!(Room::Potluck.amount(1., 115., 146.), 0.);
     }
 
     #[test]
@@ -164,18 +207,22 @@ mod tests {
     }
 
     #[test]
-    fn model_arrivals_stay_on_the_open_sides_of_both_rooms() {
+    fn model_arrivals_stay_on_the_open_sides_of_all_rooms() {
         // Validate the actual exported geometry, including shared pivots for
         // transparent and printed surfaces. Positive uniform scale means its
         // transformed AABB exactly bounds every triangle throughout the path.
-        for (bytes, office) in [
+        for (bytes, room) in [
             (
                 include_bytes!("../../../assets/about/sams-kitchen-detailed.glb").as_slice(),
-                false,
+                Room::Kitchen,
             ),
             (
                 include_bytes!("../../../assets/about/sams-office.glb").as_slice(),
-                true,
+                Room::Office,
+            ),
+            (
+                include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
+                Room::Potluck,
             ),
         ] {
             let model = super::super::gltf::decode(bytes).unwrap();
@@ -191,16 +238,12 @@ mod tests {
                     }
                 }
                 for frame in 1..=160 {
-                    let t = if office {
-                        office_amount(frame as f32, part.start, part.end)
-                    } else {
-                        amount(frame as f32, part.start, part.end)
-                    };
-                    let pose = arrival_pose(part.pivot, part.offset, t, office);
+                    let t = room.amount(frame as f32, part.start, part.end);
+                    let pose = arrival_pose(part.pivot, part.offset, t, room);
                     // Wall-mounted fixtures can already sit in a wall recess at
                     // rest. No moving part may extend farther through either
                     // wall plane than its approved, fully assembled bounds.
-                    let side_clearance = if office {
+                    let side_clearance = if room == Room::Office {
                         max[0] - (max[0] * pose.scale + pose.translation[0])
                     } else {
                         min[0] * pose.scale + pose.translation[0] - min[0]
