@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "benchmark_checksum": "d627c1ee7eb09904e8e1a1b17e313b1da3d919067e9001abf468a7b65c69cb72",
+  "source_checksum": "d8a0111adfd8c40dbcf7ed8ad041a1e6f67b5074bf30b677b9ad3c6e4a3f5c1a",
+  "items": [
+    {
+      "label": "kitchen scale",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q1796864"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    },
+    {
+      "label": "instant-read thermometer",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q899600"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "probe thermometer",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q899600"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "oven thermometer",
+      "classification": "no_specific_item_confirmed",
+      "source_ids": [],
+      "note": "No specific identity confirmed in this research pass. A failed name search does not establish absence from Wikidata; consider further lookup or editorial curation."
+    },
+    {
+      "label": "silicone spatula",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q18131125"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "tongs",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q3276479"
+      ],
+      "note": "Targeted lookup found generic tongs, a hand tool for picking up items. Confirm cooking-specific scope rather than importing medical or industrial uses. Pinned as supplemental evidence."
+    },
+    {
+      "label": "spider strainer",
+      "classification": "alias_or_identity_review",
+      "source_ids": [
+        "Q1036735"
+      ],
+      "note": "A plausible source concept is present under different wording. Review identity and aliases; do not count this as proof of a missing physical tool."
+    },
+    {
+      "label": "fine-mesh sieve",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q3818290",
+        "Q3363853"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "vegetable peeler",
+      "classification": "alias_or_identity_review",
+      "source_ids": [
+        "Q14894"
+      ],
+      "note": "A plausible source concept is present under different wording. Review identity and aliases; do not count this as proof of a missing physical tool."
+    },
+    {
+      "label": "kitchen funnel",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q29957"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "nonstick frying pan",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q127666"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "roasting rack",
+      "classification": "alias_or_identity_review",
+      "source_ids": [
+        "Q117207873"
+      ],
+      "note": "A plausible source concept is present under different wording. Review identity and aliases; do not count this as proof of a missing physical tool."
+    },
+    {
+      "label": "Bundt pan",
+      "classification": "no_specific_item_confirmed",
+      "source_ids": [],
+      "note": "No specific identity confirmed in this research pass. A failed name search does not establish absence from Wikidata; consider further lookup or editorial curation."
+    },
+    {
+      "label": "soufflé dish",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q117207869"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "cooling rack",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q321995"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    },
+    {
+      "label": "silicone baking mat",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q117207871"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "piping tip",
+      "classification": "no_specific_item_confirmed",
+      "source_ids": [],
+      "note": "No specific identity confirmed in this research pass. A failed name search does not establish absence from Wikidata; consider further lookup or editorial curation."
+    },
+    {
+      "label": "proofing basket",
+      "classification": "alias_or_identity_review",
+      "source_ids": [
+        "Q11327978",
+        "Q1558825"
+      ],
+      "note": "A plausible source concept is present under different wording. Review identity and aliases; do not count this as proof of a missing physical tool."
+    },
+    {
+      "label": "hand mixer",
+      "classification": "broader_or_grouped_source_only",
+      "source_ids": [
+        "Q954087"
+      ],
+      "note": "Related generic, material-unspecified or grouped concept exists; it does not establish the requested specific equipment identity."
+    },
+    {
+      "label": "convection oven",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q951722"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    },
+    {
+      "label": "refrigerator",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q37828"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    },
+    {
+      "label": "freezer",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q2487743"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    },
+    {
+      "label": "ice cream maker",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q1319419"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    },
+    {
+      "label": "food dehydrator",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q1807716"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    },
+    {
+      "label": "tagine",
+      "classification": "alias_or_identity_review",
+      "source_ids": [
+        "Q55992766"
+      ],
+      "note": "A plausible source concept is present under different wording. Review identity and aliases; do not count this as proof of a missing physical tool."
+    },
+    {
+      "label": "sushi rolling mat",
+      "classification": "alias_or_identity_review",
+      "source_ids": [
+        "Q1462000"
+      ],
+      "note": "A plausible source concept is present under different wording. Review identity and aliases; do not count this as proof of a missing physical tool."
+    },
+    {
+      "label": "canning funnel",
+      "classification": "no_specific_item_confirmed",
+      "source_ids": [],
+      "note": "No specific identity confirmed in this research pass. A failed name search does not establish absence from Wikidata; consider further lookup or editorial curation."
+    },
+    {
+      "label": "canning tongs",
+      "classification": "no_specific_item_confirmed",
+      "source_ids": [],
+      "note": "No specific identity confirmed in this research pass. A failed name search does not establish absence from Wikidata; consider further lookup or editorial curation."
+    },
+    {
+      "label": "kitchen twine",
+      "classification": "no_specific_item_confirmed",
+      "source_ids": [],
+      "note": "No specific identity confirmed in this research pass. A failed name search does not establish absence from Wikidata; consider further lookup or editorial curation."
+    },
+    {
+      "label": "plastic wrap",
+      "classification": "outside_hierarchy_capture",
+      "source_ids": [
+        "Q356700"
+      ],
+      "note": "A relevant equipment concept was found by targeted Wikidata search and pinned separately; absent from the detailed hierarchy capture."
+    }
+  ],
+  "identity_cautions": [
+    {
+      "source_ids": [
+        "Q954087"
+      ],
+      "issue": "The generic mixer item aliases stand mixer. Do not use this alias to merge stand mixers with hand mixers."
+    },
+    {
+      "source_ids": [
+        "Q131006579",
+        "Q17232663"
+      ],
+      "issue": "The hierarchy contains hot-air deep fryer; targeted search finds air fryer separately. Resolve identity and select source mapping before seeding."
+    },
+    {
+      "source_ids": [
+        "Q15711817",
+        "Q47454497"
+      ],
+      "issue": "Stock pot, cooking pot, cauldron and soup pot cross over in aliases. Preserve narrower tool distinctions until reviewed."
+    },
+    {
+      "source_ids": [
+        "Q1595908",
+        "Q29531528"
+      ],
+      "issue": "Pasta machine and pasta maker overlap; name matching alone is insufficient to merge IDs."
+    },
+    {
+      "source_ids": [
+        "Q803889"
+      ],
+      "issue": "Bain-marie has double boiler as an upstream alias. A general water bath and nested double-boiler vessels should not be silently equated."
+    },
+    {
+      "source_ids": [
+        "Q766983"
+      ],
+      "issue": "Clay pot is described as a storage vessel, with amphora/pitcher aliases. Excluded from the cooking-pot shortlist after definition review."
+    },
+    {
+      "source_ids": [
+        "Q3063771"
+      ],
+      "issue": "Hibachi is described as a Japanese heating device. Excluded from the cooking-grill shortlist after definition review."
+    }
+  ]
+}
