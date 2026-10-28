@@ -41,6 +41,7 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(len(seen), 1)
         self.assertEqual(seen[0].full_url,"https://staging.nomsrecipes.com/auth/staging/session")
         self.assertEqual(seen[0].get_method(),"POST")
+        self.assertEqual(seen[0].get_header("User-agent"),"Noms-Staging-Validation/1.0")
         self.assertEqual(state["cookies"][0]["domain"],"staging.nomsrecipes.com")
         self.assertTrue(state["cookies"][0]["httpOnly"])
         self.assertTrue(state["cookies"][0]["secure"])

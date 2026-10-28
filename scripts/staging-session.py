@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 
 ORIGIN = "https://staging.nomsrecipes.com"
+USER_AGENT = "Noms-Staging-Validation/1.0"
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -26,7 +27,9 @@ def create_state(secret):
         raise ValueError("Configure NOMS_STAGING_LOGIN_SECRET in the execution environment.")
     request = urllib.request.Request(
         ORIGIN + "/auth/staging/session", data=b"", method="POST",
-        headers={"Authorization": "Bearer " + secret, "Origin": ORIGIN},
+        # Cloudflare rejects urllib's default Python client with error 1010.
+        headers={"Authorization": "Bearer " + secret, "Origin": ORIGIN,
+                 "User-Agent": USER_AGENT},
     )
     jar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPCookieProcessor(jar))

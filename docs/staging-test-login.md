@@ -95,7 +95,10 @@ python3 scripts/staging-session.py --output ../work/staging-auth.json
 The helper uses the configured environment variable and the inherited HTTPS
 proxy/CA trust. A configured proxy credential placeholder is passed through as
 provided; the helper does not print or introspect it. Configure any proxy-based
-credential injection for this exact staging destination. If staging customizes `NOMS_SESSION_COOKIE_NAME`, set the same non-secret cookie
+credential injection for this exact staging destination. The helper identifies
+itself as `Noms-Staging-Validation/1.0` because staging's Cloudflare edge rejects
+urllib's default Python client with error 1010. If staging customizes
+`NOMS_SESSION_COOKIE_NAME`, set the same non-secret cookie
 name in the helper environment. Cloudflare cookies are ignored; only the app
 session is exported. The helper requests only
 `https://staging.nomsrecipes.com/auth/staging/session`, refuses all redirects and
