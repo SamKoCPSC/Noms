@@ -36,6 +36,7 @@ mod informational_module_tests {
     }
 }
 
+pub mod equipment_autocomplete;
 pub mod ingredient_autocomplete;
 pub(crate) mod ingredient_vocabulary;
 pub mod unit_autocomplete;

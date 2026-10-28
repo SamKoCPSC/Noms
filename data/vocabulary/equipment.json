@@ -1,0 +1,2866 @@
+{
+  "schema_version": 1,
+  "dimension": "equipment",
+  "entries": [
+    {
+      "label": "chef's knife",
+      "aliases": [
+        "chef knife"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "paring knife",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "utility knife",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "bread knife",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "boning knife",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fillet knife",
+      "aliases": [
+        "filet knife"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "carving knife",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "meat cleaver",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "Chinese vegetable cleaver",
+      "aliases": [
+        "cai dao"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "santoku knife",
+      "aliases": [
+        "santoku"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "nakiri knife",
+      "aliases": [
+        "nakiri"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "mezzaluna",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "oyster knife",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "kitchen shears",
+      "aliases": [
+        "kitchen scissors"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "poultry shears",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cutting board",
+      "aliases": [
+        "chopping board"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "mandoline",
+      "aliases": [
+        "mandolin slicer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "vegetable peeler",
+      "aliases": [
+        "peeler",
+        "potato peeler"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "julienne peeler",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fish scaler",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "herb scissors",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "knife sharpener",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "honing rod",
+      "aliases": [
+        "honing steel"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "whetstone",
+      "aliases": [
+        "sharpening stone"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "deba knife",
+      "aliases": [
+        "deba bocho",
+        "deba bōchō"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "yanagiba knife",
+      "aliases": [
+        "yanagiba",
+        "yanagi ba"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "usuba knife",
+      "aliases": [
+        "usuba"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "gyuto knife",
+      "aliases": [
+        "gyuto",
+        "gyūtō"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cheese slicer",
+      "aliases": [
+        "cheese plane"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cheese wire",
+      "aliases": [
+        "cheese cutting wire"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cheese knife",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "crinkle cutter",
+      "aliases": [
+        "crinkle knife",
+        "wavy cutter"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "clam knife",
+      "aliases": [
+        "clam shucking knife"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "channel knife",
+      "aliases": [
+        "citrus channel knife"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cooking spoon",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "carving fork",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "wooden spoon",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "slotted spoon",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ladle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "slotted ladle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "turner",
+      "aliases": [
+        "flipper"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "fish spatula",
+      "aliases": [
+        "fish slice"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "flexible spatula",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cooking tongs",
+      "aliases": [
+        "kitchen tongs"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "whisk",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "flat whisk",
+      "aliases": [
+        "roux whisk"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "rotary egg beater",
+      "aliases": [
+        "manual egg beater"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "spider strainer",
+      "aliases": [
+        "spider skimmer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "mesh skimmer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "potato masher",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "potato ricer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "food mill",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "mortar and pestle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "box grater",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "rasp grater",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "rotary cheese grater",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "nutmeg grater",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "zester",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "citrus reamer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "citrus press",
+      "aliases": [
+        "lemon squeezer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "apple corer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pineapple corer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "apple slicer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cherry pitter",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "melon baller",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice cream scoop",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "portion scoop",
+      "aliases": [
+        "cookie scoop",
+        "disher"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "spaghetti server",
+      "aliases": [
+        "spaghetti spoon",
+        "pasta server",
+        "pasta fork"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "egg slicer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "egg separator",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "garlic press",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "garlic peeler",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "meat tenderizer",
+      "aliases": [
+        "meat mallet"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "vegetable spiralizer",
+      "aliases": [
+        "spiralizer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "nutcracker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "funnel",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "can opener",
+      "aliases": [
+        "tin opener"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "bottle opener",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "corkscrew",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "jar opener",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "baster",
+      "aliases": [
+        "turkey baster"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "marinade injector",
+      "aliases": [
+        "meat injector"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "oil sprayer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fat separator",
+      "aliases": [
+        "gravy separator"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pastry brush",
+      "aliases": [
+        "basting brush"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "bench scraper",
+      "aliases": [
+        "bench knife"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "bowl scraper",
+      "aliases": [
+        "flexible dough scraper"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "wok spatula",
+      "aliases": [
+        "wok turner"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sausage stuffer",
+      "aliases": [
+        "sausage filler"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "jerky gun",
+      "aliases": [
+        "jerky extruder"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "burger press",
+      "aliases": [
+        "hamburger press",
+        "patty press"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "ham press",
+      "aliases": [
+        "ham mold",
+        "ham mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "larding needle",
+      "aliases": [
+        "larding pin"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "fish-bone tweezers",
+      "aliases": [
+        "fish bone tweezers",
+        "pin-bone tweezers"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "seafood cracker",
+      "aliases": [
+        "shellfish cracker",
+        "lobster cracker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "plating tweezers",
+      "aliases": [
+        "culinary tweezers",
+        "chef tweezers"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sauce squeeze bottle",
+      "aliases": [
+        "squeeze bottle",
+        "sauce bottle"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pepper mill",
+      "aliases": [
+        "pepper grinder"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "French fry cutter",
+      "aliases": [
+        "French fry press"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "coconut scraper",
+      "aliases": [
+        "coconut grater"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "meat shredding claws",
+      "aliases": [
+        "meat claws",
+        "pulled pork claws"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "mixing bowl",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "heatproof bowl",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "colander",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fine-mesh sieve",
+      "aliases": [
+        "fine-mesh strainer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "drum sieve",
+      "aliases": [
+        "tamis"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "chinois",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "flour sifter",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "salad spinner",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "vegetable brush",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "nut milk bag",
+      "aliases": [
+        "nut-milk bag"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "jelly straining stand",
+      "aliases": [
+        "jelly bag stand"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "kitchen scale",
+      "aliases": [
+        "kitchen scales"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "precision scale",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "measuring jug",
+      "aliases": [
+        "measuring pitcher"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "measuring cup",
+      "aliases": [
+        "measuring cups"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "measuring spoon",
+      "aliases": [
+        "measuring spoons"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "instant-read thermometer",
+      "aliases": [
+        "instant read thermometer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "leave-in probe thermometer",
+      "aliases": [
+        "oven-safe probe thermometer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "oven thermometer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "refrigerator thermometer",
+      "aliases": [
+        "fridge thermometer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "candy thermometer",
+      "aliases": [
+        "sugar thermometer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "infrared thermometer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "kitchen timer",
+      "aliases": [
+        "cooking timer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pastry ruler",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "food pH meter",
+      "aliases": [
+        "food pH tester"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "Brix refractometer",
+      "aliases": [
+        "sugar refractometer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "saucepan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "stockpot",
+      "aliases": [
+        "stock pot"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "frying pan",
+      "aliases": [
+        "frypan",
+        "skillet"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "nonstick frying pan",
+      "aliases": [
+        "non-stick frying pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cast-iron skillet",
+      "aliases": [
+        "cast iron frying pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sauté pan",
+      "aliases": [
+        "saute pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "saucier",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "wok",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "griddle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "grill pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "Dutch oven",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "braiser",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "roasting pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "roasting rack",
+      "aliases": [
+        "roasting pan rack"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "baking dish",
+      "aliases": [
+        "casserole dish"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "stovetop pressure cooker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "double boiler",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "bain-marie",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "frying basket",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "egg poacher",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "egg ring",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "steaming rack",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "steamer basket",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "bamboo steamer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fish kettle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "preserving pan",
+      "aliases": [
+        "jam pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "fondue pot",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "crepe pan",
+      "aliases": [
+        "crêpe pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "omelet pan",
+      "aliases": [
+        "omelette pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "paella pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "tagine",
+      "aliases": [
+        "tajine"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "karahi",
+      "aliases": [
+        "kadai"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "tawa",
+      "aliases": [
+        "tava"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "comal",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "donabe",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "dolsot",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "tamagoyaki pan",
+      "aliases": [
+        "Japanese omelet pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cataplana",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "clay cooking pot",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "divided hot pot",
+      "aliases": [
+        "divided hotpot",
+        "split hot pot"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "ttukbaegi",
+      "aliases": [
+        "ddukbaegi"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "handi",
+      "aliases": [
+        "handi pot"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "kazan",
+      "aliases": [
+        "kazan cauldron"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "steam juicer",
+      "aliases": [
+        "steam juice extractor"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "baking sheet",
+      "aliases": [
+        "baking tray",
+        "sheet pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cookie sheet",
+      "aliases": [
+        "rimless baking sheet"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cake pan",
+      "aliases": [
+        "cake tin"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "round cake pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "square cake pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "rectangular cake pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "loaf pan",
+      "aliases": [
+        "loaf tin",
+        "bread pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "muffin pan",
+      "aliases": [
+        "muffin tin",
+        "cupcake pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "mini muffin pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "springform pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "Bundt pan",
+      "aliases": [
+        "Bundt cake pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "tube pan",
+      "aliases": [
+        "angel food cake pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "tart pan",
+      "aliases": [
+        "tart tin",
+        "quiche tin"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pie dish",
+      "aliases": [
+        "pie plate",
+        "pie pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "soufflé dish",
+      "aliases": [
+        "souffle dish"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "ramekin",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pudding basin",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pizza pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pizza screen",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "baking stone",
+      "aliases": [
+        "pizza stone"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "baking steel",
+      "aliases": [
+        "pizza steel"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cooling rack",
+      "aliases": [
+        "wire cooling rack"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "silicone baking mat",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "bread cloche",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "proofing basket",
+      "aliases": [
+        "banneton",
+        "bread proofing basket"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "baker's couche",
+      "aliases": [
+        "proofing cloth"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "bread lame",
+      "aliases": [
+        "lame"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "rolling pin",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pastry mat",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pastry board",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pastry blender",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pastry docker",
+      "aliases": [
+        "dough docker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "dough whisk",
+      "aliases": [
+        "Danish dough whisk"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "chocolate mold",
+      "aliases": [
+        "chocolate mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "gelatin mold",
+      "aliases": [
+        "jelly mold",
+        "jelly mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pastry wheel",
+      "aliases": [
+        "dough wheel"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cookie cutter",
+      "aliases": [
+        "biscuit cutter"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cookie press",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "piping bag",
+      "aliases": [
+        "pastry bag"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "piping tip",
+      "aliases": [
+        "piping nozzle",
+        "pastry tip"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "offset spatula",
+      "aliases": [
+        "offset palette knife"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cake leveler",
+      "aliases": [
+        "cake leveller"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cake ring",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cake decorating turntable",
+      "aliases": [
+        "cake turntable"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "icing smoother",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cake board",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pie weights",
+      "aliases": [
+        "baking beans"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pie bird",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "proofing box",
+      "aliases": [
+        "dough proofer",
+        "bread proofer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "Pullman loaf pan",
+      "aliases": [
+        "Pullman pan",
+        "pain de mie pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "madeleine pan",
+      "aliases": [
+        "madeleine mold",
+        "madeleine mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "financier mold",
+      "aliases": [
+        "financier mould",
+        "financier pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "canelé mold",
+      "aliases": [
+        "canele mold",
+        "canelé mould",
+        "cannele mold"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "brioche mold",
+      "aliases": [
+        "brioche mould",
+        "brioche tin"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "popover pan",
+      "aliases": [
+        "popover tin"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "baguette pan",
+      "aliases": [
+        "baguette tray"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cannoli tube",
+      "aliases": [
+        "cannoli mold",
+        "cannoli mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cream horn mold",
+      "aliases": [
+        "cream horn mould",
+        "cream horn cone"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "mooncake mold",
+      "aliases": [
+        "mooncake mould",
+        "mooncake press"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "maamoul mold",
+      "aliases": [
+        "maamoul mould",
+        "maamoul press"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cookie stamp",
+      "aliases": [
+        "biscuit stamp"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pizzelle iron",
+      "aliases": [
+        "pizzelle maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "rosette iron",
+      "aliases": [
+        "rosette mold",
+        "rosette mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "chocolate dipping fork",
+      "aliases": [
+        "confectionery dipping fork"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "confectionery guitar cutter",
+      "aliases": [
+        "guitar cutter",
+        "ganache guitar cutter"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "piston funnel",
+      "aliases": [
+        "confectionery funnel"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "doughnut pan",
+      "aliases": [
+        "donut pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "doughnut cutter",
+      "aliases": [
+        "donut cutter"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "tart ring",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pie crust shield",
+      "aliases": [
+        "pie crust protector"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pie crimper",
+      "aliases": [
+        "pie crust crimper"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cake lifter",
+      "aliases": [
+        "cake lifting spatula"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "flower nail",
+      "aliases": [
+        "icing flower nail"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice pop mold",
+      "aliases": [
+        "ice pop mould",
+        "popsicle mold",
+        "popsicle mould",
+        "ice lolly mold",
+        "ice lolly mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice cream cone roller",
+      "aliases": [
+        "waffle cone roller"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "crepe spreader",
+      "aliases": [
+        "crêpe spreader"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "blender",
+      "aliases": [
+        "countertop blender"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "immersion blender",
+      "aliases": [
+        "stick blender",
+        "hand blender"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "food processor",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "mini food chopper",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "stand mixer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "hand mixer",
+      "aliases": [
+        "handheld mixer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "spice grinder",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "coffee grinder",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "grain mill",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "wet grinder",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "meat grinder",
+      "aliases": [
+        "mincer",
+        "meat mincer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "meat slicer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "juicer",
+      "aliases": [
+        "juice extractor"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric kettle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "rice cooker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric egg cooker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "slow cooker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "multicooker",
+      "aliases": [
+        "multi-cooker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric pressure cooker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "air fryer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "deep fryer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "toaster",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "waffle maker",
+      "aliases": [
+        "waffle iron"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sandwich toaster",
+      "aliases": [
+        "toastie maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "panini press",
+      "aliases": [
+        "sandwich press"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "crepe maker",
+      "aliases": [
+        "crêpe maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "popcorn maker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice cream maker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "food dehydrator",
+      "aliases": [
+        "dehydrator"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "yogurt maker",
+      "aliases": [
+        "yoghurt maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "soy milk maker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "bread machine",
+      "aliases": [
+        "breadmaker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sous vide immersion circulator",
+      "aliases": [
+        "sous-vide circulator"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "vacuum sealer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric food steamer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric griddle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric skillet",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric grill",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "milk frother",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "dough sheeter",
+      "aliases": [
+        "pastry sheeter"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "chocolate tempering machine",
+      "aliases": [
+        "chocolate temperer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "electric roti maker",
+      "aliases": [
+        "electric chapati maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "chamber vacuum sealer",
+      "aliases": [
+        "chamber sealer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "freeze dryer",
+      "aliases": [
+        "food freeze dryer"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "frozen dessert processor",
+      "aliases": [
+        "frozen-base dessert processor"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "raclette grill",
+      "aliases": [
+        "raclette maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "mochi maker",
+      "aliases": [
+        "mochi machine"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "thermal cooker",
+      "aliases": [
+        "retained-heat cooker",
+        "retained heat cooker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cotton candy machine",
+      "aliases": [
+        "cotton candy maker",
+        "candy floss machine"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "chocolate melanger",
+      "aliases": [
+        "chocolate mélangeur"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "oven",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "convection oven",
+      "aliases": [
+        "fan oven"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "microwave oven",
+      "aliases": [
+        "microwave"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "toaster oven",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "steam oven",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "combi steam oven",
+      "aliases": [
+        "combination steam oven"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cooktop",
+      "aliases": [
+        "hob"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "induction cooktop",
+      "aliases": [
+        "induction hob"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "portable burner",
+      "aliases": [
+        "portable hot plate"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pizza oven",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "broiler",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "barbecue grill",
+      "aliases": [
+        "BBQ grill"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "smoker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "camping stove",
+      "aliases": [
+        "camp stove"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "tandoor",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "kitchen torch",
+      "aliases": [
+        "cooking torch",
+        "culinary blowtorch"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "refrigerator",
+      "aliases": [
+        "fridge"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "freezer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "sugar-work heat lamp",
+      "aliases": [
+        "sugar work heat lamp",
+        "sugar lamp"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pasta machine",
+      "aliases": [
+        "pasta maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pasta drying rack",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ravioli stamp",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ravioli mold",
+      "aliases": [
+        "ravioli mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pizza cutter",
+      "aliases": [
+        "pizza wheel"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pizza peel",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "tortilla press",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "dumpling press",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "rice paddle",
+      "aliases": [
+        "shamoji"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cooking chopsticks",
+      "aliases": [
+        "saibashi"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sushi rolling mat",
+      "aliases": [
+        "makisu",
+        "bamboo sushi mat"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sushi press",
+      "aliases": [
+        "oshizushi mold"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sushi rice tub",
+      "aliases": [
+        "hangiri",
+        "sushi mixing tub"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "onigiri mold",
+      "aliases": [
+        "onigiri mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "idli stand",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "idli steamer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "appam pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "takoyaki pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "poffertjes pan",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "aebleskiver pan",
+      "aliases": [
+        "ebelskiver pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "couscous steamer",
+      "aliases": [
+        "couscoussier"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "suribachi",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "molcajete",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "metate",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "pasta extruder",
+      "aliases": [
+        "pasta press"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "gnocchi board",
+      "aliases": [
+        "gnocchi paddle"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "spaetzle maker",
+      "aliases": [
+        "spätzle maker",
+        "spaetzle grater"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "puttu steamer",
+      "aliases": [
+        "puttu maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sev press",
+      "aliases": [
+        "sev maker",
+        "sev sancha"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "string hopper press",
+      "aliases": [
+        "idiyappam press",
+        "string hopper maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "modak mold",
+      "aliases": [
+        "modak mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "paniyaram pan",
+      "aliases": [
+        "appe pan",
+        "kuzhi paniyaram pan"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "oroshigane",
+      "aliases": [
+        "oroshiki"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "asanka",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "spaghetti chitarra",
+      "aliases": [
+        "pasta chitarra",
+        "chitarra pasta cutter"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "churro press",
+      "aliases": [
+        "churro maker",
+        "churros press"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "drip coffee maker",
+      "aliases": [
+        "filter coffee maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "espresso machine",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "French press",
+      "aliases": [
+        "cafetiere",
+        "cafetière"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "moka pot",
+      "aliases": [
+        "stovetop espresso pot",
+        "stovetop espresso maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pour-over coffee dripper",
+      "aliases": [
+        "pour over coffee dripper"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "coffee percolator",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "gooseneck kettle",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "teapot",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "tea infuser",
+      "aliases": [
+        "tea ball"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "tea strainer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "matcha whisk",
+      "aliases": [
+        "chasen"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "milk frothing pitcher",
+      "aliases": [
+        "milk steaming pitcher"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "espresso tamper",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "espresso knock box",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cocktail shaker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "bar spoon",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "jigger",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "muddler",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cocktail strainer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice crusher",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice cube tray",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice scoop",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice pick",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cream whipper",
+      "aliases": [
+        "whipping siphon",
+        "whipped cream dispenser"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "soda maker",
+      "aliases": [
+        "carbonator"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "Turkish coffee pot",
+      "aliases": [
+        "cezve",
+        "cezve coffee pot"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "Vietnamese coffee filter",
+      "aliases": [
+        "phin",
+        "phin filter"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "stovetop kettle",
+      "aliases": [
+        "stovetop tea kettle",
+        "stove top kettle"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "ice shaver",
+      "aliases": [
+        "ice shaving machine",
+        "shaved ice maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "soda siphon",
+      "aliases": [
+        "soda syphon",
+        "seltzer siphon"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "coffee siphon",
+      "aliases": [
+        "coffee syphon",
+        "siphon coffee maker",
+        "vacuum coffee maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cold brew coffee maker",
+      "aliases": [
+        "cold brew maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "food storage container",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "canning jar",
+      "aliases": [
+        "preserving jar",
+        "Mason jar"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "fermentation jar",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fermentation crock",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fermentation airlock",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "fermentation weight",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "water-bath canner",
+      "aliases": [
+        "water bath canner"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pressure canner",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "canning rack",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "jar lifter",
+      "aliases": [
+        "canning tongs"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "canning funnel",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "canning bubble remover",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "magnetic lid lifter",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "salad dressing shaker",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "butter mold",
+      "aliases": [
+        "butter mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cheese press",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cheese mold",
+      "aliases": [
+        "cheese mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "curd knife",
+      "aliases": [
+        "cheese curd knife"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "butter churn",
+      "aliases": [
+        "butter maker"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "tofu press",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "tofu mold",
+      "aliases": [
+        "tofu mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "sprouting jar",
+      "aliases": [
+        "seed sprouting jar"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "fermentation tamper",
+      "aliases": [
+        "vegetable tamper",
+        "sauerkraut tamper"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "terrine mold",
+      "aliases": [
+        "terrine mould"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "oven mitt",
+      "aliases": [
+        "oven glove"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pot holder",
+      "aliases": [
+        "potholder"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "trivet",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "splatter screen",
+      "aliases": [
+        "splatter guard"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "pot lid",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "stovetop heat diffuser",
+      "aliases": [
+        "simmering plate"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "kitchen towel",
+      "aliases": [
+        "tea towel"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "apron",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "cut-resistant glove",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "heat-resistant cooking glove",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "spoon rest",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "skewer",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "grill basket",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "rotisserie spit",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "grill brush",
+      "aliases": [],
+      "scope": "equipment"
+    },
+    {
+      "label": "wok ring",
+      "aliases": [
+        "wok support ring"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "charcoal chimney starter",
+      "aliases": [
+        "chimney starter",
+        "charcoal chimney"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "cold-smoke generator",
+      "aliases": [
+        "cold smoke generator"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "handheld smoking gun",
+      "aliases": [
+        "smoking gun",
+        "food smoking gun"
+      ],
+      "scope": "equipment"
+    },
+    {
+      "label": "parchment paper",
+      "aliases": [
+        "baking paper"
+      ],
+      "scope": "related_supply"
+    },
+    {
+      "label": "aluminium foil",
+      "aliases": [
+        "aluminum foil",
+        "tin foil"
+      ],
+      "scope": "related_supply"
+    },
+    {
+      "label": "plastic wrap",
+      "aliases": [
+        "cling film",
+        "cling wrap"
+      ],
+      "scope": "related_supply"
+    },
+    {
+      "label": "cheesecloth",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "kitchen twine",
+      "aliases": [
+        "butcher's twine",
+        "cooking twine"
+      ],
+      "scope": "related_supply"
+    },
+    {
+      "label": "butcher paper",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "wax paper",
+      "aliases": [
+        "waxed paper"
+      ],
+      "scope": "related_supply"
+    },
+    {
+      "label": "cupcake liner",
+      "aliases": [
+        "muffin liner",
+        "cupcake case"
+      ],
+      "scope": "related_supply"
+    },
+    {
+      "label": "coffee filter",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "vacuum sealer bag",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "freezer bag",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "roasting bag",
+      "aliases": [
+        "oven bag"
+      ],
+      "scope": "related_supply"
+    },
+    {
+      "label": "paper towel",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "toothpick",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "smoking wood chips",
+      "aliases": [],
+      "scope": "related_supply"
+    },
+    {
+      "label": "grilling plank",
+      "aliases": [],
+      "scope": "related_supply"
+    }
+  ],
+  "ambiguous_search_terms": {
+    "spatula": [
+      "flexible spatula",
+      "turner",
+      "offset spatula",
+      "fish spatula"
+    ],
+    "mixer": [
+      "stand mixer",
+      "hand mixer"
+    ],
+    "herb chopper": [
+      "mezzaluna",
+      "mini food chopper"
+    ],
+    "cleaver": [
+      "meat cleaver",
+      "Chinese vegetable cleaver"
+    ],
+    "pressure cooker": [
+      "stovetop pressure cooker",
+      "electric pressure cooker"
+    ],
+    "meat thermometer": [
+      "instant-read thermometer",
+      "leave-in probe thermometer"
+    ],
+    "pastry cutter": [
+      "pastry blender",
+      "pastry wheel",
+      "cookie cutter"
+    ],
+    "dough scraper": [
+      "bench scraper",
+      "bowl scraper"
+    ],
+    "grater": [
+      "box grater",
+      "rasp grater",
+      "rotary cheese grater"
+    ],
+    "baking mat": [
+      "silicone baking mat",
+      "pastry mat"
+    ],
+    "sandwich maker": [
+      "sandwich toaster",
+      "panini press"
+    ],
+    "mouli": [
+      "food mill",
+      "rotary cheese grater"
+    ],
+    "kettle": [
+      "electric kettle",
+      "stovetop kettle",
+      "gooseneck kettle"
+    ],
+    "hand beater": [
+      "hand mixer",
+      "rotary egg beater"
+    ],
+    "ravioli press": [
+      "ravioli stamp",
+      "ravioli mold"
+    ],
+    "skimmer": [
+      "mesh skimmer",
+      "spider strainer",
+      "slotted ladle"
+    ],
+    "strainer": [
+      "fine-mesh sieve",
+      "colander",
+      "chinois",
+      "cocktail strainer",
+      "tea strainer"
+    ],
+    "pastry scraper": [
+      "bench scraper",
+      "bowl scraper"
+    ],
+    "silicone spatula": [
+      "flexible spatula",
+      "turner"
+    ]
+  }
+}

@@ -1,8 +1,14 @@
 # Equipment vocabulary research
 
-This stage extracts and evaluates candidates. It does not create an equipment
-seed, assign Noms vocabulary UUIDs, approve aliases, or write to a database.
+This research stage extracts and evaluates candidates. It does not create a
+database seed, assign Noms vocabulary UUIDs, or write to a database.
 See the [dated evaluation](../../docs/equipment-vocabulary-evaluation-2026-10-28.md).
+
+The approved manual draft has since been promoted into the maintained runtime
+catalog at `data/vocabulary/equipment.json` for local recipe autocomplete.
+See [equipment autocomplete](../../docs/equipment-autocomplete.md) for runtime
+behavior, maintenance and verification. The research files below remain the
+historical review snapshot rather than the source for future runtime edits.
 
 ## Manual curation alternative
 
