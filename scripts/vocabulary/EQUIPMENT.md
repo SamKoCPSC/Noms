@@ -7,11 +7,18 @@ See the [dated evaluation](../../docs/equipment-vocabulary-evaluation-2026-10-28
 ## Manual curation alternative
 
 `data/vocabulary/research/equipment/manual-equipment-draft.json` is a separate,
-manually authored review draft: 323 equipment names across twelve categories,
-16 separately scoped kitchen supplies, and 158 proposed alternative names.
+manually authored review draft: 381 equipment names across twelve categories,
+16 separately scoped kitchen supplies, and 244 proposed alternative names.
 It covers everyday equipment and practical baking, beverage, preservation and
 regional cooking tools. It replaces neither the pinned research evidence nor a
 production seed. Source entity mappings and Noms UUIDs are intentionally absent.
+
+The specialist expansion adds 58 entries and 86 aliases, including shaped
+bakeware, chocolate/confectionery tools, regional cooking tools, cheesemaking,
+charcuterie, smoking, precision measurement and plating equipment. Functional
+forms such as pasta extruders and chamber vacuum sealers retain separate labels
+from generic pasta machines and vacuum sealers. Advanced tools are identified
+in their notes. The earlier regional-name alias-review queue remains separate.
 
 Categories organize review only. The draft keeps functional distinctions such
 as stand/hand mixers, blenders/immersion blenders, pressure canners/pressure

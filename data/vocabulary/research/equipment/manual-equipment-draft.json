@@ -249,6 +249,45 @@
       "note": ""
     },
     {
+      "label": "deba knife",
+      "aliases": [
+        "deba bocho",
+        "deba bōchō"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Thick Japanese knife commonly used in fish preparation."
+    },
+    {
+      "label": "yanagiba knife",
+      "aliases": [
+        "yanagiba",
+        "yanagi ba"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Long slicing knife for sashimi preparation."
+    },
+    {
+      "label": "usuba knife",
+      "aliases": [
+        "usuba"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Traditional single-bevel Japanese vegetable knife."
+    },
+    {
+      "label": "gyuto knife",
+      "aliases": [
+        "gyuto",
+        "gyūtō"
+      ],
+      "category": "Knives and cutting tools",
+      "scope": "equipment",
+      "note": "Japanese chef-knife form."
+    },
+    {
       "label": "cooking spoon",
       "aliases": [],
       "category": "Hand utensils and preparation tools",
@@ -658,6 +697,102 @@
       "note": "Flexible tool shaped to scrape dough or batter from bowls."
     },
     {
+      "label": "wok spatula",
+      "aliases": [
+        "wok turner"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Curved-edge utensil shaped for working in a wok."
+    },
+    {
+      "label": "sausage stuffer",
+      "aliases": [
+        "sausage filler"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Fills sausage casings; not supplied by a grinder alone."
+    },
+    {
+      "label": "jerky gun",
+      "aliases": [
+        "jerky extruder"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Extrudes seasoned ground meat into strips or sticks."
+    },
+    {
+      "label": "burger press",
+      "aliases": [
+        "hamburger press",
+        "patty press"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Forms patties with controlled shape and thickness."
+    },
+    {
+      "label": "ham press",
+      "aliases": [
+        "ham mold",
+        "ham mould"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Holds and compresses meat in a formed mold."
+    },
+    {
+      "label": "larding needle",
+      "aliases": [
+        "larding pin"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Pulls strips of fat through meat."
+    },
+    {
+      "label": "fish-bone tweezers",
+      "aliases": [
+        "fish bone tweezers",
+        "pin-bone tweezers"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Grips and removes fish pin bones."
+    },
+    {
+      "label": "seafood cracker",
+      "aliases": [
+        "shellfish cracker",
+        "lobster cracker"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Cracks hard crustacean shells."
+    },
+    {
+      "label": "plating tweezers",
+      "aliases": [
+        "culinary tweezers",
+        "chef tweezers"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Fine tips for precise food handling and arrangement."
+    },
+    {
+      "label": "sauce squeeze bottle",
+      "aliases": [
+        "squeeze bottle",
+        "sauce bottle"
+      ],
+      "category": "Hand utensils and preparation tools",
+      "scope": "equipment",
+      "note": "Controlled dispensing for sauces, oils and plating."
+    },
+    {
       "label": "mixing bowl",
       "aliases": [],
       "category": "Bowls, strainers and washing",
@@ -723,6 +858,24 @@
       "category": "Bowls, strainers and washing",
       "scope": "equipment",
       "note": ""
+    },
+    {
+      "label": "nut milk bag",
+      "aliases": [
+        "nut-milk bag"
+      ],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": "Reusable fine straining bag for nut and seed milks."
+    },
+    {
+      "label": "jelly straining stand",
+      "aliases": [
+        "jelly bag stand"
+      ],
+      "category": "Bowls, strainers and washing",
+      "scope": "equipment",
+      "note": "Supports a hanging straining bag for gravity drainage."
     },
     {
       "label": "kitchen scale",
@@ -832,6 +985,24 @@
       "category": "Measuring and temperature tools",
       "scope": "equipment",
       "note": ""
+    },
+    {
+      "label": "food pH meter",
+      "aliases": [
+        "food pH tester"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Measures food acidity with a suitable food probe."
+    },
+    {
+      "label": "Brix refractometer",
+      "aliases": [
+        "sugar refractometer"
+      ],
+      "category": "Measuring and temperature tools",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Measures the refractive-index-based Brix of suitable solutions."
     },
     {
       "label": "saucepan",
@@ -1132,6 +1303,16 @@
       "category": "Pots, pans and stovetop cookware",
       "scope": "equipment",
       "note": ""
+    },
+    {
+      "label": "divided hot pot",
+      "aliases": [
+        "divided hotpot",
+        "split hot pot"
+      ],
+      "category": "Pots, pans and stovetop cookware",
+      "scope": "equipment",
+      "note": "Cooking pot with separate broth compartments."
     },
     {
       "label": "baking sheet",
@@ -1539,6 +1720,171 @@
       "note": ""
     },
     {
+      "label": "Pullman loaf pan",
+      "aliases": [
+        "Pullman pan",
+        "pain de mie pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Lidded, straight-sided loaf pan for pain de mie."
+    },
+    {
+      "label": "madeleine pan",
+      "aliases": [
+        "madeleine mold",
+        "madeleine mould"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Shell-shaped wells for madeleines."
+    },
+    {
+      "label": "financier mold",
+      "aliases": [
+        "financier mould",
+        "financier pan"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Small molds for financier cakes."
+    },
+    {
+      "label": "canelé mold",
+      "aliases": [
+        "canele mold",
+        "canelé mould",
+        "cannele mold"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Deep fluted molds for canelés."
+    },
+    {
+      "label": "brioche mold",
+      "aliases": [
+        "brioche mould",
+        "brioche tin"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Fluted molds for shaped brioche."
+    },
+    {
+      "label": "popover pan",
+      "aliases": [
+        "popover tin"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Deep, separated cups for popovers."
+    },
+    {
+      "label": "baguette pan",
+      "aliases": [
+        "baguette tray"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Channels that support baguettes during baking."
+    },
+    {
+      "label": "cannoli tube",
+      "aliases": [
+        "cannoli mold",
+        "cannoli mould"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Hollow forms for frying cannoli shells."
+    },
+    {
+      "label": "cream horn mold",
+      "aliases": [
+        "cream horn mould",
+        "cream horn cone"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Conical forms for pastry horns."
+    },
+    {
+      "label": "mooncake mold",
+      "aliases": [
+        "mooncake mould",
+        "mooncake press"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Shapes and imprints filled mooncakes."
+    },
+    {
+      "label": "maamoul mold",
+      "aliases": [
+        "maamoul mould",
+        "maamoul press"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Shapes and patterns filled maamoul pastries."
+    },
+    {
+      "label": "cookie stamp",
+      "aliases": [
+        "biscuit stamp"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Imprints dough without cutting or extruding it."
+    },
+    {
+      "label": "pizzelle iron",
+      "aliases": [
+        "pizzelle maker"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Heated patterned plates for thin pizzelle."
+    },
+    {
+      "label": "rosette iron",
+      "aliases": [
+        "rosette mold",
+        "rosette mould"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Patterned metal form dipped into batter for frying."
+    },
+    {
+      "label": "chocolate dipping fork",
+      "aliases": [
+        "confectionery dipping fork"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Supports confectionery during coating and draining."
+    },
+    {
+      "label": "confectionery guitar cutter",
+      "aliases": [
+        "guitar cutter",
+        "ganache guitar cutter"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Wire frame for uniform cuts in soft ganache or fruit-jelly slabs."
+    },
+    {
+      "label": "piston funnel",
+      "aliases": [
+        "confectionery funnel"
+      ],
+      "category": "Bakeware and baking tools",
+      "scope": "equipment",
+      "note": "Valve-controlled dispensing of batter, syrup or fillings."
+    },
+    {
       "label": "blender",
       "aliases": [
         "countertop blender"
@@ -1841,6 +2187,60 @@
       "note": ""
     },
     {
+      "label": "dough sheeter",
+      "aliases": [
+        "pastry sheeter"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Rolls dough to controlled thickness using rollers."
+    },
+    {
+      "label": "chocolate tempering machine",
+      "aliases": [
+        "chocolate temperer"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Controls heating and cooling for tempering chocolate."
+    },
+    {
+      "label": "electric roti maker",
+      "aliases": [
+        "electric chapati maker"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Heated press that flattens and cooks flatbread."
+    },
+    {
+      "label": "chamber vacuum sealer",
+      "aliases": [
+        "chamber sealer"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Specialized sealer that evacuates a chamber around the bag."
+    },
+    {
+      "label": "freeze dryer",
+      "aliases": [
+        "food freeze dryer"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Removes water by freeze-drying rather than ordinary hot-air drying."
+    },
+    {
+      "label": "frozen dessert processor",
+      "aliases": [
+        "frozen-base dessert processor"
+      ],
+      "category": "Countertop appliances",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Processes frozen bases; distinct from a conventional churn-style ice cream maker."
+    },
+    {
       "label": "oven",
       "aliases": [],
       "category": "Ovens, heating and refrigeration",
@@ -1986,6 +2386,16 @@
       "category": "Ovens, heating and refrigeration",
       "scope": "equipment",
       "note": ""
+    },
+    {
+      "label": "sugar-work heat lamp",
+      "aliases": [
+        "sugar work heat lamp",
+        "sugar lamp"
+      ],
+      "category": "Ovens, heating and refrigeration",
+      "scope": "equipment",
+      "note": "Advanced specialist equipment. Maintains workability during pulled or blown sugar work."
     },
     {
       "label": "pasta machine",
@@ -2176,6 +2586,53 @@
       "category": "Pasta, dumpling and regional preparation tools",
       "scope": "equipment",
       "note": ""
+    },
+    {
+      "label": "pasta extruder",
+      "aliases": [
+        "pasta press"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Pushes dough through dies; distinct from rolling pasta sheets."
+    },
+    {
+      "label": "gnocchi board",
+      "aliases": [
+        "gnocchi paddle"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Ridged board for shaping gnocchi and similar pasta."
+    },
+    {
+      "label": "spaetzle maker",
+      "aliases": [
+        "spätzle maker",
+        "spaetzle grater"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Forms small dough pieces directly over a cooking pot."
+    },
+    {
+      "label": "puttu steamer",
+      "aliases": [
+        "puttu maker"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Steams layered rice-flour mixtures in a cylindrical chamber."
+    },
+    {
+      "label": "sev press",
+      "aliases": [
+        "sev maker",
+        "sev sancha"
+      ],
+      "category": "Pasta, dumpling and regional preparation tools",
+      "scope": "equipment",
+      "note": "Extrudes dough through plates for sev and related snacks."
     },
     {
       "label": "drip coffee maker",
@@ -2371,6 +2828,26 @@
       "note": ""
     },
     {
+      "label": "Turkish coffee pot",
+      "aliases": [
+        "cezve",
+        "cezve coffee pot"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": "Small long-handled pot, commonly called a cezve."
+    },
+    {
+      "label": "Vietnamese coffee filter",
+      "aliases": [
+        "phin",
+        "phin filter"
+      ],
+      "category": "Coffee, tea and drink preparation",
+      "scope": "equipment",
+      "note": "Phin-style metal coffee filter and brewing chamber."
+    },
+    {
       "label": "food storage container",
       "aliases": [],
       "category": "Preserving and food storage",
@@ -2482,6 +2959,40 @@
       "category": "Preserving and food storage",
       "scope": "equipment",
       "note": ""
+    },
+    {
+      "label": "cheese press",
+      "aliases": [],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Applies pressure to molded curds."
+    },
+    {
+      "label": "cheese mold",
+      "aliases": [
+        "cheese mould"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Draining form for shaping cheese."
+    },
+    {
+      "label": "curd knife",
+      "aliases": [
+        "cheese curd knife"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Long blade for cutting set curds."
+    },
+    {
+      "label": "butter churn",
+      "aliases": [
+        "butter maker"
+      ],
+      "category": "Preserving and food storage",
+      "scope": "equipment",
+      "note": "Agitates cream to make butter."
     },
     {
       "label": "oven mitt",
@@ -2597,6 +3108,44 @@
       "category": "Cooking accessories and safety",
       "scope": "equipment",
       "note": ""
+    },
+    {
+      "label": "wok ring",
+      "aliases": [
+        "wok support ring"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": "Supports a round-bottomed wok."
+    },
+    {
+      "label": "charcoal chimney starter",
+      "aliases": [
+        "chimney starter",
+        "charcoal chimney"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": "Container for starting charcoal before transferring it to a grill."
+    },
+    {
+      "label": "cold-smoke generator",
+      "aliases": [
+        "cold smoke generator"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": "Generates smoke separately from the cooking heat source."
+    },
+    {
+      "label": "handheld smoking gun",
+      "aliases": [
+        "smoking gun",
+        "food smoking gun"
+      ],
+      "category": "Cooking accessories and safety",
+      "scope": "equipment",
+      "note": "Applies smoke to prepared food or drinks."
     },
     {
       "label": "parchment paper",
