@@ -330,6 +330,7 @@ pub(crate) mod tests {
                         amount: "1".into(),
                         unit: "cup".into(),
                         name: "beans".into(),
+                        ..Default::default()
                     }],
                     images: vec![
                         images[0].clone(),

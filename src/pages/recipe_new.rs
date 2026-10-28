@@ -224,6 +224,7 @@ pub fn RecipeNew() -> Element {
         if editor
             .ingredients
             .iter()
+            .flat_map(|row| std::iter::once(row).chain(row.substitutes.iter()))
             .any(|row| noms::units::canonicalize(&row.unit).is_err())
         {
             let next_generation = *autosave_generation.peek() + 1;
@@ -336,6 +337,7 @@ pub fn RecipeNew() -> Element {
         {
             if ingredients()
                 .iter()
+                .flat_map(|row| std::iter::once(row).chain(row.substitutes.iter()))
                 .any(|row| noms::units::canonicalize(&row.unit).is_err())
             {
                 error.set(Some(noms::units::INVALID_UNIT.into()));
@@ -659,6 +661,7 @@ pub fn RecipeNew() -> Element {
         let ings = ingredients();
         if ings
             .iter()
+            .flat_map(|row| std::iter::once(row).chain(row.substitutes.iter()))
             .any(|row| noms::units::canonicalize(&row.unit).is_err())
         {
             error.set(Some(noms::units::INVALID_UNIT.into()));
@@ -670,6 +673,19 @@ pub fn RecipeNew() -> Element {
         }
         if ings.iter().all(|i| i.name.trim().is_empty()) {
             error.set(Some("At least one ingredient must have a name".to_string()));
+            return;
+        }
+        if ings.iter().any(|ingredient| {
+            ingredient
+                .substitutes
+                .iter()
+                .any(|substitute| substitute.name.trim().is_empty())
+                || (!ingredient.substitutes.is_empty() && ingredient.name.trim().is_empty())
+        }) {
+            error.set(Some(
+                "Give each ingredient and substitute a name, or remove the empty substitute."
+                    .into(),
+            ));
             return;
         }
 
@@ -927,6 +943,7 @@ pub fn RecipeNew() -> Element {
             amount: String::new(),
             unit: String::new(),
             name: String::new(),
+            ..Default::default()
         });
     };
 
@@ -1250,58 +1267,9 @@ pub fn RecipeNew() -> Element {
                         flex_direction: "column",
                         gap: "var(--space-sm)",
 
-                        for (idx, _ing) in ingredients().iter().enumerate() {
-                            div {
-                                key: "{idx}",
-                                class: "recipe-editor__ingredient-row",
-                                display: "flex",
-                                gap: "var(--space-sm)",
-                                align_items: "center",
-                                // Amount
-                                div {
-                                    style: "width: 70px; flex-shrink: 0;",
-                                    Input {
-                            accessible_name: "Ingredient {idx + 1} amount",
-                                        value: ingredients()[idx].amount.clone(),
-                                        placeholder: "Amt",
-                                        oninput: move |v| {
-                                            ingredients.write()[idx].amount = v;
-                                        },
-                                    }
-                                }
-                                // Unit
-                                div {
-                                    style: "width: 80px; flex-shrink: 0;",
-                                    crate::components::unit_autocomplete::UnitAutocomplete {
-                                        id: "ingredient-unit-{idx}",
-                                        accessible_name: "Ingredient {idx + 1} unit",
-                                        align_end: false,
-                                        value: ingredients()[idx].unit.clone(),
-                                        placeholder: "Unit",
-                                        oninput: move |v| {
-                                            ingredients.write()[idx].unit = v;
-                                        },
-                                    }
-                                }
-                                // Name: suggestions never constrain custom text.
-                                crate::components::ingredient_autocomplete::IngredientAutocomplete {
-                                    index: idx,
-                                    value: ingredients()[idx].name.clone(),
-                                    oninput: move |(name, vocabulary_id)| {
-                                        let mut rows = ingredients.write();
-                                        rows[idx].name = name;
-                                        rows[idx].vocabulary_id = vocabulary_id;
-                                    },
-                                }
-                                // Remove
-                                Button {
-                                    variant: ButtonVariant::Ghost,
-                                    onclick: move |_| {
-                                        ingredients.write().remove(idx);
-                                    },
-                                    span { aria_hidden: "true", "✕" }
-                                        span { class: "sr-only", "Remove item" }
-                                }
+                        for idx in 0..ingredients.read().len() {
+                            super::recipe_ingredient_editor::RecipeIngredientEditor {
+                                key: "{idx}", ingredients, index: idx,
                             }
                         }
 

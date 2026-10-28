@@ -26,6 +26,7 @@ mod recipe_edit;
 mod recipe_editor_form;
 mod recipe_import;
 mod recipe_import_mapping;
+mod recipe_ingredient_editor;
 mod recipe_json_controls;
 mod recipe_new;
 mod recipe_pantry;

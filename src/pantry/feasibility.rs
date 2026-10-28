@@ -102,6 +102,7 @@ mod tests {
             name: name.into(),
             amount: amount.into(),
             unit: unit.into(),
+            ..Default::default()
         }
     }
     fn stock(name: &str, amount: &str, unit: &str, available: bool) -> PantryEntry {
@@ -120,6 +121,23 @@ mod tests {
             position: 0,
             revision: 0,
         }
+    }
+
+    #[test]
+    fn ingredient_options_do_not_change_kitchen_presence_matching_yet() {
+        let mut rice = ingredient("Rice", "1", "cup");
+        rice.optional = true;
+        rice.text_before = "Acme".into();
+        rice.text_after = "rinsed".into();
+        rice.substitutes.push(ingredient("Lentils", "300", "g"));
+        assert_eq!(
+            check_pantry(&[rice.clone()], &[stock("Lentils", "", "", true)]).label(),
+            "Missing ingredients"
+        );
+        assert_eq!(
+            check_pantry(&[rice], &[stock("rice", "", "", true)]).label(),
+            "All ingredients available"
+        );
     }
 
     #[test]

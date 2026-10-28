@@ -147,14 +147,25 @@ pub(crate) mod render {
         if !recipe.ingredients.is_empty() {
             write!(out, "<section class=\"card\"><{section_heading} class=\"section-title\">Ingredients</{section_heading}><ul class=\"ingredients\">").unwrap();
             for ingredient in &recipe.ingredients {
-                let quantity = format!("{} {}", ingredient.amount, ingredient.unit);
                 write!(
                     out,
-                    "<li><span class=\"quantity\">{}</span> {}</li>",
-                    escape(quantity.trim()),
-                    escape(&ingredient.name)
+                    "<li>{}",
+                    escape(&ingredient.display_line(&ingredient.amount))
                 )
                 .unwrap();
+                if !ingredient.substitutes.is_empty() {
+                    out.push_str("<ul>");
+                    for substitute in &ingredient.substitutes {
+                        write!(
+                            out,
+                            "<li>Or {}</li>",
+                            escape(&substitute.display_line(&substitute.amount))
+                        )
+                        .unwrap();
+                    }
+                    out.push_str("</ul>");
+                }
+                out.push_str("</li>");
             }
             out.push_str("</ul></section>");
         }

@@ -296,6 +296,7 @@ mod tests {
             amount: amount.into(),
             unit: unit.into(),
             name: name.into(),
+            ..Default::default()
         })
         .collect();
         editor.instructions = vec![

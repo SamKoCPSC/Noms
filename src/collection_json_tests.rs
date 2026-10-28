@@ -17,6 +17,7 @@ fn snapshot() -> CollectionSnapshot {
             amount: "½".into(),
             unit: "cup".into(),
             name: "beans".into(),
+            ..Default::default()
         }],
         instructions: vec![crate::types::RecipeStep {
             text: "Cook".into(),

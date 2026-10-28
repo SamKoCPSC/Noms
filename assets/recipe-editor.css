@@ -65,3 +65,39 @@
     .recipe-editor__panel { padding: 16px; }
     .recipe-editor__panel h2 { font-size: 23px; }
 }
+
+/* Ingredient identity stays separate from authored wording and alternatives. */
+.recipe-ingredient-editor { min-width: 0; padding: 16px; border: 1px solid var(--border-color); border-radius: 16px; }
+.recipe-ingredient-basic { display: grid; grid-template-columns: minmax(0,1fr) 72px 80px auto auto 44px; align-items: end; gap: 12px; }
+.recipe-ingredient-basic label, .recipe-ingredient-modifiers label { display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--text-secondary); min-width: 0; }
+.recipe-ingredient-basic > *, .recipe-ingredient-name, .recipe-ingredient-basic input, .recipe-ingredient-modifiers input { min-width: 0; width: 100%; }
+.recipe-ingredient-name > label, .recipe-ingredient-unit > label { margin-bottom: 8px; }
+.recipe-ingredient-basic .recipe-ingredient-remove { width: 44px; min-height: 44px; }
+.recipe-ingredient-preview { margin: 6px 0 0; font-size: 13px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.recipe-ingredient-details { margin-top: 4px; min-width: 0; }
+.recipe-ingredient-details > summary { padding-block: 10px; min-height: 44px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.recipe-ingredient-badge { display: inline-block; margin-left: 8px; font-size: 11px; color: var(--accent-ink); }
+.recipe-ingredient-options { display: grid; gap: 8px; padding-top: 8px; }
+.recipe-ingredient-modifier-toggle { display: flex; align-items: center; justify-content: center; gap: 4px; width: auto; min-height: 48px; padding: 0 4px; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; border-radius: 8px; }
+.recipe-ingredient-modifier-toggle:hover { background: var(--neumo-surface); }
+.recipe-ingredient-modifier-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.recipe-ingredient-basic .recipe-ingredient-optional { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; min-height: 48px; width: auto; white-space: nowrap; cursor: pointer; }
+.recipe-ingredient-basic .recipe-ingredient-optional input { width: 20px; height: 20px; accent-color: var(--accent); }
+.recipe-ingredient-modifiers { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.recipe-ingredient-substitutes { display: grid; gap: 8px; padding-top: 4px; }
+.recipe-ingredient-substitutions { border-top: 1px solid var(--border-color); padding-top: 0; }
+.recipe-ingredient-substitute { padding: 10px; border-radius: 14px; background: var(--neumo-surface); box-shadow: var(--elevation-inset-compact); min-width: 0; }
+.recipe-ingredient-substitute h4 { margin: 0 0 6px; font-size: 13px; }
+.recipe-ingredient-substitutes > .btn { justify-self: start; }
+@media(max-width:760px) {
+    .recipe-ingredient-basic { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; gap: 10px; }
+    .recipe-ingredient-name { grid-column: 1; grid-row: 1; }
+    .recipe-ingredient-modifier-toggle { grid-column: 2; grid-row: 1; justify-self: end; }
+    .recipe-ingredient-basic .recipe-ingredient-remove { grid-column: 3; grid-row: 1; justify-self: end; }
+    .recipe-ingredient-amount { grid-column: 1; grid-row: 2; }
+    .recipe-ingredient-unit { grid-column: 2; grid-row: 2; }
+    .recipe-ingredient-optional { grid-column: 3; grid-row: 2; }
+    .recipe-ingredient-modifiers { grid-template-columns: minmax(0,1fr); }
+    .recipe-ingredient-editor { padding: 12px; }
+    .recipe-ingredient-substitute { padding: 10px; }
+}
