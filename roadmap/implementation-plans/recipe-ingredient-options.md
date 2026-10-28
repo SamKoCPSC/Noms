@@ -15,3 +15,9 @@ Recipe details, historical versions, mobile cooking views, session scaling, and 
 Kitchen behavior is intentionally unchanged in this phase: pantry matching still checks every primary ingredient's name, including optional ingredients; alternatives do not satisfy pantry checks. Grocery lists still copy primary names and quantities as before. A later change can explicitly define optional and substitute handling in those workflows.
 
 Validation covers legacy JSON shape, structured export/import, draft/publish validation, immutable history/fork preservation, unchanged pantry matching, and the real create/edit browser workflow at mobile and desktop widths.
+
+The ingredient editor has a local Done/Edit workflow. Done collapses a complete ingredient to its authored display line and substitution count; Edit reopens every field. Complete existing rows start compact, while new or incomplete rows start open. Substitution rows can be confirmed independently. Names and supported units are required to confirm each primary and alternative; quantities retain their existing optional semantics. Confirmation is presentation state, separate from draft saving and publication, and does not change stored JSON. Removing an earlier row cannot apply its confirmation to a different ingredient.
+
+Compact rows place pencil and filled destructive delete icons at the top right. The visible controls are 32px with 44px hit areas and accessible labels; expanded rows use the same delete treatment. Delete inherits the shared danger button styling, including its raised material rim around the inset fill.
+
+Confirmed rows use 6px vertical padding and 6px list gaps, with tighter ingredient panel spacing. Icon controls retain their 44px hit areas.

@@ -101,3 +101,23 @@
     .recipe-ingredient-editor { padding: 12px; }
     .recipe-ingredient-substitute { padding: 10px; }
 }
+
+/* Confirmed ingredients read like a list while keeping edits close at hand. */
+.recipe-editor__ingredients { padding-block: 16px; gap: 12px; }
+/* The list's gap is supplied inline by the editor. */
+.recipe-editor__ingredients > div { row-gap: 6px !important; }
+.recipe-ingredient-editor:has(> .recipe-ingredient-compact),
+.recipe-ingredient-substitute:has(> .recipe-ingredient-compact) { padding-block: 6px; }
+.recipe-ingredient-compact { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.recipe-ingredient-compact-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.recipe-ingredient-compact-text p { margin: 0; font-size: 14px; }
+.recipe-ingredient-compact-text small { display: block; margin-top: 0; font-size: 12px; color: var(--text-secondary); }
+.recipe-ingredient-compact-actions { display: flex; align-items: flex-start; flex-shrink: 0; gap: 12px; }
+.recipe-editor__panel .recipe-ingredient-icon-action { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; border-radius: 8px; }
+/* Keep a 44px hit area around the smaller visible controls. */
+.recipe-ingredient-icon-action::before { content: ""; position: absolute; inset: -6px; }
+.recipe-ingredient-icon-action svg { pointer-events: none; }
+.recipe-ingredient-basic .recipe-ingredient-icon-action { align-self: start; justify-self: end; }
+.recipe-ingredient-confirm-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.recipe-ingredient-confirm-actions > p { flex: 1; min-width: 0; }
+.recipe-ingredient-confirm-actions > button { flex-shrink: 0; }
