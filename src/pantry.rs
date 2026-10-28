@@ -1,4 +1,4 @@
-//! Shared pantry inventory contracts. Authored names and units are never normalized.
+//! Shared pantry inventory contracts; authoring APIs standardize supported units.
 pub mod feasibility;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -37,6 +37,15 @@ pub struct PantryFields {
     pub unit: String,
 }
 impl PantryFields {
+    /// Authoring validation is stricter than reading historical inventory.
+    pub fn validate_input(&self, kind: PantryKind) -> Result<(), String> {
+        self.validate(kind)?;
+        if kind == PantryKind::Ingredient {
+            noms::units::canonicalize(&self.unit).map_err(String::from)?;
+        }
+        Ok(())
+    }
+
     pub fn validate(&self, kind: PantryKind) -> Result<(), String> {
         text(
             &self.name,
@@ -197,6 +206,14 @@ pub struct PantryCreate {
     pub copy: Option<PantryCopy>,
 }
 impl PantryCreate {
+    pub fn validate_input(&self) -> Result<(), String> {
+        self.validate()?;
+        for stock in &self.ingredients {
+            stock.fields.validate_input(PantryKind::Ingredient)?;
+        }
+        Ok(())
+    }
+
     pub fn validate(&self) -> Result<(), String> {
         validate_profile(&self.name, &self.note)?;
         if self.ingredients.len() > MAX_INGREDIENTS {
@@ -232,6 +249,21 @@ pub enum PantryChange {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unit_input_policy_keeps_legacy_reads_but_rejects_unsupported_new_units() {
+        let mut fields = PantryFields {
+            name: "Rice".into(),
+            amount: "2".into(),
+            unit: "bag".into(),
+        };
+        assert!(fields.validate(PantryKind::Ingredient).is_ok());
+        assert!(fields.validate_input(PantryKind::Ingredient).is_err());
+        fields.unit = "metric cups".into();
+        assert!(fields.validate_input(PantryKind::Ingredient).is_ok());
+        fields.unit.clear();
+        assert!(fields.validate_input(PantryKind::Ingredient).is_err());
+        assert!(fields.validate_input(PantryKind::Equipment).is_err());
+    }
     #[test]
     fn quantity_keeps_unknown_zero_and_units_distinct() {
         for s in ["0", "0.000", "0/2", "0 / 3"] {

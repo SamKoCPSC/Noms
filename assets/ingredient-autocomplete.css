@@ -6,6 +6,18 @@
 .ingredient-autocomplete__hint { color: var(--text-secondary); font-size: .8rem; }
 .ingredient-autocomplete__list button { min-height: 44px; }
 .ingredient-autocomplete__list strong { min-width: 0; overflow-wrap: anywhere; }
+.unit-autocomplete { flex: 0 1 auto; }
+.unit-autocomplete .ingredient-autocomplete__list { min-width: 13rem; max-height: 10rem; padding: 2px; }
+.unit-autocomplete--end .ingredient-autocomplete__list { left: auto; right: 0; }
+.unit-autocomplete .ingredient-autocomplete__list button { min-height: 32px; padding: 5px 8px; line-height: 20px; }
+.unit-autocomplete__name { font-size: .85rem; white-space: nowrap; }
+.unit-autocomplete__error { position: absolute; top: 100%; right: 0; z-index: 20; min-width: 13rem; max-width: calc(100vw - 2rem); padding: 6px 8px; background: var(--overlay-opaque); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-secondary); font-size: .8rem; }
+.unit-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 @media (max-width: 760px) {
     .ingredient-autocomplete { flex-basis: 160px; }
+    .unit-autocomplete { flex-basis: auto; }
+    .unit-autocomplete .ingredient-autocomplete__list { left: auto; right: 0; }
+}
+@media (pointer: coarse) {
+    .unit-autocomplete .ingredient-autocomplete__list button { min-height: 44px; }
 }

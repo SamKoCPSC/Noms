@@ -554,7 +554,7 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                         return;
                                                     }
                                                     let fields = add_fields();
-                                                    if let Err(problem) = fields.validate() {
+                                                    if let Err(problem) = fields.validate_input() {
                                                         error.set(Some(problem));
                                                         return;
                                                     }
@@ -601,19 +601,15 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                     oninput: move |e| add_fields.write().amount = e.value(),
                                                 }
                                             }
-                                            label {
-
-                                                span {
-                                                    class: "sr-only",
-                                                    "Unit"
-                                                }
-                                                input {
-                                                    class: "neumo-inset input input--shared",
+                                            div { class: "unit-field",
+                                                label { class: "sr-only", r#for: "grocery-add-unit", "Unit" }
+                                                crate::components::unit_autocomplete::UnitAutocomplete {
+                                                    id: "grocery-add-unit",
                                                     placeholder: "Unit",
                                                     maxlength: 64,
                                                     value: add_fields().unit,
                                                     disabled: disabled || pending_add().is_some(),
-                                                    oninput: move |e| add_fields.write().unit = e.value(),
+                                                    oninput: move |value| add_fields.write().unit = value,
                                                 }
                                             }
                                             button {
@@ -818,7 +814,7 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                             return;
                                         }
                                         let fields = edit_fields();
-                                        if let Err(problem) = fields.validate() {
+                                        if let Err(problem) = fields.validate_input() {
                                             error.set(Some(problem));
                                             return;
                                         }
@@ -864,15 +860,14 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                 oninput: move |e| edit_fields.write().amount = e.value(),
                                             }
                                         }
-                                        label {
-
-                                            "Unit"
-                                            input {
-                                                class: "neumo-inset input input--shared",
+                                        div { class: "unit-field",
+                                            label { r#for: "grocery-edit-unit", "Unit" }
+                                            crate::components::unit_autocomplete::UnitAutocomplete {
+                                                id: "grocery-edit-unit",
                                                 maxlength: 64,
                                                 disabled: busy(),
                                                 value: edit_fields().unit,
-                                                oninput: move |e| edit_fields.write().unit = e.value(),
+                                                oninput: move |value| edit_fields.write().unit = value,
                                             }
                                         }
                                     }
@@ -1549,7 +1544,7 @@ pub fn GroceryListNew() -> Element {
                                         return;
                                     }
                                     let fields = entry();
-                                    if let Err(problem) = fields.validate() {
+                                    if let Err(problem) = fields.validate_input() {
                                         error.set(Some(problem));
                                         return;
                                     }
@@ -1587,19 +1582,15 @@ pub fn GroceryListNew() -> Element {
                                         oninput: move |e| entry.write().amount = e.value(),
                                     }
                                 }
-                                label {
-
-                                    span {
-                                        class: "sr-only",
-                                        "Unit"
-                                    }
-                                    input {
-                                        class: "neumo-inset input input--shared",
+                                div { class: "unit-field",
+                                    label { class: "sr-only", r#for: "grocery-create-unit", "Unit" }
+                                    crate::components::unit_autocomplete::UnitAutocomplete {
+                                        id: "grocery-create-unit",
                                         placeholder: "Unit",
                                         value: entry().unit,
                                         maxlength: 64,
                                         disabled: frozen,
-                                        oninput: move |e| entry.write().unit = e.value(),
+                                        oninput: move |value| entry.write().unit = value,
                                     }
                                 }
                                 button {
@@ -1610,7 +1601,7 @@ pub fn GroceryListNew() -> Element {
                             }
                             p {
                                 class: "grocery-muted",
-                                "Amounts and units are optional. Add food, household supplies, or anything else."
+                                "Choose a weight or volume unit for each item. Enter whole portions as measured quantities."
                             }
                         }
                         label {
@@ -1706,7 +1697,7 @@ pub fn GroceryListNew() -> Element {
                                             }
                                         }
                                         if !unadded.name.is_empty() || !unadded.amount.is_empty() || !unadded.unit.is_empty() {
-                                            if let Err(problem) = unadded.validate() {
+                                            if let Err(problem) = unadded.validate_input() {
                                                 error.set(Some(problem));
                                                 return;
                                             }
@@ -1726,7 +1717,7 @@ pub fn GroceryListNew() -> Element {
                                                 .collect(),
                                             manual_items: extras,
                                         };
-                                        if let Err(problem) = request.validate() {
+                                        if let Err(problem) = request.validate_input() {
                                             error.set(Some(problem));
                                             return;
                                         }

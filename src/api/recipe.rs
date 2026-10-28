@@ -295,6 +295,8 @@ pub async fn create_recipe_draft(
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
         .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let mut editor = editor;
+    super::unit_validation::ingredients(&mut editor.ingredients)?;
     let storage = crate::storage::get_storage_client();
     validate_recipe_media_references(&storage, &editor.images, &editor.instructions)?;
     let draft = bounded_database_operation(crate::db::create_new_recipe_draft(
@@ -352,6 +354,8 @@ pub async fn save_recipe_draft(
         .map_err(|_| ServerFnError::new("Mutation rate limit exceeded"))?;
     crate::security::validate_recipe_editor(&editor, crate::security::RecipeValidationMode::Draft)
         .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let mut editor = editor;
+    super::unit_validation::ingredients(&mut editor.ingredients)?;
     let draft_id = uuid::Uuid::parse_str(&draft_id)
         .map_err(|error| ServerFnError::new(format!("Invalid draft ID: {error}")))?;
     let current_draft = crate::db::get_recipe_draft(&crate::db::get_pool(), draft_id, user_id)
@@ -421,6 +425,7 @@ pub async fn publish_recipe_draft(
         .clone()
         .unwrap_or_else(|| "private".to_string());
     let editor = snapshot_to_editor(payload.content.clone(), visibility);
+    super::unit_validation::saved_ingredients(&editor.ingredients)?;
     crate::security::validate_recipe_editor(
         &editor,
         crate::security::RecipeValidationMode::Publish,
@@ -1264,6 +1269,8 @@ async fn create_recipe_for_user(
         crate::security::RecipeValidationMode::Publish,
     )
     .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let mut input = input;
+    super::unit_validation::ingredients(&mut input.ingredients)?;
     validate_recipe_media_references(storage, &input.images, &input.instructions)?;
     bounded_database_operation(crate::db::create_published_recipe(
         pool,
@@ -1339,6 +1346,7 @@ async fn update_recipe_for_user(
         crate::security::RecipeValidationMode::Publish,
     )
     .map_err(|error| ServerFnError::new(error.to_string()))?;
+    super::unit_validation::ingredients(&mut snapshot.ingredients)?;
     validate_recipe_media_references(storage, &snapshot.images, &snapshot.instructions)?;
     let recipe = bounded_database_operation(crate::db::publish_snapshot(
         pool,

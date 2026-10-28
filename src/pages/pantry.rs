@@ -116,14 +116,13 @@ fn PantryFieldsInput(
                 disabled,
                 oninput: move |e| fields.write().amount = e.value(),
             }
-            input {
+            crate::components::unit_autocomplete::UnitAutocomplete {
                 id: "{prefix}-unit",
-                class: "input input--shared neumo-inset",
                 value: "{fields().unit}",
                 maxlength: 64,
                 placeholder: "e.g. cup",
                 disabled,
-                oninput: move |e| fields.write().unit = e.value(),
+                oninput: move |value| fields.write().unit = value,
             }
         }
 
@@ -173,7 +172,7 @@ fn PantryEditor(
                         return;
                     }
                     let submitted = fields();
-                    if let Err(problem) = submitted.validate(kind) {
+                    if let Err(problem) = submitted.validate_input(kind) {
                         error.set(Some(problem));
                         return;
                     }
@@ -694,7 +693,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                             available: true,
                                                         },
                                                     ));
-                                                if let Err(problem) = stock.fields.validate(PantryKind::Ingredient) {
+                                                if let Err(problem) = stock.fields.validate_input(PantryKind::Ingredient) {
                                                     error.set(Some(problem));
                                                     return;
                                                 }
@@ -990,16 +989,15 @@ fn PantryQuickAdd(
                     oninput: move |e| fields.write().amount = e.value(),
                 }
             }
-            label {
-
-                span { class: "sr-only", "Unit" }
-                input {
-                    class: "input input--shared neumo-inset",
+            div { class: "unit-field",
+                label { class: "sr-only", r#for: "pantry-add-unit", "Unit" }
+                crate::components::unit_autocomplete::UnitAutocomplete {
+                    id: "pantry-add-unit",
                     value: "{fields().unit}",
                     placeholder: "Unit",
                     disabled: disabled || frozen,
                     maxlength: 64,
-                    oninput: move |e| fields.write().unit = e.value(),
+                    oninput: move |value| fields.write().unit = value,
                 }
             }
 
@@ -1039,7 +1037,7 @@ pub fn PantryNew() -> Element {
         if frozen {
             return;
         }
-        if let Err(problem) = fields.validate(PantryKind::Ingredient) {
+        if let Err(problem) = fields.validate_input(PantryKind::Ingredient) {
             error.set(Some(problem));
             return;
         }
@@ -1160,7 +1158,7 @@ pub fn PantryNew() -> Element {
                                         if !fields.name.is_empty() || !fields.amount.is_empty()
                                             || !fields.unit.is_empty()
                                         {
-                                            if let Err(problem) = fields.validate(PantryKind::Ingredient) {
+                                            if let Err(problem) = fields.validate_input(PantryKind::Ingredient) {
                                                 error.set(Some(problem));
                                                 return;
                                             }
@@ -1178,7 +1176,7 @@ pub fn PantryNew() -> Element {
                                             equipment: Vec::new(),
                                             copy: None,
                                         };
-                                        if let Err(problem) = request.validate() {
+                                        if let Err(problem) = request.validate_input() {
                                             error.set(Some(problem));
                                             return;
                                         }
@@ -1234,7 +1232,7 @@ pub fn PantryNew() -> Element {
                                     onsubmit: move |e| {
                                         e.prevent_default();
                                         let fields = edited();
-                                        if let Err(problem) = fields.validate(PantryKind::Ingredient) {
+                                        if let Err(problem) = fields.validate_input(PantryKind::Ingredient) {
                                             error.set(Some(problem));
                                             return;
                                         }

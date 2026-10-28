@@ -63,6 +63,11 @@ pub async fn create_grocery_list(
     request: GroceryCreate,
 ) -> Result<GroceryList, ServerFnError> {
     let owner = actor(expected_account_id, true).await?;
+    let mut request = request;
+    request.validate_input().map_err(ServerFnError::new)?;
+    for fields in &mut request.manual_items {
+        super::unit_validation::unit(&mut fields.unit)?;
+    }
     budget(crate::db::grocery::create(
         &crate::db::get_pool(),
         owner,
@@ -112,6 +117,9 @@ pub async fn add_grocery_item(
     fields: ItemFields,
 ) -> Result<(), ServerFnError> {
     let owner = actor(expected_account_id, true).await?;
+    let mut fields = fields;
+    fields.validate_input().map_err(ServerFnError::new)?;
+    super::unit_validation::unit(&mut fields.unit)?;
     budget(crate::db::grocery::add_item(
         &crate::db::get_pool(),
         owner,
@@ -130,6 +138,11 @@ pub async fn update_grocery_item(
     change: GroceryItemChange,
 ) -> Result<(), ServerFnError> {
     let owner = actor(expected_account_id, true).await?;
+    let mut change = change;
+    if let GroceryItemChange::Fields(fields) = &mut change {
+        fields.validate_input().map_err(ServerFnError::new)?;
+        super::unit_validation::unit(&mut fields.unit)?;
+    }
     budget(crate::db::grocery::change_item(
         &crate::db::get_pool(),
         owner,

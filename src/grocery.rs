@@ -20,6 +20,14 @@ pub struct ItemFields {
     pub unit: String,
 }
 impl ItemFields {
+    /// Preserve source-recipe provenance on reads, but require supported units
+    /// whenever an author creates or edits fields.
+    pub fn validate_input(&self) -> Result<(), String> {
+        self.validate()?;
+        noms::units::canonicalize(&self.unit).map_err(String::from)?;
+        Ok(())
+    }
+
     pub fn validate(&self) -> Result<(), String> {
         if self.name.trim().is_empty() || self.name.chars().count() > MAX_NAME {
             return Err("Item names must contain 1–500 characters.".into());
@@ -115,6 +123,14 @@ pub struct GroceryCreate {
     pub manual_items: Vec<ItemFields>,
 }
 impl GroceryCreate {
+    pub fn validate_input(&self) -> Result<(), String> {
+        self.validate()?;
+        for item in &self.manual_items {
+            item.validate_input()?;
+        }
+        Ok(())
+    }
+
     pub fn validate(&self) -> Result<(), String> {
         validate_list_name(&self.name)?;
         if self.note.chars().count() > 500 {
@@ -359,6 +375,20 @@ pub fn build_requirements(previews: &[GroceryRecipePreview]) -> Result<Vec<Gener
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unit_input_policy_keeps_source_provenance_but_validates_manual_fields() {
+        let mut fields = ItemFields {
+            name: "Rice".into(),
+            amount: "2".into(),
+            unit: "bag".into(),
+        };
+        assert!(fields.validate().is_ok());
+        assert!(fields.validate_input().is_err());
+        fields.unit = "grams".into();
+        assert!(fields.validate_input().is_ok());
+        fields.unit.clear();
+        assert!(fields.validate_input().is_err());
+    }
     fn recipe(
         name: &str,
         amount: &str,

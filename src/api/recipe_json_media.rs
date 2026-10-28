@@ -207,6 +207,7 @@ pub async fn import(
     available: &[String],
 ) -> Result<db::RecipeDraft, ServerFnError> {
     let (file, mut editor) = crate::recipe_json::parse_recipe(json).map_err(ServerFnError::new)?;
+    super::unit_validation::ingredients(&mut editor.ingredients)?;
     let source = Some(crate::recipe_json::source_recipe_id(&file).map_err(ServerFnError::new)?);
     let candidates = take_images(&mut editor);
     let (checked, issues) = check(

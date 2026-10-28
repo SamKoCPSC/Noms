@@ -221,6 +221,15 @@ pub fn RecipeNew() -> Element {
             || !editor.equipment.is_empty()
             || !editor.images.is_empty()
             || !editor.tags.is_empty();
+        if editor
+            .ingredients
+            .iter()
+            .any(|row| noms::units::canonicalize(&row.unit).is_err())
+        {
+            let next_generation = *autosave_generation.peek() + 1;
+            autosave_generation.set(next_generation);
+            return;
+        }
         if !meaningful
             || draft_creation_unconfirmed()
             || publication_unconfirmed()
@@ -325,6 +334,13 @@ pub fn RecipeNew() -> Element {
     let on_save_draft = move |_| {
         #[cfg(target_arch = "wasm32")]
         {
+            if ingredients()
+                .iter()
+                .any(|row| noms::units::canonicalize(&row.unit).is_err())
+            {
+                error.set(Some(noms::units::INVALID_UNIT.into()));
+                return;
+            }
             let editor = editor_state(
                 title(),
                 description(),
@@ -641,6 +657,13 @@ pub fn RecipeNew() -> Element {
 
         // Validate at least one ingredient with a non-empty name
         let ings = ingredients();
+        if ings
+            .iter()
+            .any(|row| noms::units::canonicalize(&row.unit).is_err())
+        {
+            error.set(Some(noms::units::INVALID_UNIT.into()));
+            return;
+        }
         if ings.is_empty() {
             error.set(Some("Add at least one ingredient".to_string()));
             return;
@@ -1249,8 +1272,10 @@ pub fn RecipeNew() -> Element {
                                 // Unit
                                 div {
                                     style: "width: 80px; flex-shrink: 0;",
-                                    Input {
-                            accessible_name: "Ingredient {idx + 1} unit",
+                                    crate::components::unit_autocomplete::UnitAutocomplete {
+                                        id: "ingredient-unit-{idx}",
+                                        accessible_name: "Ingredient {idx + 1} unit",
+                                        align_end: false,
                                         value: ingredients()[idx].unit.clone(),
                                         placeholder: "Unit",
                                         oninput: move |v| {
