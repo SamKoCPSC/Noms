@@ -89,10 +89,10 @@ impl RuntimeConfig {
                 ));
             }
             let secret = required(&lookup, "NOMS_STAGING_LOGIN_SECRET")?;
-            if secret.len() != 64 || !secret.bytes().all(|b| b.is_ascii_hexdigit()) {
+            if !crate::auth::staging::has_valid_secret_format(&secret) {
                 return Err(ConfigError::new(
                     "NOMS_STAGING_LOGIN_SECRET",
-                    "must contain 64 random hexadecimal characters",
+                    "must contain 32 to 512 printable ASCII characters without whitespace",
                 ));
             }
             if secret == lookup("SESSION_SECRET").unwrap_or_default() {
@@ -555,6 +555,48 @@ mod tests {
             "SESSION_SECRET".into(),
             environment["NOMS_STAGING_LOGIN_SECRET"].clone(),
         );
+        assert!(load(&environment).is_err());
+    }
+
+    #[test]
+    fn staging_login_accepts_multiple_secret_formats_and_rejects_invalid_tokens() {
+        let valid = staging_environment();
+        let minimum = "0123456789ABCDEFGHIJKLMNOPQRSTUV";
+        let maximum = minimum.repeat(16);
+        for secret in [
+            minimum,
+            maximum.as_str(),
+            "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdef-",
+            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+/abcd==",
+            valid["NOMS_STAGING_LOGIN_SECRET"].as_str(),
+        ] {
+            let mut environment = valid.clone();
+            environment.insert("NOMS_STAGING_LOGIN_SECRET".into(), secret.into());
+            let config = load(&environment).unwrap();
+            assert!(config.staging_login().is_some());
+            assert!(!format!("{config:?}").contains(secret));
+        }
+        for secret in [
+            minimum[..31].to_owned(),
+            format!("{maximum}A"),
+            format!(" {minimum}"),
+            format!("{minimum} "),
+            format!("{minimum}\n"),
+            format!("{minimum}\t"),
+            format!("{minimum}\r"),
+            format!("{minimum}\0"),
+            format!("{minimum}\u{7f}"),
+            format!("{minimum}é"),
+            "a".repeat(44),
+        ] {
+            let mut environment = valid.clone();
+            environment.insert("NOMS_STAGING_LOGIN_SECRET".into(), secret);
+            assert!(load(&environment).is_err());
+        }
+        let mut environment = valid;
+        environment.insert("NOMS_STAGING_LOGIN_SECRET".into(), minimum.into());
+        environment.insert("SESSION_SECRET".into(), minimum.into());
         assert!(load(&environment).is_err());
     }
 
