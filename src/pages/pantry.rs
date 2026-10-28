@@ -116,14 +116,13 @@ fn PantryFieldsInput(
                 disabled,
                 oninput: move |e| fields.write().amount = e.value(),
             }
-            input {
+            crate::components::unit_autocomplete::UnitAutocomplete {
                 id: "{prefix}-unit",
-                class: "input input--shared neumo-inset",
                 value: "{fields().unit}",
                 maxlength: 64,
                 placeholder: "e.g. cup",
                 disabled,
-                oninput: move |e| fields.write().unit = e.value(),
+                oninput: move |value| fields.write().unit = value,
             }
         }
 
@@ -990,16 +989,15 @@ fn PantryQuickAdd(
                     oninput: move |e| fields.write().amount = e.value(),
                 }
             }
-            label {
-
-                span { class: "sr-only", "Unit" }
-                input {
-                    class: "input input--shared neumo-inset",
+            div { class: "unit-field",
+                label { class: "sr-only", r#for: "pantry-add-unit", "Unit" }
+                crate::components::unit_autocomplete::UnitAutocomplete {
+                    id: "pantry-add-unit",
                     value: "{fields().unit}",
                     placeholder: "Unit",
                     disabled: disabled || frozen,
                     maxlength: 64,
-                    oninput: move |e| fields.write().unit = e.value(),
+                    oninput: move |value| fields.write().unit = value,
                 }
             }
 

@@ -1249,8 +1249,10 @@ pub fn RecipeNew() -> Element {
                                 // Unit
                                 div {
                                     style: "width: 80px; flex-shrink: 0;",
-                                    Input {
-                            accessible_name: "Ingredient {idx + 1} unit",
+                                    crate::components::unit_autocomplete::UnitAutocomplete {
+                                        id: "ingredient-unit-{idx}",
+                                        accessible_name: "Ingredient {idx + 1} unit",
+                                        align_end: false,
                                         value: ingredients()[idx].unit.clone(),
                                         placeholder: "Unit",
                                         oninput: move |v| {
