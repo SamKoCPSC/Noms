@@ -1,0 +1,1495 @@
+[
+  {
+    "label": "Beater",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABeater"
+  },
+  {
+    "label": "Blender",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABlender"
+  },
+  {
+    "label": "Bread Machine",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABread%20Machine"
+  },
+  {
+    "label": "Cooktop",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACooktop"
+  },
+  {
+    "label": "Deep Fryer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ADeep%20Fryer"
+  },
+  {
+    "label": "Food Processor",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AFood%20Processor"
+  },
+  {
+    "label": "Juice Extractor",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AJuice%20Extractor"
+  },
+  {
+    "label": "Microwave Oven",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMicrowave%20Oven"
+  },
+  {
+    "label": "Mixer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMixer"
+  },
+  {
+    "label": "Oven",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AOven"
+  },
+  {
+    "label": "Pasta Maker",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APasta%20Maker"
+  },
+  {
+    "label": "Proofer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AProofer"
+  },
+  {
+    "label": "Rice Cooker",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ARice%20Cooker"
+  },
+  {
+    "label": "Slow Cooker",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASlow%20Cooker"
+  },
+  {
+    "label": "Toaster",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AToaster"
+  },
+  {
+    "label": "Toaster Oven",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AToaster%20Oven"
+  },
+  {
+    "label": "Waffle Iron",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AWaffle%20Iron"
+  },
+  {
+    "label": "Bain-marie",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABain-marie"
+  },
+  {
+    "label": "Baking Sheet",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABaking%20Sheet"
+  },
+  {
+    "label": "Bean Pot",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABean%20Pot"
+  },
+  {
+    "label": "Bundt Cake Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABundt%20Cake%20Pan"
+  },
+  {
+    "label": "Cooling Rack",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACooling%20Rack"
+  },
+  {
+    "label": "Cupcake Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACupcake%20Pan"
+  },
+  {
+    "label": "Muffin Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMuffin%20Pan"
+  },
+  {
+    "label": "Pizza Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APizza%20Pan"
+  },
+  {
+    "label": "Springform Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASpringform%20Pan"
+  },
+  {
+    "label": "Aluminium Foil",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AAluminium%20Foil"
+  },
+  {
+    "label": "Baking Dish",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABaking%20Dish"
+  },
+  {
+    "label": "Baking Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABaking%20Pan"
+  },
+  {
+    "label": "Baster",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABaster"
+  },
+  {
+    "label": "Bench Scraper",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABench%20Scraper"
+  },
+  {
+    "label": "Blowtorch",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABlowtorch"
+  },
+  {
+    "label": "Brush",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ABrush"
+  },
+  {
+    "label": "Cake Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACake%20Pan"
+  },
+  {
+    "label": "Can Opener",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACan%20Opener"
+  },
+  {
+    "label": "Caquelon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACaquelon"
+  },
+  {
+    "label": "Cheese Knife",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACheese%20Knife"
+  },
+  {
+    "label": "Cheese Plane",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACheese%20Plane"
+  },
+  {
+    "label": "Cheesecloth",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACheesecloth"
+  },
+  {
+    "label": "Chopstick",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AChopstick"
+  },
+  {
+    "label": "Citrus reamer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACitrus%20reamer"
+  },
+  {
+    "label": "Colander",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AColander"
+  },
+  {
+    "label": "Cookie Cutter",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACookie%20Cutter"
+  },
+  {
+    "label": "Cooking Spoon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACooking%20Spoon"
+  },
+  {
+    "label": "Cookware",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACookware"
+  },
+  {
+    "label": "Cupcake Liner",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACupcake%20Liner"
+  },
+  {
+    "label": "Cutting Board",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ACutting%20Board"
+  },
+  {
+    "label": "Dessert Spoon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ADessert%20Spoon"
+  },
+  {
+    "label": "Double Boiler",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ADouble%20Boiler"
+  },
+  {
+    "label": "Dough cutter",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ADough%20cutter"
+  },
+  {
+    "label": "Dough Hook",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ADough%20Hook"
+  },
+  {
+    "label": "Dull Knife",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ADull%20Knife"
+  },
+  {
+    "label": "Dutch Oven",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ADutch%20Oven"
+  },
+  {
+    "label": "Egg Separator",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AEgg%20Separator"
+  },
+  {
+    "label": "Egg Slicer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AEgg%20Slicer"
+  },
+  {
+    "label": "Fat Separator",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AFat%20Separator"
+  },
+  {
+    "label": "Filet Knife",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AFilet%20Knife"
+  },
+  {
+    "label": "Food Mill",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AFood%20Mill"
+  },
+  {
+    "label": "Fork",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AFork"
+  },
+  {
+    "label": "Frying Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AFrying%20Pan"
+  },
+  {
+    "label": "Funnel",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AFunnel"
+  },
+  {
+    "label": "Garlic Press",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AGarlic%20Press"
+  },
+  {
+    "label": "Grapefruit Spoon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AGrapefruit%20Spoon"
+  },
+  {
+    "label": "Grater",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AGrater"
+  },
+  {
+    "label": "Griddle",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AGriddle"
+  },
+  {
+    "label": "Grill",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AGrill"
+  },
+  {
+    "label": "Ice Cream Machine",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AIce%20Cream%20Machine"
+  },
+  {
+    "label": "Idli Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AIdli%20Pan"
+  },
+  {
+    "label": "Kadai",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AKadai"
+  },
+  {
+    "label": "Knife",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AKnife"
+  },
+  {
+    "label": "Knife Sharpener",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AKnife%20Sharpener"
+  },
+  {
+    "label": "Ladle",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ALadle"
+  },
+  {
+    "label": "Lame",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ALame"
+  },
+  {
+    "label": "Loaf Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ALoaf%20Pan"
+  },
+  {
+    "label": "Makiyakinabe Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMakiyakinabe%20Pan"
+  },
+  {
+    "label": "Mandoline",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMandoline"
+  },
+  {
+    "label": "Measuring Cup",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMeasuring%20Cup"
+  },
+  {
+    "label": "Measuring Spoons",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMeasuring%20Spoons"
+  },
+  {
+    "label": "Melon Baller",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMelon%20Baller"
+  },
+  {
+    "label": "Mixing Bowl",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMixing%20Bowl"
+  },
+  {
+    "label": "Mortar and Pestle",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMortar%20and%20Pestle"
+  },
+  {
+    "label": "Multicooking",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AMulticooking"
+  },
+  {
+    "label": "Nigerian Masa Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ANigerian%20Masa%20Pan"
+  },
+  {
+    "label": "Non-stick",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ANon-stick"
+  },
+  {
+    "label": "Paper Towel",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APaper%20Towel"
+  },
+  {
+    "label": "Parchment Paper",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AParchment%20Paper"
+  },
+  {
+    "label": "Pasta Fork",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APasta%20Fork"
+  },
+  {
+    "label": "Pastry Bag",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APastry%20Bag"
+  },
+  {
+    "label": "Pastry Blender",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APastry%20Blender"
+  },
+  {
+    "label": "Pastry Board",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APastry%20Board"
+  },
+  {
+    "label": "Peeler",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APeeler"
+  },
+  {
+    "label": "Pie and Tart Pans",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APie%20and%20Tart%20Pans"
+  },
+  {
+    "label": "Pizza Cutter",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APizza%20Cutter"
+  },
+  {
+    "label": "Pizza Stone",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APizza%20Stone"
+  },
+  {
+    "label": "Plastic Wrap",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APlastic%20Wrap"
+  },
+  {
+    "label": "Potato Masher",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APotato%20Masher"
+  },
+  {
+    "label": "Potato-ricer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3APotato-ricer"
+  },
+  {
+    "label": "Quiche Ring",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AQuiche%20Ring"
+  },
+  {
+    "label": "Ramekin",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ARamekin"
+  },
+  {
+    "label": "Rolling Pin",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ARolling%20Pin"
+  },
+  {
+    "label": "Salad Spinner",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASalad%20Spinner"
+  },
+  {
+    "label": "Saucepan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASaucepan"
+  },
+  {
+    "label": "Sauté Pan",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASaut%C3%A9%20Pan"
+  },
+  {
+    "label": "Scale",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AScale"
+  },
+  {
+    "label": "Shears",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AShears"
+  },
+  {
+    "label": "Sieve",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASieve"
+  },
+  {
+    "label": "Sifter",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASifter"
+  },
+  {
+    "label": "Silpat",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASilpat"
+  },
+  {
+    "label": "Skewer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASkewer"
+  },
+  {
+    "label": "Slotted Spoon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASlotted%20Spoon"
+  },
+  {
+    "label": "Soup Spoon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASoup%20Spoon"
+  },
+  {
+    "label": "Spatula",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASpatula"
+  },
+  {
+    "label": "Spider",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASpider"
+  },
+  {
+    "label": "Steak Knife",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASteak%20Knife"
+  },
+  {
+    "label": "Stock Pot",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AStock%20Pot"
+  },
+  {
+    "label": "Storage Containers",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AStorage%20Containers"
+  },
+  {
+    "label": "Sushi Roller",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ASushi%20Roller"
+  },
+  {
+    "label": "Tablespoon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ATablespoon"
+  },
+  {
+    "label": "Tandoor",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ATandoor"
+  },
+  {
+    "label": "Tava",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ATava"
+  },
+  {
+    "label": "Teaspoon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ATeaspoon"
+  },
+  {
+    "label": "Thermometer",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AThermometer"
+  },
+  {
+    "label": "Tongs",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3ATongs"
+  },
+  {
+    "label": "Whipping Siphon",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AWhipping%20Siphon"
+  },
+  {
+    "label": "Whisk",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AWhisk"
+  },
+  {
+    "label": "Wok",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AWok"
+  },
+  {
+    "label": "Zester",
+    "reference": "wikibooks",
+    "reference_url": "https://en.wikibooks.org/wiki/Cookbook%3AZester"
+  },
+  {
+    "label": "barbecue grill",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "barbecueGrill",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "blender",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "blender",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "bread machine",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "bread Machine",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "broiler",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "broiler",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "convection oven",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "convectionOven",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "deep fryer",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "deepFryer",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "fondue pot",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "fonduePot",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "food processor",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "foodProcessor",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "freezer",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "freezer",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "fry pan",
+    "aliases": [
+      "frying pan"
+    ],
+    "reference": "prism",
+    "source_term": "fryPan",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "griddle",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "griddle",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "grill pan",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "grillPan",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "ice cream maker",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "iceCreamMaker",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "microwave oven",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "microwaveOven",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "oven",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "oven",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "pressure cooker",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "pressureCooker",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "rice cooker",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "riceCooker",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "panini press",
+    "aliases": [
+      "sandwich maker"
+    ],
+    "reference": "prism",
+    "source_term": "sandwichOrPaniniPres Press",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "slow cooker",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "slowCooker",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "waffle maker",
+    "aliases": [
+      "waffle iron"
+    ],
+    "reference": "prism",
+    "source_term": "waffleMaker",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "wok",
+    "aliases": [],
+    "reference": "prism",
+    "source_term": "wok",
+    "reference_url": "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  },
+  {
+    "label": "chef's knife",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "paring knife",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "bread knife",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "boning knife",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "fillet knife",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cleaver",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "kitchen shears",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cutting board",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "mixing bowl",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "measuring cup",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "measuring spoon",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "kitchen scale",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "instant-read thermometer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "probe thermometer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "oven thermometer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cooking timer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "wooden spoon",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "silicone spatula",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "turner",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "tongs",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "whisk",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "ladle",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "slotted spoon",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "skimmer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "spider strainer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "colander",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "fine-mesh sieve",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "flour sifter",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cheese grater",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "zester",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "vegetable peeler",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "garlic press",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "potato masher",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "potato ricer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "mortar and pestle",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "spice grinder",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "mandoline",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "salad spinner",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "can opener",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "bottle opener",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "corkscrew",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "kitchen funnel",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "basting brush",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pastry brush",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "baster",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cherry pitter",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "apple corer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "melon baller",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "nutcracker",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "lemon squeezer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "egg separator",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "frying pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cast-iron skillet",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "nonstick frying pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "sauté pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "saucepan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "stockpot",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "Dutch oven",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "wok",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "griddle",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "grill pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pressure cooker",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "steamer basket",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "bamboo steamer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "double boiler",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "roasting pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "roasting rack",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "casserole dish",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "baking sheet",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cake pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "loaf pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "muffin tin",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "Bundt pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "springform pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "tart pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pie dish",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "ramekin",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "soufflé dish",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "baking stone",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cooling rack",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "silicone baking mat",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pie weights",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "rolling pin",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "bench scraper",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "dough scraper",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pastry bag",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "piping tip",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pastry blender",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cookie cutter",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cookie press",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "bread lame",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "proofing basket",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "blender",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "immersion blender",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "food processor",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "stand mixer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "hand mixer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "food mill",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "meat grinder",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "coffee grinder",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "electric kettle",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "oven",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "convection oven",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "microwave oven",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "toaster oven",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cooktop",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "refrigerator",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "freezer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "rice cooker",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "slow cooker",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "multicooker",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "air fryer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "deep fryer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "ice cream maker",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "food dehydrator",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "waffle iron",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "vacuum sealer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cooking torch",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pizza cutter",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "pasta machine",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "tortilla press",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "tagine",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "karahi",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "tawa",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "comal",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "donabe",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "dolsot",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "tamagoyaki pan",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "sushi rolling mat",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "suribachi",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "canning funnel",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "canning tongs",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "fermentation crock",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "Mason jar",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "parchment paper",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "aluminium foil",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "cheesecloth",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "kitchen twine",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "plastic wrap",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "oven mitt",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  },
+  {
+    "label": "skewer",
+    "reference": "noms-common-kitchen",
+    "reference_url": "Noms editorial benchmark, authored 2026-10-28; not a random recipe sample"
+  }
+]

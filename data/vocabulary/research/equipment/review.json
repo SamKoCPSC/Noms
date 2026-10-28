@@ -1,0 +1,1501 @@
+{
+  "schema_version": 1,
+  "source_checksum": "d8a0111adfd8c40dbcf7ed8ad041a1e6f67b5074bf30b677b9ad3c6e4a3f5c1a",
+  "review_method": "Complete English-label screening with explicit initial shortlist; policy-assisted disposition of other records. Proposed labels are editorial candidates, not approved semantic equivalences or seed entries.",
+  "choices": {
+    "Q12337": {
+      "label": "corkscrew",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q12360": {
+      "label": "bottle opener",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q12714": {
+      "label": "can opener",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q12872": {
+      "label": "potato masher",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14880": {
+      "label": "nutcracker",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14890": {
+      "label": "toaster",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14894": {
+      "label": "peeler",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14899": {
+      "label": "melon baller",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14906": {
+      "label": "garlic press",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14909": {
+      "label": "egg slicer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14915": {
+      "label": "tomato knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q23752": {
+      "label": "chef's knife",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q23764": {
+      "label": "santoku knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q39743": {
+      "label": "butter mold",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q107444": {
+      "label": "kettle",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q127666": {
+      "label": "frying pan",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q127956": {
+      "label": "microwave oven",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q153059": {
+      "label": "deep fryer",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q182995": {
+      "label": "kitchen stove",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q192848": {
+      "label": "grater",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q193358": {
+      "label": "ladle",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q196816": {
+      "label": "zester",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q207763": {
+      "label": "rolling pin",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q208364": {
+      "label": "wok",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q211841": {
+      "label": "coffeemaker",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q262515": {
+      "label": "Dutch oven",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q263057": {
+      "label": "whisk",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q271997": {
+      "label": "pressure cooker",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q289340": {
+      "label": "Mason jar",
+      "family": "storage",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q356838": {
+      "label": "spice grinder",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q382747": {
+      "label": "apple corer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q382753": {
+      "label": "salad spinner",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q382924": {
+      "label": "pastry brush",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q388428": {
+      "label": "skimmer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q430627": {
+      "label": "sushi mixing tub",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q447349": {
+      "label": "aluminium foil",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q501862": {
+      "label": "blender",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q502335": {
+      "label": "baking sheet",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q520049": {
+      "label": "honing steel",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q540224": {
+      "label": "ramekin",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q586319": {
+      "label": "ice pick",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q589110": {
+      "label": "couscoussier",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q592408": {
+      "label": "Cherry pitter",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q615463": {
+      "label": "poultry shears",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q617239": {
+      "label": "cutting board",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q642345": {
+      "label": "slow cooker",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q732054": {
+      "label": "oven mitt",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q736334": {
+      "label": "pot holder",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q751960": {
+      "label": "induction stove",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q798428": {
+      "label": "loaf pan",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q798500": {
+      "label": "parchment paper",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q803889": {
+      "label": "bain-marie",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q808337": {
+      "label": "bar spoon",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q839143": {
+      "label": "cataplana",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q847235": {
+      "label": "ttukbaegi",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q853185": {
+      "label": "barbecue grill",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q887602": {
+      "label": "springform pan",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q899260": {
+      "label": "meat grinder",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q907099": {
+      "label": "measuring cup",
+      "family": "measuring_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q938509": {
+      "label": "cleaver",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q950375": {
+      "label": "muddler",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q954087": {
+      "label": "mixer",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Generic food mixer; upstream aliases may conflate stand and hand mixers. Keep those functional types distinct before seeding."
+    },
+    "Q1036735": {
+      "label": "spider",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1054566": {
+      "label": "moka pot",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1057060": {
+      "label": "colander",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1105339": {
+      "label": "cocktail shaker",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1111908": {
+      "label": "deba knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1126251": {
+      "label": "food processor",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1137500": {
+      "label": "rice cooker",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1139048": {
+      "label": "coffee grinder",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1139975": {
+      "label": "waffle iron",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1147545": {
+      "label": "French press",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1158805": {
+      "label": "food steamer",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Generic food-steaming device; do not collapse steamer baskets, bamboo steamers and electric steamers into one identity."
+    },
+    "Q1210743": {
+      "label": "espresso machine",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1323569": {
+      "label": "skewer",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q1326871": {
+      "label": "electric grill",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1361107": {
+      "label": "jigger",
+      "family": "measuring_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1364042": {
+      "label": "electric kettle",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1406259": {
+      "label": "Japanese grater",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1420408": {
+      "label": "fish scaler",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1427909": {
+      "label": "meat tenderizer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1430265": {
+      "label": "food mill",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1432049": {
+      "label": "food mold",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1454117": {
+      "label": "tamagoyaki pan",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1462000": {
+      "label": "bamboo sushi mat",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1473090": {
+      "label": "usuba knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1501252": {
+      "label": "mandoline",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1546715": {
+      "label": "pizza cutter",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1548347": {
+      "label": "cheese slicer",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1558651": {
+      "label": "gyuto knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1558853": {
+      "label": "fermentation crock",
+      "family": "storage",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1566385": {
+      "label": "nakiri knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1567238": {
+      "label": "chopping block",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1569661": {
+      "label": "pastry bag",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1595908": {
+      "label": "pasta machine",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1619772": {
+      "label": "milk frother",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1691892": {
+      "label": "yogurt maker",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1762390": {
+      "label": "wooden spoon",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1854307": {
+      "label": "metate",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1917279": {
+      "label": "flour sifter",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q1934490": {
+      "label": "immersion blender",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2023008": {
+      "label": "casserole dish",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2049293": {
+      "label": "chinois",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2061094": {
+      "label": "soda siphon",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2082349": {
+      "label": "splatter guard",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q2166926": {
+      "label": "tava",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2198722": {
+      "label": "baking stone",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2226954": {
+      "label": "handi",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2253582": {
+      "label": "grill pan",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2295077": {
+      "label": "cheese knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2342885": {
+      "label": "coffee percolator",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2366864": {
+      "label": "cooking pot",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2423285": {
+      "label": "comal",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2426230": {
+      "label": "measuring spoon",
+      "family": "measuring_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2547095": {
+      "label": "cheese grater",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2569925": {
+      "label": "trivet",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q2603627": {
+      "label": "potato ricer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2621157": {
+      "label": "cheesecloth",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q2685412": {
+      "label": "egg separator",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q2916202": {
+      "label": "cookie cutter",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3006338": {
+      "label": "crepe pan",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3007072": {
+      "label": "mixing bowl",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3183852": {
+      "label": "Boston shaker",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3267901": {
+      "label": "bamboo steamer",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3274349": {
+      "label": "griddle",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3325557": {
+      "label": "tart pan",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3363853": {
+      "label": "strainer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3388175": {
+      "label": "boning knife",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3401128": {
+      "label": "fish kettle",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3402546": {
+      "label": "tortilla press",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3494285": {
+      "label": "spurtle",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3509140": {
+      "label": "popcorn maker",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3536439": {
+      "label": "wet grinder",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3595636": {
+      "label": "karahi",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3748418": {
+      "label": "cooktop",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q3944918": {
+      "label": "saibashi",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q4057194": {
+      "label": "agemono nabe",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q4188287": {
+      "label": "zipper storage bag",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q4207627": {
+      "label": "kazan",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q4306963": {
+      "label": "multicooker",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q4327038": {
+      "label": "grapefruit knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q5002460": {
+      "label": "butcher knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q5002461": {
+      "label": "butcher paper",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q5166117": {
+      "label": "convection microwave",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q5167102": {
+      "label": "cookie press",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q5184231": {
+      "label": "crepe maker",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q5733262": {
+      "label": "herb chopper",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q6481648": {
+      "label": "bread lame",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q6741078": {
+      "label": "ice cube tray",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q6845269": {
+      "label": "mihbaj",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q6932019": {
+      "label": "muffin tin",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7070464": {
+      "label": "nutmeg grater",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7106634": {
+      "label": "sushi press",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7216960": {
+      "label": "shaguo",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7258290": {
+      "label": "pudding basin",
+      "family": "bakeware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7339910": {
+      "label": "roasting pan",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7541441": {
+      "label": "slotted spoon",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7571990": {
+      "label": "soy milk maker",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7646268": {
+      "label": "suribachi",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7681478": {
+      "label": "tamis",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7724780": {
+      "label": "saucepan",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q7901521": {
+      "label": "uruli",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q8352359": {
+      "label": "bread knife",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q9184233": {
+      "label": "Chinese cleaver",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q10467716": {
+      "label": "pastry wheel",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q10542413": {
+      "label": "coffee scoop",
+      "family": "measuring_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q10542531": {
+      "label": "cake pan",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q10746609": {
+      "label": "donabe",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q11327978": {
+      "label": "bread proofing basket",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q11692319": {
+      "label": "pastry blender",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q12294124": {
+      "label": "juicer",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14624645": {
+      "label": "terrine",
+      "family": "bakeware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q14694908": {
+      "label": "steam juicer",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q15711817": {
+      "label": "stockpot",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q16888524": {
+      "label": "jar opener",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q16977287": {
+      "label": "citrus reamer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q17061421": {
+      "label": "yanagiba knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q17209136": {
+      "label": "toaster oven",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q17996656": {
+      "label": "dough scraper",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q18131125": {
+      "label": "spatula",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q18341850": {
+      "label": "mortar and pestle",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q18355271": {
+      "label": "fillet knife",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q19703148": {
+      "label": "retained-heat cooker",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q21162481": {
+      "label": "güveç",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q21550525": {
+      "label": "custard cup",
+      "family": "bakeware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q24255183": {
+      "label": "herb scissors",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q24866026": {
+      "label": "cast-iron skillet",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q28167435": {
+      "label": "larding needle",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q29531732": {
+      "label": "hand beater",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q29913179": {
+      "label": "egg poacher",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q29944791": {
+      "label": "dolsot",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q30141216": {
+      "label": "apple slicer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q30314979": {
+      "label": "garlic peeler",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q55992766": {
+      "label": "tajine",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q60739826": {
+      "label": "food storage container",
+      "family": "storage",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q65010468": {
+      "label": "asanka",
+      "family": "cookware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q65064210": {
+      "label": "cheese press",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q87478722": {
+      "label": "knife sharpener",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q87777641": {
+      "label": "apple butter stirrer",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q89833816": {
+      "label": "cobbler shaker",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q94035928": {
+      "label": "tourne knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q94037782": {
+      "label": "paring knife",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q94038050": {
+      "label": "oyster knife",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q98935312": {
+      "label": "carving knife",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q104554090": {
+      "label": "ice cream scoop",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q107401769": {
+      "label": "pie plate",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q107616224": {
+      "label": "dough hook",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q108854983": {
+      "label": "baster",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q109072031": {
+      "label": "portable induction cooktop",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q109569602": {
+      "label": "masticating juicer",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q109569939": {
+      "label": "centrifugal juicer",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q110619713": {
+      "label": "egg mold",
+      "family": "bakeware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q111878051": {
+      "label": "oven",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q114625439": {
+      "label": "rice paddle",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q115645815": {
+      "label": "measuring pitcher",
+      "family": "measuring_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971347": {
+      "label": "basting brush",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971353": {
+      "label": "channel knife",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971359": {
+      "label": "cooking timer",
+      "family": "measuring_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971360": {
+      "label": "cooking torch",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971362": {
+      "label": "dough wheel",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971380": {
+      "label": "gelatin mold",
+      "family": "bakeware",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971413": {
+      "label": "pastry cloth",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q116971422": {
+      "label": "ice scoop",
+      "family": "bar_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207868": {
+      "label": "pizza pan",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207872": {
+      "label": "pie weights",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207873": {
+      "label": "roasting pan rack",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207882": {
+      "label": "paella pan",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207884": {
+      "label": "sauté pan",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207892": {
+      "label": "steamer basket",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207971": {
+      "label": "vacuum sealer bag",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q117207979": {
+      "label": "chocolate tempering machine",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207984": {
+      "label": "cotton candy machine",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207985": {
+      "label": "meat slicer",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117207988": {
+      "label": "fondue pot",
+      "family": "cookware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117208004": {
+      "label": "mochi maker",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117208014": {
+      "label": "pizzelle maker",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117208016": {
+      "label": "sandwich maker",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117208018": {
+      "label": "vacuum sealer",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q117293906": {
+      "label": "cupcake liners",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q130457502": {
+      "label": "kitchen scissors",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q131006579": {
+      "label": "air fryer",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Proposed natural label for hot-air deep fryer; reconcile with the separate English-Wikipedia air-fryer item before seeding."
+    },
+    "Q131623493": {
+      "label": "raclette grill",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q132159561": {
+      "label": "bamboo skewer",
+      "family": "kitchen_supplies",
+      "tier": "scope_review",
+      "reason": "Related kitchen supply or safety item; decide inclusion separately from reusable equipment."
+    },
+    "Q136384028": {
+      "label": "ice shaver",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q136384053": {
+      "label": "ice crusher",
+      "family": "appliances",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q136384235": {
+      "label": "ravioli press",
+      "family": "preparation_tools",
+      "tier": "specialist",
+      "reason": "Useful recipe equipment type; retain functional/regional distinctions. Identity and aliases still require approval before seeding."
+    },
+    "Q990772": {
+      "label": "bread machine",
+      "family": "appliances",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; source definition reviewed. Identity and aliases still require approval before seeding."
+    },
+    "Q107401777": {
+      "label": "baking dish",
+      "family": "bakeware",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; source definition reviewed. Identity and aliases still require approval before seeding."
+    },
+    "Q14902": {
+      "label": "lemon squeezer",
+      "family": "preparation_tools",
+      "tier": "core",
+      "reason": "Useful recipe equipment type; source definition reviewed. Identity and aliases still require approval before seeding."
+    }
+  }
+}
