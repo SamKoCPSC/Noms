@@ -25,6 +25,7 @@ pub use shared_modal::SharedModal;
 
 mod action_menu;
 mod add_to_collection_dropdown;
+pub(crate) mod autocomplete_popup;
 mod avatar;
 mod brand_artwork;
 mod button;

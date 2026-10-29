@@ -1,13 +1,11 @@
 .ingredient-autocomplete { position: relative; flex: 1; min-width: 0; }
 .ingredient-autocomplete > input { width: 100%; }
-.ingredient-autocomplete__list { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; list-style: none; padding: var(--space-xs); margin: var(--space-xs) 0 0; max-height: 20rem; overflow-y: auto; background: var(--overlay-opaque); border: 1px solid var(--border-color); border-radius: var(--radius-md); }
-.ingredient-autocomplete__list button { display: flex; width: 100%; padding: var(--space-sm); text-align: left; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); cursor: pointer; font: inherit; }
+.ingredient-autocomplete__list { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; list-style: none; box-sizing: border-box; padding: 2px; margin: 4px 0 0; max-height: 12rem; overflow-y: auto; overscroll-behavior: contain; background: var(--overlay-opaque); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.ingredient-autocomplete .ingredient-autocomplete__list > li { margin: 0; padding: 0; list-style: none; }
+.ingredient-autocomplete__list button { display: flex; align-items: center; width: 100%; min-height: 32px; margin: 0; padding: 4px 8px; line-height: 20px; text-align: left; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-primary); cursor: pointer; font-family: inherit; font-size: inherit; }
 .ingredient-autocomplete__list button:hover, .ingredient-autocomplete__list button[aria-selected="true"] { background: var(--surface); outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .ingredient-autocomplete__hint { color: var(--text-secondary); font-size: .8rem; }
-.ingredient-autocomplete__list button { min-height: 44px; }
 .ingredient-autocomplete__list strong { min-width: 0; overflow-wrap: anywhere; }
-.equipment-autocomplete .ingredient-autocomplete__list { max-height: 12rem; padding: 2px; }
-.equipment-autocomplete .ingredient-autocomplete__list button { padding: 5px 8px; }
 .unit-autocomplete { flex: 0 1 auto; }
 .unit-autocomplete .ingredient-autocomplete__list { min-width: 13rem; max-height: 10rem; padding: 2px; }
 .unit-autocomplete--end .ingredient-autocomplete__list { left: auto; right: 0; }
@@ -21,5 +19,5 @@
     .unit-autocomplete .ingredient-autocomplete__list { left: auto; right: 0; }
 }
 @media (pointer: coarse) {
-    .unit-autocomplete .ingredient-autocomplete__list button { min-height: 44px; }
+    .ingredient-autocomplete .ingredient-autocomplete__list button { min-height: 40px; padding-block: 4px; }
 }

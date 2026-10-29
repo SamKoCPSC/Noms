@@ -136,6 +136,7 @@ async def main(args):
             await page.set_viewport_size({"width": 390, "height": 900})
             # Contents navigation activates the optional panel on small screens.
             await page.locator('.recipe-editor__contents a[href="#recipe-equipment"]').click()
+            await expect(page.locator('#recipe-equipment')).to_be_focused()
             await choose(1, "pastry sheeter", "dough sheeter", "touch")
             await field(2).fill("pan")
             await field(2).press("ArrowUp")

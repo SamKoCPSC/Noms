@@ -33,22 +33,6 @@ pub fn UnitAutocomplete(
             }
         },
     ));
-    #[cfg(target_arch = "wasm32")]
-    use_effect(use_reactive((&id,), move |(id,)| {
-        if open() {
-            if let Some(position) = active() {
-                if let Some(element) = web_sys::window()
-                    .and_then(|w| w.document())
-                    .and_then(|d| d.get_element_by_id(&format!("{id}-suggestions-{position}")))
-                {
-                    let options = web_sys::ScrollIntoViewOptions::new();
-                    options.set_block(web_sys::ScrollLogicalPosition::Nearest);
-                    options.set_inline(web_sys::ScrollLogicalPosition::Nearest);
-                    element.scroll_into_view_with_scroll_into_view_options(&options);
-                }
-            }
-        }
-    }));
     let mut confirm = move || {
         if !open() {
             return;
@@ -138,7 +122,9 @@ pub fn UnitAutocomplete(
                 },
             }
             if expanded {
-                ul { id: list_id.clone(), class: "ingredient-autocomplete__list neumo-raised", role: "listbox", aria_label: "Unit suggestions",
+                crate::components::base::autocomplete_popup::AutocompleteList {
+                    id: list_id.clone(), accessible_name: "Unit suggestions",
+                    query: editing(), active: active(),
                     for (position, unit) in suggestions.iter().enumerate() {
                         li { role: "presentation",
                             button {
@@ -150,6 +136,7 @@ pub fn UnitAutocomplete(
                                 aria_selected: active() == Some(position),
                                 tabindex: "-1",
                                 title: "{unit.name} — {unit.label}",
+                                onpointerdown: move |event| event.prevent_default(),
                                 onmousedown: move |event| event.prevent_default(),
                                 onclick: {
                                     let label = unit.label;

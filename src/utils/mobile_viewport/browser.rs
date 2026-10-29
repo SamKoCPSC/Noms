@@ -58,6 +58,13 @@ pub fn mount() -> Option<MobileViewport> {
             let _ = root
                 .style()
                 .set_property("--mobile-keyboard-offset", &format!("{offset}px"));
+            let (visible_height, visible_top) = visual.unwrap_or((height, 0.));
+            let _ = root
+                .style()
+                .set_property("--mobile-visual-height", &format!("{visible_height}px"));
+            let _ = root
+                .style()
+                .set_property("--mobile-visual-top", &format!("{visible_top}px"));
         }
     }));
     let heading_id = Rc::new(RefCell::new(None::<String>));
@@ -147,6 +154,8 @@ impl Drop for MobileViewport {
             .root
             .style()
             .remove_property("--mobile-keyboard-offset");
+        let _ = self.root.style().remove_property("--mobile-visual-height");
+        let _ = self.root.style().remove_property("--mobile-visual-top");
     }
 }
 
