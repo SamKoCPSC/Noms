@@ -6,6 +6,8 @@
 .ingredient-autocomplete__hint { color: var(--text-secondary); font-size: .8rem; }
 .ingredient-autocomplete__list button { min-height: 44px; }
 .ingredient-autocomplete__list strong { min-width: 0; overflow-wrap: anywhere; }
+.equipment-autocomplete .ingredient-autocomplete__list { max-height: 12rem; padding: 2px; }
+.equipment-autocomplete .ingredient-autocomplete__list button { padding: 5px 8px; }
 .unit-autocomplete { flex: 0 1 auto; }
 .unit-autocomplete .ingredient-autocomplete__list { min-width: 13rem; max-height: 10rem; padding: 2px; }
 .unit-autocomplete--end .ingredient-autocomplete__list { left: auto; right: 0; }

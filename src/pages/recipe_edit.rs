@@ -1668,8 +1668,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                 display: "flex",
                                 gap: "var(--space-sm)",
                                 align_items: "center",
-                                Input {
-                            accessible_name: "Equipment {idx + 1} name",
+                                crate::components::equipment_autocomplete::EquipmentAutocomplete {
+                                    id: "recipe-equipment-{idx}",
+                                    accessible_name: "Equipment {idx + 1} name",
                                     value: equipment()[idx].name.clone(),
                                     placeholder: "e.g. mixing bowl",
                                     oninput: move |v| {
