@@ -106,9 +106,6 @@ pub fn mount() -> Option<MobileViewport> {
     let select_section = runtime.select_section.clone();
     runtime.listeners.push(
         DomListener::new(document.into(), "click", move |event| {
-            if width(&window) > 760.0 {
-                return;
-            }
             let Some(target) = event
                 .target()
                 .and_then(|e| e.dyn_into::<web_sys::Element>().ok())
@@ -125,7 +122,7 @@ pub fn mount() -> Option<MobileViewport> {
             let Some(href) = anchor.get_attribute("href") else {
                 return;
             };
-            // We scroll locally after the section has rendered. Native fragment
+            // Jump locally without changing routes. Native fragment
             // navigation would notify the router of an autosaved draft URL and
             // remount the editor, losing the selected section and field focus.
             event.prevent_default();

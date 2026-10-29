@@ -22,8 +22,8 @@ use crate::pages::recipe_editor_form::{
     apply_step_photo_edit, build_step_tree, can_indent_step, flatten_steps,
     format_step_photo_file_size, reorder_step_photo_within_step, reset_step_photo_input,
     step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
-    RecipeEditorInput as Input, StepForm, StepPhotoEditButton, StepPhotoPreview,
-    StepPhotoUploadFeedback,
+    RecipeEditorInput as Input, RecipeTimingFields, StepForm, StepPhotoEditButton,
+    StepPhotoPreview, StepPhotoUploadFeedback,
 };
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient,
@@ -1147,7 +1147,6 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     div { class: "recipe-editor__panels",
 
                     section { class: "recipe-editor__panel recipe-editor__basics neumo-raised", aria_labelledby: "recipe-basics",
-                        "data-mobile-active": active_editor_section() == "basics",
                         onfocusin: move |_| active_editor_section.set("basics"),
                         onclick: move |_| active_editor_section.set("basics"),
                         h2 { id: "recipe-basics", tabindex: "-1", "Basics" }
@@ -1202,66 +1201,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                     }
 
-                    // Time & servings row
-                    div {
-                        display: "grid",
-                        grid_template_columns: "1fr 1fr 1fr",
-                        gap: "var(--space-sm)",
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Prep Time (min)"
-                            }
-                            Input {
-                            accessible_name: "Prep time in minutes",
-                                value: prep_time().clone(),
-                                placeholder: "0",
-                                input_type: "number",
-                                oninput: move |v| prep_time.set(v),
-                            }
-                        }
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Cook Time (min)"
-                            }
-                            Input {
-                            accessible_name: "Cook time in minutes",
-                                value: cook_time().clone(),
-                                placeholder: "0",
-                                input_type: "number",
-                                oninput: move |v| cook_time.set(v),
-                            }
-                        }
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Servings"
-                            }
-                            Input {
-                            accessible_name: "Servings",
-                                value: servings().clone(),
-                                placeholder: "4",
-                                input_type: "number",
-                                oninput: move |v| servings.set(v),
-                            }
-                        }
-                    }
+                    RecipeTimingFields { prep_time, cook_time, servings }
 
                     // ── Tags ────────────────────────────────────────────
                     div {
@@ -1325,7 +1265,6 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__photos neumo-raised", aria_labelledby: "recipe-photos",
-                        "data-mobile-active": active_editor_section() == "photos",
                         onfocusin: move |_| active_editor_section.set("photos"),
                         onclick: move |_| active_editor_section.set("photos"),
                         h2 { id: "recipe-photos", tabindex: "-1", "Photos" span { " · Optional" } }
@@ -1356,7 +1295,6 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__ingredients neumo-raised", aria_labelledby: "recipe-ingredients",
-                        "data-mobile-active": active_editor_section() == "ingredients",
                         onfocusin: move |_| active_editor_section.set("ingredients"),
                         onclick: move |_| active_editor_section.set("ingredients"),
                         h2 { id: "recipe-ingredients", tabindex: "-1", "Ingredients" }
@@ -1382,7 +1320,6 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__method neumo-raised", aria_labelledby: "recipe-method",
-                        "data-mobile-active": active_editor_section() == "method",
                         onfocusin: move |_| active_editor_section.set("method"),
                         onclick: move |_| active_editor_section.set("method"),
                         h2 { id: "recipe-method", tabindex: "-1", "Method" }
@@ -1652,7 +1589,6 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__equipment neumo-raised", aria_labelledby: "recipe-equipment",
-                        "data-mobile-active": active_editor_section() == "equipment",
                         onfocusin: move |_| active_editor_section.set("equipment"),
                         onclick: move |_| active_editor_section.set("equipment"),
                         h2 { id: "recipe-equipment", tabindex: "-1", "Equipment" span { " · Optional" } }
@@ -1699,7 +1635,6 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     }
 
                     section { class: "recipe-editor__panel recipe-editor__notes neumo-raised", aria_labelledby: "recipe-notes",
-                        "data-mobile-active": active_editor_section() == "notes",
                         onfocusin: move |_| active_editor_section.set("notes"),
                         onclick: move |_| active_editor_section.set("notes"),
                         h2 { id: "recipe-notes", tabindex: "-1", "Notes" span { " · Optional" } }
