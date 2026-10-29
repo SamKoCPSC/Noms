@@ -103,13 +103,17 @@ async def main(args):
             boxes=[await basic.get_by_label('Ingredient 1 '+name,exact=True).bounding_box() for name in ['amount','unit','optional']]
             centers=[box['y']+box['height']/2 for box in boxes]
             assert max(centers)-min(centers)<=8, f'Optional is not beside quantity at {width}'
-            inline_names=['name','modifiers'] + (['amount','unit','optional'] if width>760 else [])
-            inline_boxes=[]
-            for name in inline_names:
-                control=basic.get_by_role('button',name='Ingredient 1 modifiers',exact=True) if name=='modifiers' else basic.get_by_label('Ingredient 1 '+name,exact=True)
-                inline_boxes.append(await control.bounding_box())
-            inline_centers=[box['y']+box['height']/2 for box in inline_boxes]
-            assert max(inline_centers)-min(inline_centers)<=8, f'Modifiers is not inline at {width}'
+            if width>760:
+                inline_boxes=[await basic.get_by_label('Ingredient 1 '+name,exact=True).bounding_box() for name in ['name','amount','unit','optional']]
+                inline_boxes.append(await basic.get_by_role('button',name='Ingredient 1 modifiers',exact=True).bounding_box())
+                inline_centers=[box['y']+box['height']/2 for box in inline_boxes]
+                assert max(inline_centers)-min(inline_centers)<=8, f'Modifiers is not inline at {width}'
+            else:
+                name_box=await basic.get_by_label('Ingredient 1 name',exact=True).bounding_box()
+                basic_box=await basic.bounding_box()
+                modifier_box=await basic.get_by_role('button',name='Ingredient 1 modifiers',exact=True).bounding_box()
+                assert abs(name_box['width']-basic_box['width'])<=1, f'Ingredient name is not full width at {width}'
+                assert modifier_box['y']>=max(box['y']+box['height'] for box in boxes), f'Modifiers must follow quantity at {width}'
             assert all(box['width']>=44 for box in boxes[:2]), f'Quantity inputs too narrow at {width}'
             for row in [primary, primary.locator('.recipe-ingredient-substitute').first]:
                 assert await row.evaluate('el=>el.scrollWidth<=el.clientWidth'), f'Ingredient row overflow at {width}'

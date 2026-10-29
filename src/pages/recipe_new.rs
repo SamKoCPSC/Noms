@@ -1014,7 +1014,8 @@ pub fn RecipeNew() -> Element {
                                 || busy()
                                 || step_photo_upload_count() > 0,
                             onclick: on_save_draft,
-                            "{draft_save_state.label()}"
+                            span { class: "desktop-editor-label", "{draft_save_state.label()}" }
+                            span { class: "mobile-only", if draft_save_state.is_actionable() { "Save" } else { "{draft_save_state.label()}" } }
                         }
                         Button {
                             variant: ButtonVariant::Primary,
@@ -1029,7 +1030,7 @@ pub fn RecipeNew() -> Element {
                                 "Publishing..."
                             } else {
                                 span { class: "desktop-publish-label", "Publish Recipe" }
-                                span { class: "mobile-only", "Review & publish" }
+                                span { class: "mobile-only", "Review" }
                             }
                         }
                         Button {
