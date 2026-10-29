@@ -56,6 +56,9 @@ async def main(args):
         await page.goto(base + '/recipes/new', wait_until='networkidle')
         await page.get_by_label('Recipe name', exact=True).fill('Mobile recipe ' + suffix)
         await page.get_by_label('Servings', exact=True).fill('2')
+        await page.get_by_label('Prep time in minutes', exact=True).fill('10')
+        await page.get_by_label('Cook time in minutes', exact=True).fill('20')
+        await page.get_by_label('Description', exact=True).fill('A quick chickpea supper.')
         sections = page.get_by_role('navigation', name='Recipe editor sections', exact=True)
         await sections.get_by_role('link', name='Ingredients', exact=False).click()
         await page.get_by_role('button', name='+ Add Ingredient', exact=True).click()
@@ -116,6 +119,39 @@ async def main(args):
             assert max(box['y'] for box in tab_boxes) - min(box['y'] for box in tab_boxes) <= 1
             assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth')
             await check_toolbar(3)
+            timing = page.locator('.recipe-editor__timing')
+            timing_boxes = [await timing.get_by_role('spinbutton', name=label, exact=True).bounding_box()
+                            for label in ['Prep time in minutes', 'Cook time in minutes', 'Servings']]
+            assert max(box['y'] for box in timing_boxes) - min(box['y'] for box in timing_boxes) <= 1
+            assert max(box['height'] for box in timing_boxes) - min(box['height'] for box in timing_boxes) <= 1
+            for label in await timing.locator('label > span').all():
+                assert await label.evaluate('el=>el.scrollWidth<=el.clientWidth'), (width, await label.inner_text())
+            panels = page.locator('.recipe-editor__panel')
+            await expect(panels).to_have_count(6)
+            panel_boxes = []
+            for panel in await panels.all():
+                await expect(panel).to_be_visible()
+                panel_boxes.append(await panel.bounding_box())
+                assert float((await panel.evaluate('el=>getComputedStyle(el).rowGap')).replace('px','')) <= 14
+            for previous, current in zip(panel_boxes, panel_boxes[1:]):
+                assert 0 <= current['y'] - previous['y'] - previous['height'] <= 21
+        checks.append('aligned time/servings inputs, single-line minute labels, compact gaps and all six sections continuously visible')
+        print('PASS:', checks[-1], flush=True)
+        await page.set_viewport_size({'width': 390, 'height': 844})
+        for label in ['Notes', 'Basics', 'Photos', 'Ingredients', 'Method', 'Equipment', 'Basics']:
+            heading = page.locator('#recipe-' + label.lower())
+            await sections.get_by_role('link', name=label, exact=False).click()
+            await expect(heading).to_be_focused()
+            await expect(sections.get_by_role('link', name=label, exact=False)).to_have_attribute('aria-current', 'location')
+            await expect(name).to_have_value('Chickpeas')
+            box = await heading.bounding_box()
+            nav_box = await sections.bounding_box()
+            assert box['y'] >= nav_box['y'] + nav_box['height'] - 2
+            assert box['y'] < 760
+        await page.screenshot(path=str(args.output / 'basics-mobile.png'))
+        await sections.get_by_role('link', name='Ingredients', exact=False).click()
+        checks.append('section tabs scroll and focus every section without hiding fields or losing ingredient values')
+        print('PASS:', checks[-1], flush=True)
         checks.append('full-width primary/substitution names, quantity alignment, modifiers below quantity, single-row sections and flat toolbar at 320–760px')
         print('PASS:', checks[-1], flush=True)
 
@@ -159,6 +195,11 @@ async def main(args):
         await expect(page.get_by_label('Ingredient 1 text before', exact=True)).to_have_value('Acme')
         await expect(page.get_by_role('button', name='Saved', exact=True)).to_be_visible()
         await page.reload(wait_until='networkidle')
+        await expect(page.get_by_label('Prep time in minutes', exact=True)).to_have_value('10')
+        await expect(page.get_by_label('Cook time in minutes', exact=True)).to_have_value('20')
+        await expect(page.get_by_label('Servings', exact=True)).to_have_value('2')
+        for panel in await page.locator('.recipe-editor__panel').all():
+            await expect(panel).to_be_visible()
         await sections.get_by_role('link', name='Ingredients', exact=False).click()
         await primary.get_by_role('button', name='Edit Ingredient 1', exact=True).click()
         await name.press('Escape')
@@ -180,6 +221,11 @@ async def main(args):
         await keyboard(False)
         await expect(page.locator('.recipe-editor__actions')).to_have_css('position', 'static')
         await expect(page.get_by_role('button', name='Publish Changes', exact=True)).to_be_visible()
+        await sections.get_by_role('link', name='Notes', exact=False).click()
+        await expect(page.locator('#recipe-notes')).to_be_focused()
+        await sections.get_by_role('link', name='Basics', exact=False).click()
+        await expect(page.locator('#recipe-basics')).to_be_focused()
+        await page.screenshot(path=str(args.output / 'basics-desktop.png'))
         await page.get_by_role('button', name='Toggle theme', exact=True).click()
         await page.set_viewport_size({'width': 390, 'height': 844})
         await expect(page.locator('html')).to_have_class(re.compile('dark'))

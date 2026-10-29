@@ -61,6 +61,43 @@ pub(super) fn RecipeEditorInput(
         }
     }
 }
+/// Time and serving fields share one aligned row and the parent editor's signals.
+#[component]
+pub(super) fn RecipeTimingFields(
+    mut prep_time: Signal<String>,
+    mut cook_time: Signal<String>,
+    mut servings: Signal<String>,
+) -> Element {
+    rsx! {
+        div { class: "recipe-editor__timing",
+            label {
+                span { "Prep time (min)" }
+                RecipeEditorInput {
+                    accessible_name: "Prep time in minutes", value: prep_time(),
+                    placeholder: "0", input_type: "number",
+                    oninput: move |value| prep_time.set(value),
+                }
+            }
+            label {
+                span { "Cook time (min)" }
+                RecipeEditorInput {
+                    accessible_name: "Cook time in minutes", value: cook_time(),
+                    placeholder: "0", input_type: "number",
+                    oninput: move |value| cook_time.set(value),
+                }
+            }
+            label {
+                span { "Servings" }
+                RecipeEditorInput {
+                    accessible_name: "Servings", value: servings(),
+                    placeholder: "4", input_type: "number",
+                    oninput: move |value| servings.set(value),
+                }
+            }
+        }
+    }
+}
+
 /// A contents list, not a completion checklist: empty optional sections never
 /// prevent saving or publishing. Counts include only content the user entered.
 #[component]
