@@ -19,6 +19,10 @@ pub fn mount() -> Option<MobileViewport> {
         .dyn_into::<HtmlElement>()
         .ok()?;
     let viewport = window.visual_viewport();
+    // Retain the unfocused layout height while editing. Some Android browsers
+    // resize both viewports, so innerHeight alone loses the keyboard's height.
+    let reference_height = Cell::new(0.0_f64);
+    let reference_width = Cell::new(width(&window));
     let update = Rc::new(AnimationFrame::new(window.clone(), {
         let (window, document, root, viewport) = (
             window.clone(),
@@ -36,15 +40,20 @@ pub fn mount() -> Option<MobileViewport> {
                 .ok()
                 .and_then(|v| v.as_f64())
                 .unwrap_or(0.0);
-            let offset = super::keyboard_offset(
-                width(&window),
-                editing,
-                height,
-                viewport.as_ref().map(|v| (v.height(), v.offset_top())),
-            );
+            let current_width = width(&window);
+            if current_width != reference_width.get() || !editing {
+                reference_width.set(current_width);
+                reference_height.set(height);
+            } else {
+                reference_height.set(reference_height.get().max(height));
+            }
+            let visual = viewport.as_ref().map(|v| (v.height(), v.offset_top()));
+            let keyboard =
+                super::keyboard_offset(current_width, editing, reference_height.get(), visual);
+            let offset = super::keyboard_offset(current_width, editing, height, visual);
             let _ = root.set_attribute(
                 "data-mobile-keyboard",
-                if offset > 0.0 { "open" } else { "closed" },
+                if keyboard > 0.0 { "open" } else { "closed" },
             );
             let _ = root
                 .style()
@@ -116,6 +125,10 @@ pub fn mount() -> Option<MobileViewport> {
             let Some(href) = anchor.get_attribute("href") else {
                 return;
             };
+            // We scroll locally after the section has rendered. Native fragment
+            // navigation would notify the router of an autosaved draft URL and
+            // remount the editor, losing the selected section and field focus.
+            event.prevent_default();
             *heading_id.borrow_mut() = href.strip_prefix('#').map(str::to_owned);
             select_section.request();
         })

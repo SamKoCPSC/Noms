@@ -90,9 +90,10 @@
 .recipe-ingredient-substitute h4 { margin: 0 0 6px; font-size: 13px; }
 .recipe-ingredient-substitutes > .btn { justify-self: start; }
 @media(max-width:760px) {
-    .recipe-ingredient-basic { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; gap: 10px; }
-    .recipe-ingredient-name { grid-column: 1; grid-row: 1; }
-    .recipe-ingredient-modifier-toggle { grid-column: 2; grid-row: 1; justify-self: end; }
+    .recipe-ingredient-basic { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; gap: 8px 10px; }
+    .recipe-ingredient-name { grid-column: 1 / -1; grid-row: 1; }
+    .recipe-ingredient-name > label { min-height: 32px; justify-content: center; padding-right: 44px; margin-bottom: 6px; }
+    .recipe-ingredient-modifier-toggle { grid-column: 1 / -1; grid-row: 3; justify-self: start; min-height: 44px; padding-inline: 0; }
     .recipe-ingredient-basic .recipe-ingredient-remove { grid-column: 3; grid-row: 1; justify-self: end; }
     .recipe-ingredient-amount { grid-column: 1; grid-row: 2; }
     .recipe-ingredient-unit { grid-column: 2; grid-row: 2; }

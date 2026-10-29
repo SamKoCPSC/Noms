@@ -1101,7 +1101,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                 || busy()
                                 || step_photo_upload_count() > 0,
                             onclick: on_save_draft,
-                            "{draft_save_state.label()}"
+                            span { class: "desktop-editor-label", "{draft_save_state.label()}" }
+                            span { class: "mobile-only", if draft_save_state.is_actionable() { "Save" } else { "{draft_save_state.label()}" } }
                         }
                         Button {
                             variant: ButtonVariant::Primary,
@@ -1116,7 +1117,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                 "Publishing..."
                             } else {
                                 span { class: "desktop-publish-label", "Publish Changes" }
-                                span { class: "mobile-only", "Review & publish" }
+                                span { class: "mobile-only", "Review" }
                             }
                         }
                         Button {
@@ -1130,7 +1131,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             variant: ButtonVariant::Danger,
                             disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
                             onclick: on_discard,
-                            if is_discarding() { "Discarding..." } else { "Discard Draft" }
+                            if is_discarding() { "Discarding..." } else { span { class: "desktop-editor-label", "Discard Draft" } span { class: "mobile-only", "Discard" } }
                         }
                     }
                 div { class: "recipe-editor__layout",
