@@ -76,7 +76,7 @@ async def main(args):
             assert data['bottom'] <= data['viewBottom'] - 7, data
             assert data['left'] >= data['viewLeft'] + 7, data
             assert data['right'] <= data['viewRight'] - 7, data
-            assert abs(data['gap']) <= 1 and 39 <= data['rowHeight'] <= 41, data
+            assert abs(data['gap']) <= 1 and 31 <= data['rowHeight'] <= 33, data
             await expect(field).to_be_focused()
             measurements.append(data)
             return menu
@@ -94,6 +94,13 @@ async def main(args):
             active = await field.get_attribute('aria-activedescendant')
             selected = page.locator(f'[id="{active}"]')
             await expect(selected).to_be_visible()
+            await page.wait_for_function("""id => {
+                const selected = document.getElementById(id);
+                const list = selected?.closest('[role=listbox]');
+                if (!selected || !list) return false;
+                const row = selected.getBoundingClientRect(), menu = list.getBoundingClientRect();
+                return row.top >= menu.top && row.bottom <= menu.bottom;
+            }""", arg=active)
             selected_box, menu_box = await selected.bounding_box(), await menu.bounding_box()
             assert selected_box['y'] >= menu_box['y']
             assert selected_box['y'] + selected_box['height'] <= menu_box['y'] + menu_box['height']

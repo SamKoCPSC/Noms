@@ -47,8 +47,8 @@ The native nonmodal top layer avoids clipping in scrollable forms and dialogs;
 focus remains in the input. Mobile bottom-sheet dialogs also fit the visual
 viewport so their focused fields remain reachable above the keyboard.
 
-Rows have no inter-item margins, compact padding, 32-pixel minimum desktop
-targets and 40-pixel minimum touch targets. Arrow navigation scrolls only the
+Rows have no inter-item margins, compact padding, 28-pixel minimum desktop
+targets and 32-pixel minimum touch targets. Arrow navigation scrolls only the
 suggestions list; manually scrolling it does not snap back to an earlier
 highlight. Closing or unmounting a list removes its viewport listeners and
 cancels pending layout frames. Matching and confirmation behavior are unchanged.
