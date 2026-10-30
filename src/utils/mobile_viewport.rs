@@ -1,6 +1,8 @@
 //! Mobile viewport behavior; browser registrations live for the application scope.
 
 #[cfg(target_arch = "wasm32")]
+mod autocomplete;
+#[cfg(target_arch = "wasm32")]
 mod browser;
 #[cfg(target_arch = "wasm32")]
 pub use browser::mount;

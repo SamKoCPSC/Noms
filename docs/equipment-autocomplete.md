@@ -73,3 +73,5 @@ The viewport test simulates keyboard shrinkage and panning through browser
 VisualViewport measurements/events, and checks real rendered bounds, spacing,
 focus, touch selection, scroll behavior, native dialogs and the layout-viewport
 fallback. Headless Chromium does not display a physical OS keyboard.
+
+On mobile, focused autocomplete fields can also scroll toward the visible top when the keyboard opens and there is insufficient space. The page or sheet receives temporary scroll room for fields near its end. This helper handles only field scrolling; the shared popup continues to own result positioning, clipping avoidance, compact row sizing, and list-only keyboard navigation. See `scripts/tests/test-autocomplete-keyboard-browser.py` for normal-flow field scrolling and keyboard transitions.

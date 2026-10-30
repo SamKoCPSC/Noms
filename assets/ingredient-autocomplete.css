@@ -16,6 +16,9 @@
     .ingredient-autocomplete { flex-basis: 160px; }
     .unit-autocomplete { flex-basis: auto; }
     .unit-autocomplete .ingredient-autocomplete__list { left: auto; right: 0; }
+    /* Leave scroll room for focused fields near the end of a page or sheet. */
+    html[data-mobile-autocomplete=open] .app-shell .main-content { padding-bottom: calc(var(--mobile-keyboard-offset, 0px) + 240px); }
+    [data-autocomplete-scroller=true] { padding-bottom: 240px !important; }
 }
 @media (pointer: coarse) {
     .ingredient-autocomplete .ingredient-autocomplete__list button { min-height: 32px; }
