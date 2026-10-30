@@ -5,6 +5,8 @@ use dioxus::prelude::*;
 mod browser;
 #[cfg(any(target_arch = "wasm32", test))]
 mod placement;
+#[cfg(target_arch = "wasm32")]
+pub(super) use placement::{place, Rect};
 
 #[component]
 pub(crate) fn AutocompleteList(
