@@ -23,6 +23,7 @@ pub fn mount() -> Option<MobileViewport> {
     // resize both viewports, so innerHeight alone loses the keyboard's height.
     let reference_height = Cell::new(0.0_f64);
     let reference_width = Cell::new(width(&window));
+    let mut autocomplete = super::autocomplete::AutocompleteViewport::default();
     let update = Rc::new(AnimationFrame::new(window.clone(), {
         let (window, document, root, viewport) = (
             window.clone(),
@@ -65,6 +66,7 @@ pub fn mount() -> Option<MobileViewport> {
             let _ = root
                 .style()
                 .set_property("--mobile-visual-top", &format!("{visible_top}px"));
+            autocomplete.update(&window, &document, &root, keyboard > 0.0, visual);
         }
     }));
     let heading_id = Rc::new(RefCell::new(None::<String>));
@@ -99,6 +101,7 @@ pub fn mount() -> Option<MobileViewport> {
         (window.clone().into(), "resize"),
         (document.clone().into(), "focusin"),
         (document.clone().into(), "focusout"),
+        (document.clone().into(), "scroll"),
     ];
     if let Some(viewport) = viewport {
         targets.push((viewport.clone().into(), "resize"));
@@ -147,6 +150,7 @@ impl Drop for MobileViewport {
         self.update.cancel();
         self.select_section.cancel();
         let _ = self.root.remove_attribute("data-mobile-keyboard");
+        let _ = self.root.remove_attribute("data-mobile-autocomplete");
         let _ = self
             .root
             .style()
@@ -221,7 +225,11 @@ impl DomListener {
         callback: impl FnMut(Event) + 'static,
     ) -> Result<Self, JsValue> {
         let callback = Closure::wrap(Box::new(callback) as Box<dyn FnMut(Event)>);
-        target.add_event_listener_with_callback(name, callback.as_ref().unchecked_ref())?;
+        target.add_event_listener_with_callback_and_bool(
+            name,
+            callback.as_ref().unchecked_ref(),
+            name == "scroll",
+        )?;
         Ok(Self {
             target,
             name,
@@ -232,8 +240,10 @@ impl DomListener {
 
 impl Drop for DomListener {
     fn drop(&mut self) {
-        let _ = self
-            .target
-            .remove_event_listener_with_callback(self.name, self.callback.as_ref().unchecked_ref());
+        let _ = self.target.remove_event_listener_with_callback_and_bool(
+            self.name,
+            self.callback.as_ref().unchecked_ref(),
+            self.name == "scroll",
+        );
     }
 }
