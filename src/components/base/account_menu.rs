@@ -4,8 +4,10 @@ use super::{
     overlay_logic::{menu_position, menu_target, natural_height},
 };
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Element, Event, EventTarget, HtmlElement, KeyboardEvent, Node};
+
+const MENU_ITEMS: &str = "[role=\"menuitem\"], [role=\"menuitemradio\"]";
 
 struct AccountMenu {
     root: HtmlElement,
@@ -14,7 +16,7 @@ struct AccountMenu {
 }
 impl AccountMenu {
     fn items(&self) -> Vec<HtmlElement> {
-        let Ok(nodes) = self.panel.query_selector_all("[role=\"menuitem\"]") else {
+        let Ok(nodes) = self.panel.query_selector_all(MENU_ITEMS) else {
             return vec![];
         };
         (0..nodes.length())
@@ -40,20 +42,61 @@ impl AccountMenu {
             self.close(false);
             return;
         }
+        let trigger_rect = dom::rect(&self.trigger);
+        let (viewport_width, viewport_height) = dom::viewport();
+        let field_width = self.panel.get_attribute("data-menu-width").as_deref() == Some("trigger");
+        let view = web_sys::window().and_then(|window| window.visual_viewport());
+        let view = super::autocomplete_popup::Rect {
+            left: view.as_ref().map_or(0., |view| view.offset_left()),
+            top: view.as_ref().map_or(0., |view| view.offset_top()),
+            right: view
+                .as_ref()
+                .map_or(viewport_width, |view| view.offset_left() + view.width()),
+            bottom: view
+                .as_ref()
+                .map_or(viewport_height, |view| view.offset_top() + view.height()),
+        };
+        if field_width {
+            let width = (trigger_rect.right - trigger_rect.left)
+                .min((view.right - view.left - 16.).max(0.));
+            dom::css(&self.panel, "width", &format!("{width}px"));
+        }
+        // Measure after matching the field width so wrapping is accounted for.
         // Never expand the scroll container during focus scrolling (P1 regression).
         let height = natural_height(
             self.panel.scroll_height(),
             self.panel.offset_height(),
             self.panel.client_height(),
         );
-        let (viewport_width, viewport_height) = dom::viewport();
-        let at = menu_position(
-            dom::rect(&self.trigger),
-            f64::from(self.panel.offset_width()),
-            height,
-            viewport_width,
-            viewport_height,
-        );
+        let at = if field_width {
+            // Share autocomplete placement, including its 4px gap and visual
+            // viewport clamping when a mobile keyboard is closing or panning.
+            let at = super::autocomplete_popup::place(
+                super::autocomplete_popup::Rect {
+                    left: trigger_rect.left,
+                    top: trigger_rect.top,
+                    right: trigger_rect.right,
+                    bottom: trigger_rect.bottom,
+                },
+                view,
+                f64::from(self.panel.offset_width()),
+                height,
+                false,
+            );
+            super::overlay_logic::MenuPosition {
+                left: at.left,
+                top: at.top,
+                max_height: at.max_height,
+            }
+        } else {
+            menu_position(
+                trigger_rect,
+                f64::from(self.panel.offset_width()),
+                height,
+                viewport_width,
+                viewport_height,
+            )
+        };
         dom::css(&self.panel, "left", &format!("{}px", at.left));
         dom::css(&self.panel, "top", &format!("{}px", at.top));
         dom::css(&self.panel, "max-height", &format!("{}px", at.max_height));
@@ -113,9 +156,14 @@ impl AccountMenu {
 struct Registration {
     menu: Rc<AccountMenu>,
     _listeners: Vec<dom::Listener>,
+    resize_observer: Option<web_sys::ResizeObserver>,
+    _resize_callback: Closure<dyn FnMut()>,
 }
 impl Drop for Registration {
     fn drop(&mut self) {
+        if let Some(observer) = &self.resize_observer {
+            observer.disconnect();
+        }
         self.menu.close(false);
     }
 }
@@ -187,7 +235,7 @@ pub(crate) fn mount_menu(id: &str, trigger_selector: &str, panel_selector: &str)
                 if event
                     .target()
                     .and_then(|target| target.dyn_into::<Element>().ok())
-                    .and_then(|target| target.closest("[role=\"menuitem\"]").ok().flatten())
+                    .and_then(|target| target.closest(MENU_ITEMS).ok().flatten())
                     .is_some()
                 {
                     menu.close(true);
@@ -218,6 +266,15 @@ pub(crate) fn mount_menu(id: &str, trigger_selector: &str, panel_selector: &str)
             false,
             |menu, _| menu.position(),
         ));
+        if menu.panel.get_attribute("data-menu-width").as_deref() == Some("trigger") {
+            if let Some(viewport) = web_sys::window().and_then(|window| window.visual_viewport()) {
+                for event in ["resize", "scroll"] {
+                    listeners.push(listen(&menu, &viewport, event, false, |menu, _| {
+                        menu.position()
+                    }));
+                }
+            }
+        }
         listeners.push(listen(
             &menu,
             &dom::document(),
@@ -225,11 +282,30 @@ pub(crate) fn mount_menu(id: &str, trigger_selector: &str, panel_selector: &str)
             true,
             |menu, _| menu.position(),
         ));
+        // Stylesheets, fonts and responsive reflow can resize an open menu
+        // after its initial placement without emitting a window resize event.
+        let weak = Rc::downgrade(&menu);
+        let resize_callback = Closure::wrap(Box::new(move || {
+            if let Some(menu) = weak.upgrade() {
+                menu.position();
+            }
+        }) as Box<dyn FnMut()>);
+        let resize_observer =
+            web_sys::ResizeObserver::new(resize_callback.as_ref().unchecked_ref()).ok();
+        if let Some(observer) = &resize_observer {
+            observer.observe(&menu.trigger);
+            observer.observe(&menu.panel);
+            if let Some(parent) = menu.root.parent_element() {
+                observer.observe(&parent);
+            }
+        }
         registry.insert(
             id.into(),
             Registration {
                 menu,
                 _listeners: listeners,
+                resize_observer,
+                _resize_callback: resize_callback,
             },
         );
     });

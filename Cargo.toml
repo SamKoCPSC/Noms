@@ -60,7 +60,7 @@ web-sys = { version = "0.3.98", features = [
     "DragEvent", "KeyboardEvent", "Event", "EventTarget", "HtmlElement", "HtmlDialogElement",
     "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions",
     "MediaQueryList", "WebGlRenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlUniformLocation", "WebGlTexture", "WebGlContextEvent", "ScrollToOptions",
-    "VisualViewport", "ScrollIntoViewOptions", "ScrollLogicalPosition", "ScrollBehavior",
+    "VisualViewport", "ResizeObserver", "ScrollIntoViewOptions", "ScrollLogicalPosition", "ScrollBehavior",
     "Cache", "CacheStorage", "Response", "RequestCache", "AbortController", "AbortSignal"
 ] }
 js-sys = "0.3"

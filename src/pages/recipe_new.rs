@@ -12,7 +12,8 @@ use crate::api::recipe::{
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
-    Button, ButtonVariant, ImageEditorModal, ImageUpload, PageHeader, UploadOutcome,
+    Button, ButtonVariant, ImageEditorModal, ImageUpload, PageHeader, RecipeVisibilityField,
+    UploadOutcome,
 };
 use crate::components::AuthRequired;
 use crate::pages::draft_save::{
@@ -1135,33 +1136,10 @@ pub fn RecipeNew() -> Element {
                     }
 
                     // ── Visibility ──────────────────────────────────────
-                    div {
-                        display: "flex",
-                        flex_direction: "column",
-                        gap: "var(--space-sm)",
-                        label {
-                            font_size: "14px",
-                            font_weight: "600",
-                            color: "var(--text-secondary)",
-                            "Visibility when published"
-                        }
-                        select {
-                                aria_label: "Visibility when published",
-                            class: "neumo-inset input",
-                            padding: "var(--space-sm) var(--space-md)",
-                            font_family: "var(--font-body)",
-                            font_size: "14px",
-                            color: "var(--text-primary)",
-                            border_radius: "var(--radius-md)",
-                            width: "100%",
-                            value: visibility().clone(),
-                            onchange: move |evt| {
-                                visibility.set(evt.value());
-                            },
-                            option { value: "private", "Private — only you can see this recipe" }
-                            option { value: "unlisted", "Unlisted — anyone with the link can view" }
-                            option { value: "public", "Public — appears in Explore and search" }
-                        }
+                    RecipeVisibilityField {
+                        id: "recipe-new-visibility",
+                        visibility: visibility(),
+                        onchange: move |value| visibility.set(value),
                     }
 
                     }
