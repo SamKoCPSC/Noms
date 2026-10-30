@@ -113,13 +113,12 @@ fn RetainedFormPage(path: String, children: Element) -> Element {
     }
     rsx! {
         if blocked {
-            section { class: "container", aria_label: "Account changed",
+            section { class: "container", aria_label: "Session changed",
                 padding_top: "var(--space-lg)", padding_bottom: "var(--space-lg)",
                 div { class: "neumo-raised", padding: "var(--space-lg)", border_radius: "var(--radius-lg)", overflow_wrap: "anywhere",
-                    h1 { id: "session-page-notice", tabindex: "-1", "Your signed-in account changed" }
-                    p { role: "status", "This editor belongs to the original account. Your local entries and image edits are kept in this tab, but the editor is hidden to avoid mixing accounts." }
-                    p { "Sign in to the original account in another tab, then return here to continue. You can also open a fresh page for the current account without closing this tab." }
-                    a { href: path, target: "_blank", rel: "noopener noreferrer", class: "btn btn-primary touch-target", "Open current account in a new tab" }
+                    h1 { id: "session-page-notice", tabindex: "-1", "Your session has changed" }
+                    p { role: "status", "Sign in with the same account in another tab, then return here to continue. Keep this tab open to preserve your changes." }
+                    a { href: path, target: "_blank", rel: "noopener noreferrer", class: "btn btn-primary touch-target", "Open a new tab" }
                 }
             }
         }
@@ -520,11 +519,7 @@ mod tests {
             let html = dioxus_ssr::render(&dom);
             assert_eq!(mounts.get(), 1, "Form was discarded: {html}");
             assert!(html.contains("Retained local entry"), "{html}");
-            assert_eq!(
-                html.contains("This editor belongs to the original account"),
-                blocked,
-                "{html}"
-            );
+            assert_eq!(html.contains("Your session has changed"), blocked, "{html}");
             assert_eq!(
                 html.contains("id=\"session-retained-page\" hidden=true inert=true"),
                 blocked,
