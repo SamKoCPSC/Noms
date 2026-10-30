@@ -132,7 +132,9 @@ pub fn IngredientAutocomplete(
                 },
             }
             if expanded {
-                ul { id: list_id.clone(), class: "ingredient-autocomplete__list neumo-raised", role: "listbox", aria_label: "Ingredient suggestions",
+                crate::components::base::autocomplete_popup::AutocompleteList {
+                    id: list_id.clone(), accessible_name: "Ingredient suggestions",
+                    query: value.clone(), active: active(),
                     for (position, row) in suggestions.iter().enumerate() {
                         li { role: "presentation",
                             button {
@@ -142,6 +144,7 @@ pub fn IngredientAutocomplete(
                                 role: "option",
                                 aria_selected: active() == Some(position),
                                 tabindex: "-1",
+                                onpointerdown: move |event| event.prevent_default(),
                                 onmousedown: move |event| event.prevent_default(),
                                 onclick: {
                                     let row = row.clone();

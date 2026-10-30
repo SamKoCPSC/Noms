@@ -20,22 +20,6 @@ pub fn EquipmentAutocomplete(
             open.set(false);
         }
     }));
-    #[cfg(target_arch = "wasm32")]
-    use_effect(use_reactive((&id,), move |(id,)| {
-        if open() {
-            if let Some(position) = active() {
-                if let Some(element) = web_sys::window()
-                    .and_then(|w| w.document())
-                    .and_then(|d| d.get_element_by_id(&format!("{id}-suggestions-{position}")))
-                {
-                    let options = web_sys::ScrollIntoViewOptions::new();
-                    options.set_block(web_sys::ScrollLogicalPosition::Nearest);
-                    options.set_inline(web_sys::ScrollLogicalPosition::Nearest);
-                    element.scroll_into_view_with_scroll_into_view_options(&options);
-                }
-            }
-        }
-    }));
     let suggestions = noms::equipment::suggestions(&value);
     let expanded = !disabled && open() && !suggestions.is_empty();
     let list_id = format!("{id}-suggestions");
@@ -60,7 +44,7 @@ pub fn EquipmentAutocomplete(
                 autocomplete: "off",
                 placeholder,
                 disabled,
-                value,
+                value: value.clone(),
                 onfocus: move |_| { open.set(true); active.set(None); },
                 onblur: move |_| { open.set(false); active.set(None); },
                 oninput: move |event| {
@@ -100,11 +84,10 @@ pub fn EquipmentAutocomplete(
                 },
             }
             if expanded {
-                ul {
+                crate::components::base::autocomplete_popup::AutocompleteList {
                     id: list_id.clone(),
-                    class: "ingredient-autocomplete__list neumo-raised",
-                    role: "listbox",
-                    aria_label: "Equipment suggestions",
+                    accessible_name: "Equipment suggestions",
+                    query: value.clone(), active: active(),
                     for (position, label) in suggestions.into_iter().enumerate() {
                         li { role: "presentation",
                             button {

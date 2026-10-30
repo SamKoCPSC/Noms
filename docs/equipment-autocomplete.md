@@ -36,6 +36,23 @@ asset versioning delivers updated vocabulary on a fresh page load after a
 deployment; an already open page continues using its loaded app version until
 reloaded. Ingredient vocabulary downloads and their cache remain independent.
 
+## Dropdown layout
+
+Equipment, ingredient and unit suggestions share an adaptive anchored popover.
+It prefers the space below the input, flips above when there is more usable
+space there, and limits its width and scrolling height to the visual viewport.
+Keyboard resizing, viewport panning and page/container scrolling reposition the
+surface. Without VisualViewport support, it uses the layout viewport instead.
+The native nonmodal top layer avoids clipping in scrollable forms and dialogs;
+focus remains in the input. Mobile bottom-sheet dialogs also fit the visual
+viewport so their focused fields remain reachable above the keyboard.
+
+Rows have no inter-item margins, compact padding, 28-pixel minimum desktop
+targets and 32-pixel minimum touch targets. Arrow navigation scrolls only the
+suggestions list; manually scrolling it does not snap back to an earlier
+highlight. Closing or unmounting a list removes its viewport listeners and
+cancels pending layout frames. Matching and confirmation behavior are unchanged.
+
 ## Verification
 
 ```sh
@@ -44,9 +61,15 @@ cargo check --locked --target wasm32-unknown-unknown
 cargo check --locked --no-default-features --features server
 python3 scripts/tests/test-equipment-autocomplete-browser.py \
   --instance noms-cloud --base-url http://127.0.0.1:PORT
+python3 scripts/tests/test-autocomplete-viewport-browser.py \
+  --base-url http://127.0.0.1:PORT
 ```
 
 The browser check requires the local mock-auth development stack, Chromium and
 Python Playwright. It creates private test data, checks creation/draft/existing
 recipe flows, mouse/keyboard/touch selection, distinct broad-term suggestions,
 free-text preservation, row removal, saved values and local/offline matching.
+The viewport test simulates keyboard shrinkage and panning through browser
+VisualViewport measurements/events, and checks real rendered bounds, spacing,
+focus, touch selection, scroll behavior, native dialogs and the layout-viewport
+fallback. Headless Chromium does not display a physical OS keyboard.
