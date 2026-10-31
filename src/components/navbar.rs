@@ -280,6 +280,14 @@ pub fn Navbar(theme: UseTheme) -> Element {
 #[component]
 fn NavigationSearch(compact: bool, #[props(default)] on_navigate: EventHandler<()>) -> Element {
     let mut text = use_signal(String::new);
+    let mut submit = move |value: String| {
+        text.set(value);
+        let route = crate::pages::search::landing_search_route(&text()).unwrap_or(Route::Search {
+            query: Default::default(),
+        });
+        navigator().push(route);
+        on_navigate.call(());
+    };
     rsx! {
         form {
             class: if compact { "navigation-search navigation-search--header" } else { "navigation-search" },
@@ -287,14 +295,13 @@ fn NavigationSearch(compact: bool, #[props(default)] on_navigate: EventHandler<(
             method: "get", action: "/search",
             onsubmit: move |event| {
                 event.prevent_default();
-                let route = crate::pages::search::landing_search_route(&text())
-                    .unwrap_or(Route::Search { query: Default::default() });
-                navigator().push(route);
-                // Same-route searches must dismiss the drawer too.
-                on_navigate.call(());
+                submit(text());
             },
-            input { r#type: "search", name: "q", aria_label: "Search Noms", placeholder: "Search Noms…", maxlength: "256",
-                value: text(), oninput: move |event| text.set(event.value()) }
+            crate::components::recipe_title_autocomplete::RecipeTitleAutocomplete {
+                id: if compact { "site-search-query" } else { "drawer-search-query" },
+                accessible_name: "Search Noms", placeholder: "Search Noms…", input_class: "",
+                value: text(), oninput: move |value| text.set(value), onsubmit: submit,
+            }
             button { r#type: "submit", aria_label: "Submit search",
                 svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "2", "aria-hidden": "true",
                     circle { cx: "10", cy: "10", r: "6" }

@@ -114,3 +114,23 @@ pub async fn autocomplete_entities(
     ))
     .await
 }
+
+/// Live query completions: titles only, with no recipe identity in the response.
+/// Public discovery callers can restrict even a signed-in viewer to public titles.
+#[server]
+pub async fn suggest_recipe_titles(
+    text: String,
+    public_only: bool,
+) -> Result<Vec<String>, ServerFnError> {
+    crate::search::validate_autocomplete_text(&text)
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let viewer = crate::auth::session::extract_user_id_from_fullstack().await;
+    crate::security::enforce_request_budget(viewer, crate::security::RequestClass::Autocomplete)
+        .map_err(|_| ServerFnError::new("Request rate limit exceeded"))?;
+    database_budget(crate::db::suggest_recipe_titles(
+        &crate::db::get_pool(),
+        viewer.filter(|_| !public_only),
+        &text,
+    ))
+    .await
+}

@@ -102,11 +102,13 @@ fn navigation_uses_one_accessible_drawer_and_native_search() {
     assert!(source.contains("aria_haspopup: \"dialog\""));
     assert!(source.contains("method: \"get\""));
     assert!(source.contains("action: \"/search\""));
-    assert!(source.contains("name: \"q\""));
+    let field = include_str!("../recipe_title_autocomplete.rs");
+    assert!(source.contains("RecipeTitleAutocomplete {"));
+    assert!(field.contains("name: \"q\""));
     assert!(source.contains("landing_search_route(&text())"));
     assert!(source.contains("on_navigate: move |_| menu_open.set(false)"));
     assert!(source.contains("on_navigate.call(())"));
-    assert!(source.contains("maxlength: \"256\""));
+    assert!(field.contains("maxlength: \"256\""));
     assert!(source.contains("\"My profile\""));
     assert!(source.contains("\"Collections\""));
 }
