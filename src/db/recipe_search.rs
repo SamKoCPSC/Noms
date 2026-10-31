@@ -12,7 +12,7 @@ use crate::types::{
     AdvancedRecipeSearchCriteria, IntegerRange, IntegerRangeFacetBucket, RecipeSearchFacets,
     RecipeSearchRequest, RecipeSearchResponse, RecipeSearchSort, RecipeSearchVisibility,
     RecipeVisibilityFacetValue, SearchResult, SearchSuggestion, SearchSuggestionKind,
-    TagFacetBucket, TextCriterion, TextMatchMode, VisibilityFacetBucket,
+    TextCriterion, TextMatchMode, VisibilityFacetBucket,
 };
 
 const TITLE_WORDS: &str = "(r.title::pdb.simple('alias=recipe_title_words'))";
@@ -80,23 +80,12 @@ pub async fn search_recipes(
 
     let positive_text = has_positive_text(request);
     let results = fetch_results(pool, resolved_user_id, request, positive_text).await?;
-    let total_count = fetch_count(pool, resolved_user_id, request).await?;
-    let tags = fetch_tag_facets(pool, resolved_user_id, request).await?;
-    let visibility = fetch_visibility_facets(pool, resolved_user_id, request).await?;
-    let total_time =
-        fetch_integer_facets(pool, resolved_user_id, request, IntegerFacet::TotalTime).await?;
-    let servings =
-        fetch_integer_facets(pool, resolved_user_id, request, IntegerFacet::Servings).await?;
+    let (total_count, facets) = fetch_summary(pool, resolved_user_id, request).await?;
 
     let response = RecipeSearchResponse {
         results,
         total_count,
-        facets: RecipeSearchFacets {
-            tags,
-            visibility,
-            total_time,
-            servings,
-        },
+        facets,
     };
     crate::search::validate_search_response(&response)
         .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
@@ -224,6 +213,10 @@ fn title_suggestion_query(viewer: Option<Uuid>, text: &str) -> QueryBuilder<'sta
 #[path = "recipe_title_tests.rs"]
 mod title_tests;
 
+#[cfg(test)]
+#[path = "recipe_search_tests.rs"]
+mod tests;
+
 async fn fetch_results(
     pool: &PgPool,
     user_id: Uuid,
@@ -281,66 +274,147 @@ async fn fetch_count(
         .map_err(DbError::Query)
 }
 
-async fn fetch_tag_facets(
-    pool: &PgPool,
-    user_id: Uuid,
-    request: &RecipeSearchRequest,
-) -> Result<Vec<TagFacetBucket>, DbError> {
+/// Plan and execute the indexed match once for all counts. Facets omit only
+/// their own selected filter; authorization, text, tags and dates always apply.
+fn summary_query(user_id: Uuid, request: &RecipeSearchRequest) -> QueryBuilder<'static, Postgres> {
     let mut query = QueryBuilder::<Postgres>::new(
-        "SELECT rt.tag, COUNT(*)::bigint AS count FROM recipe_tags rt \
-         JOIN recipes r ON r.id = rt.recipe_id WHERE ",
+        "WITH candidates AS MATERIALIZED (SELECT r.id, r.visibility, r.servings, \
+         CASE WHEN r.prep_time_minutes IS NULL AND r.cook_time_minutes IS NULL THEN NULL \
+         ELSE COALESCE(r.prep_time_minutes, 0) + COALESCE(r.cook_time_minutes, 0) END AS total_time, (",
     );
-    push_criteria(&mut query, user_id, request, OmittedFilter::default());
-    query.push(" GROUP BY rt.tag ORDER BY count DESC, rt.tag ASC LIMIT 50");
-    let rows = query
-        .build_query_as::<(String, i64)>()
-        .fetch_all(pool)
-        .await
-        .map_err(DbError::Query)?;
-    Ok(rows
-        .into_iter()
-        .map(|(tag, count)| TagFacetBucket { tag, count })
-        .collect())
-}
-
-async fn fetch_visibility_facets(
-    pool: &PgPool,
-    user_id: Uuid,
-    request: &RecipeSearchRequest,
-) -> Result<Vec<VisibilityFacetBucket>, DbError> {
-    let mut query = QueryBuilder::<Postgres>::new(
-        "SELECT r.visibility, COUNT(*)::bigint FROM recipes r WHERE ",
+    match request.visibility {
+        RecipeSearchVisibility::AllVisible => query.push("TRUE"),
+        RecipeSearchVisibility::MineOnly => query.push("r.user_id = ").push_bind(user_id),
+        RecipeSearchVisibility::PublicOnly => query.push("r.visibility = 'public'"),
+    };
+    query.push(") AS visibility_matches, (");
+    push_selected_range(
+        &mut query,
+        request.total_time,
+        "(r.prep_time_minutes IS NOT NULL OR r.cook_time_minutes IS NOT NULL)",
+        "(COALESCE(r.prep_time_minutes, 0) + COALESCE(r.cook_time_minutes, 0))",
     );
+    query.push(") AS time_matches, (");
+    push_selected_range(
+        &mut query,
+        request.servings,
+        "r.servings IS NOT NULL",
+        "r.servings",
+    );
+    query.push(") AS servings_matches FROM recipes r WHERE ");
     push_criteria(
         &mut query,
         user_id,
         request,
         OmittedFilter {
             visibility: true,
-            ..OmittedFilter::default()
+            total_time: true,
+            servings: true,
         },
     );
-    query.push(" GROUP BY r.visibility");
-    let rows = query
-        .build_query_as::<(String, i64)>()
-        .fetch_all(pool)
+    query.push(
+        ") SELECT COUNT(*) FILTER (WHERE visibility_matches AND time_matches AND servings_matches) AS total_count, \
+         (SELECT COALESCE(jsonb_agg(jsonb_build_object('tag', tag, 'count', count) \
+             ORDER BY count DESC, tag ASC), '[]'::jsonb) FROM (\
+             SELECT rt.tag, COUNT(*) AS count FROM candidates c \
+             JOIN recipe_tags rt ON rt.recipe_id = c.id \
+             WHERE c.visibility_matches AND c.time_matches AND c.servings_matches \
+             GROUP BY rt.tag ORDER BY count DESC, rt.tag ASC LIMIT 50\
+         ) AS tags) AS tags, ARRAY[",
+    );
+    for (index, visibility) in ["private", "unlisted", "public"].into_iter().enumerate() {
+        if index > 0 {
+            query.push(", ");
+        }
+        query
+            .push("COUNT(*) FILTER (WHERE time_matches AND servings_matches AND visibility = ")
+            .push_bind(visibility.to_owned())
+            .push(")");
+    }
+    query.push("] AS visibility, ");
+    for (index, facet) in [IntegerFacet::TotalTime, IntegerFacet::Servings]
+        .into_iter()
+        .enumerate()
+    {
+        if index > 0 {
+            query.push(", ");
+        }
+        query.push("ARRAY[");
+        let (column, retained_filters) = match facet {
+            IntegerFacet::TotalTime => ("total_time", "visibility_matches AND servings_matches"),
+            IntegerFacet::Servings => ("servings", "visibility_matches AND time_matches"),
+        };
+        for (index, &(lower, upper)) in facet.buckets().iter().enumerate() {
+            if index > 0 {
+                query.push(", ");
+            }
+            query
+                .push("COUNT(*) FILTER (WHERE ")
+                .push(retained_filters)
+                .push(" AND ")
+                .push(column)
+                .push(" >= ")
+                .push_bind(lower);
+            if let Some(upper) = upper {
+                query
+                    .push(" AND ")
+                    .push(column)
+                    .push(" < ")
+                    .push_bind(upper);
+            }
+            query.push(")");
+        }
+        query.push("] AS ").push(column);
+    }
+    query.push(" FROM candidates");
+    query
+}
+
+fn push_selected_range(
+    query: &mut QueryBuilder<'_, Postgres>,
+    range: Option<IntegerRange>,
+    known: &'static str,
+    expression: &'static str,
+) {
+    if let Some(range) = range {
+        query.push(known);
+        push_integer_range(query, expression, range);
+    } else {
+        query.push("TRUE");
+    }
+}
+
+async fn fetch_summary(
+    pool: &PgPool,
+    user_id: Uuid,
+    request: &RecipeSearchRequest,
+) -> Result<(i64, RecipeSearchFacets), DbError> {
+    let row = summary_query(user_id, request)
+        .build()
+        .fetch_one(pool)
         .await
         .map_err(DbError::Query)?;
-
-    Ok(["private", "unlisted", "public"]
-        .into_iter()
-        .map(|value| VisibilityFacetBucket {
-            visibility: match value {
-                "private" => RecipeVisibilityFacetValue::Private,
-                "unlisted" => RecipeVisibilityFacetValue::Unlisted,
-                _ => RecipeVisibilityFacetValue::Public,
-            },
-            count: rows
-                .iter()
-                .find(|(visibility, _)| visibility == value)
-                .map_or(0, |(_, count)| *count),
-        })
-        .collect())
+    let visibility: Vec<i64> = row.try_get("visibility").map_err(DbError::Query)?;
+    let total_time: Vec<i64> = row.try_get("total_time").map_err(DbError::Query)?;
+    let servings: Vec<i64> = row.try_get("servings").map_err(DbError::Query)?;
+    let tags: serde_json::Value = row.try_get("tags").map_err(DbError::Query)?;
+    Ok((
+        row.try_get("total_count").map_err(DbError::Query)?,
+        RecipeSearchFacets {
+            tags: serde_json::from_value(tags).map_err(DbError::SerdeJson)?,
+            visibility: [
+                RecipeVisibilityFacetValue::Private,
+                RecipeVisibilityFacetValue::Unlisted,
+                RecipeVisibilityFacetValue::Public,
+            ]
+            .into_iter()
+            .zip(visibility)
+            .map(|(visibility, count)| VisibilityFacetBucket { visibility, count })
+            .collect(),
+            total_time: IntegerFacet::TotalTime.counts(total_time),
+            servings: IntegerFacet::Servings.counts(servings),
+        },
+    ))
 }
 
 #[derive(Clone, Copy)]
@@ -356,72 +430,18 @@ impl IntegerFacet {
             Self::Servings => &[(1, Some(3)), (3, Some(5)), (5, Some(9)), (9, None)],
         }
     }
-}
 
-async fn fetch_integer_facets(
-    pool: &PgPool,
-    user_id: Uuid,
-    request: &RecipeSearchRequest,
-    facet: IntegerFacet,
-) -> Result<Vec<IntegerRangeFacetBucket>, DbError> {
-    let omitted = match facet {
-        IntegerFacet::TotalTime => OmittedFilter {
-            total_time: true,
-            ..OmittedFilter::default()
-        },
-        IntegerFacet::Servings => OmittedFilter {
-            servings: true,
-            ..OmittedFilter::default()
-        },
-    };
-
-    let mut counts = Vec::with_capacity(4);
-    for &(lower, upper) in facet.buckets() {
-        let mut query = QueryBuilder::<Postgres>::new("SELECT COUNT(*) FROM recipes r WHERE ");
-        push_criteria(&mut query, user_id, request, omitted);
-        query.push(" AND ");
-        match facet {
-            IntegerFacet::TotalTime => {
-                query
-                    .push(
-                        "(r.prep_time_minutes IS NOT NULL OR r.cook_time_minutes IS NOT NULL) AND \
-                    (COALESCE(r.prep_time_minutes, 0) + COALESCE(r.cook_time_minutes, 0)) >= ",
-                    )
-                    .push_bind(lower);
-                if let Some(upper) = upper {
-                    query
-                        .push(" AND (COALESCE(r.prep_time_minutes, 0) + COALESCE(r.cook_time_minutes, 0)) < ")
-                        .push_bind(upper);
-                }
-            }
-            IntegerFacet::Servings => {
-                query
-                    .push("r.servings IS NOT NULL AND r.servings >= ")
-                    .push_bind(lower);
-                if let Some(upper) = upper {
-                    query.push(" AND r.servings < ").push_bind(upper);
-                }
-            }
-        }
-        counts.push(
-            query
-                .build_query_scalar::<i64>()
-                .fetch_one(pool)
-                .await
-                .map_err(DbError::Query)?,
-        );
+    fn counts(self, counts: Vec<i64>) -> Vec<IntegerRangeFacetBucket> {
+        self.buckets()
+            .iter()
+            .zip(counts)
+            .map(|(&(lower, upper), count)| IntegerRangeFacetBucket {
+                lower_inclusive: Some(lower),
+                upper_exclusive: upper,
+                count,
+            })
+            .collect()
     }
-
-    Ok(facet
-        .buckets()
-        .iter()
-        .zip(counts)
-        .map(|(&(lower, upper), count)| IntegerRangeFacetBucket {
-            lower_inclusive: Some(lower),
-            upper_exclusive: upper,
-            count,
-        })
-        .collect())
 }
 
 fn push_criteria(

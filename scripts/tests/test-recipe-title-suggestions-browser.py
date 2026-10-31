@@ -191,7 +191,8 @@ async def main(args):
             await page.wait_for_url(lambda url: search_text(str(url)) == needle + ' chick' and parse_qs(urlsplit(str(url)).query).get('scope') == ['recipes'])
             await choose(main_field, needle + ' chick', chosen, 'mouse')
             assert parse_qs(urlsplit(page.url).query).get('scope') == ['recipes']
-            passed('search scopes: changing scope preserves draft text and selecting a title preserves the selected scope')
+            await expect(page.locator('.search-recipe-grid .recipe-card').first).to_be_visible()
+            passed('search scopes: draft text and selected scope are preserved, and Recipes results load after title selection')
 
             before_requests = len(requests)
             for text in [needle[:4], needle[:7], needle[:11], needle + ' chick']:
