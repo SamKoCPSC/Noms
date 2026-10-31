@@ -1,4 +1,5 @@
 //! The shared home for pantry inventory and independent grocery lists.
+use crate::components::base::{PageIcon, PageIconKind};
 use crate::components::AuthRequired;
 use crate::Route;
 use dioxus::prelude::*;
@@ -71,7 +72,10 @@ pub fn KitchenLayout() -> Element {
         AuthRequired {
             div { class: "kitchen-workspace",
                 header { class: "container kitchen-header",
-                    p { class: "kitchen-title", "Kitchen" }
+                    p { class: "kitchen-title brand-title",
+                        PageIcon { kind: PageIconKind::Kitchen, compact: true }
+                        span { "Kitchen" }
+                    }
                     nav { class: "kitchen-views", aria_label: "Kitchen views",
                         for (view, label, destination) in [
                             (KitchenView::Pantry, "Pantry", pantry()),
