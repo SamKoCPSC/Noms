@@ -95,6 +95,13 @@ pub fn landing_search_route(text: &str) -> Option<Route> {
     })
 }
 
+pub(crate) fn public_recipe_search_url(text: &str) -> String {
+    let query = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("q", text.trim())
+        .finish();
+    format!("/explore?{query}")
+}
+
 fn navigate_route(target: Route, interaction: SearchInteraction) {
     navigate_with_action(target, history_action(interaction));
 }
@@ -256,7 +263,10 @@ pub fn Search(query: SearchRouteQuery) -> Element {
         let scope = active_scope();
         let focused = search_focused();
         async move {
-            if !focused || text.trim().chars().count() < crate::search::MIN_AUTOCOMPLETE_CHARS {
+            if !matches!(scope, SearchScope::Collections | SearchScope::Users)
+                || !focused
+                || text.trim().chars().count() < crate::search::MIN_AUTOCOMPLETE_CHARS
+            {
                 return Ok(Vec::new());
             }
             #[cfg(target_arch = "wasm32")]
@@ -280,6 +290,7 @@ pub fn Search(query: SearchRouteQuery) -> Element {
         && input_text().chars().count() >= 2;
     let input_query = query.clone();
     let submit_query = query.clone();
+    let title_submit_query = query.clone();
     let scope_query = query.clone();
 
     rsx! {
@@ -309,10 +320,12 @@ pub fn Search(query: SearchRouteQuery) -> Element {
                                 input_text.set(value.clone());
                                 active_suggestion.set(None);
                                 suggestions_dismissed.set(false);
+                                if matches!(active_scope(), SearchScope::Collections | SearchScope::Users) {
                                 if let Ok(parsed) = parse_search_query(input_query.as_str()) {
                                     let mut request = parsed.request;
                                     update_text(&mut request, value);
                                     navigate_search(request, SearchInteraction::Typing);
+                                }
                                 }
                             },
                             onsubmit: move |_| {
@@ -320,6 +333,14 @@ pub fn Search(query: SearchRouteQuery) -> Element {
                                     let mut request = parsed.request;
                                     update_text(&mut request, input_text());
                                     navigate_search(request, SearchInteraction::Submit);
+                                }
+                            },
+                            ontextsubmit: move |text: String| {
+                                input_text.set(text.clone());
+                                if let Ok(parsed) = parse_search_query(title_submit_query.as_str()) {
+                                    let mut request = parsed.request;
+                                    update_text(&mut request, text);
+                                    navigate_search(request, SearchInteraction::Suggestion);
                                 }
                             },
                             onmove: move |direction| {
@@ -355,7 +376,8 @@ pub fn Search(query: SearchRouteQuery) -> Element {
                             active: parsed.request.scope(),
                             onchange: move |scope| {
                                 if let Ok(parsed) = parse_search_query(scope_query.as_str()) {
-                                    if let Ok(switched) = parsed.switch_scope(scope) {
+                                    if let Ok(mut switched) = parsed.switch_scope(scope) {
+                                        update_text(&mut switched.request, input_text());
                                         navigate_search(switched.request, SearchInteraction::Scope);
                                     }
                                 }
@@ -430,6 +452,7 @@ struct SearchInputProps {
     suggestions_open: bool,
     oninput: EventHandler<String>,
     onsubmit: EventHandler<()>,
+    ontextsubmit: EventHandler<String>,
     onmove: EventHandler<SuggestionDirection>,
     onselect: EventHandler<SearchSuggestion>,
     ondismiss: EventHandler<()>,
@@ -439,6 +462,7 @@ struct SearchInputProps {
 
 #[component]
 fn SearchInput(props: SearchInputProps) -> Element {
+    let keyboard_suggestions = props.suggestions.clone();
     let scope_label = match props.scope {
         SearchScope::All => "everything",
         SearchScope::Recipes => "recipes",
@@ -458,7 +482,13 @@ fn SearchInput(props: SearchInputProps) -> Element {
                     circle { cx: "10.5", cy: "10.5", r: "6.5" }
                     path { d: "m16 16 4 4", stroke_linecap: "round" }
                 }
-                input {
+                if matches!(props.scope, SearchScope::Recipes | SearchScope::All) {
+                    crate::components::recipe_title_autocomplete::RecipeTitleAutocomplete {
+                        id: "search-query", accessible_name: "Search {scope_label}",
+                        placeholder: "Search {scope_label}…", input_class: "search-query-input",
+                        value: props.value.clone(), oninput: props.oninput, onsubmit: props.ontextsubmit,
+                    }
+                } else { input {
                     id: "search-query",
                     class: "search-query-input",
                     r#type: "search",
@@ -486,7 +516,7 @@ fn SearchInput(props: SearchInputProps) -> Element {
                             event.prevent_default();
                             if let Some(suggestion) = props
                                 .active_suggestion
-                                .and_then(|index| props.suggestions.get(index))
+                                .and_then(|index| keyboard_suggestions.get(index))
                                 .cloned()
                             {
                                 props.onselect.call(suggestion);
@@ -495,7 +525,7 @@ fn SearchInput(props: SearchInputProps) -> Element {
                         Key::Escape => props.ondismiss.call(()),
                         _ => {}
                     },
-                }
+                } }
                 button { class: "btn btn-primary search-submit", r#type: "submit", "Search" }
             }
             if props.suggestions_open {

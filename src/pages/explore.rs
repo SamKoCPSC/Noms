@@ -177,7 +177,7 @@ pub fn Explore() -> Element {
     let filtered_recipes = loaded_recipes.read().clone();
 
     // ── Handlers ─────────────────────────────────────────────────────────
-    let mut on_search = move |value: String| {
+    let on_search = move |value: String| {
         if value == *search_query.peek() {
             return;
         }
@@ -239,14 +239,14 @@ pub fn Explore() -> Element {
                             circle { cx: "11", cy: "11", r: "7" }
                             path { d: "m16 16 4 4" }
                         }
-                        input {
+                        crate::components::recipe_title_autocomplete::RecipeTitleAutocomplete {
                             id: "explore-query",
-                            class: "input input--shared",
-                            r#type: "search",
-                            aria_label: "Search public recipes",
+                            input_class: "input input--shared", public_only: true,
+                            accessible_name: "Search public recipes",
                             value: search_query(),
                             placeholder: "Search recipes…",
-                            oninput: move |event| on_search(event.value()),
+                            oninput: on_search,
+                            onsubmit: on_search,
                         }
                     }
                     if !tags_list.is_empty() {

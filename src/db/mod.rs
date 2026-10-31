@@ -38,7 +38,7 @@ use crate::types::{
 };
 
 mod recipe_search;
-pub use recipe_search::search_recipes;
+pub use recipe_search::{search_recipes, suggest_recipe_titles};
 mod user_search;
 pub use user_search::search_users;
 mod collection_search;

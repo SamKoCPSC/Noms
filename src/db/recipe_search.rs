@@ -165,6 +165,65 @@ pub(super) async fn autocomplete_recipes(
         .collect())
 }
 
+/// Read the maintained title index, filter visibility before deduplication and
+/// return eight distinct query strings. No candidate LIMIT can let duplicates
+/// crowd out other matching titles. The API applies the normal search deadline.
+pub async fn suggest_recipe_titles(
+    pool: &PgPool,
+    viewer: Option<Uuid>,
+    text: &str,
+) -> Result<Vec<String>, DbError> {
+    crate::search::validate_autocomplete_text(text)
+        .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
+    title_suggestion_query(viewer, text)
+        .build_query_scalar::<String>()
+        .fetch_all(pool)
+        .await
+        .map_err(DbError::Query)
+}
+
+fn title_suggestion_query(viewer: Option<Uuid>, text: &str) -> QueryBuilder<'static, Postgres> {
+    let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let key = text.to_lowercase();
+    let terms: Vec<String> = key.split_whitespace().map(str::to_owned).collect();
+    let mut query = QueryBuilder::<Postgres>::new(
+        "WITH matches AS MATERIALIZED (SELECT r.title, pdb.score(r.id)::real AS score \
+         FROM recipes r WHERE (r.visibility = 'public'",
+    );
+    if let Some(viewer) = viewer {
+        query.push(" OR r.user_id = ").push_bind(viewer);
+    }
+    query.push(")");
+    for term in text.split_whitespace() {
+        query.push(" AND (");
+        push_field_term(&mut query, RecipeTextField::Title, term, true);
+        query.push(")");
+    }
+    query.push(
+        "), normalized AS (\
+           SELECT btrim(regexp_replace(title, '[[:space:]]+', ' ', 'g')) AS title, score FROM matches\
+         ), ranked AS (\
+           SELECT title, lower(title) AS key, score, \
+             row_number() OVER (PARTITION BY lower(title) ORDER BY score DESC, title COLLATE \"C\") AS position \
+           FROM normalized\
+         ) SELECT title FROM ranked WHERE position = 1 \
+         ORDER BY CASE WHEN key = ",
+    ).push_bind(key.clone()).push(" THEN 0 WHEN starts_with(key, ")
+        .push_bind(key).push(") THEN 1 WHEN NOT EXISTS (SELECT 1 FROM unnest(")
+        .push_bind(terms).push(
+            "::text[]) AS q(term) WHERE NOT EXISTS (\
+               SELECT 1 FROM string_to_table(key, ' ') AS word(value) \
+               WHERE starts_with(word.value, q.term)\
+             )) THEN 2 ELSE 3 END, score DESC, key COLLATE \"C\" ASC LIMIT ",
+        )
+        .push_bind(crate::search::MAX_AUTOCOMPLETE_SUGGESTIONS as i64);
+    query
+}
+
+#[cfg(test)]
+#[path = "recipe_title_tests.rs"]
+mod title_tests;
+
 async fn fetch_results(
     pool: &PgPool,
     user_id: Uuid,

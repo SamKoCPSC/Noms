@@ -198,15 +198,25 @@ fn LandingActions(
     #[props(default)] search: bool,
 ) -> Element {
     let cta = home_cta(signed_in);
+    let mut search_text = use_signal(String::new);
+    let mut submit = move |text: String| {
+        search_text.set(text.clone());
+        navigator().push(crate::pages::search::public_recipe_search_url(&text));
+    };
     rsx! {
         if search {
             form { class: "landing-recipe-search", role: "search", aria_label: "Find a recipe", action: "/explore", method: "get",
+                onsubmit: move |event| { event.prevent_default(); submit(search_text()); },
                 label { class: "sr-only", r#for: "landing-recipe-query", "Search public recipes" }
                 svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", "aria-hidden": "true",
                     circle { cx: "10.5", cy: "10.5", r: "6.5" }
                     path { d: "m16 16 4 4" }
                 }
-                input { id: "landing-recipe-query", name: "q", r#type: "search", placeholder: "Find your next recipe…", maxlength: "256" }
+                crate::components::recipe_title_autocomplete::RecipeTitleAutocomplete {
+                    id: "landing-recipe-query", accessible_name: "Search public recipes", public_only: true,
+                    placeholder: "Find your next recipe…", input_class: "", value: search_text(),
+                    oninput: move |text| search_text.set(text), onsubmit: submit,
+                }
                 button { class: "btn btn-primary", r#type: "submit", "Search" }
             }
         }
