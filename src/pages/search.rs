@@ -477,7 +477,7 @@ fn SearchInput(props: SearchInputProps) -> Element {
                 event.prevent_default();
                 props.onsubmit.call(());
             },
-            div { class: "search-input-row",
+            div { class: "search-input-row", "data-autocomplete-anchor": "true",
                 svg { class: "search-icon", view_box: "0 0 24 24", width: "22", height: "22", fill: "none", stroke: "currentColor", stroke_width: "1.8", "aria-hidden": "true",
                     circle { cx: "10.5", cy: "10.5", r: "6.5" }
                     path { d: "m16 16 4 4", stroke_linecap: "round" }

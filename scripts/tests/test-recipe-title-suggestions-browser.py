@@ -43,6 +43,18 @@ async def main(args):
     def search_text(url):
         return parse_qs(urlsplit(url).query).get('q', [''])[0]
 
+    async def aligned(field):
+        controls = await field.get_attribute('aria-controls')
+        await field.page.wait_for_function('''id => {
+            const input = document.querySelector(`[aria-controls="${id}"]`);
+            const surface = input?.closest('[data-autocomplete-anchor]');
+            const menu = document.getElementById(id);
+            if (!surface || !menu || getComputedStyle(menu).visibility !== 'visible') return false;
+            const bar = surface.getBoundingClientRect(), list = menu.getBoundingClientRect();
+            return list.width > 0 && Math.abs(list.left - bar.left) < 1.5
+                && Math.abs(list.right - bar.right) < 1.5;
+        }''', arg=controls)
+
     async with async_playwright() as playwright:
         options = dict(executable_path=args.chromium, headless=True, args=['--disable-dev-shm-usage'])
         proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('HTTP_PROXY')
@@ -154,6 +166,7 @@ async def main(args):
                 menu = page.locator(f'[id="{controls}"]')
                 option = menu.get_by_role('option', name=expected, exact=True)
                 await expect(option).to_be_visible()
+                await aligned(field)
                 assert await option.inner_text() == expected
                 if method == 'keyboard':
                     labels = await menu.get_by_role('option').all_text_contents()
@@ -255,16 +268,20 @@ async def main(args):
             await public_page.goto(base + '/', wait_until='networkidle')
             landing = public_page.get_by_role('combobox', name='Search public recipes', exact=True)
             await landing.fill(needle + ' chick')
+            await expect(public_page.get_by_role('option', name=chosen, exact=True)).to_be_visible()
+            await aligned(landing)
             await public_page.get_by_role('option', name=chosen, exact=True).click()
             await public_page.wait_for_url(lambda url: urlsplit(str(url)).path == '/explore' and search_text(str(url)) == chosen)
             discovery = public_page.get_by_role('combobox', name='Search public recipes', exact=True)
             await expect(discovery).to_have_value(chosen)
             await discovery.fill(needle + ' chick')
             await expect(public_page.get_by_role('option', name=chosen, exact=True)).to_be_visible()
+            await aligned(discovery)
             await public_page.screenshot(path=str(args.output / 'public-titles.png'), full_page=True)
             await public_page.get_by_role('option', name=chosen, exact=True).click()
             await expect(discovery).to_have_value(chosen)
             passed('anonymous landing and Explore: public-title completion submits to public search with no recipe IDs or authors')
+            passed('layout: dropdown edges align with the full desktop search, navbar, mobile drawer, landing and Explore bars')
             assert not errors, errors
             (args.output / 'result.json').write_text(json.dumps(dict(checks=checks, page_errors=errors, suggestion_requests=len(requests)), indent=2))
         except Exception:

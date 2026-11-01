@@ -206,6 +206,7 @@ fn LandingActions(
     rsx! {
         if search {
             form { class: "landing-recipe-search", role: "search", aria_label: "Find a recipe", action: "/explore", method: "get",
+                "data-autocomplete-anchor": "true",
                 onsubmit: move |event| { event.prevent_default(); submit(search_text()); },
                 label { class: "sr-only", r#for: "landing-recipe-query", "Search public recipes" }
                 svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", "aria-hidden": "true",

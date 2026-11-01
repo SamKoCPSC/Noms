@@ -233,7 +233,7 @@ pub fn Explore() -> Element {
                     p { class: "explore-intro", "Public recipes from the community." }
                 }
                 div { class: "explore-tools",
-                    div { class: "explore-search",
+                    div { class: "explore-search", "data-autocomplete-anchor": "true",
                         label { class: "explore-visually-hidden", r#for: "explore-query", "Search public recipes" }
                         svg { class: "explore-search__icon", view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", stroke_linecap: "round", "aria-hidden": "true",
                             circle { cx: "11", cy: "11", r: "7" }

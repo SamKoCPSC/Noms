@@ -60,6 +60,8 @@ appearing in the current list. Arrow keys highlight suggestions; Enter submits
 the highlighted title or the typed text. Mouse/touch selection submits the title.
 Escape and Tab close the list without replacing the text. The field uses the
 shared compact, visual-viewport-aware autocomplete surface and accessible IDs.
+The dropdown's left and right edges align with the full search bar, including
+its icon and submit button, across navigation, main search and public discovery.
 
 The main recipe/all-scope search bar submits on Enter, the search button or
 suggestion selection, preserving its scope/filters and resetting pagination.

@@ -291,6 +291,7 @@ fn NavigationSearch(compact: bool, #[props(default)] on_navigate: EventHandler<(
     rsx! {
         form {
             class: if compact { "navigation-search navigation-search--header" } else { "navigation-search" },
+            "data-autocomplete-anchor": "true",
             role: "search", aria_label: if compact { "Site search" } else { "Navigation search" },
             method: "get", action: "/search",
             onsubmit: move |event| {
