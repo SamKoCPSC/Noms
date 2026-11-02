@@ -12,7 +12,19 @@ use web_sys::{
 const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
 const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];
 type StateRef = Rc<RefCell<State>>;
-thread_local! {static RUNTIME:RefCell<Option<StateRef>>=const{RefCell::new(None)};}
+thread_local! {
+    static RUNTIME: RefCell<Option<StateRef>> = const { RefCell::new(None) };
+    static ENTRY_FRAGMENT: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+/// The router normalizes `/about#chapter` to `/about` during hydration.
+/// Preserve only this route's initial fragment before launching the router.
+pub fn capture_entry_fragment() {
+    if let Some(window) = web_sys::window() {
+        if window.location().pathname().ok().as_deref() == Some("/about") {
+            ENTRY_FRAGMENT.with(|entry| *entry.borrow_mut() = window.location().hash().ok());
+        }
+    }
+}
 struct Listener {
     target: EventTarget,
     name: &'static str,
@@ -56,11 +68,14 @@ struct State {
     time: f32,
     frames: u64,
     initial_alignment: u8,
+    align_fragment_on_entry: bool,
     models_requested: bool,
     generation: u32,
     models_ready: bool,
     assembly: super::assembly::Playback,
-    office_arrival: super::assembly::OfficeArrival,
+    office_arrival: super::assembly::ChapterArrival,
+    bedroom_arrival: super::assembly::ChapterArrival,
+    potluck_arrival: super::assembly::ChapterArrival,
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
     loading_phrases: Option<gloo_timers::callback::Interval>,
@@ -80,6 +95,20 @@ fn el(doc: &Document, id: &str) -> Result<Element, JsValue> {
 pub fn start() -> Result<(), JsValue> {
     stop();
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
+    if let Some(hash) = ENTRY_FRAGMENT.with(|entry| entry.borrow_mut().take()) {
+        if IDS.contains(&hash.trim_start_matches('#'))
+            && window.location().hash().unwrap_or_default().is_empty()
+        {
+            if let Ok(history) = window.history() {
+                let url = format!(
+                    "/about{}{}",
+                    window.location().search().unwrap_or_default(),
+                    hash
+                );
+                let _ = history.replace_state_with_url(&JsValue::NULL, "", Some(&url));
+            }
+        }
+    }
     let doc = window
         .document()
         .ok_or_else(|| JsValue::from_str("No document"))?;
@@ -134,11 +163,14 @@ pub fn start() -> Result<(), JsValue> {
         time: 0.,
         frames: 0,
         initial_alignment: 3,
+        align_fragment_on_entry: true,
         models_requested: false,
         generation: 0,
         models_ready: false,
         assembly: super::assembly::Playback::default(),
-        office_arrival: super::assembly::OfficeArrival::default(),
+        office_arrival: super::assembly::ChapterArrival::new(1),
+        bedroom_arrival: super::assembly::ChapterArrival::new(2),
+        potluck_arrival: super::assembly::ChapterArrival::new(3),
         gate: Gate::Open,
         loading_timeout: None,
         loading_phrases: None,
@@ -332,6 +364,18 @@ fn maybe_load_models(state: &StateRef) {
                 ]
                 .as_slice(),
             ),
+            (
+                "potluck",
+                [
+                    "data-potluck-window-url",
+                    "data-potluck-tv-url",
+                    "data-potluck-pastry-url",
+                    "data-potluck-salt-url",
+                    "data-potluck-bbq-url",
+                ]
+                .as_slice(),
+            ),
+            ("bedroom", ["data-bedroom-prints-url"].as_slice()),
         ]
         .into_iter()
         .map(|(name, images)| {
@@ -394,7 +438,12 @@ fn maybe_load_models(state: &StateRef) {
                 }
                 models.push((data, images));
             }
-            Ok::<_, JsValue>((models.remove(0), models.remove(0)))
+            Ok::<_, JsValue>((
+                models.remove(0),
+                models.remove(0),
+                models.remove(0),
+                models.remove(0),
+            ))
         }
         .await;
         if let Some(state) = weak.upgrade() {
@@ -403,15 +452,23 @@ fn maybe_load_models(state: &StateRef) {
                 return;
             }
             let loaded = match result {
-                Ok(((kitchen, kitchen_images), (office, office_images))) => {
-                    s.renderer.as_mut().is_some_and(|r| {
-                        r.upload_models(&kitchen, &kitchen_images, &office, &office_images)
-                            .is_ok()
-                    })
-                }
+                Ok((
+                    (kitchen, kitchen_images),
+                    (office, office_images),
+                    (potluck, potluck_images),
+                    (bedroom, bedroom_images),
+                )) => s.renderer.as_mut().is_some_and(|r| {
+                    r.upload_models([
+                        (&kitchen, &kitchen_images),
+                        (&office, &office_images),
+                        (&potluck, &potluck_images),
+                        (&bedroom, &bedroom_images),
+                    ])
+                    .is_ok()
+                }),
                 Err(_) => false,
             };
-            for name in ["kitchen", "office"] {
+            for name in ["kitchen", "office", "potluck", "bedroom"] {
                 let _ = s.root.set_attribute(
                     &format!("data-{name}-state"),
                     if loaded { "ready" } else { "failed" },
@@ -550,7 +607,7 @@ impl State {
         self.models_requested = false;
         self.renderer = None;
         self.manual_read = true;
-        for name in ["kitchen", "office"] {
+        for name in ["kitchen", "office", "potluck", "bedroom"] {
             let _ = self
                 .root
                 .set_attribute(&format!("data-{name}-state"), "failed");
@@ -793,6 +850,8 @@ impl State {
         );
         if !self.gate.blocked() {
             self.office_arrival.advance(camera.progress, dt);
+            self.potluck_arrival.advance(camera.progress, dt);
+            self.bedroom_arrival.advance(camera.progress, dt);
         }
         let active = (camera.progress + 0.5).floor().clamp(0., 3.) as usize;
         if self.active != active {
@@ -866,8 +925,12 @@ impl State {
                 self.time,
                 motion,
                 self.width <= 700.,
-                self.assembly.frame(),
-                self.office_arrival.frame(),
+                [
+                    self.assembly.frame(),
+                    self.office_arrival.frame(),
+                    self.potluck_arrival.frame(),
+                    self.bedroom_arrival.frame(),
+                ],
             );
             let _ = self.canvas.set_attribute(
                 "data-assembly-frame",
@@ -876,6 +939,14 @@ impl State {
             let _ = self.canvas.set_attribute(
                 "data-office-assembly-frame",
                 &format!("{:.3}", self.office_arrival.frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-potluck-assembly-frame",
+                &format!("{:.3}", self.potluck_arrival.frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-bedroom-assembly-frame",
+                &format!("{:.3}", self.bedroom_arrival.frame()),
             );
             self.frames += 1;
             let _ = self
@@ -906,18 +977,28 @@ impl State {
         let previous_gate = self.gate;
         self.gate = self.gate.after_frame();
         if self.gate != previous_gate {
+            self.sync_gate();
+            // Releasing the loading scroll lock can change the document's scroll
+            // range after the router's initial fragment alignment. Resolve it once
+            // against the visible layout before starting a chapter entrance.
+            if !self.gate.blocked() && self.align_fragment_on_entry {
+                self.align_fragment_on_entry = false;
+                self.goto_hash(false);
+                self.initial_alignment = 3;
+            }
             // Later chapter entries should already have a settled kitchen when
             // the visitor returns to the opening. Re-entry never resets it.
             if !self.gate.blocked() && self.target >= 0.5 {
                 self.assembly.finish();
             }
-            self.sync_gate();
         }
         self.dirty = false;
         self.initial_alignment > 0
             || motion
             || (!self.gate.blocked() && !self.assembly.finished())
             || (!self.gate.blocked() && self.office_arrival.animating())
+            || (!self.gate.blocked() && self.potluck_arrival.animating())
+            || (!self.gate.blocked() && self.bedroom_arrival.animating())
             || self.gate != previous_gate
             || self.gate == Gate::Presenting
             || (self.target - self.progress).abs() > 0.0004

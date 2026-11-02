@@ -1,3 +1,4 @@
+use super::assembly::Room;
 use super::flight::{self, Camera};
 use super::math::*;
 use std::f32::consts::PI;
@@ -105,6 +106,8 @@ pub struct Renderer {
     textures: Vec<WebGlTexture>,
     kitchen: Diorama,
     office: Diorama,
+    potluck: Diorama,
+    bedroom: Diorama,
     a_pos: u32,
     a_normal: u32,
     a_uv: u32,
@@ -185,6 +188,8 @@ impl Renderer {
             textures,
             kitchen: Diorama::default(),
             office: Diorama::default(),
+            potluck: Diorama::default(),
+            bedroom: Diorama::default(),
             a_pos,
             a_normal,
             a_uv,
@@ -226,14 +231,20 @@ impl Renderer {
     }
     pub fn upload_models(
         &mut self,
-        kitchen: &super::gltf::DioramaMesh,
-        kitchen_images: &[HtmlImageElement],
-        office: &super::gltf::DioramaMesh,
-        office_images: &[HtmlImageElement],
+        models: [(&super::gltf::DioramaMesh, &[HtmlImageElement]); 4],
     ) -> Result<(), JsValue> {
+        let [(kitchen, kitchen_images), (office, office_images), (potluck, potluck_images), (bedroom, bedroom_images)] =
+            models;
         self.kitchen = self.upload_diorama(kitchen, kitchen_images)?;
         self.office = self.upload_diorama(office, office_images)?;
-        for (name, data) in [("kitchen", kitchen), ("office", office)] {
+        self.potluck = self.upload_diorama(potluck, potluck_images)?;
+        self.bedroom = self.upload_diorama(bedroom, bedroom_images)?;
+        for (name, data) in [
+            ("kitchen", kitchen),
+            ("office", office),
+            ("potluck", potluck),
+            ("bedroom", bedroom),
+        ] {
             let _ = self.canvas.set_attribute(
                 &format!("data-{name}-groups"),
                 &data
@@ -436,15 +447,7 @@ impl Renderer {
             2.,
         );
     }
-    pub fn render(
-        &self,
-        camera: &Camera,
-        time: f32,
-        motion: bool,
-        mobile: bool,
-        assembly_frame: f32,
-        office_frame: f32,
-    ) {
+    pub fn render(&self, camera: &Camera, time: f32, motion: bool, mobile: bool, frames: [f32; 4]) {
         let gl = &self.gl;
         gl.use_program(Some(&self.program));
         gl.clear(Gl::COLOR_BUFFER_BIT | Gl::DEPTH_BUFFER_BIT);
@@ -475,21 +478,41 @@ impl Renderer {
             };
             // Each arch belongs to the world; the camera flies through it en route.
             self.draw(&self.arch, root, color, None, false, 2.);
-            if i <= 1 {
+            if matches!(i, 0..=3) {
                 let ratio = self.canvas.width() as f32 / self.canvas.height().max(1) as f32;
                 let short_mobile = self.canvas.get_bounding_client_rect().height() < 600.;
-                let (x, y, sc) = if mobile && i == 1 {
+                let (x, y, sc) = if mobile && i != 0 {
                     if short_mobile {
-                        (0., 3.1, 0.28)
+                        (
+                            0.,
+                            3.1,
+                            if i == 2 {
+                                0.22
+                            } else if i == 3 {
+                                0.25
+                            } else {
+                                0.28
+                            },
+                        )
                     } else {
-                        (0., 3.25, 0.33)
+                        (
+                            0.,
+                            if i == 3 { 3.15 } else { 3.25 },
+                            if i == 2 {
+                                0.29
+                            } else if i == 3 {
+                                0.30
+                            } else {
+                                0.33
+                            },
+                        )
                     }
                 } else if mobile {
                     (0., 2.7, 0.34)
                 } else {
-                    (ratio * 2.35, -1.45, 0.78)
+                    (ratio * 2.35, -1.45, if i == 3 { 0.68 } else { 0.78 })
                 };
-                let pose = if i == 0 {
+                let pose = if i != 1 {
                     transform([x, y, -11.7], [0.58, -0.62, 0.], [sc; 3])
                 } else {
                     // Turn the room before pitching it, keeping vertical walls upright.
@@ -498,13 +521,21 @@ impl Renderer {
                         mul(rx(0.58), mul(ry(0.62), scale(sc, sc, sc))),
                     )
                 };
-                let model = mul(root, pose);
-                self.draw_diorama(
-                    model,
-                    if i == 0 { &self.kitchen } else { &self.office },
-                    if i == 0 { assembly_frame } else { office_frame },
-                    i == 1,
+                let model = mul(
+                    root,
+                    if i == 3 {
+                        mul(pose, translate(1.6, 0., -0.35))
+                    } else {
+                        pose
+                    },
                 );
+                let (diorama, frame, room) = match i {
+                    0 => (&self.kitchen, frames[0], Room::Kitchen),
+                    1 => (&self.office, frames[1], Room::Office),
+                    2 => (&self.bedroom, frames[3], Room::Bedroom),
+                    _ => (&self.potluck, frames[2], Room::Potluck),
+                };
+                self.draw_diorama(model, diorama, frame, room);
                 continue;
             }
             // The creator now has its own placeholder exhibit; the kitchen belongs to the idea.
@@ -641,18 +672,14 @@ impl Renderer {
             );
         }
     }
-    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32, office: bool) {
+    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32, room: Room) {
         for draw in &diorama.draws {
             let p = &draw.part;
-            let t = if office {
-                super::assembly::office_amount(frame, p.start, p.end)
-            } else {
-                super::assembly::amount(frame, p.start, p.end)
-            };
+            let t = room.amount(frame, p.start, p.end);
             if t <= 0. {
                 continue;
             }
-            let pose = super::assembly::arrival_pose(p.pivot, p.offset, t, office);
+            let pose = super::assembly::arrival_pose(p.pivot, p.offset, t, room);
             let local = mul(
                 translate(
                     pose.translation[0],
@@ -677,16 +704,15 @@ impl Renderer {
         }
         self.gl.depth_mask(true);
     }
-    /// Warm both rooms, including prints and transparent PC surfaces, before entry.
+    /// Warm all four rooms, including prints and transparent PC surfaces, before entry.
     pub fn warm_models(&self, aspect: f32, mobile: bool) -> bool {
-        for stop in [0., 1.] {
+        for stop in [0., 1., 2., 3.] {
             self.render(
                 &flight::camera(stop, aspect, [0.; 2]),
                 0.,
                 false,
                 mobile,
-                160.,
-                160.,
+                [160.; 4],
             );
         }
         self.gl.finish();
@@ -709,7 +735,14 @@ impl Drop for Renderer {
         ] {
             self.gl.delete_buffer(Some(&m.buffer));
         }
-        for draw in self.kitchen.draws.iter().chain(&self.office.draws) {
+        for draw in self
+            .kitchen
+            .draws
+            .iter()
+            .chain(&self.office.draws)
+            .chain(&self.potluck.draws)
+            .chain(&self.bedroom.draws)
+        {
             self.gl.delete_buffer(Some(&draw.mesh.buffer));
         }
         for t in &self.textures {
@@ -1040,11 +1073,21 @@ fn image_texture(gl: &Gl, image: &HtmlImageElement) -> Result<WebGlTexture, JsVa
         Gl::UNSIGNED_BYTE,
         image,
     )?;
-    gl.generate_mipmap(Gl::TEXTURE_2D);
+    // WebGL 1 only permits mipmaps for power-of-two images. Keep rectangular
+    // approved artwork at its original aspect ratio with linear sampling.
+    let mipmapped =
+        image.natural_width().is_power_of_two() && image.natural_height().is_power_of_two();
+    if mipmapped {
+        gl.generate_mipmap(Gl::TEXTURE_2D);
+    }
     gl.tex_parameteri(
         Gl::TEXTURE_2D,
         Gl::TEXTURE_MIN_FILTER,
-        Gl::LINEAR_MIPMAP_LINEAR as i32,
+        if mipmapped {
+            Gl::LINEAR_MIPMAP_LINEAR
+        } else {
+            Gl::LINEAR
+        } as i32,
     );
     gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
     gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);

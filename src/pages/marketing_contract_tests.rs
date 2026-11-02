@@ -77,6 +77,19 @@ fn about_renders_the_four_approved_chapters_and_readable_fallback() {
         .next()
         .unwrap();
     assert!(!creator.contains("kitchen-fallback"));
+    let philosophy = html.split("id=\"panel-3\"").nth(1).unwrap();
+    assert!(philosophy.contains("potluck-fallback"));
+    assert!(philosophy.contains("communal potluck dining room"));
+    for attribute in [
+        "data-potluck-url",
+        "data-potluck-window-url",
+        "data-potluck-tv-url",
+        "data-potluck-pastry-url",
+        "data-potluck-salt-url",
+        "data-potluck-bbq-url",
+    ] {
+        assert!(html.contains(attribute));
+    }
     assert!(html.contains("Nowadays I continue to support the project"));
     assert!(!html.contains("How did Noms start"));
 }

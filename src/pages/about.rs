@@ -38,6 +38,34 @@ const OFFICE_POSTER: Asset = asset!(
     "/assets/about/sams-office.webp",
     manganis::AssetOptions::builder()
 );
+const BEDROOM_MODEL: Asset = asset!("/assets/about/sams-bedroom.glb");
+const BEDROOM_PRINTS: Asset = asset!("/assets/about/bedroom-posters.webp");
+const BEDROOM_POSTER: Asset = asset!("/assets/about/sams-bedroom.webp");
+const POTLUCK_MODEL: Asset = asset!("/assets/about/sams-potluck.glb");
+const POTLUCK_WINDOW: Asset = asset!(
+    "/assets/about/potluck-window.webp",
+    manganis::AssetOptions::builder()
+);
+const POTLUCK_TV: Asset = asset!(
+    "/assets/about/potluck-tv.webp",
+    manganis::AssetOptions::builder()
+);
+const POTLUCK_PASTRY: Asset = asset!(
+    "/assets/about/potluck-pastry.webp",
+    manganis::AssetOptions::builder()
+);
+const POTLUCK_SALT: Asset = asset!(
+    "/assets/about/potluck-chips-salt.webp",
+    manganis::AssetOptions::builder()
+);
+const POTLUCK_BBQ: Asset = asset!(
+    "/assets/about/potluck-chips-bbq.webp",
+    manganis::AssetOptions::builder()
+);
+const POTLUCK_POSTER: Asset = asset!(
+    "/assets/about/sams-potluck.webp",
+    manganis::AssetOptions::builder()
+);
 pub(super) const LOADING_PHRASES: [&str; 100] = [
     "The cookies are baking…",
     "The steak is defrosting…",
@@ -170,6 +198,8 @@ pub fn About() -> Element {
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,
        "data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
+       "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
+       "data-potluck-url":POTLUCK_MODEL,"data-potluck-window-url":POTLUCK_WINDOW,"data-potluck-tv-url":POTLUCK_TV,"data-potluck-pastry-url":POTLUCK_PASTRY,"data-potluck-salt-url":POTLUCK_SALT,"data-potluck-bbq-url":POTLUCK_BBQ,
         onmounted: move |_| {
           #[cfg(target_arch="wasm32")]
           if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
@@ -204,6 +234,8 @@ pub fn About() -> Element {
         if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
         if i==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
         if i==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
+        if i==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:960,height:960}}}
+        if i==3 {figure{class:"potluck-fallback",img{src:POTLUCK_POSTER,alt:"A communal potluck dining room and TV lounge with three couches, a chess game, and a table of cake, candy, chips and drinks",loading:"lazy",width:960,height:720}}}
         for (j, paragraph) in CONTENT[i].iter().enumerate() {p{class:if j==0{"lead"}else{"detail"},"{paragraph}"}}
         if i==3 {div{class:"values",span{"Key features free"}span{"No intrusive ads"}span{"Your data stays yours"}}}
         a{class:"next-link",href:if i<3{format!("#{}",IDS[i+1])}else{"#idea".into()},
