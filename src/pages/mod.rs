@@ -58,3 +58,5 @@ pub use settings::SettingsProfile;
 pub use user_profile::UserProfile;
 
 pub use crate::components::mobile::MobileYou;
+
+mod recipe_name;

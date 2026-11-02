@@ -38,7 +38,7 @@ fn request(name: &str) -> GroceryCreate {
 }
 async fn recipe(pool: &PgPool, owner: Uuid, visibility: &str, amount: &str) -> Uuid {
     let id = Uuid::new_v4();
-    sqlx::query("INSERT INTO recipes(id,user_id,title,servings,ingredients,visibility) VALUES($1,$2,'Dinner',2,$3,$4)").bind(id).bind(owner).bind(serde_json::json!([{"name":"Rice","amount":amount,"unit":"cup"},{"name":"Garnish (optional)","amount":"to taste","unit":""}])).bind(visibility).execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO recipes(id,user_id,title,servings,ingredients,visibility) VALUES($1,$2,$5,2,$3,$4)").bind(id).bind(owner).bind(serde_json::json!([{"name":"Rice","amount":amount,"unit":"cup"},{"name":"Garnish (optional)","amount":"to taste","unit":""}])).bind(visibility).bind(format!("Dinner {id}")).execute(pool).await.unwrap();
     id
 }
 async fn selection(pool: &PgPool, owner: Uuid, id: Uuid, target: Option<i32>) -> RecipeSelection {

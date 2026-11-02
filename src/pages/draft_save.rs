@@ -22,6 +22,9 @@ pub(super) fn recipe_write_feedback(
     if let Some(feedback) = crate::auth::account_binding::account_error_feedback(error) {
         return feedback;
     }
+    if recipe_name_conflict(error) {
+        return "You already have a recipe with this name. Choose a different name to publish.";
+    }
     if matches!(action, RecipeWriteAction::CreateDraft) {
         return UNCONFIRMED_DRAFT_CREATION_MESSAGE;
     }
@@ -201,5 +204,28 @@ mod tests {
         assert!(cancel.contains("crate::Route::Dashboard {}"));
         assert!(cancel.contains("crate::Route::RecipeDetail"));
         assert!(!cancel.contains("navigator.push"), "Cancel must save first");
+    }
+}
+
+pub(super) fn recipe_name_conflict(error: &ServerFnError) -> bool {
+    matches!(error, ServerFnError::ServerError { message, .. }
+        if message == "You already have a recipe with this name. Choose a different name to publish.")
+}
+
+#[cfg(test)]
+mod name_conflict_tests {
+    #[test]
+    fn confirmed_name_conflicts_allow_renaming_without_unknown_write_feedback() {
+        let error = dioxus::prelude::ServerFnError::new(
+            "You already have a recipe with this name. Choose a different name to publish.",
+        );
+        assert!(super::recipe_name_conflict(&error));
+        assert_eq!(
+            super::recipe_write_feedback(super::RecipeWriteAction::Publish, &error),
+            "You already have a recipe with this name. Choose a different name to publish."
+        );
+        assert!(!super::recipe_name_conflict(
+            &dioxus::prelude::ServerFnError::new("Database operation timed out")
+        ));
     }
 }

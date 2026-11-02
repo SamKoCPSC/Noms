@@ -42,3 +42,29 @@ pub(super) fn map_write_error(error: sqlx::Error) -> DbError {
 #[cfg(test)]
 #[path = "recipe_names_tests.rs"]
 mod tests;
+
+pub async fn recipe_name_available(
+    pool: &sqlx::PgPool,
+    user_id: Uuid,
+    title: &str,
+    recipe_id: Option<Uuid>,
+) -> Result<bool, DbError> {
+    if let Some(id) = recipe_id {
+        let owned: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM recipes WHERE id = $1 AND user_id = $2)",
+        )
+        .bind(id)
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .map_err(DbError::Query)?;
+        if !owned {
+            return Err(DbError::RecipeNotFound(id));
+        }
+    }
+    match ensure_available(pool, user_id, title, recipe_id).await {
+        Ok(()) => Ok(true),
+        Err(DbError::RecipeNameTaken) => Ok(false),
+        Err(error) => Err(error),
+    }
+}

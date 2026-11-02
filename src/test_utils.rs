@@ -2592,7 +2592,7 @@ mod search_integration_tests {
                 RecipeFixture {
                     id,
                     owner_id: other_owner_id,
-                    title: "Hidden suggestion recipe",
+                    title: &format!("Hidden suggestion recipe {visibility}"),
                     description: &term,
                     visibility,
                     prep_time: None,

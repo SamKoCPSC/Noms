@@ -208,6 +208,11 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let mut is_discarding = use_signal(|| false);
     let mut draft_id = use_signal(|| Option::<String>::None);
     let mut draft_recipe_id = use_signal(|| Option::<uuid::Uuid>::None);
+    let name_check = crate::pages::recipe_name::use_name_check(
+        title(),
+        form_account(),
+        draft_recipe_id(),
+    );
     let mut draft_revision = use_signal(|| 0i64);
     let mut last_saved_editor = use_signal(|| Option::<RecipeEditorState>::None);
     let mut autosave_generation = use_signal(|| 0u64);
@@ -597,6 +602,10 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         form_error.set(None);
 
         // ── Client-side validation ──────────────────────────────────────
+        if name_check().blocked() {
+            form_error.set(Some(name_check().message().to_string()));
+            return;
+        }
         let trimmed_title = title().trim().to_string();
         if trimmed_title.is_empty() {
             form_error.set(Some("Title is required".to_string()));
@@ -1047,6 +1056,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                     title: title(), ingredient_count: ingredients().iter().filter(|item| !item.name.trim().is_empty()).count(),
                     step_count: steps().iter().filter(|step| !step.text.trim().is_empty()).count(), visibility: visibility(),
                     preserve_visibility: !id_is_draft,
+                    publication_blocked: name_check().blocked(),
                     oncancel: move |_| publication_review_open.set(false),
                     onconfirm: move |event| {
                         publication_review_open.set(false);
@@ -1106,7 +1116,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
+                            disabled: name_check().blocked() || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
                             onclick: move |event| {
                                 if crate::components::mobile::is_mobile_layout() { publication_review_open.set(true); }
                                 else { let mut submit = on_submit; submit(event); }
@@ -1163,6 +1173,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                         Input {
                             accessible_name: "Recipe name",
+                            invalid: name_check().invalid(),
+                            described_by: Some("recipe-name-status".to_string()),
                             value: title().clone(),
                             placeholder: "e.g. Grandma's Chocolate Chip Cookies",
                             oninput: move |v| {
@@ -1170,6 +1182,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                 form_error.set(None);
                             },
                         }
+                        crate::pages::recipe_name::NameFeedback { status: name_check() }
                     }
 
                     // Description

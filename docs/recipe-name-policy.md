@@ -30,3 +30,17 @@ contains the equivalent additive migration for explicit application. Creating th
 index fails if unresolved duplicates remain, preserving existing data. Drafts
 need no cleanup. Test fixtures use distinct names per owner and exercise shared
 titles using different owners.
+
+## API and editor
+
+The authenticated `recipe_name_available` API checks only the verified account.
+An optional recipe ID must belong to that account and allows an unchanged name
+during edits. Requests validate title length and use autocomplete rate limits.
+
+Both editors debounce checks, ignore stale account/title/recipe responses, show
+inline feedback linked to the name field, and block publication while checking
+or when a conflict is known. Draft saves remain available. A failed advisory
+check permits publication through the authoritative server check. Confirmed
+publication conflicts permit renaming and retrying; unknown write outcomes retain
+the existing recovery behavior. Collection imports reject conflicting names with
+an explicit message and roll back the whole import.
