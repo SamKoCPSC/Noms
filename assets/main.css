@@ -188,11 +188,18 @@ a:not(.btn):not(.navbar-link):hover {
         0 5px 12px color-mix(in srgb, var(--shadow-dark) 35%, transparent),
         2px 3px 6px color-mix(in srgb, var(--shadow-dark) 26%, transparent),
         -3px -3px 8px color-mix(in srgb, var(--shadow-light) 70%, transparent);
+    /* A raised rim defines the opening without flattening the recessed well. */
+    --elevation-inset-rim:
+        0 0 0 5px color-mix(in srgb, var(--surface) 65%, var(--shadow-light) 35%),
+        -1px -1px 2px 4px color-mix(in srgb, var(--shadow-light) 75%, transparent),
+        1px 1px 2px 4px color-mix(in srgb, var(--shadow-dark) 28%, transparent);
     --elevation-inset:
+        var(--elevation-inset-rim),
         inset 4px 4px 7px color-mix(in srgb, var(--shadow-dark) 64%, transparent),
         inset -3px -3px 7px color-mix(in srgb, var(--shadow-light) 82%, transparent),
         1px 2px 5px color-mix(in srgb, var(--shadow-dark) 18%, transparent);
     --elevation-inset-compact:
+        var(--elevation-inset-rim),
         inset 2px 2px 4px color-mix(in srgb, var(--shadow-dark) 60%, transparent),
         inset -2px -2px 5px color-mix(in srgb, var(--shadow-light) 75%, transparent),
         1px 1px 3px color-mix(in srgb, var(--shadow-dark) 12%, transparent);
@@ -908,7 +915,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 
 .image-editor__soft-button:active,
 .image-editor__icon-button:active {
-    box-shadow: inset 3px 3px 4px var(--shadow-dark), inset -3px -3px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .image-editor__soft-button:disabled,
@@ -916,7 +923,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     color: var(--text-tertiary);
     cursor: not-allowed;
     opacity: 0.55;
-    box-shadow: inset 2px 2px 3px var(--shadow-dark), inset -2px -2px 3px var(--shadow-light);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .image-editor__soft-button:disabled:hover,
@@ -1192,7 +1199,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     height: 32px;
     border-radius: var(--radius-sm);
     background: var(--surface);
-    box-shadow: inset 3px 3px 4px var(--shadow-dark), inset -3px -3px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset-compact);
     overflow: hidden;
 }
 
@@ -1261,7 +1268,7 @@ dialog.shared-modal::backdrop { background: transparent; }
 .image-editor__flip-toggle--active {
     color: white;
     background: var(--accent);
-    box-shadow: inset 3px 3px 4px rgba(92, 55, 43, 0.28), inset -3px -3px 4px rgba(255, 236, 226, 0.18);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .image-editor__flip-toggle--active:hover {
@@ -1474,7 +1481,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     background: var(--surface);
     border-radius: var(--radius-md);
     padding: var(--space-xs);
-    box-shadow: inset 5px 5px 4px var(--shadow-dark), inset -5px -5px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset);
     width: fit-content;
     max-width: 100%;
 }
@@ -1836,7 +1843,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     border-radius: var(--radius-md);
     flex-shrink: 0;
     border: 3px solid color-mix(in srgb, var(--shadow-light) 68%, var(--bg-base));
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--shadow-dark) 38%, transparent);
+    box-shadow: var(--elevation-inset-rim), 0 0 0 1px color-mix(in srgb, var(--shadow-dark) 38%, transparent);
 }
 .recipe-card--framed .recipe-card__image::after {
     position: absolute;
@@ -1949,11 +1956,11 @@ dialog.shared-modal::backdrop { background: transparent; }
     box-shadow: 3px 3px 4px var(--shadow-dark), -3px -3px 4px var(--shadow-light);
 }
 
-.tag-chip--active {
+.tag-chip--active,
+.tag-chip--active:hover {
     background-color: var(--accent);
     color: white;
-    box-shadow: inset 2px 2px 3px rgba(0, 0, 0, 0.15),
-                inset -2px -2px 3px rgba(255, 255, 255, 0.1);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 /* ============================================================
@@ -2104,8 +2111,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     background: var(--accent);
     color: white;
     border-color: var(--accent);
-    box-shadow: inset 2px 2px 3px rgba(0, 0, 0, 0.15),
-                inset -2px -2px 3px rgba(255, 255, 255, 0.1);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .recipe-scaler__select {
@@ -2121,8 +2127,9 @@ dialog.shared-modal::backdrop { background: transparent; }
 }
 
 .recipe-scaler__select:focus {
-    outline: none;
-    box-shadow: var(--elevation-inset-compact), 0 0 0 2px var(--accent);
+    outline: 2px solid var(--accent);
+    outline-offset: 7px;
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .recipe-scaler__reset {
@@ -3873,7 +3880,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     padding: var(--space-lg);
     border: 2px dashed var(--text-tertiary);
     border-radius: var(--radius-lg);
-    box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+    box-shadow: var(--elevation-inset);
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: var(--font-body);
@@ -3921,7 +3928,7 @@ dialog.shared-modal::backdrop { background: transparent; }
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
-    box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+    box-shadow: var(--elevation-inset-compact);
 }
 
 .image-upload__item[draggable="true"] {
