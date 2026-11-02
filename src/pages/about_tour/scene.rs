@@ -107,6 +107,7 @@ pub struct Renderer {
     kitchen: Diorama,
     office: Diorama,
     potluck: Diorama,
+    bedroom: Diorama,
     a_pos: u32,
     a_normal: u32,
     a_uv: u32,
@@ -188,6 +189,7 @@ impl Renderer {
             kitchen: Diorama::default(),
             office: Diorama::default(),
             potluck: Diorama::default(),
+            bedroom: Diorama::default(),
             a_pos,
             a_normal,
             a_uv,
@@ -229,20 +231,19 @@ impl Renderer {
     }
     pub fn upload_models(
         &mut self,
-        kitchen: &super::gltf::DioramaMesh,
-        kitchen_images: &[HtmlImageElement],
-        office: &super::gltf::DioramaMesh,
-        office_images: &[HtmlImageElement],
-        potluck: &super::gltf::DioramaMesh,
-        potluck_images: &[HtmlImageElement],
+        models: [(&super::gltf::DioramaMesh, &[HtmlImageElement]); 4],
     ) -> Result<(), JsValue> {
+        let [(kitchen, kitchen_images), (office, office_images), (potluck, potluck_images), (bedroom, bedroom_images)] =
+            models;
         self.kitchen = self.upload_diorama(kitchen, kitchen_images)?;
         self.office = self.upload_diorama(office, office_images)?;
         self.potluck = self.upload_diorama(potluck, potluck_images)?;
+        self.bedroom = self.upload_diorama(bedroom, bedroom_images)?;
         for (name, data) in [
             ("kitchen", kitchen),
             ("office", office),
             ("potluck", potluck),
+            ("bedroom", bedroom),
         ] {
             let _ = self.canvas.set_attribute(
                 &format!("data-{name}-groups"),
@@ -446,7 +447,7 @@ impl Renderer {
             2.,
         );
     }
-    pub fn render(&self, camera: &Camera, time: f32, motion: bool, mobile: bool, frames: [f32; 3]) {
+    pub fn render(&self, camera: &Camera, time: f32, motion: bool, mobile: bool, frames: [f32; 4]) {
         let gl = &self.gl;
         gl.use_program(Some(&self.program));
         gl.clear(Gl::COLOR_BUFFER_BIT | Gl::DEPTH_BUFFER_BIT);
@@ -477,17 +478,33 @@ impl Renderer {
             };
             // Each arch belongs to the world; the camera flies through it en route.
             self.draw(&self.arch, root, color, None, false, 2.);
-            if matches!(i, 0 | 1 | 3) {
+            if matches!(i, 0..=3) {
                 let ratio = self.canvas.width() as f32 / self.canvas.height().max(1) as f32;
                 let short_mobile = self.canvas.get_bounding_client_rect().height() < 600.;
                 let (x, y, sc) = if mobile && i != 0 {
                     if short_mobile {
-                        (0., 3.1, if i == 3 { 0.25 } else { 0.28 })
+                        (
+                            0.,
+                            3.1,
+                            if i == 2 {
+                                0.22
+                            } else if i == 3 {
+                                0.25
+                            } else {
+                                0.28
+                            },
+                        )
                     } else {
                         (
                             0.,
                             if i == 3 { 3.15 } else { 3.25 },
-                            if i == 3 { 0.30 } else { 0.33 },
+                            if i == 2 {
+                                0.29
+                            } else if i == 3 {
+                                0.30
+                            } else {
+                                0.33
+                            },
                         )
                     }
                 } else if mobile {
@@ -515,6 +532,7 @@ impl Renderer {
                 let (diorama, frame, room) = match i {
                     0 => (&self.kitchen, frames[0], Room::Kitchen),
                     1 => (&self.office, frames[1], Room::Office),
+                    2 => (&self.bedroom, frames[3], Room::Bedroom),
                     _ => (&self.potluck, frames[2], Room::Potluck),
                 };
                 self.draw_diorama(model, diorama, frame, room);
@@ -686,15 +704,15 @@ impl Renderer {
         }
         self.gl.depth_mask(true);
     }
-    /// Warm all three rooms, including prints and transparent PC surfaces, before entry.
+    /// Warm all four rooms, including prints and transparent PC surfaces, before entry.
     pub fn warm_models(&self, aspect: f32, mobile: bool) -> bool {
-        for stop in [0., 1., 3.] {
+        for stop in [0., 1., 2., 3.] {
             self.render(
                 &flight::camera(stop, aspect, [0.; 2]),
                 0.,
                 false,
                 mobile,
-                [160.; 3],
+                [160.; 4],
             );
         }
         self.gl.finish();
@@ -723,6 +741,7 @@ impl Drop for Renderer {
             .iter()
             .chain(&self.office.draws)
             .chain(&self.potluck.draws)
+            .chain(&self.bedroom.draws)
         {
             self.gl.delete_buffer(Some(&draw.mesh.buffer));
         }

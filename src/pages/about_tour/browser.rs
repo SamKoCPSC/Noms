@@ -61,6 +61,7 @@ struct State {
     models_ready: bool,
     assembly: super::assembly::Playback,
     office_arrival: super::assembly::ChapterArrival,
+    bedroom_arrival: super::assembly::ChapterArrival,
     potluck_arrival: super::assembly::ChapterArrival,
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
@@ -140,6 +141,7 @@ pub fn start() -> Result<(), JsValue> {
         models_ready: false,
         assembly: super::assembly::Playback::default(),
         office_arrival: super::assembly::ChapterArrival::new(1),
+        bedroom_arrival: super::assembly::ChapterArrival::new(2),
         potluck_arrival: super::assembly::ChapterArrival::new(3),
         gate: Gate::Open,
         loading_timeout: None,
@@ -345,6 +347,7 @@ fn maybe_load_models(state: &StateRef) {
                 ]
                 .as_slice(),
             ),
+            ("bedroom", ["data-bedroom-prints-url"].as_slice()),
         ]
         .into_iter()
         .map(|(name, images)| {
@@ -407,7 +410,12 @@ fn maybe_load_models(state: &StateRef) {
                 }
                 models.push((data, images));
             }
-            Ok::<_, JsValue>((models.remove(0), models.remove(0), models.remove(0)))
+            Ok::<_, JsValue>((
+                models.remove(0),
+                models.remove(0),
+                models.remove(0),
+                models.remove(0),
+            ))
         }
         .await;
         if let Some(state) = weak.upgrade() {
@@ -420,20 +428,19 @@ fn maybe_load_models(state: &StateRef) {
                     (kitchen, kitchen_images),
                     (office, office_images),
                     (potluck, potluck_images),
+                    (bedroom, bedroom_images),
                 )) => s.renderer.as_mut().is_some_and(|r| {
-                    r.upload_models(
-                        &kitchen,
-                        &kitchen_images,
-                        &office,
-                        &office_images,
-                        &potluck,
-                        &potluck_images,
-                    )
+                    r.upload_models([
+                        (&kitchen, &kitchen_images),
+                        (&office, &office_images),
+                        (&potluck, &potluck_images),
+                        (&bedroom, &bedroom_images),
+                    ])
                     .is_ok()
                 }),
                 Err(_) => false,
             };
-            for name in ["kitchen", "office", "potluck"] {
+            for name in ["kitchen", "office", "potluck", "bedroom"] {
                 let _ = s.root.set_attribute(
                     &format!("data-{name}-state"),
                     if loaded { "ready" } else { "failed" },
@@ -572,7 +579,7 @@ impl State {
         self.models_requested = false;
         self.renderer = None;
         self.manual_read = true;
-        for name in ["kitchen", "office", "potluck"] {
+        for name in ["kitchen", "office", "potluck", "bedroom"] {
             let _ = self
                 .root
                 .set_attribute(&format!("data-{name}-state"), "failed");
@@ -816,6 +823,7 @@ impl State {
         if !self.gate.blocked() {
             self.office_arrival.advance(camera.progress, dt);
             self.potluck_arrival.advance(camera.progress, dt);
+            self.bedroom_arrival.advance(camera.progress, dt);
         }
         let active = (camera.progress + 0.5).floor().clamp(0., 3.) as usize;
         if self.active != active {
@@ -893,6 +901,7 @@ impl State {
                     self.assembly.frame(),
                     self.office_arrival.frame(),
                     self.potluck_arrival.frame(),
+                    self.bedroom_arrival.frame(),
                 ],
             );
             let _ = self.canvas.set_attribute(
@@ -906,6 +915,10 @@ impl State {
             let _ = self.canvas.set_attribute(
                 "data-potluck-assembly-frame",
                 &format!("{:.3}", self.potluck_arrival.frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-bedroom-assembly-frame",
+                &format!("{:.3}", self.bedroom_arrival.frame()),
             );
             self.frames += 1;
             let _ = self
@@ -949,6 +962,7 @@ impl State {
             || (!self.gate.blocked() && !self.assembly.finished())
             || (!self.gate.blocked() && self.office_arrival.animating())
             || (!self.gate.blocked() && self.potluck_arrival.animating())
+            || (!self.gate.blocked() && self.bedroom_arrival.animating())
             || self.gate != previous_gate
             || self.gate == Gate::Presenting
             || (self.target - self.progress).abs() > 0.0004

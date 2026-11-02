@@ -2,7 +2,7 @@
 import json,struct,sys
 from pathlib import Path
 out=Path(sys.argv[1]);model=sys.argv[2] if len(sys.argv)>2 else 'kitchen'
-if model not in ('kitchen','office','potluck'):raise SystemExit('Expected kitchen, office or potluck')
+if model not in ('kitchen','office','potluck','bedroom'):raise SystemExit('Expected kitchen, office, potluck or bedroom')
 path=out/f'sams-{model}.glb';raw=path.read_bytes();jl=struct.unpack_from('<I',raw,12)[0];d=json.loads(raw[20:20+jl]);binary=raw[28+jl:]
 if d.get('extensionsRequired'):raise SystemExit('Expected unquantized Blender export')
 def accessor(index):

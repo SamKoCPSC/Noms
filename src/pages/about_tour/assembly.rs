@@ -70,12 +70,13 @@ pub enum Room {
     Kitchen,
     Office,
     Potluck,
+    Bedroom,
 }
 impl Room {
     pub fn amount(self, frame: f32, start: f32, end: f32) -> f32 {
         match self {
             Self::Kitchen => amount(frame, start, end),
-            Self::Office | Self::Potluck => office_amount(frame, start, end),
+            Self::Office | Self::Potluck | Self::Bedroom => office_amount(frame, start, end),
         }
     }
 }
@@ -197,6 +198,23 @@ mod tests {
     }
 
     #[test]
+    fn bedroom_arrives_once_when_creator_chapter_is_approached() {
+        let mut arrival = ChapterArrival::new(2);
+        arrival.advance(0., 60.);
+        assert_eq!(arrival.frame(), 1.);
+        arrival.advance(1.8, DURATION / 2.);
+        assert!(arrival.animating());
+        arrival.advance(2., DURATION);
+        for progress in [3., 0., 2.] {
+            arrival.advance(progress, 1.);
+            assert_eq!(arrival.frame(), 160.);
+            assert!(!arrival.animating());
+        }
+        assert_eq!(Room::Bedroom.amount(1., 1., 25.), 1.);
+        assert_eq!(Room::Bedroom.amount(1., 76., 110.), 0.);
+    }
+
+    #[test]
     fn office_shell_is_present_while_furniture_and_accessories_arrive() {
         assert_eq!(office_amount(1., 1., 25.), 1.);
         for (start, end) in [(18., 48.), (32., 65.), (72., 104.), (116., 145.)] {
@@ -223,6 +241,10 @@ mod tests {
             (
                 include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
                 Room::Potluck,
+            ),
+            (
+                include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
+                Room::Bedroom,
             ),
         ] {
             let model = super::super::gltf::decode(bytes).unwrap();
