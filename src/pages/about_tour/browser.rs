@@ -12,7 +12,19 @@ use web_sys::{
 const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
 const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];
 type StateRef = Rc<RefCell<State>>;
-thread_local! {static RUNTIME:RefCell<Option<StateRef>>=const{RefCell::new(None)};}
+thread_local! {
+    static RUNTIME: RefCell<Option<StateRef>> = const { RefCell::new(None) };
+    static ENTRY_FRAGMENT: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+/// The router normalizes `/about#chapter` to `/about` during hydration.
+/// Preserve only this route's initial fragment before launching the router.
+pub fn capture_entry_fragment() {
+    if let Some(window) = web_sys::window() {
+        if window.location().pathname().ok().as_deref() == Some("/about") {
+            ENTRY_FRAGMENT.with(|entry| *entry.borrow_mut() = window.location().hash().ok());
+        }
+    }
+}
 struct Listener {
     target: EventTarget,
     name: &'static str,
@@ -56,6 +68,7 @@ struct State {
     time: f32,
     frames: u64,
     initial_alignment: u8,
+    align_fragment_on_entry: bool,
     models_requested: bool,
     generation: u32,
     models_ready: bool,
@@ -82,6 +95,20 @@ fn el(doc: &Document, id: &str) -> Result<Element, JsValue> {
 pub fn start() -> Result<(), JsValue> {
     stop();
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
+    if let Some(hash) = ENTRY_FRAGMENT.with(|entry| entry.borrow_mut().take()) {
+        if IDS.contains(&hash.trim_start_matches('#'))
+            && window.location().hash().unwrap_or_default().is_empty()
+        {
+            if let Ok(history) = window.history() {
+                let url = format!(
+                    "/about{}{}",
+                    window.location().search().unwrap_or_default(),
+                    hash
+                );
+                let _ = history.replace_state_with_url(&JsValue::NULL, "", Some(&url));
+            }
+        }
+    }
     let doc = window
         .document()
         .ok_or_else(|| JsValue::from_str("No document"))?;
@@ -136,6 +163,7 @@ pub fn start() -> Result<(), JsValue> {
         time: 0.,
         frames: 0,
         initial_alignment: 3,
+        align_fragment_on_entry: true,
         models_requested: false,
         generation: 0,
         models_ready: false,
@@ -949,12 +977,20 @@ impl State {
         let previous_gate = self.gate;
         self.gate = self.gate.after_frame();
         if self.gate != previous_gate {
+            self.sync_gate();
+            // Releasing the loading scroll lock can change the document's scroll
+            // range after the router's initial fragment alignment. Resolve it once
+            // against the visible layout before starting a chapter entrance.
+            if !self.gate.blocked() && self.align_fragment_on_entry {
+                self.align_fragment_on_entry = false;
+                self.goto_hash(false);
+                self.initial_alignment = 3;
+            }
             // Later chapter entries should already have a settled kitchen when
             // the visitor returns to the opening. Re-entry never resets it.
             if !self.gate.blocked() && self.target >= 0.5 {
                 self.assembly.finish();
             }
-            self.sync_gate();
         }
         self.dirty = false;
         self.initial_alignment > 0
