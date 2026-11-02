@@ -581,7 +581,7 @@ pub async fn insert_test_recipe(
     crate::db::insert_recipe(
         pool,
         user_id,
-        "Collection Test Recipe",
+        &format!("Collection Test Recipe {}", uid()),
         None,
         None,
         None,

@@ -37,6 +37,7 @@ use crate::types::{
     RecipeCardSummary, RecipeImageEdit,
 };
 
+mod recipe_names;
 mod recipe_search;
 pub use recipe_search::{search_recipes, suggest_recipe_titles};
 mod user_search;
@@ -72,6 +73,8 @@ pub enum DbError {
     Query(sqlx::Error),
     /// The requested username is already taken by another user.
     UsernameTaken,
+    /// This owner already has a saved recipe with the same normalized title.
+    RecipeNameTaken,
     /// The session was not found, revoked, or expired.
     SessionInvalid,
     /// The requested recipe was not found.
@@ -131,6 +134,10 @@ impl std::fmt::Display for DbError {
             DbError::InvalidConfiguration(e) => write!(f, "database configuration failed: {e}"),
             DbError::Query(e) => write!(f, "database query failed: {e}"),
             DbError::UsernameTaken => write!(f, "username is already taken"),
+            DbError::RecipeNameTaken => write!(
+                f,
+                "You already have a recipe with this name. Choose a different name to publish."
+            ),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
             DbError::RecipeNotFound(id) => write!(f, "recipe not found: {id}"),
             DbError::VersionNotFound {
@@ -188,7 +195,7 @@ impl std::error::Error for DbError {
         match self {
             DbError::MissingUrl | DbError::InvalidConfiguration(_) => None,
             DbError::Connection(e) | DbError::Query(e) => Some(e),
-            DbError::UsernameTaken => None,
+            DbError::UsernameTaken | DbError::RecipeNameTaken => None,
             DbError::SessionInvalid => None,
             DbError::RecipeNotFound(_) => None,
             DbError::VersionNotFound { .. }
@@ -3304,7 +3311,7 @@ pub async fn insert_recipe(
     .bind(visibility)
     .fetch_one(executor)
     .await
-    .map_err(DbError::Query)?;
+    .map_err(recipe_names::map_write_error)?;
 
     Recipe::from_row(&row).map_err(DbError::Query)
 }
@@ -3427,7 +3434,7 @@ pub async fn update_recipe(
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => DbError::RecipeNotFound(id),
-        other => DbError::Query(other),
+        other => recipe_names::map_write_error(other),
     })?;
 
     Recipe::from_row(&row).map_err(DbError::Query)

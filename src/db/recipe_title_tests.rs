@@ -8,7 +8,11 @@ async fn search_integration_recipe_title_suggestions_are_live_distinct_bounded_a
     let viewer = Uuid::new_v4();
     let other = Uuid::new_v4();
     let term = format!("titlecheck{}", crate::test_utils::uid());
-    for user in [viewer, other] {
+    let duplicate_owners: Vec<_> = (0..20).map(|_| Uuid::new_v4()).collect();
+    for user in [viewer, other]
+        .into_iter()
+        .chain(duplicate_owners.iter().copied())
+    {
         sqlx::query(
             "INSERT INTO users(id,username,display_name,email) VALUES($1,$2,'Title test',$3)",
         )
@@ -26,8 +30,8 @@ async fn search_integration_recipe_title_suggestions_are_live_distinct_bounded_a
         id
     }
     add(&pool, other, &term, "public", "").await;
-    for _ in 0..20 {
-        add(&pool, other, &format!("{term} Curry"), "public", "").await;
+    for owner in &duplicate_owners {
+        add(&pool, *owner, &format!("{term} Curry"), "public", "").await;
     }
     add(
         &pool,
@@ -204,7 +208,12 @@ async fn search_integration_recipe_title_suggestions_are_live_distinct_bounded_a
     );
     eprintln!("Title suggestion plan:\n{plan}");
     sqlx::query("DELETE FROM users WHERE id = ANY($1)")
-        .bind(vec![viewer, other])
+        .bind(
+            [viewer, other]
+                .into_iter()
+                .chain(duplicate_owners)
+                .collect::<Vec<_>>(),
+        )
         .execute(&pool)
         .await
         .unwrap();

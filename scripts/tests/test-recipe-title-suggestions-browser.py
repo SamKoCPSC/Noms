@@ -29,6 +29,7 @@ async def main(args):
     needle = 'titleprobe' + suffix
     checks, errors, requests, fixture_ids = [], [], [], []
     other = str(uuid.uuid4())
+    duplicate_owners = [str(uuid.uuid4()) for _ in range(12)]
 
     def sql(statement, **values):
         command = ['docker', 'exec', '-i', args.instance + '-postgres-1', 'psql', '-U', 'noms', '-d', 'noms', '-Atq', '-v', 'ON_ERROR_STOP=1']
@@ -82,6 +83,10 @@ async def main(args):
             owner = str(uuid.UUID(profile['current_user_id']))
             sql("INSERT INTO users(id,username,display_name,email) VALUES(:'id'::uuid,:'name','Other title fixture',:'email');",
                 id=other, name='title_other_' + suffix, email=f'other-{suffix}@example.test')
+            sql("""INSERT INTO users(id,username,display_name,email)
+                SELECT id,'dup_' || replace(id::text,'-','')::varchar(20),'Other title fixture',id::text || '@example.test'
+                FROM jsonb_to_recordset(:'users'::jsonb) AS r(id uuid);""",
+                users=json.dumps([dict(id=user) for user in duplicate_owners]))
             records = []
 
             def add(title, visibility='public', user=other, description=''):
@@ -92,8 +97,8 @@ async def main(args):
 
             add(needle)
             chicken = needle + ' Chicken curry'
-            for _ in range(12):
-                add(chicken)
+            for user in duplicate_owners:
+                add(chicken, user=user)
             add('  ' + needle.upper() + '   CHICKEN   CURRY  ')
             add(chicken + ' with spinach')
             for index in range(10):
@@ -291,7 +296,8 @@ async def main(args):
         finally:
             if fixture_ids:
                 sql("DELETE FROM recipes WHERE id IN (SELECT value::uuid FROM jsonb_array_elements_text(:'ids'::jsonb));", ids=json.dumps(fixture_ids))
-            sql("DELETE FROM users WHERE id=:'id'::uuid;", id=other)
+            sql("DELETE FROM users WHERE id IN (SELECT value::uuid FROM jsonb_array_elements_text(:'ids'::jsonb));",
+                ids=json.dumps([other] + duplicate_owners))
             await browser.close()
 
 

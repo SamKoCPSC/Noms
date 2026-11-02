@@ -3420,6 +3420,13 @@ async fn insert_recipe_from_snapshot(
     visibility: &str,
     authority: super::MediaAttachAuthority,
 ) -> Result<Recipe, DbError> {
+    super::recipe_names::ensure_available(
+        &mut **transaction,
+        user_id,
+        &snapshot.title,
+        None,
+    )
+    .await?;
     let recipe = super::insert_recipe(
         &mut **transaction,
         user_id,
@@ -3455,6 +3462,13 @@ async fn update_recipe_from_snapshot(
     user_id: Uuid,
     snapshot: &RecipeSnapshot,
 ) -> Result<Recipe, DbError> {
+    super::recipe_names::ensure_available(
+        &mut **transaction,
+        user_id,
+        &snapshot.title,
+        Some(recipe_id),
+    )
+    .await?;
     super::update_recipe(
         &mut **transaction,
         recipe_id,

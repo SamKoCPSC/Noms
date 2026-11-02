@@ -169,6 +169,10 @@ CREATE TABLE IF NOT EXISTS recipes (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- All saved recipes reserve a name, regardless of visibility. Drafts live separately.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recipes_owner_title_unique
+ON recipes (user_id, (lower(btrim(regexp_replace(title, '[[:space:]]+', ' ', 'g')))));
+
 CREATE INDEX IF NOT EXISTS idx_recipes_search
 ON recipes USING bm25 (
     id,
