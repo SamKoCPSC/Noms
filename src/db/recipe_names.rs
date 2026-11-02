@@ -11,7 +11,6 @@ pub(super) fn map_write_error(error: sqlx::Error) -> DbError {
     }
 }
 
-
 #[cfg(test)]
 #[path = "recipe_names_tests.rs"]
 mod tests;
