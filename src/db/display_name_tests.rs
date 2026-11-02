@@ -17,7 +17,7 @@ async fn user(pool: &PgPool, name: &str) -> User {
 #[tokio::test]
 async fn display_name_constraint_rejects_direct_sql_case_and_space_duplicates() {
     let (_db, pool) = test_utils::setup_test_db().await;
-    let owner = user(&pool, "Recipe Cook").await;
+    let _owner = user(&pool, "Recipe Cook").await;
     for name in ["Recipe Cook", "recipe cook", " RECIPE COOK "] {
         let suffix = test_utils::uid();
         let error =
@@ -44,14 +44,6 @@ async fn display_name_constraint_rejects_direct_sql_case_and_space_duplicates() 
     .await
     .unwrap_err();
     assert!(matches!(error, DbError::DisplayNameTaken));
-    assert!(display_name_available(&pool, owner.id, " recipe COOK ")
-        .await
-        .unwrap());
-    assert!(
-        !display_name_available(&pool, Uuid::new_v4(), "recipe COOK")
-            .await
-            .unwrap()
-    );
 }
 
 #[tokio::test]

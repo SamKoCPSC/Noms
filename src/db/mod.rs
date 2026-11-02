@@ -2918,23 +2918,6 @@ fn user_write_error(error: sqlx::Error) -> DbError {
     DbError::Query(error)
 }
 
-/// The same indexed comparison as the database constraint; allow one's own name.
-pub async fn display_name_available(
-    executor: impl sqlx::Executor<'_, Database = Postgres>,
-    user_id: Uuid,
-    display_name: &str,
-) -> Result<bool, DbError> {
-    sqlx::query_scalar(
-        "SELECT NOT EXISTS(SELECT 1 FROM users \
-         WHERE lower(btrim(display_name)) = lower(btrim($1)) AND id <> $2)",
-    )
-    .bind(display_name.trim())
-    .bind(user_id)
-    .fetch_one(executor)
-    .await
-    .map_err(DbError::Query)
-}
-
 /// Insert a new user. Returns the created user with the generated ID.
 pub async fn insert_user(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
