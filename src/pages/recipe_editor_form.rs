@@ -11,7 +11,6 @@ pub(super) fn PublicationReview(
     preserve_visibility: bool,
     oncancel: EventHandler<()>,
     onconfirm: EventHandler<MouseEvent>,
-    #[props(default)] publication_blocked: bool,
 ) -> Element {
     rsx! {
         crate::components::base::SharedModal {
@@ -34,7 +33,7 @@ pub(super) fn PublicationReview(
                 p { class: "recipe-editor__hint", "To change recipe details, return to editing. Nothing is published until you confirm." }
                 div { class: "mobile-review-actions",
                     button { r#type: "button", class: "btn btn-secondary touch-target", onclick: move |_| oncancel.call(()), "Keep editing" }
-                    button { r#type: "button", class: "btn btn-primary touch-target", disabled: publication_blocked, onclick: move |event| onconfirm.call(event), "Publish recipe" }
+                    button { r#type: "button", class: "btn btn-primary touch-target", onclick: move |event| onconfirm.call(event), "Publish recipe" }
                 }
             }
         }
@@ -50,15 +49,11 @@ pub(super) fn RecipeEditorInput(
     placeholder: String,
     oninput: EventHandler<String>,
     #[props(default = "text".to_string())] input_type: String,
-    #[props(default)] invalid: bool,
-    #[props(default)] described_by: Option<String>,
 ) -> Element {
     rsx! {
         input {
             class: "neumo-inset input input--shared",
             aria_label: accessible_name,
-            aria_invalid: invalid,
-            aria_describedby: described_by,
             r#type: input_type,
             value,
             placeholder,

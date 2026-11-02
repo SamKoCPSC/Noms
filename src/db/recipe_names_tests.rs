@@ -161,28 +161,3 @@ async fn concurrent_direct_writes_are_guarded_by_the_database_index() {
     let error = first.err().or_else(|| second.err()).unwrap();
     assert!(matches!(map_write_error(error), DbError::RecipeNameTaken));
 }
-
-#[tokio::test]
-async fn availability_is_owner_scoped_and_excludes_only_an_owned_recipe() {
-    let (_database, pool) = test_utils::setup_test_db().await;
-    let owner = test_utils::insert_test_user(&pool).await;
-    let other = test_utils::insert_test_user(&pool).await;
-    let recipe = db::create_published_recipe(&pool, owner.id, &payload("Curry"), None)
-        .await
-        .unwrap();
-    assert!(!recipe_name_available(&pool, owner.id, " CURRY ", None)
-        .await
-        .unwrap());
-    assert!(
-        recipe_name_available(&pool, owner.id, "curry", Some(recipe.id))
-            .await
-            .unwrap()
-    );
-    assert!(recipe_name_available(&pool, other.id, "curry", None)
-        .await
-        .unwrap());
-    assert!(matches!(
-        recipe_name_available(&pool, other.id, "curry", Some(recipe.id)).await,
-        Err(DbError::RecipeNotFound(_))
-    ));
-}

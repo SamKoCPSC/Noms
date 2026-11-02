@@ -126,7 +126,6 @@ pub fn RecipeNew() -> Element {
     let navigator = use_navigator();
     // Basic fields
     let mut title = use_signal(String::new);
-    let name_check = crate::pages::recipe_name::use_name_check(title(), form_account(), None);
     let mut active_editor_section = use_signal(|| "basics");
     let mut publication_review_open = use_signal(|| false);
     let mut description = use_signal(String::new);
@@ -653,10 +652,6 @@ pub fn RecipeNew() -> Element {
         error.set(None);
 
         // ── Client-side validation ──────────────────────────────────────
-        if name_check().blocked() {
-            error.set(Some(name_check().message().to_string()));
-            return;
-        }
         let trimmed_title = title().trim().to_string();
         if trimmed_title.is_empty() {
             error.set(Some("Title is required".to_string()));
@@ -980,7 +975,6 @@ pub fn RecipeNew() -> Element {
                     title: title(), ingredient_count: ingredients().iter().filter(|item| !item.name.trim().is_empty()).count(),
                     step_count: steps().iter().filter(|step| !step.text.trim().is_empty()).count(), visibility: visibility(),
                     preserve_visibility: false,
-                    publication_blocked: name_check().blocked(),
                     oncancel: move |_| publication_review_open.set(false),
                     onconfirm: move |event| {
                         publication_review_open.set(false);
@@ -1027,7 +1021,7 @@ pub fn RecipeNew() -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: name_check().blocked() || draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                            disabled: draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: move |event| {
                                 if crate::components::mobile::is_mobile_layout() { publication_review_open.set(true); }
                                 else { let mut submit = on_submit; submit(event); }
@@ -1078,8 +1072,6 @@ pub fn RecipeNew() -> Element {
                         }
                         Input {
                             accessible_name: "Recipe name",
-                            invalid: name_check().invalid(),
-                            described_by: Some("recipe-name-status".to_string()),
                             value: title().clone(),
                             placeholder: "e.g. Grandma's Chocolate Chip Cookies",
                             oninput: move |v| {
@@ -1087,7 +1079,6 @@ pub fn RecipeNew() -> Element {
                                 error.set(None);
                             },
                         }
-                        crate::pages::recipe_name::NameFeedback { status: name_check() }
                     }
 
                     // Description

@@ -38,7 +38,6 @@ use crate::types::{
 };
 
 mod recipe_names;
-pub use recipe_names::recipe_name_available;
 mod recipe_search;
 pub use recipe_search::{search_recipes, suggest_recipe_titles};
 mod user_search;

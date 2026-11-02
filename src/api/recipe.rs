@@ -2411,30 +2411,3 @@ pub async fn export_recipe_html(
     .map_err(|_| ServerFnError::new("Exports are busy. Try again shortly."))?
     .map_err(ServerFnError::new)
 }
-
-/// Check only the verified account's saved names; caller IDs never grant ownership.
-#[server]
-pub async fn recipe_name_available(
-    expected_account_id: Option<uuid::Uuid>,
-    title: String,
-    recipe_id: Option<uuid::Uuid>,
-) -> Result<bool, ServerFnError> {
-    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
-    crate::security::enforce_user_request_budget(
-        user_id,
-        crate::security::RequestClass::Autocomplete,
-    )
-    .map_err(|_| ServerFnError::new("Too many name checks. Try again shortly."))?;
-    if title.trim().is_empty() || title.chars().count() > crate::security::MAX_RECIPE_TITLE_CHARS {
-        return Err(ServerFnError::new(
-            "Recipe names must contain 1 to 255 characters.",
-        ));
-    }
-    bounded_database_operation(crate::db::recipe_name_available(
-        &crate::db::get_pool(),
-        user_id,
-        &title,
-        recipe_id,
-    ))
-    .await
-}

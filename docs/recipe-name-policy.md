@@ -6,17 +6,27 @@ whitespace and repeated whitespace do not distinguish names; display spelling is
 preserved. The PostgreSQL key is
 `lower(btrim(regexp_replace(title, '[[:space:]]+', ' ', 'g')))`.
 
-Drafts and immutable historical snapshots do not reserve names. Imported and
-forked recipes remain editable drafts: if their title conflicts, choose another
-title before publishing. Publishing a new version can retain its own name.
-Renaming or restoring an old name conflicts if another saved recipe now owns it.
-Deleting or renaming a recipe releases its previous name.
+Drafts and immutable historical snapshots do not reserve names. Single-recipe
+imports and forks remain editable drafts. Publishing a new version can retain
+its own name. Renaming or restoring an old name conflicts if another saved
+recipe now owns it. Deleting or renaming a recipe releases its previous name.
 
-Publication validates the authenticated owner's name inside the existing write
-transaction. A unique owner/name index also protects concurrent and direct SQL
-writes. A conflict returns: "You already have a recipe with this name. Choose a
-different name to publish." Publication rolls back, preserving the editable draft,
-its media references and the existing version history.
+## Collision handling
+
+The database unique index is the sole authority for name uniqueness. There are
+no preflight name queries, availability endpoint, background editor checks or
+name-based publication disabling.
+
+When a create or rename violates this specific index, the database layer maps it
+to a recipe-name conflict. The API returns the clear message: "You already have
+a recipe with this name. Choose a different name to publish." The editor displays
+that confirmed failure and permits renaming and retrying. Other database errors
+retain their existing handling.
+
+The publication transaction rolls back on a collision, preserving the draft,
+media references and history. Unknown write outcomes still use the existing
+recovery behavior. Collection imports show an explicit collision message and
+roll back the whole import; rename the conflicting recipe in the file to retry.
 
 ## Existing databases
 
@@ -30,17 +40,3 @@ contains the equivalent additive migration for explicit application. Creating th
 index fails if unresolved duplicates remain, preserving existing data. Drafts
 need no cleanup. Test fixtures use distinct names per owner and exercise shared
 titles using different owners.
-
-## API and editor
-
-The authenticated `recipe_name_available` API checks only the verified account.
-An optional recipe ID must belong to that account and allows an unchanged name
-during edits. Requests validate title length and use autocomplete rate limits.
-
-Both editors debounce checks, ignore stale account/title/recipe responses, show
-inline feedback linked to the name field, and block publication while checking
-or when a conflict is known. Draft saves remain available. A failed advisory
-check permits publication through the authoritative server check. Confirmed
-publication conflicts permit renaming and retrying; unknown write outcomes retain
-the existing recovery behavior. Collection imports reject conflicting names with
-an explicit message and roll back the whole import.
