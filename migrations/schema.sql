@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Display names are public identities: ignore case and surrounding spaces.
+CREATE UNIQUE INDEX IF NOT EXISTS users_display_name_unique
+ON users (lower(btrim(display_name)));
+
 CREATE INDEX IF NOT EXISTS idx_users_search
 ON users USING bm25 (
     id,

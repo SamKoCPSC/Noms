@@ -127,6 +127,7 @@ fn profile_save_feedback_keeps_known_validation_and_session_guidance() {
         "Display name must be 2-100 characters",
         "Bio must be 160 characters or less",
         "That username is already taken. Please choose another.",
+        DISPLAY_NAME_TAKEN,
     ] {
         assert_eq!(profile_save_feedback(&ServerFnError::new(message)), message);
     }

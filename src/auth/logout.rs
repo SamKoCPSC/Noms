@@ -585,7 +585,7 @@ mod tests {
             let user = crate::db::insert_user(
                 &pool,
                 &format!("logout_origin_{}", test_utils::uid()),
-                "Logout Origin User",
+                &format!("Logout Origin User {label}"),
                 &format!("logout-origin-{}@example.com", test_utils::uid()),
                 None,
             )
