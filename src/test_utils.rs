@@ -256,6 +256,11 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .await
     .expect("failed to create recipes table");
 
+    sqlx::raw_sql(include_str!("../migrations/recipe-owner-title-unique.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create unique owner/recipe-name index");
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS recipe_tags (\
          recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,\

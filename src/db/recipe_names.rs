@@ -31,8 +31,7 @@ pub(super) async fn ensure_available(
 
 pub(super) fn map_write_error(error: sqlx::Error) -> DbError {
     if error.as_database_error().is_some_and(|error| {
-        error.is_unique_violation()
-            && error.constraint() == Some("idx_recipes_owner_title_unique")
+        error.is_unique_violation() && error.constraint() == Some("idx_recipes_owner_title_unique")
     }) {
         DbError::RecipeNameTaken
     } else {

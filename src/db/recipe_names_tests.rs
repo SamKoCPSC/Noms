@@ -1,6 +1,6 @@
 use super::*;
-use crate::db::diff::RecipeDraftPayload;
 use crate::db;
+use crate::db::diff::RecipeDraftPayload;
 use crate::test_utils;
 
 fn payload(title: &str) -> RecipeDraftPayload {
@@ -51,7 +51,9 @@ async fn conflicting_drafts_survive_publication_and_can_be_renamed() {
         db::publish_recipe_draft(&pool, draft.id, owner.id, None).await,
         Err(DbError::RecipeNameTaken)
     ));
-    let retained = db::get_recipe_draft(&pool, draft.id, owner.id).await.unwrap();
+    let retained = db::get_recipe_draft(&pool, draft.id, owner.id)
+        .await
+        .unwrap();
     assert_eq!(retained.revision, draft.revision);
     let revised = db::update_recipe_draft(
         &pool,
@@ -75,9 +77,16 @@ async fn own_name_is_allowed_and_conflicting_restore_rolls_back_history() {
     let recipe = db::create_published_recipe(&pool, owner.id, &payload("Soup"), None)
         .await
         .unwrap();
-    db::publish_snapshot(&pool, recipe.id, owner.id, 1, &payload("Broth").content, None)
-        .await
-        .unwrap();
+    db::publish_snapshot(
+        &pool,
+        recipe.id,
+        owner.id,
+        1,
+        &payload("Broth").content,
+        None,
+    )
+    .await
+    .unwrap();
     db::create_published_recipe(&pool, owner.id, &payload("Soup"), None)
         .await
         .unwrap();
@@ -85,7 +94,9 @@ async fn own_name_is_allowed_and_conflicting_restore_rolls_back_history() {
         db::restore_recipe_version(&pool, recipe.id, owner.id, 1, 2).await,
         Err(DbError::RecipeNameTaken)
     ));
-    let latest = db::get_latest_recipe_version(&pool, recipe.id).await.unwrap();
+    let latest = db::get_latest_recipe_version(&pool, recipe.id)
+        .await
+        .unwrap();
     assert_eq!(latest.version_number, 2);
     let actual = db::get_recipe_by_id_and_owner(&pool, recipe.id, owner.id)
         .await
@@ -127,7 +138,10 @@ async fn fork_draft_can_be_renamed_before_publishing_for_the_same_owner() {
         .await
         .unwrap();
     assert_eq!(recipe.title, "Slow cooker curry");
-    assert!(db::get_fork_relationship(&pool, recipe.id).await.unwrap().is_some());
+    assert!(db::get_fork_relationship(&pool, recipe.id)
+        .await
+        .unwrap()
+        .is_some());
 }
 
 #[tokio::test]
