@@ -226,3 +226,67 @@ fn profile_save_control_blocks_pending_and_invalid_activation() {
         assert_eq!(calls.get(), expected);
     }
 }
+
+#[tokio::test]
+async fn unauthenticated_display_name_check_stops_before_database_access() {
+    let error = check_display_name_available(Some(uuid::Uuid::new_v4()), "Valid name".into())
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("Not authenticated"));
+}
+
+#[test]
+fn display_name_checks_ignore_stale_input_and_other_accounts() {
+    let account = uuid::Uuid::new_v4();
+    let check = DisplayNameCheck {
+        account_id: account,
+        name: "New Cook".into(),
+        available: Some(true),
+    };
+    assert_eq!(
+        display_name_status("  New Cook  ", "Old Cook", Some(account), Some(&check)),
+        DisplayNameStatus::Available
+    );
+    assert_eq!(
+        display_name_status("Newer Cook", "Old Cook", Some(account), Some(&check)),
+        DisplayNameStatus::Checking
+    );
+    assert_eq!(
+        display_name_status(
+            "New Cook",
+            "Old Cook",
+            Some(uuid::Uuid::new_v4()),
+            Some(&check)
+        ),
+        DisplayNameStatus::Checking
+    );
+    assert_eq!(
+        display_name_status("Old Cook", "Old Cook", Some(account), None),
+        DisplayNameStatus::Unchanged
+    );
+}
+
+#[test]
+fn display_name_conflicts_and_failed_checks_prevent_client_save() {
+    let account = uuid::Uuid::new_v4();
+    for (available, expected) in [
+        (Some(false), DisplayNameStatus::Taken),
+        (None, DisplayNameStatus::Unavailable),
+    ] {
+        let check = DisplayNameCheck {
+            account_id: account,
+            name: "New Cook".into(),
+            available,
+        };
+        let status = display_name_status("New Cook", "Old Cook", Some(account), Some(&check));
+        assert_eq!(status, expected);
+        assert!(!status.permits_save());
+    }
+    assert!(!DisplayNameStatus::Checking.permits_save());
+    assert!(DisplayNameStatus::Available.permits_save());
+    assert!(DisplayNameStatus::Unchanged.permits_save());
+    assert_eq!(
+        profile_save_feedback(&ServerFnError::new(DISPLAY_NAME_TAKEN)),
+        DISPLAY_NAME_TAKEN
+    );
+}

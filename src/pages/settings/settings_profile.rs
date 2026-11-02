@@ -25,6 +25,7 @@ mod recovery_tests;
 
 // Matches users.display_name VARCHAR(100), including names imported by OAuth.
 const PROFILE_DISPLAY_NAME_MAX_CHARACTERS: usize = 100;
+const DISPLAY_NAME_TAKEN: &str = "That display name is already taken. Please choose another.";
 
 /// Shared display-name validation for the form and its server write boundary.
 fn validate_profile_display_name(name: &str) -> Result<(), &'static str> {
@@ -33,6 +34,64 @@ fn validate_profile_display_name(name: &str) -> Result<(), &'static str> {
         return Err("Display name must be 2-100 characters");
     }
     Ok(())
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct DisplayNameCheck {
+    account_id: uuid::Uuid,
+    name: String,
+    available: Option<bool>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum DisplayNameStatus {
+    Unchanged,
+    Checking,
+    Available,
+    Taken,
+    Unavailable,
+}
+
+impl DisplayNameStatus {
+    fn permits_save(self) -> bool {
+        matches!(self, Self::Unchanged | Self::Available)
+    }
+
+    fn feedback(self) -> &'static str {
+        match self {
+            Self::Unchanged => "Display names are unique, ignoring capitalization.",
+            Self::Checking => "Checking display name…",
+            Self::Available => "Display name is available.",
+            Self::Taken => DISPLAY_NAME_TAKEN,
+            Self::Unavailable => "Could not check availability. Retry the check.",
+        }
+    }
+}
+
+/// Only an answer for the current account and exact trimmed input can enable
+/// saving. Late responses for earlier input must never approve a different name.
+fn display_name_status(
+    name: &str,
+    current_name: &str,
+    account_id: Option<uuid::Uuid>,
+    check: Option<&DisplayNameCheck>,
+) -> DisplayNameStatus {
+    let name = name.trim();
+    if name == current_name.trim() {
+        return DisplayNameStatus::Unchanged;
+    }
+    match check.filter(|check| Some(check.account_id) == account_id && check.name == name) {
+        Some(DisplayNameCheck {
+            available: Some(true),
+            ..
+        }) => DisplayNameStatus::Available,
+        Some(DisplayNameCheck {
+            available: Some(false),
+            ..
+        }) => DisplayNameStatus::Taken,
+        Some(_) => DisplayNameStatus::Unavailable,
+        None => DisplayNameStatus::Checking,
+    }
 }
 
 /// Only known validation messages are safe to show verbatim. Transport and
@@ -49,6 +108,7 @@ fn profile_save_feedback(error: &ServerFnError) -> &str {
             | "Display name must be 2-30 characters"
             | "Display name must be 2-100 characters"
             | "Bio must be 160 characters or less"
+            | DISPLAY_NAME_TAKEN
             | "That username is already taken. Please choose another." => return message,
             "Not authenticated" => return "Sign in again in another tab, then retry saving. Keep this page open to retain your entries.",
             _ => {}
@@ -250,6 +310,19 @@ pub async fn delete_account(expected_account_id: Option<uuid::Uuid>) -> Result<(
     Ok(())
 }
 
+/// Authenticated availability check for the same name comparison used on save.
+#[server]
+pub async fn check_display_name_available(
+    expected_account_id: Option<uuid::Uuid>,
+    display_name: String,
+) -> Result<bool, ServerFnError> {
+    let user_id = crate::auth::account_binding::require_form_account(expected_account_id).await?;
+    validate_profile_display_name(&display_name).map_err(ServerFnError::new)?;
+    crate::db::display_name_available(&crate::db::get_pool(), user_id, &display_name)
+        .await
+        .map_err(|_| ServerFnError::new("Could not check display name availability. Try again."))
+}
+
 /// Save user profile via server function.
 #[server]
 pub async fn save_profile(
@@ -294,23 +367,23 @@ pub async fn save_profile(
         }
     }
 
-    // --- Apply username change if provided ---
-    if let Some(ref username) = trimmed_username {
-        crate::db::update_username(&pool, user_id, username)
-            .await
-            .map_err(|e| match &e {
-                crate::db::DbError::UsernameTaken => {
-                    ServerFnError::new("That username is already taken. Please choose another.")
-                }
-                _ => ServerFnError::new(e.to_string()),
-            })?;
-    }
-
-    // --- Apply display_name + bio update ---
-    let updated =
-        crate::db::update_user_profile(&pool, user_id, &trimmed_name, trimmed_bio.as_deref())
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?;
+    // The database constraint also arbitrates concurrent claims. Keep the
+    // username, display name and bio in one transaction on any conflict.
+    let updated = crate::db::update_user_profile_and_username(
+        &pool,
+        user_id,
+        &trimmed_name,
+        trimmed_bio.as_deref(),
+        trimmed_username.as_deref(),
+    )
+    .await
+    .map_err(|error| match error {
+        crate::db::DbError::DisplayNameTaken => ServerFnError::new(DISPLAY_NAME_TAKEN),
+        crate::db::DbError::UsernameTaken => {
+            ServerFnError::new("That username is already taken. Please choose another.")
+        }
+        _ => ServerFnError::new("Could not save profile. Please try again."),
+    })?;
 
     Ok(UserProfile {
         id: updated.id,
@@ -1130,6 +1203,43 @@ pub fn SettingsProfile() -> Element {
         }
     });
 
+    let mut display_name_check = use_resource(move || {
+        let name = display_name().trim().to_string();
+        let account_id = form_account();
+        let current = auth_context.read().current_user.clone();
+        async move {
+            let account_id = account_id?;
+            let current = current?;
+            if current.id != account_id
+                || name == current.display_name.trim()
+                || validate_profile_display_name(&name).is_err()
+            {
+                return None;
+            }
+            #[cfg(target_arch = "wasm32")]
+            gloo_timers::future::TimeoutFuture::new(300).await;
+            let available = check_display_name_available(Some(account_id), name.clone())
+                .await
+                .ok();
+            Some(DisplayNameCheck {
+                account_id,
+                name,
+                available,
+            })
+        }
+    });
+    let name_status = display_name_status(
+        &display_name(),
+        &auth_context
+            .read()
+            .current_user
+            .as_ref()
+            .map(|user| user.display_name.clone())
+            .unwrap_or_default(),
+        form_account(),
+        display_name_check.read().as_ref().and_then(Option::as_ref),
+    );
+
     let on_save = move |_| {
         // Check the live signal before validation/spawning, not only the last
         // rendered button prop, so rapid activations cannot overlap saves.
@@ -1197,6 +1307,19 @@ pub fn SettingsProfile() -> Element {
             error.set(Some(reason.to_string()));
             return;
         }
+        let status = display_name_status(
+            &trimmed_name,
+            &current_user
+                .as_ref()
+                .map(|user| user.display_name.clone())
+                .unwrap_or_default(),
+            form_account(),
+            display_name_check.read().as_ref().and_then(Option::as_ref),
+        );
+        if !status.permits_save() {
+            error.set(Some(status.feedback().to_string()));
+            return;
+        }
         if let Some(ref b) = trimmed_bio {
             if b.len() > 160 {
                 error.set(Some("Bio must be 160 characters or less".to_string()));
@@ -1247,6 +1370,11 @@ pub fn SettingsProfile() -> Element {
                     // Clear any previous success message so it doesn't show alongside error
                     saved_message.set(None);
 
+                    // A different account may claim the name after our check.
+                    // Refresh the field feedback instead of leaving it "available".
+                    if profile_save_feedback(&e) == DISPLAY_NAME_TAKEN {
+                        display_name_check.restart();
+                    }
                     error.set(Some(profile_save_feedback(&e).to_string()));
                     is_saving.set(false);
                 }
@@ -1281,6 +1409,7 @@ pub fn SettingsProfile() -> Element {
 
         initialized()
             && validate_profile_display_name(&n).is_ok()
+            && name_status.permits_save()
             && b.len() <= 160
             && username_valid
     };
@@ -1713,14 +1842,22 @@ pub fn SettingsProfile() -> Element {
                                 id: "profile-display-name", class: "input input--shared neumo-inset", r#type: "text",
                                 value: display_name(), placeholder: "Your name",
                                 // Avoid HTML maxlength's UTF-16 counting and silent truncation.
-                                aria_invalid: validate_profile_display_name(&display_name()).is_err(),
+                                aria_invalid: validate_profile_display_name(&display_name()).is_err() || name_status == DisplayNameStatus::Taken,
                                 readonly: is_saving() || !initialized(),
-                                aria_describedby: "profile-display-name-hint",
+                                aria_describedby: "profile-display-name-hint profile-display-name-status",
                                 oninput: move |evt| { if initialized() && !is_saving() { display_name.set(evt.value()); error.set(None); saved_message.set(None); } },
                             }
                             span { id: "profile-display-name-hint", class: "user-settings__hint",
                                 "{display_name().trim().chars().count()}/{PROFILE_DISPLAY_NAME_MAX_CHARACTERS}"
                                 if validate_profile_display_name(&display_name()).is_err() { " · Use 2–100 characters." }
+                            }
+                            if validate_profile_display_name(&display_name()).is_ok() {
+                                span { id: "profile-display-name-status", class: "user-settings__hint", role: "status", aria_live: "polite",
+                                    "{name_status.feedback()}"
+                                }
+                                if name_status == DisplayNameStatus::Unavailable {
+                                    button { r#type: "button", class: "btn btn-secondary", onclick: move |_| display_name_check.restart(), "Retry name check" }
+                                }
                             }
                         }
                         div { class: "user-settings__field",
