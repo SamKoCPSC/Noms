@@ -170,9 +170,17 @@ async fn availability_is_owner_scoped_and_excludes_only_an_owned_recipe() {
     let recipe = db::create_published_recipe(&pool, owner.id, &payload("Curry"), None)
         .await
         .unwrap();
-    assert!(!recipe_name_available(&pool, owner.id, " CURRY ", None).await.unwrap());
-    assert!(recipe_name_available(&pool, owner.id, "curry", Some(recipe.id)).await.unwrap());
-    assert!(recipe_name_available(&pool, other.id, "curry", None).await.unwrap());
+    assert!(!recipe_name_available(&pool, owner.id, " CURRY ", None)
+        .await
+        .unwrap());
+    assert!(
+        recipe_name_available(&pool, owner.id, "curry", Some(recipe.id))
+            .await
+            .unwrap()
+    );
+    assert!(recipe_name_available(&pool, other.id, "curry", None)
+        .await
+        .unwrap());
     assert!(matches!(
         recipe_name_available(&pool, other.id, "curry", Some(recipe.id)).await,
         Err(DbError::RecipeNotFound(_))

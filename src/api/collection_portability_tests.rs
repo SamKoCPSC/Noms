@@ -309,7 +309,7 @@ async fn collection_json_import_reuses_authorized_recipe_images_and_keeps_missin
         .await
         .unwrap();
     assert!(saved.images.is_empty());
-    assert_eq!(saved.title, recipe.title);
+    assert_eq!(saved.title, format!("{} reused missing", recipe.title));
     // A forged source identity does not authorize somebody else's private assets.
     let other = user(&pool, "imagecopy").await;
     mock.reset().await;

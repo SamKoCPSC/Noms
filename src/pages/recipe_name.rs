@@ -23,7 +23,9 @@ impl NameStatus {
         match self {
             Self::Clear => "",
             Self::Checking => "Checking recipe name…",
-            Self::Taken => "You already have a recipe with this name. Choose a different name to publish.",
+            Self::Taken => {
+                "You already have a recipe with this name. Choose a different name to publish."
+            }
             Self::TooLong => "Use 255 characters or fewer for the recipe name.",
             Self::Unavailable => "Could not check this name. Publishing will check again.",
         }
@@ -38,15 +40,16 @@ pub(super) fn use_name_check(
     let response = use_resource(use_reactive(
         (&title, &account, &recipe_id),
         move |(title, account, recipe_id)| async move {
-            let result = if title.trim().is_empty() || title.chars().count() > 255 || account.is_none() {
-                Ok(true)
-            } else {
-                #[cfg(target_arch = "wasm32")]
-                gloo_timers::future::TimeoutFuture::new(300).await;
-                crate::api::recipe::recipe_name_available(account, title.clone(), recipe_id)
-                    .await
-                    .map_err(|_| ())
-            };
+            let result =
+                if title.trim().is_empty() || title.chars().count() > 255 || account.is_none() {
+                    Ok(true)
+                } else {
+                    #[cfg(target_arch = "wasm32")]
+                    gloo_timers::future::TimeoutFuture::new(300).await;
+                    crate::api::recipe::recipe_name_available(account, title.clone(), recipe_id)
+                        .await
+                        .map_err(|_| ())
+                };
             (title, account, recipe_id, result)
         },
     ));

@@ -2412,7 +2412,6 @@ pub async fn export_recipe_html(
     .map_err(ServerFnError::new)
 }
 
-    
 /// Check only the verified account's saved names; caller IDs never grant ownership.
 #[server]
 pub async fn recipe_name_available(
@@ -2427,7 +2426,9 @@ pub async fn recipe_name_available(
     )
     .map_err(|_| ServerFnError::new("Too many name checks. Try again shortly."))?;
     if title.trim().is_empty() || title.chars().count() > crate::security::MAX_RECIPE_TITLE_CHARS {
-        return Err(ServerFnError::new("Recipe names must contain 1 to 255 characters."));
+        return Err(ServerFnError::new(
+            "Recipe names must contain 1 to 255 characters.",
+        ));
     }
     bounded_database_operation(crate::db::recipe_name_available(
         &crate::db::get_pool(),

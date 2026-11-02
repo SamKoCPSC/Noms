@@ -126,11 +126,7 @@ pub fn RecipeNew() -> Element {
     let navigator = use_navigator();
     // Basic fields
     let mut title = use_signal(String::new);
-    let name_check = crate::pages::recipe_name::use_name_check(
-        title(),
-        form_account(),
-        None,
-    );
+    let name_check = crate::pages::recipe_name::use_name_check(title(), form_account(), None);
     let mut active_editor_section = use_signal(|| "basics");
     let mut publication_review_open = use_signal(|| false);
     let mut description = use_signal(String::new);

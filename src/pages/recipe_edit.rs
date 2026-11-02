@@ -208,11 +208,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let mut is_discarding = use_signal(|| false);
     let mut draft_id = use_signal(|| Option::<String>::None);
     let mut draft_recipe_id = use_signal(|| Option::<uuid::Uuid>::None);
-    let name_check = crate::pages::recipe_name::use_name_check(
-        title(),
-        form_account(),
-        draft_recipe_id(),
-    );
+    let name_check =
+        crate::pages::recipe_name::use_name_check(title(), form_account(), draft_recipe_id());
     let mut draft_revision = use_signal(|| 0i64);
     let mut last_saved_editor = use_signal(|| Option::<RecipeEditorState>::None);
     let mut autosave_generation = use_signal(|| 0u64);
