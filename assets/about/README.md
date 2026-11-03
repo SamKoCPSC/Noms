@@ -67,7 +67,7 @@ cp /tmp/noms-potluck-web/{potluck-*.webp,sams-potluck.webp} assets/about/
 
 ## Runtime
 
-`src/pages/about_tour` ports the approved first-person Rust/WebGL prototype into the Dioxus About route. Semantic HTML contains all four complete chapters before enhancement. The camera and floating panels share the same projection, scoped beneath the existing app navbar. All four models and their twelve print textures load from local Manganis URLs on entry, including direct chapter links. A loading curtain locks document scrolling and makes covered controls inert until all assets are uploaded, all four rooms have rendered with GPU completion, and an additional frame has presented. It opens at the requested chapter. Other routes, initial reading view and reduced motion do not fetch model or print assets. Leaving the loading tour invalidates pending work before another model can start downloading or upload to an obsolete renderer.
+`src/pages/about_tour` ports the approved first-person Rust/WebGL prototype into the Dioxus About route. Semantic HTML contains all five complete chapters before enhancement. The camera and floating panels share the same projection, scoped beneath the existing app navbar. All five models and their thirteen print textures load from local Manganis URLs on entry, including direct chapter links. A loading curtain locks document scrolling and makes covered controls inert until all assets are uploaded, all five scenes have rendered with GPU completion, and an additional frame has presented. It opens at the requested chapter. Other routes, initial reading view and reduced motion do not fetch model or print assets. Leaving the loading tour invalidates pending work before another model can start downloading or upload to an obsolete renderer.
 
 After the loading curtain closes, the kitchen plays a three-second fly-in once per route visit, independently of scrolling. Frames 40–160 assemble appliances, island, food, recipe book and laptop, then all parts remain in their final positions. The floor, room and counters are complete at first paint. Mobile starts with ambient drift paused but still plays the intro; rendering stops when it finishes unless the camera is moving. Hidden tabs suspend playback. Scrolling or switching to reading view never resets it, and direct links to later chapters skip the unseen intro. All chapter steps are 160svh, with no extra opening assembly segment. Native scrolling continues to move the camera between chapters. Ambient pause stops continuous rendering after the intro without disabling scroll input. Pause/read controls, reduced-motion changes, WebGL/context-loss fallbacks and route unmounting stop rendering or dispose resources. Restoring graphics rebuilds the scene and reloads all four rooms if needed. Reading mode uses the lazy still image.
 
@@ -90,7 +90,7 @@ cargo test --locked --no-default-features --features server pages::about
 cargo test --locked --no-default-features --features server pages::marketing_contract_tests
 ```
 
-The GLB contract tests check all four file/mesh budgets, finite geometry, the 18 kitchen, 16 office, 26 potluck and 32 bedroom assemblies, all twelve printed UV surfaces, transparent PC panels and potluck glazing, preserved mouse controls, curved furniture and dishes, carved chess pieces, and the color palette. The bounded loader permits at most 64 primitives, five print indices and 400,000 triangles per model. Browser verification should cover all four stops, automatic opening assembly without scrolling, settled geometry during forward/backward scrolling, creator panel scrolling, opening/direct-fragment loading, one-time office, bedroom and potluck approach/direct-entry/reverse-approach arrivals, mobile idle rendering, route exit/re-entry, reduced motion, graphics and image failure, context recovery, and desktop/mobile screenshots. Do not commit browser validation screenshots to the application or PR.
+The GLB contract tests check all five file/mesh budgets, finite geometry, the 18 kitchen, 16 office, 26 potluck, 32 bedroom and 29 garden assemblies, all thirteen printed UV surfaces, transparent PC panels and potluck glazing, preserved mouse controls, curved furniture and dishes, carved chess pieces, and the color palette. The bounded loader permits at most 64 primitives, five print indices and 400,000 triangles per model. Browser verification should cover all five stops, automatic opening assembly without scrolling, settled geometry during forward/backward scrolling, creator panel scrolling, opening/direct-fragment loading, one-time office, bedroom, potluck and garden approach/direct-entry/reverse-approach arrivals, mobile idle rendering, route exit/re-entry, reduced motion, graphics and image failure, context recovery, and desktop/mobile screenshots. Do not commit browser validation screenshots to the application or PR.
 
 ## Creator bedroom
 
@@ -108,3 +108,34 @@ cargo test --locked --no-default-features --features server pages::about_tour
 ```
 
 The exporter reads `assembly-manifest.json` beside the master and never saves the source scene. The app uses the bounded Rust GLB decoder, without a JavaScript 3D runtime. The bedroom contains 342,007 triangles in 36 draws; the 400,000-triangle ceiling remains per model, not unbounded.
+
+## Garden cookout
+
+The fifth chapter, “Around the table” (`#gather`), uses the approved **revision 6**
+[garden model](https://chatgpt.com/space/page_7c6bf3f7c53081919c1588f851054446).
+It retains the shared meals, beer picnic table, enlarged centered spikeball net,
+sports equipment at the side, left fence and two striped lawn chairs.
+
+The web derivative contains 394,185 triangles, 29 assemblies and 32 draws, with
+one pastry texture. Quantization reduces the GLB to 12,892,928 bytes; the native
+master stays unchanged. Rounded dishes, bottles and sports equipment retain their
+evaluated geometry. `garden-budget.json` records provenance and
+`garden-geometry-audit.json` records the per-object simplification.
+
+Ground, house and fences are assembled immediately. The remaining groups arrive
+once on approaching the fifth stop, through the open front (+Z), keeping clear
+of both side fences. They remain settled when revisiting the chapter. Loading
+includes the garden's geometry, texture and GPU warm-up; reader, reduced-motion
+and graphics-failure modes use the approved Blender still.
+
+```sh
+blender -b /path/to/revision6/garden-v6.blend --threads 5 \
+  --python tools/about/export_garden.py -- /tmp/noms-garden-web
+python tools/about/pack_kitchen.py /tmp/noms-garden-web garden
+python tools/about/prepare_garden_images.py /path/to/revision6 /tmp/noms-garden-web assets/about
+cp /tmp/noms-garden-web/{sams-garden.glb,garden-budget.json,garden-geometry-audit.json} assets/about/
+```
+
+Keep `assembly-manifest.json` and `garden-v6-clean.png` beside the master. The
+geometry and entrance tests validate the delivered asset, including fence
+clearance, group count, texture references and the existing triangle ceiling.

@@ -1,5 +1,5 @@
 use super::{flight, loading::Gate, scene::Renderer};
-use crate::pages::about::LOADING_PHRASES;
+use crate::pages::about::{IDS, LOADING_PHRASES, NAMES};
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -9,8 +9,6 @@ use web_sys::{
     Document, Element, Event, EventTarget, HtmlCanvasElement, HtmlElement, MediaQueryList,
     MouseEvent, Window,
 };
-const IDS: [&str; 4] = ["idea", "why", "creator", "community"];
-const NAMES: [&str; 4] = ["The idea", "The reason", "The creator", "The philosophy"];
 type StateRef = Rc<RefCell<State>>;
 thread_local! {
     static RUNTIME: RefCell<Option<StateRef>> = const { RefCell::new(None) };
@@ -76,6 +74,7 @@ struct State {
     office_arrival: super::assembly::ChapterArrival,
     bedroom_arrival: super::assembly::ChapterArrival,
     potluck_arrival: super::assembly::ChapterArrival,
+    garden_arrival: super::assembly::ChapterArrival,
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
     loading_phrases: Option<gloo_timers::callback::Interval>,
@@ -129,13 +128,13 @@ pub fn start() -> Result<(), JsValue> {
         renderer,
         reduced: media.matches(),
         media: media.clone(),
-        panels: (0..4)
+        panels: (0..flight::COUNT)
             .map(|i| el(&doc, &format!("panel-{i}"))?.dyn_into::<HtmlElement>())
             .collect::<Result<_, _>>()?,
-        anchors: (0..4)
+        anchors: (0..flight::COUNT)
             .map(|i| el(&doc, &format!("stop-{i}")))
             .collect::<Result<_, _>>()?,
-        nav: (0..4)
+        nav: (0..flight::COUNT)
             .map(|i| el(&doc, &format!("nav-{i}")))
             .collect::<Result<_, _>>()?,
         motion_button: el(&doc, "motion-toggle")?,
@@ -171,6 +170,7 @@ pub fn start() -> Result<(), JsValue> {
         office_arrival: super::assembly::ChapterArrival::new(1),
         bedroom_arrival: super::assembly::ChapterArrival::new(2),
         potluck_arrival: super::assembly::ChapterArrival::new(3),
+        garden_arrival: super::assembly::ChapterArrival::new(4),
         gate: Gate::Open,
         loading_timeout: None,
         loading_phrases: None,
@@ -222,7 +222,7 @@ pub fn start() -> Result<(), JsValue> {
         } else if s.renderer.is_none() {
             s.renderer = Renderer::new(s.canvas.clone(), &s.doc).ok();
         }
-        let i = s.active.min(3);
+        let i = s.active.min(flight::COUNT - 1);
         s.apply_mode();
         s.navigate(i, false, false);
     });
@@ -231,7 +231,7 @@ pub fn start() -> Result<(), JsValue> {
         el(&doc, "tour-loader-read")?.into(),
         "click",
         |s, _| {
-            let i = s.active.min(3);
+            let i = s.active.min(flight::COUNT - 1);
             s.manual_read = true;
             s.apply_mode();
             s.navigate(i, false, false);
@@ -239,7 +239,7 @@ pub fn start() -> Result<(), JsValue> {
         },
     );
     listen(&state, el(&doc, "mode-toggle")?.into(), "click", |s, _| {
-        let i = s.active.min(3);
+        let i = s.active.min(flight::COUNT - 1);
         s.manual_read = !s.manual_read;
         s.apply_mode();
         s.navigate(i, false, false);
@@ -309,7 +309,7 @@ pub fn start() -> Result<(), JsValue> {
     });
     listen(&state, canvas.clone().into(), "webglcontextlost", |s, e| {
         e.prevent_default();
-        let i = s.active.min(3);
+        let i = s.active.min(flight::COUNT - 1);
         s.renderer = None;
         s.generation += 1;
         s.models_requested = false;
@@ -318,7 +318,7 @@ pub fn start() -> Result<(), JsValue> {
         s.navigate(i, false, false);
     });
     listen(&state, canvas.into(), "webglcontextrestored", |s, _| {
-        let i = s.active.min(3);
+        let i = s.active.min(flight::COUNT - 1);
         s.renderer = Renderer::new(s.canvas.clone(), &s.doc).ok();
         s.apply_mode();
         s.navigate(i, false, false);
@@ -376,6 +376,7 @@ fn maybe_load_models(state: &StateRef) {
                 .as_slice(),
             ),
             ("bedroom", ["data-bedroom-prints-url"].as_slice()),
+            ("garden", ["data-garden-pastry-url"].as_slice()),
         ]
         .into_iter()
         .map(|(name, images)| {
@@ -443,6 +444,7 @@ fn maybe_load_models(state: &StateRef) {
                 models.remove(0),
                 models.remove(0),
                 models.remove(0),
+                models.remove(0),
             ))
         }
         .await;
@@ -457,18 +459,20 @@ fn maybe_load_models(state: &StateRef) {
                     (office, office_images),
                     (potluck, potluck_images),
                     (bedroom, bedroom_images),
+                    (garden, garden_images),
                 )) => s.renderer.as_mut().is_some_and(|r| {
                     r.upload_models([
                         (&kitchen, &kitchen_images),
                         (&office, &office_images),
                         (&potluck, &potluck_images),
                         (&bedroom, &bedroom_images),
+                        (&garden, &garden_images),
                     ])
                     .is_ok()
                 }),
                 Err(_) => false,
             };
-            for name in ["kitchen", "office", "potluck", "bedroom"] {
+            for name in ["kitchen", "office", "potluck", "bedroom", "garden"] {
                 let _ = s.root.set_attribute(
                     &format!("data-{name}-state"),
                     if loaded { "ready" } else { "failed" },
@@ -596,18 +600,18 @@ impl State {
             self.loading_timeout = None;
             self.loading_phrases = None;
             if focus_loading_control {
-                self.focus_chapter(self.active.min(3));
+                self.focus_chapter(self.active.min(flight::COUNT - 1));
             }
         }
     }
     fn reading_fallback(&mut self) {
-        let i = self.active.min(3);
+        let i = self.active.min(flight::COUNT - 1);
         self.generation += 1;
         self.models_ready = false;
         self.models_requested = false;
         self.renderer = None;
         self.manual_read = true;
-        for name in ["kitchen", "office", "potluck", "bedroom"] {
+        for name in ["kitchen", "office", "potluck", "bedroom", "garden"] {
             let _ = self
                 .root
                 .set_attribute(&format!("data-{name}-state"), "failed");
@@ -785,7 +789,7 @@ impl State {
             let a = self.anchors[0].get_bounding_client_rect().top() + y;
             let step = self.anchors[2].get_bounding_client_rect().top()
                 - self.anchors[1].get_bounding_client_rect().top();
-            self.target = ((y - a) / step.max(1.)).clamp(0., 3.) as f32;
+            self.target = ((y - a) / step.max(1.)).clamp(0., (flight::COUNT - 1) as f64) as f32;
         } else {
             let mut closest = 0;
             let mut distance = f64::MAX;
@@ -852,16 +856,19 @@ impl State {
             self.office_arrival.advance(camera.progress, dt);
             self.potluck_arrival.advance(camera.progress, dt);
             self.bedroom_arrival.advance(camera.progress, dt);
+            self.garden_arrival.advance(camera.progress, dt);
         }
-        let active = (camera.progress + 0.5).floor().clamp(0., 3.) as usize;
+        let active = (camera.progress + 0.5)
+            .floor()
+            .clamp(0., (flight::COUNT - 1) as f32) as usize;
         if self.active != active {
             self.active = active;
-            for i in 0..4 {
+            for i in 0..flight::COUNT {
                 let _ = self.nav[i]
                     .set_attribute("aria-current", if i == active { "step" } else { "false" });
             }
             if let Ok(e) = el(&self.doc, "chapter-count") {
-                e.set_text_content(Some(&format!("{:02} / 04", active + 1)));
+                e.set_text_content(Some(&format!("{:02} / {:02}", active + 1, flight::COUNT)));
             }
             if let Ok(e) = el(&self.doc, "stop-name") {
                 e.set_text_content(Some(NAMES[active]));
@@ -869,9 +876,10 @@ impl State {
         }
         if let Ok(e) = el(&self.doc, "route-progress") {
             if let Some(e) = e.dyn_ref::<HtmlElement>() {
-                let _ = e
-                    .style()
-                    .set_property("width", &format!("{}%", camera.progress * (100. / 3.)));
+                let _ = e.style().set_property(
+                    "width",
+                    &format!("{}%", camera.progress * (100. / (flight::COUNT - 1) as f32)),
+                );
             }
         }
         for (i, panel) in self.panels.iter().enumerate() {
@@ -930,6 +938,7 @@ impl State {
                     self.office_arrival.frame(),
                     self.potluck_arrival.frame(),
                     self.bedroom_arrival.frame(),
+                    self.garden_arrival.frame(),
                 ],
             );
             let _ = self.canvas.set_attribute(
@@ -947,6 +956,10 @@ impl State {
             let _ = self.canvas.set_attribute(
                 "data-bedroom-assembly-frame",
                 &format!("{:.3}", self.bedroom_arrival.frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-garden-assembly-frame",
+                &format!("{:.3}", self.garden_arrival.frame()),
             );
             self.frames += 1;
             let _ = self
@@ -999,6 +1012,7 @@ impl State {
             || (!self.gate.blocked() && self.office_arrival.animating())
             || (!self.gate.blocked() && self.potluck_arrival.animating())
             || (!self.gate.blocked() && self.bedroom_arrival.animating())
+            || (!self.gate.blocked() && self.garden_arrival.animating())
             || self.gate != previous_gate
             || self.gate == Gate::Presenting
             || (self.target - self.progress).abs() > 0.0004

@@ -272,6 +272,27 @@ pub fn decode(bytes: &[u8]) -> Result<DioramaMesh, String> {
 mod tests {
     use super::*;
     #[test]
+    fn delivered_garden_keeps_approved_revision_six_assemblies() {
+        let model = decode(include_bytes!("../../../assets/about/sams-garden.glb")).unwrap();
+        let names: std::collections::HashSet<_> =
+            model.parts.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names.len(), 29);
+        for prefix in ["04 ", "22 ", "28 ", "29 "] {
+            assert!(
+                names.iter().any(|n| n.starts_with(prefix)),
+                "missing {prefix}"
+            );
+        }
+        assert!(model.parts.iter().any(|p| p.texture == 1));
+        assert!(model.vertices.iter().all(|v| v.is_finite()));
+        assert!(model.vertices.len() / 36 <= MAX_TRIANGLES);
+        for part in &model.parts {
+            assert!(part.end <= 160.);
+            assert!(part.texture <= 1);
+        }
+    }
+
+    #[test]
     fn delivered_bedroom_keeps_all_assemblies_and_posters() {
         let model = decode(include_bytes!("../../../assets/about/sams-bedroom.glb")).unwrap();
         let names: std::collections::HashSet<_> =

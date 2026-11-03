@@ -36,17 +36,18 @@ fn signed_in_home_cta_opens_dashboard() {
 }
 
 #[test]
-fn about_renders_the_four_approved_chapters_and_readable_fallback() {
+fn about_renders_the_five_approved_chapters_and_readable_fallback() {
     let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
     for title in [
         "The Ultimate Recipe Manager",
         "A side project that grew in to something larger.",
         "Hi, I&#39;m Sam!",
         "Just a simple and easy-to-use app.",
+        "Good food brings us together.",
     ] {
         assert!(html.contains(title), "Missing {title}");
     }
-    assert_eq!(html.matches("<article").count(), 4);
+    assert_eq!(html.matches("<article").count(), 5);
     assert!(html.contains("class=\"kitchen-fallback\""));
     assert!(html.contains("loading=\"lazy\""));
     let opening = html.split("id=\"panel-1\"").next().unwrap();
@@ -90,6 +91,13 @@ fn about_renders_the_four_approved_chapters_and_readable_fallback() {
     ] {
         assert!(html.contains(attribute));
     }
+    let garden = html.split("id=\"panel-4\"").nth(1).unwrap();
+    assert!(garden.contains("garden-fallback"));
+    assert!(garden.contains("lawn chairs"));
+    assert!(garden.contains("Take the tour again"));
+    assert!(html.contains("data-garden-url"));
+    assert!(html.contains("data-garden-pastry-url"));
+    assert!(html.contains("01 / 05"));
     assert!(html.contains("Nowadays I continue to support the project"));
     assert!(!html.contains("How did Noms start"));
 }
@@ -100,7 +108,7 @@ fn about_provides_motion_and_reading_controls_before_enhancement() {
     assert!(html.contains("id=\"mode-toggle\""));
     assert!(html.contains("id=\"motion-toggle\""));
     assert!(html.contains("Story chapters"));
-    for id in ["idea", "why", "creator", "community"] {
+    for id in ["idea", "why", "creator", "community", "gather"] {
         assert!(html.contains(&format!("href=\"#{id}\"")));
     }
 }
