@@ -1,0 +1,11 @@
+[
+  "collection create: database conflict shown in the hydrated client",
+  "collection create: inputs retained; rename and retry succeed",
+  "collection rename: database conflict shown in the hydrated client",
+  "pantry create: database conflict shown in the hydrated client",
+  "pantry create: inputs retained; rename and retry succeed",
+  "pantry rename: database conflict shown in the hydrated client",
+  "grocery-list create: database conflict shown in the hydrated client",
+  "grocery create: inputs retained; rename and retry succeed",
+  "grocery-list rename: database conflict shown in the hydrated client"
+]
