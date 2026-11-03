@@ -1,13 +1,14 @@
 use super::math::*;
-pub const COUNT: usize = 4;
+pub const COUNT: usize = super::super::about::IDS.len();
 pub const FOV: f32 = 0.88;
 const EYES: [[f32; 3]; COUNT] = [
     [0., 3.1, 12.],
     [7., 3.9, -10.],
     [-4., 3.2, -32.],
     [6., 4.4, -54.],
+    [-3., 3.7, -76.],
 ];
-const YAWS: [f32; COUNT] = [0., 0.32, -0.28, 0.28];
+const YAWS: [f32; COUNT] = [0., 0.32, -0.28, 0.28, -0.22];
 pub struct Camera {
     pub eye: [f32; 3],
     pub vp: Mat4,
@@ -30,8 +31,8 @@ fn catmull(a: f32, b: f32, c: f32, d: f32, t: f32) -> f32 {
         + (-a + 3. * b - 3. * c + d) * t * t * t)
 }
 pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
-    let p = p.clamp(0., 3.);
-    let i = (p.floor() as usize).min(2);
+    let p = p.clamp(0., (COUNT - 1) as f32);
+    let i = (p.floor() as usize).min(COUNT - 2);
     let t = smooth(0.06, 0.94, p - i as f32);
     let mut eye = [0.; 3];
     for (k, v) in eye.iter_mut().enumerate() {
@@ -39,7 +40,7 @@ pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
             EYES[i.saturating_sub(1)][k],
             EYES[i][k],
             EYES[i + 1][k],
-            EYES[(i + 2).min(3)][k],
+            EYES[(i + 2).min(COUNT - 1)][k],
             t,
         )
     }

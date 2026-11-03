@@ -71,12 +71,15 @@ pub enum Room {
     Office,
     Potluck,
     Bedroom,
+    Garden,
 }
 impl Room {
     pub fn amount(self, frame: f32, start: f32, end: f32) -> f32 {
         match self {
             Self::Kitchen => amount(frame, start, end),
-            Self::Office | Self::Potluck | Self::Bedroom => office_amount(frame, start, end),
+            Self::Office | Self::Potluck | Self::Bedroom | Self::Garden => {
+                office_amount(frame, start, end)
+            }
         }
     }
 }
@@ -84,11 +87,16 @@ pub fn arrival_pose(pivot: [f32; 3], authored: [f32; 3], t: f32, room: Room) -> 
     // glTF Y is up. All rooms have a back wall at -Z; the kitchen/potluck side
     // wall is at -X and the office's window wall is at +X. Enter diagonally
     // through the open front/side, including groups authored as vertical drops.
-    let incoming = [
-        authored[0].abs().max(0.75) * if room == Room::Office { -1. } else { 1. },
-        (authored[1].abs() * 0.25).min(0.45),
-        authored[2].abs().max(1.2),
-    ];
+    // The garden has fences on both sides: approach only through its open front.
+    let incoming = if room == Room::Garden {
+        [0., 0.075, authored[2].abs().max(2.4)]
+    } else {
+        [
+            authored[0].abs().max(0.75) * if room == Room::Office { -1. } else { 1. },
+            (authored[1].abs() * 0.25).min(0.45),
+            authored[2].abs().max(1.2),
+        ]
+    };
     let scale = 0.85 + 0.15 * t;
     let mut translation = [0.; 3];
     for axis in 0..3 {
@@ -99,6 +107,72 @@ pub fn arrival_pose(pivot: [f32; 3], authored: [f32; 3], t: f32, room: Room) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn garden_waits_for_fifth_chapter_then_arrives_once() {
+        for entry in [3.8, 4.] {
+            let mut garden = ChapterArrival::new(4);
+            for progress in [0., 1., 2., 3.] {
+                garden.advance(progress, 60.);
+                assert_eq!(garden.frame(), 1.);
+            }
+            garden.advance(entry, DURATION / 2.);
+            assert!(garden.animating());
+            garden.advance(entry, DURATION);
+            for progress in [0., 3., 4.] {
+                garden.advance(progress, 1.);
+                assert_eq!(garden.frame(), 160.);
+                assert!(!garden.animating());
+            }
+        }
+    }
+
+    #[test]
+    fn garden_arrivals_remain_between_both_side_fences_and_in_front_of_house() {
+        let model =
+            super::super::gltf::decode(include_bytes!("../../../assets/about/sams-garden.glb"))
+                .unwrap();
+        for part in &model.parts {
+            if part.end <= 25. {
+                assert_eq!(Room::Garden.amount(1., part.start, part.end), 1.);
+                continue;
+            }
+            let vertices = &model.vertices[part.first * 12..(part.first + part.count) * 12];
+            let min_x = vertices
+                .chunks_exact(12)
+                .map(|v| v[0])
+                .fold(f32::INFINITY, f32::min);
+            let max_x = vertices
+                .chunks_exact(12)
+                .map(|v| v[0])
+                .fold(f32::NEG_INFINITY, f32::max);
+            let min_z = vertices
+                .chunks_exact(12)
+                .map(|v| v[2])
+                .fold(f32::INFINITY, f32::min);
+            for frame in 1..=160 {
+                let t = Room::Garden.amount(frame as f32, part.start, part.end);
+                let pose = arrival_pose(part.pivot, part.offset, t, Room::Garden);
+                // The front is open. Stay inside both fence planes, allowing
+                // only the existing mounted extent of any boundary fixtures.
+                assert!(
+                    min_x * pose.scale + pose.translation[0] >= (-7.6_f32).min(min_x) - 0.001,
+                    "{} left fence",
+                    part.name
+                );
+                assert!(
+                    max_x * pose.scale + pose.translation[0] <= 7.5_f32.max(max_x) + 0.001,
+                    "{} right fence",
+                    part.name
+                );
+                assert!(
+                    min_z * pose.scale + pose.translation[2] >= min_z - 0.001,
+                    "{} back wall",
+                    part.name
+                );
+            }
+        }
+    }
+
     #[test]
     fn intro_advances_without_scrolling_and_stays_complete() {
         let mut playback = Playback::default();
