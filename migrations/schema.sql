@@ -413,9 +413,6 @@ CREATE TABLE IF NOT EXISTS grocery_lists (
 CREATE INDEX IF NOT EXISTS idx_grocery_lists_owner_order
     ON grocery_lists(owner_id, created_at DESC, id DESC);
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_grocery_lists_owner_name_unique
-ON grocery_lists (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
-
 CREATE TABLE IF NOT EXISTS grocery_list_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id UUID NOT NULL REFERENCES grocery_lists(id) ON DELETE CASCADE,
@@ -455,9 +452,6 @@ CREATE TABLE IF NOT EXISTS kitchen_profiles (
 CREATE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_order
 ON kitchen_profiles (owner_id, created_at DESC, id DESC);
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_name_unique
-ON kitchen_profiles (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
-
 CREATE TABLE IF NOT EXISTS pantry_ingredients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     profile_id UUID NOT NULL REFERENCES kitchen_profiles(id) ON DELETE CASCADE,
@@ -494,6 +488,12 @@ CREATE TABLE IF NOT EXISTS pantry_equipment (
     CHECK ((add_key IS NULL AND add_hash IS NULL) OR
            (add_key IS NOT NULL AND add_hash IS NOT NULL AND length(add_hash) = 64))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_grocery_lists_owner_name_unique
+ON grocery_lists (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_name_unique
+ON kitchen_profiles (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
 
 -- NOMS-017: maintained ingredient suggestions. The seed CLI owns these rows;
 -- authored recipe text and optional IDs remain in existing JSON snapshots.
