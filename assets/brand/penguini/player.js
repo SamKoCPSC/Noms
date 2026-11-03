@@ -3,10 +3,12 @@
 // Animation definitions are registered independently of the playback loop.
 // Scope one player to one inline SVG; no global selectors or network requests.
 class PenguiniPlayer {
-  constructor(svg, {idle, animations = [], idleDurationMs = 4000, transitionMs = 240, autoplay = true, random = Math.random} = {}) {
+  constructor(svg, {idle, animations = [], renderers = {}, idleDurationMs = 4000, transitionMs = 240, autoplay = true, random = Math.random} = {}) {
     if (!(svg instanceof SVGElement)) throw new TypeError('An inline SVG is required.');
     if (!Number.isFinite(idleDurationMs) || idleDurationMs <= 0 || !Number.isFinite(transitionMs) || transitionMs <= 0) throw new TypeError('Durations must be positive.');
     this.svg = svg;
+    this.renderers = {...renderers};
+    if (Object.values(this.renderers).some(renderer => typeof renderer?.draw !== 'function' || typeof renderer?.reset !== 'function')) throw new TypeError('Renderers require draw(state) and reset().');
     this.idle = {...idle, id: 'idle', durationMs: idleDurationMs};
     this.transitionMs = transitionMs;
     this.random = random;
@@ -36,6 +38,7 @@ class PenguiniPlayer {
   }
   _validate(clip) {
     if (!clip || typeof clip.id !== 'string' || !clip.id || !Number.isFinite(clip.durationMs) || clip.durationMs <= 0 || !Array.isArray(clip.tracks) || !clip.tracks.length) throw new TypeError('A clip requires an id, positive durationMs and tracks.');
+    if (clip.renderer && !Object.hasOwn(this.renderers, clip.renderer)) throw new TypeError(`Animation ${clip.id} requires the ${clip.renderer} renderer.`);
     const seen = new Set();
     for (const track of clip.tracks) {
       if (!this.parts.some(p => p.selector === track.selector) || seen.has(track.selector) || !Array.isArray(track.keyframes) || !track.keyframes.length) throw new TypeError('Tracks require unique rig selectors and keyframes.');
@@ -59,6 +62,7 @@ class PenguiniPlayer {
     this.blends = []; this.active = [];
   }
   _rest() {
+    for (const renderer of Object.values(this.renderers)) renderer.reset();
     for (const {element} of this.parts) { element.style.transform = 'none'; element.style.opacity = '1'; }
     this.svg.querySelector('.flipper').style.transform = 'rotate(88deg)';
     this.svg.querySelector('.eyes-happy').style.opacity = '0';
@@ -83,7 +87,9 @@ class PenguiniPlayer {
       a.pause(); a.currentTime = 0;
       return a;
     });
+    this._render();
   }
+  _render() { for (const renderer of Object.values(this.renderers)) renderer.draw(this.state); }
   _begin(clip) { this._install(clip); this._emit(); }
   _pose() { return this.parts.map(({element}) => { const s = getComputedStyle(element); return {transform:s.transform,opacity:s.opacity}; }); }
   _transition(clip) {
@@ -104,6 +110,7 @@ class PenguiniPlayer {
       for (const a of this.blends) a.cancel();
       this.blends = []; this.phase = this.clip.id === 'idle' ? 'idle' : 'activity';
       this.elapsed = 0; this.duration = this.clip.durationMs; this._emit();
+      this._render();
     } else if (this.phase === 'idle' && this.registry.size) {
       const choices = [...this.registry.values()];
       this._transition(choices[Math.min(choices.length - 1, Math.max(0, Math.floor(this.random() * choices.length)))]);
@@ -119,6 +126,7 @@ class PenguiniPlayer {
       const dt = Math.min(ms, this.duration - this.elapsed);
       this.elapsed += dt; ms -= dt;
       for (const a of this.phase === 'transition' ? this.blends : this.active) a.currentTime = this.elapsed;
+      this._render();
       if (this.elapsed >= this.duration) this._next();
     }
   }

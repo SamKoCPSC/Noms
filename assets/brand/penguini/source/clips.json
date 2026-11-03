@@ -1489,5 +1489,143 @@
         ]
       }
     ]
+  },
+  "thinking": {
+    "id": "thinking",
+    "label": "Thinking",
+    "durationMs": 6800,
+    "tracks": [
+      {
+        "selector": ".head",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.07352941176470588,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.25735294117647056,
+            "transform": "translate(2px,5px) rotate(-7deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.41911764705882354,
+            "transform": "translate(2px,5px) rotate(-7deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.4852941176470588,
+            "transform": "translate(2px,8px) rotate(-6deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.5955882352941176,
+            "transform": "translate(2px,5px) rotate(-7deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.6838235294117647,
+            "transform": "translate(2px,5px) rotate(-7deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.9191176470588235,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".lower-beak",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "scaleY(.45)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.07352941176470588,
+            "transform": "scaleY(.45)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.22058823529411764,
+            "transform": "scaleY(.12)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.6764705882352942,
+            "transform": "scaleY(.12)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.9191176470588235,
+            "transform": "scaleY(.45)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "scaleY(.45)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".blink",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.041176470588235294,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.058823529411764705,
+            "transform": "scaleY(.08)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.07647058823529412,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.8235294117647058,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.8411764705882353,
+            "transform": "scaleY(.08)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 0.8588235294117647,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.45,0,.55,1)"
+          }
+        ]
+      }
+    ],
+    "renderer": "thinking"
   }
 }

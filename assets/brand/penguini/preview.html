@@ -26,11 +26,13 @@
     <div class="choices" id="choices" aria-label="Animation selection"></div>
     <button id="pause" type="button" aria-pressed="false" disabled>Pause</button>
     <p id="status">Loading the mascot…</p>
+    <p id="availability" hidden></p>
   </section>
   <div id="stage"></div>
 </main>
 <script src="clips.js"></script>
 <script src="player.js"></script>
+<script src="thinking-rig.js"></script>
 <script>
   (async () => {
     const status = document.querySelector("#status");
@@ -40,8 +42,18 @@
       const parsed = new DOMParser().parseFromString(await response.text(), "image/svg+xml");
       if (parsed.querySelector("parsererror")) throw new Error("Invalid mascot SVG.");
       const svg = document.importNode(parsed.documentElement, true);
+      svg.style.visibility = "hidden";
       document.querySelector("#stage").append(svg);
-      const activities = Object.values(PenguiniClips).filter(clip => clip.id !== "idle");
+      const renderers = {};
+      try {
+        renderers.thinking = await PenguiniThinkingRig.create(svg);
+      } catch (error) {
+        const availability = document.querySelector("#availability");
+        availability.hidden = false;
+        availability.textContent = "Thinking is unavailable in this browser. The other animations are ready to play.";
+        console.warn(error);
+      }
+      const activities = Object.values(PenguiniClips).filter(clip => clip.id !== "idle" && (!clip.renderer || Object.hasOwn(renderers, clip.renderer)));
       const pause = document.querySelector("#pause");
       const choices = document.querySelector("#choices");
       const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -63,6 +75,7 @@
         player = new PenguiniPlayer(svg, {
           idle: PenguiniClips.idle,
           animations: selected,
+          renderers,
           random: mode === "all" ? () => ((cursor++ % selected.length) + .01) / selected.length : Math.random,
         });
         choices.querySelectorAll("button").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === mode)));
@@ -82,7 +95,9 @@
       pause.addEventListener("click", () => { player.state.paused ? player.play() : player.pause(); update(); });
       reduced.addEventListener("change", update);
       window.addEventListener("pagehide", () => player.pause());
-      select("random");
+      const requested = new URLSearchParams(location.search).get("animation");
+      select(activities.some(clip => clip.id === requested) ? requested : "random");
+      svg.style.visibility = "";
     } catch (error) {
       status.setAttribute("role", "alert");
       status.textContent = "Unable to load the preview. Serve this folder over HTTP as described in README.md.";

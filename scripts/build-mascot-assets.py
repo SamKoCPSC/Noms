@@ -38,6 +38,10 @@ def build():
             rig, "Chef Penguini", "A smiling penguin in a chef hat and terracotta apron.", BASE_STYLE),
     }
     for clip_id, clip in clips.items():
+        # Procedural meshes cannot be represented by transform/opacity CSS.
+        # Their individual preview uses the inline player, not a partial SVG.
+        if clip.get("renderer"):
+            continue
         css = BASE_STYLE
         for index, track in enumerate(clip["tracks"]):
             frames = []
