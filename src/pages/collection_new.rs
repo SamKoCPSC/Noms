@@ -347,7 +347,7 @@ mod tests {
         assert!(component.contains("let mut creation_unconfirmed"));
         assert!(component.contains("submit_disabled: collection_creation_submit_blocked(false, creation_unconfirmed(), created_collection().is_some())"));
         assert!(component.contains("if collection_creation_submit_blocked(saving(), creation_unconfirmed(), created_collection().is_some())"));
-        assert!(component.contains("creation_unconfirmed.set(true)"));
+        assert!(component.contains("creation_unconfirmed.set(unconfirmed)"));
         assert!(component.contains("new_tab: true"));
         assert!(component.contains("Check Collections"));
         assert!(!component.contains("problem.to_string()"));
