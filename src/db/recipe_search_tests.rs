@@ -33,10 +33,10 @@ async fn search_integration_summary_shares_index_scan_and_preserves_facet_bounda
         (other, "public", Some(30), None, Some(3)),
         (other, "private", Some(30), None, Some(3)),
     ];
-    for (user, visibility, prep, cook, servings) in fixtures {
+    for (index, (user, visibility, prep, cook, servings)) in fixtures.into_iter().enumerate() {
         let id = Uuid::new_v4();
         sqlx::query("INSERT INTO recipes(id,user_id,title,visibility,prep_time_minutes,cook_time_minutes,servings) VALUES($1,$2,$3,$4,$5,$6,$7)")
-            .bind(id).bind(user).bind(&term).bind(visibility).bind(prep).bind(cook).bind(servings)
+            .bind(id).bind(user).bind(format!("{term} recipe {index}")).bind(visibility).bind(prep).bind(cook).bind(servings)
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO recipe_tags(recipe_id,tag) VALUES($1,$2)")
             .bind(id)

@@ -176,7 +176,13 @@ async fn collection_json_roundtrip_preserves_private_copies_order_shared_members
         .await
         .unwrap();
     assert!(new_ids.iter().all(|id| !original_ids.contains(id)));
-    let again = import_for_user(&pool, &storage, importer.id, &original, &[])
+    let conflict = import_for_user(&pool, &storage, importer.id, &original, &[])
+        .await
+        .unwrap_err();
+    assert!(conflict.to_string().contains("name you already have"));
+    assert_eq!(counts(&pool, importer.id).await, (4, 2, 2, 0, 5));
+    let renamed = renamed_import(&original, " second copy");
+    let again = import_for_user(&pool, &storage, importer.id, &renamed, &[])
         .await
         .unwrap();
     assert_ne!(again.collection_id, imported.collection_id);
@@ -269,6 +275,7 @@ async fn collection_json_import_reuses_authorized_recipe_images_and_keeps_missin
         .await
         .unwrap();
     let available = vec!["https://external.example/photo.webp".into()];
+    let original = renamed_import(&original, " reused");
     let reused = import_for_user(&pool, &storage, owner, &original, &available)
         .await
         .unwrap();
@@ -287,6 +294,7 @@ async fn collection_json_import_reuses_authorized_recipe_images_and_keeps_missin
         .respond_with(ResponseTemplate::new(404))
         .mount(&mock)
         .await;
+    let original = renamed_import(&original, " missing");
     let missing = import_for_user(&pool, &storage, owner, &original, &[])
         .await
         .unwrap();
@@ -301,7 +309,7 @@ async fn collection_json_import_reuses_authorized_recipe_images_and_keeps_missin
         .await
         .unwrap();
     assert!(saved.images.is_empty());
-    assert_eq!(saved.title, recipe.title);
+    assert_eq!(saved.title, format!("{} reused missing", recipe.title));
     // A forged source identity does not authorize somebody else's private assets.
     let other = user(&pool, "imagecopy").await;
     mock.reset().await;
@@ -504,4 +512,16 @@ async fn collection_json_browser_fixture() {
         }
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
+}
+
+fn renamed_import(json: &str, suffix: &str) -> String {
+    let file: crate::collection_json::CollectionFile = serde_json::from_str(json).unwrap();
+    let mut snapshot: crate::collection_json::CollectionSnapshot =
+        serde_json::from_value(file.snapshot).unwrap();
+    for recipe in &mut snapshot.recipes {
+        let title = recipe.snapshot["title"].as_str().unwrap().to_string();
+        recipe.snapshot["title"] = json!(format!("{title}{suffix}"));
+        recipe.snapshot_digest = crate::recipe_json::digest(&recipe.snapshot).unwrap();
+    }
+    crate::collection_json::export(snapshot).unwrap()
 }

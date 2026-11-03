@@ -879,6 +879,7 @@ pub fn RecipeNew() -> Element {
                 }
                 Err(e) => {
                     if publication_attempted
+                        && !crate::pages::draft_save::recipe_name_conflict(&e)
                         && crate::auth::account_binding::account_error_feedback(&e).is_none()
                     {
                         // Do not let an autosave failure overwrite an unknown

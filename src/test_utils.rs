@@ -264,6 +264,11 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .await
     .expect("failed to create recipes table");
 
+    sqlx::raw_sql(include_str!("../migrations/recipe-owner-title-unique.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create unique owner/recipe-name index");
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS recipe_tags (\
          recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,\
@@ -589,7 +594,7 @@ pub async fn insert_test_recipe(
     crate::db::insert_recipe(
         pool,
         user_id,
-        "Collection Test Recipe",
+        &format!("Collection Test Recipe {}", uid()),
         None,
         None,
         None,
@@ -2595,7 +2600,7 @@ mod search_integration_tests {
                 RecipeFixture {
                     id,
                     owner_id: other_owner_id,
-                    title: "Hidden suggestion recipe",
+                    title: &format!("Hidden suggestion recipe {visibility}"),
                     description: &term,
                     visibility,
                     prep_time: None,

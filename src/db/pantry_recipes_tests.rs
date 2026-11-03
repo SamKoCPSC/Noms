@@ -52,7 +52,7 @@ async fn recipe(pool: &PgPool, owner: Uuid, title: &str, visibility: &str, names
         .map(|name| serde_json::json!({"name":name,"amount":"999999","unit":"cup"}))
         .collect();
     sqlx::query("INSERT INTO recipes(id,user_id,title,visibility,ingredients,description,equipment) VALUES($1,$2,$3,$4,$5,$6,'[{\"name\":\"Oven\"}]')")
-        .bind(id).bind(owner).bind(title).bind(visibility).bind(serde_json::json!(ingredients))
+        .bind(id).bind(owner).bind(format!("{title} {id}")).bind(visibility).bind(serde_json::json!(ingredients))
         .bind("description ".repeat(1000)).execute(pool).await.unwrap();
     id
 }
