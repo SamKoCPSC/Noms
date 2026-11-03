@@ -1081,7 +1081,7 @@ mod tests {
 
         async fn make_test_state_with_database(
             rate_limit: RateLimitState,
-        ) -> (pgtemp::PgTempDB, AppState) {
+        ) -> (crate::test_database::TestDatabase, AppState) {
             let (database, pool) = test_utils::setup_test_db().await;
             let (google_client, github_client) = build_oauth_clients("http://localhost:8080");
 

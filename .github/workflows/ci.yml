@@ -23,7 +23,12 @@ jobs:
           sudo apt-get install -y postgresql postgresql-client libpq-dev
           pg_config --bindir >> "$GITHUB_PATH"
       - name: Inventory temporary database construction and exported URIs
-        run: rg --line-number 'pgtemp::|connection_uri\(' src
+        run: |
+          rg --line-number 'pgtemp::|connection_uri\(' src
+          if rg --line-number 'pgtemp::' src --glob '!test_database.rs' --glob '!lib.rs'; then
+            echo "An unconverted raw pgtemp caller remains."
+            exit 1
+          fi
       - name: Demonstrate the legacy TCP address collision
         run: |
           cargo test --locked --no-default-features --features server --lib legacy_tcp_port_reuse_reaches_the_other_cluster -- --nocapture
