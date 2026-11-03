@@ -27,10 +27,8 @@ impl TestDatabase {
     pub fn connection_uri(&self) -> String {
         let directory = self.inner.data_dir();
         let socket = directory.to_str().expect("test socket path must be UTF-8");
-        let socket = percent_encoding::utf8_percent_encode(
-            socket,
-            percent_encoding::NON_ALPHANUMERIC,
-        );
+        let socket =
+            percent_encoding::utf8_percent_encode(socket, percent_encoding::NON_ALPHANUMERIC);
         let mut uri = url::Url::parse(&self.inner.connection_uri()).expect("valid pgtemp URI");
         // libpq URI query values require percent encoding; form encoding would
         // turn a space into '+' and connect to the wrong socket path.
@@ -106,7 +104,8 @@ mod tests {
 
     #[tokio::test]
     async fn socket_uri_with_spaces_round_trips_through_sqlx_and_psql() {
-        let directory = std::env::temp_dir().join(format!("noms socket {}", uuid::Uuid::new_v4().simple()));
+        let directory =
+            std::env::temp_dir().join(format!("noms socket {}", uuid::Uuid::new_v4().simple()));
         std::fs::create_dir(&directory).unwrap();
         let database = TestDatabase::from_builder(
             pgtemp::PgTempDB::builder().with_data_dir_prefix(&directory),
@@ -116,7 +115,13 @@ mod tests {
         assert_eq!(identity(&pool).await.1, None);
         let output = std::process::Command::new("psql")
             .arg(database.connection_uri())
-            .args(["-XAt", "--set", "ON_ERROR_STOP=1", "-c", "SELECT inet_server_addr() IS NULL"])
+            .args([
+                "-XAt",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "-c",
+                "SELECT inet_server_addr() IS NULL",
+            ])
             .output()
             .expect("psql is required for database fixture tests");
         assert!(

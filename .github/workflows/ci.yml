@@ -25,9 +25,11 @@ jobs:
       - name: Inventory temporary database construction and exported URIs
         run: rg --line-number 'pgtemp::|connection_uri\(' src
       - name: Demonstrate the legacy TCP address collision
-        run: cargo test --locked --no-default-features --features server --lib legacy_tcp_port_reuse_reaches_the_other_cluster -- --nocapture
+        run: |
+          cargo test --locked --no-default-features --features server --lib legacy_tcp_port_reuse_reaches_the_other_cluster -- --nocapture
       - name: Force port reuse with private socket endpoints
-        run: cargo test --locked --no-default-features --features server test_database:: -- --test-threads=8
+        run: |
+          cargo test --locked --no-default-features --features server test_database:: -- --test-threads=8
       - name: Repeat the full parallel suite three times
         run: |
           for attempt in 1 2 3; do

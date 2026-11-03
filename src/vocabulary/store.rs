@@ -284,7 +284,12 @@ mod tests {
     // Keep ranking/transaction fixtures stable as the maintained catalog grows.
     // The full catalog is validated separately by vocabulary::tests and the seed CLI.
 
-    async fn popularity_db() -> (crate::test_database::TestDatabase, PgPool, SeedFile, SourceManifest) {
+    async fn popularity_db() -> (
+        crate::test_database::TestDatabase,
+        PgPool,
+        SeedFile,
+        SourceManifest,
+    ) {
         let db = crate::test_database::TestDatabase::start().await;
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(12)
