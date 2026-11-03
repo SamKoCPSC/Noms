@@ -63,10 +63,10 @@ async fn verify_bm25_index_creation(pool: &PgPool) {
 /// Spawn a fresh temporary PostgreSQL database and apply the NOMS schema.
 ///
 /// Each call creates an isolated database — no shared state, no cleanup needed.
-/// The returned `PgTempDB` handle must stay in scope for the duration of the test;
+/// The returned `TestDatabase` handle must stay in scope for the duration of the test;
 /// dropping it cleans up the temporary database.
-pub async fn setup_test_db() -> (pgtemp::PgTempDB, PgPool) {
-    let db = pgtemp::PgTempDB::async_new().await;
+pub async fn setup_test_db() -> (crate::test_database::TestDatabase, PgPool) {
+    let db = crate::test_database::TestDatabase::start().await;
     let pool = PgPool::connect(&db.connection_uri())
         .await
         .expect("failed to connect to temp database");

@@ -180,7 +180,7 @@ mod tests {
     use crate::vocabulary::{index::SearchIndex, store, SeedFile, SourceManifest};
     #[tokio::test]
     async fn snapshot_matches_sql_and_refreshes_without_changing_name_hash_for_popularity() {
-        let db = pgtemp::PgTempDB::async_new().await;
+        let db = crate::test_database::TestDatabase::start().await;
         let pool = PgPool::connect(&db.connection_uri()).await.unwrap();
         let schema = include_str!("../../migrations/schema.sql");
         sqlx::raw_sql("CREATE TABLE recipes(id uuid PRIMARY KEY,ingredients jsonb NOT NULL DEFAULT '[]',visibility text NOT NULL DEFAULT 'public')").execute(&pool).await.unwrap();
