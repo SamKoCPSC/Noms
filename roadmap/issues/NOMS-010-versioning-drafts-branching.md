@@ -1,6 +1,10 @@
 # NOMS-010: Recipe Versioning, Drafts & Branching
 
-**Status:** ✅ Implemented — original proposal superseded
+> **Current-state review — 2026-11-03:** The current full-snapshot architecture remains authoritative. Later editor/ingredient changes preserve drafts/history; physical graph accessibility remains a release follow-up.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — immutable snapshots, drafts and forks implemented
 **Phase:** Phase 1 (core content creation)  
 **Depends on:** NOMS-008 (Recipe CRUD)
 

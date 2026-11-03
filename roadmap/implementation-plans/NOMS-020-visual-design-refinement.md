@@ -1,6 +1,10 @@
 # NOMS-020: Application Visual Design Refinement — Implementation Plan
 
-**Status:** Page redesigns integrated — checkpoint 8 integration review active; release acceptance remains open
+> **Current-state review — 2026-11-03:** Shared surfaces, page redesigns and painted identities are integrated; PR #52 adds raised rims. Later mobile/editor/artwork work is merged. Existing real-device/screen-reader and bounded final-acceptance limits remain; historical transient tool blockers are not permanent current blockers.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** 🟡 In Progress — designs integrated; final acceptance open
 **Created:** 2026-08-15
 **Depends on:** Current application routes, components, design tokens, and the visual direction established by NOMS-013
 **Coordination:** Feature tickets NOMS-016 through NOMS-019 should use shared primitives where stable; NOMS-020 must avoid redesigning feature behavior owned by those tickets.

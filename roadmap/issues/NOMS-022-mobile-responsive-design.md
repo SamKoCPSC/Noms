@@ -1,6 +1,10 @@
 # NOMS-022: Mobile Responsive Design
 
-**Status:** 🟡 In Progress — implementation complete; PR review pending
+> **Current-state review — 2026-11-03:** PR #6 is confirmed merged (fc066c1). Continuous authoring, compact controls, keyboard-aware popovers and later Kitchen/account navigation are also merged. Physical-device/screen-reader release acceptance remains open.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — responsive baseline merged
 **Phase:** User experience
 **Recorded retroactively:** 2026-10-17
 **Depends on:** Existing application routes and the [NOMS-020 visual direction](../implementation-plans/NOMS-020-visual-design-refinement.md)
@@ -10,7 +14,7 @@
 
 Give every existing Noms page a deliberate mobile layout that feels familiar to modern phone users while retaining the app's neumorphic components, painted artwork, colors, Fredoka headings and Nunito body text. Preserve the existing data, authentication, visibility and write contracts.
 
-The mobile designs were reviewed as a combined HTML document, aligned with the existing components and fonts, and approved for implementation. This task records that work retroactively; opening the implementation PR does not mark it shipped.
+The mobile designs were reviewed as a combined HTML document, aligned with the existing components and fonts, and approved for implementation. This task records that work retroactively; PR #6 is now merged; the evidence below records its original validation.
 
 ## Implemented scope
 
@@ -19,7 +23,7 @@ The mobile designs were reviewed as a combined HTML document, aligned with the e
 - Welcome, About, How To, sign-in, Community Home, Explore, Search, fallback, public-profile and settings layouts.
 - Library list/grid and Recipes/Collections/Drafts navigation, creation sheet, collections, nested albums and collection forms.
 - Recipe readers, serving controls and ingredient checklists, collection selection, full-screen cooking, immutable versions, and timeline/map history navigation.
-- Sectioned new/edit/draft editors with mounted form state, fixed actions, image editing, publication review and save/resume behavior; responsive recipe import.
+- Continuous new/edit/draft editors with section jump links, mounted state, compact actions, image editing, publication review and save/resume behavior; responsive recipe import.
 - Integration with NOMS-016's JSON import/export and imported-image review after rebasing onto current main.
 - A Rust `web_sys` viewport helper with scope-owned event listeners, animation-frame coalescing, editor-section focus and automatic cleanup; the standalone JavaScript runtime asset has been removed.
 - Light/dark appearance, compact 320px layouts, focus targets, reduced-motion behavior and keyboard viewport positioning. Physical-device keyboard and safe-area behavior still require device testing.
@@ -34,7 +38,7 @@ The mobile designs were reviewed as a combined HTML document, aligned with the e
 - [x] Theme preference survives reload with consistent colors and switch semantics.
 - [x] Representative compact pages have no horizontal overflow; desktop navigation remains available.
 - [x] Browser screenshots and a downloadable gallery/PDF were delivered for review.
-- [ ] PR review and merge to main.
+- [x] PR review and merge to main — PR #6 merged at `fc066c1`; confirmed in the current-state review.
 
 ## Verification evidence
 

@@ -1,8 +1,12 @@
 # NOMS-007: Minor UI Fixes and Routing Cleanups
 
+> **Current-state review — 2026-11-03:** Current design/navigation supersedes the old styling/drawer proposals. Source implementation is substantially present; remaining per-case verification is not silently checked off.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
 **Type:** Task / Bugfix
 **Priority:** Low
-**Status:** In Progress
+**Status:** 🟡 In Progress — original acceptance not fully reconciled
 **Created:** 2026-06-06
 
 ---

@@ -1,6 +1,10 @@
 # NOMS-019: Visual Recipe Flow & Cooking Timeline — Implementation Plan
 
-**Status:** Placeholder — discovery and implementation planning required
+> **Current-state review — 2026-11-03:** Version-history and About animation code are not implementations of recipe execution graphs or cooking timelines.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ⚪ Backlog — discovery/prototype required
 **Created:** 2026-08-15
 **Depends on:** Current ingredient and instruction models; stable recipe scaling and versioning behavior
 **Coordination:** NOMS-017 may supply cooking methods and timing metadata; NOMS-020 defines the final visual language and interaction polish.

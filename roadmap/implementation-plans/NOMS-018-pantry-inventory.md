@@ -1,6 +1,10 @@
 # NOMS-018: Pantry inventory — Slice 2
 
-**Status:** W01 / C01 selected by the user; pantry inventory implemented and locally validated. No production deployment performed.
+> **Current-state review — 2026-11-03:** PR #25 is merged; current Kitchen excludes equipment from the UI. Presence checks and cookable-library discovery are delivered separately. PR #56 adds owner-wide pantry names; later quantity/equipment proposals below are not current feasibility rules.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — ingredient inventory baseline implemented
 **Updated:** 2026-10-25
 **Foundation:** Grocery lists merged in [PR #21](https://github.com/SamKoCPSC/Noms/pull/21); pantry inventory merged in [PR #25](https://github.com/SamKoCPSC/Noms/pull/25).
 **Parent scope:** [NOMS-018](NOMS-018-pantry-meal-planner-grocery-list.md).

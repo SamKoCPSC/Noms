@@ -1,11 +1,15 @@
 # NOMS-013: Marketing Pages & 3D Feasibility Experiment — Implementation Plan
 
+> **Current-state review — 2026-11-03:** Later approved production About work supersedes the original no-3D/isolated-experiment restriction. The app now has five Rust-rendered scenes (PRs #20–24, #31–33, #54–55); do not schedule the old experiment as unstarted without reconciling that scope. Editorial/device/accessibility/performance closeout remains.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
 **Created:** 2026-07-16
 **Revised:** 2026-09-04
-**Status:** In progress — traditional pages are merged; content evidence, icons, the full release gate, and the 3D experiment remain
+**Status:** 🟡 In Progress — public pages/tour implemented; acceptance open
 **Depends on:** The current application shell, design tokens, authentication context, and canonical recipe/application routes
-**Coordination:** NOMS-012 may later replace the Home Explore CTA with a search-first CTA. NOMS-013 must use canonical application routes and must not duplicate product functionality inside marketing pages.
-**Approach:** Ship polished, conventional, server-rendered Home, About, and How-to pages using semantic HTML, responsive CSS, optimized screenshots, and original SVG illustrations. Do not put a 3D runtime or scene on production pages. After the complete traditional experience passes its release gate, conduct an isolated 3D feasibility experiment and record whether a separately scoped follow-up is justified.
+**Coordination:** The landing page now has public recipe-title suggestions and search (PR #50). Keep canonical application routes; complete current About-tour acceptance with NOMS-020/022.
+**Current approach:** Maintain the delivered Introduction and How-to pages and approved five-scene Rust About tour. Complete current content, fallback, accessibility, device and performance acceptance. The dated no-production-3D/isolated-experiment proposal below is retained as superseded history.
 
 ---
 

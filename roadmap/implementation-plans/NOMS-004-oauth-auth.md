@@ -1,5 +1,11 @@
 # NOMS-004: OAuth Authentication — Implementation Plan
 
+> **Current-state review — 2026-11-03:** Explicit linking, stable provider identities and revocable sessions supersede the early authentication proposal; see NOMS-015 for the current hardening boundary.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — baseline implemented; historical checkpoint plan
+
 **Issue:** [NOMS-004-oauth-auth.md](../issues/NOMS-004-oauth-auth.md)
 **Created:** 2026-05-17
 **Approach:** Bottom-up by dependency, 7 incremental checkpoints

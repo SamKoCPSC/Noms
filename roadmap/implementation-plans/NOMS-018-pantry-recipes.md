@@ -1,5 +1,11 @@
 # NOMS-018 — What can I cook?
 
+> **Current-state review — 2026-11-03:** PR #32 is merged. Owned/collected scope and presence-only matching remain; optional/substitute semantics and near-cookable ranking are not implemented.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — cookable-library baseline implemented
+
 ## Delivered scope
 
 The Pantry tab includes **What can I cook?** below its inventory and item editor. It uses the selected pantry, with no extra selector or Kitchen tab. Compact recipe cards link to live recipe details and reuse the app's image, author and cooking-time presentation. Empty results explain that ingredients can be added or marked available. Results are paginated, 12 cards at a time.

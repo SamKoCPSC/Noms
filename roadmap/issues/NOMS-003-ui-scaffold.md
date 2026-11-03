@@ -1,6 +1,10 @@
 # NOMS-003: UI Scaffold & Application Shell
 
-**Status:** ✅ Complete
+> **Current-state review — 2026-11-03:** The routed shell is delivered. Subsequent visual/mobile scope is tracked in NOMS-020/022.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — application shell implemented
 **Phase:** 1 — Foundation
 **Created:** 2026-05-15
 

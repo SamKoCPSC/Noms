@@ -1,6 +1,10 @@
 # NOMS-018: Kitchen Workspace, Pantries, Grocery Lists & Recipe Feasibility — Implementation Plan
 
-**Status:** Grocery lists merged in [PR #21](https://github.com/SamKoCPSC/Noms/pull/21); pantry inventory implemented and locally validated with W01/C01. Production deployment is not verified here.
+> **Current-state review — 2026-11-03:** PRs #21/#25–32 deliver the main Kitchen slices; PR #49 adds artwork. PR #56 supersedes earlier non-unique-list/sibling-name assumptions with owner-wide uniqueness. Optional/substitute matching, shortages and later shopping/offline scope remain.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** 🟡 In Progress — lists, inventory and presence discovery delivered
 **Created:** 2026-08-15
 **Updated:** 2026-10-25
 **First delivery:** Multiple private, database-backed grocery lists; manual-only or generated as independent snapshots from selected recipes

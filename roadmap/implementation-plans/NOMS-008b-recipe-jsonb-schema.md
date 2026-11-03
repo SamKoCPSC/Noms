@@ -1,5 +1,11 @@
 # NOMS-008b: Recipe JSONB Schema Refactor — Implementation Plan
 
+> **Current-state review — 2026-11-03:** Ingredients, instructions, equipment and image metadata use structured models; current schema/types supersede old serialization examples.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — structured JSONB baseline implemented
+
 **Parent Issue:** [NOMS-008-recipe-crud.md](../issues/NOMS-008-recipe-crud.md)
 **Created:** 2026-06-14
 **Approach:** Bottom-up by dependency, 6 incremental checkpoints

@@ -1,6 +1,10 @@
 # NOMS-017 Recipe Metadata and Autocomplete Vocabulary Implementation Plan
 
-**Status:** Discovery — flexible metadata and autocomplete contracts under refinement
+> **Current-state review — 2026-11-03:** Ingredient seed/aliases/cache, units, equipment suggestions and structured options are implemented. Wider metadata dimensions remain discovery; Kitchen use of optional/substitute fields is proposed NOMS-023.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** 🟡 In Progress — ingredient/unit/equipment slices delivered
 **Created:** 2026-08-15
 **Updated:** 2026-09-30
 **Depends on:** Current recipe schema, recipe editor, versioning, and search contracts
