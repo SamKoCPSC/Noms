@@ -3,8 +3,7 @@ use crate::pantry::*;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-pub(crate) const PANTRY_NAME_TAKEN: &str =
-    "You already have a pantry with this name.";
+pub(crate) const PANTRY_NAME_TAKEN: &str = "You already have a pantry with this name.";
 
 pub(crate) fn is_name_conflict(error: &ServerFnError) -> bool {
     matches!(error, ServerFnError::ServerError { message, .. } if message == PANTRY_NAME_TAKEN)

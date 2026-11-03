@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   capture:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       CARGO_BUILD_JOBS: "2"
@@ -45,7 +45,9 @@ jobs:
           echo '3b132551b480bc96f938f9f0d37936ee1190f994977539dcc347eaf38540d005  /tmp/name-error-dx.tar.gz' | sha256sum --check
           tar -xzf /tmp/name-error-dx.tar.gz -C /tmp/name-error-dx
           dx_path="$(find /tmp/name-error-dx -type f -name dx -print -quit)"
-          install -m 755 "$dx_path" /usr/local/bin/dx
+          mkdir -p "$HOME/.local/bin"
+          install -m 755 "$dx_path" "$HOME/.local/bin/dx"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           go install github.com/pgplex/pgschema@v1.12.1
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Start disposable PostgreSQL and apply schema
@@ -101,7 +103,7 @@ jobs:
         run: docker rm --force noms-name-error-postgres || true
   publish-evidence:
     needs: capture
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       actions: read

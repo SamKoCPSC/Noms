@@ -351,7 +351,10 @@ mod tests {
     fn confirmed_name_collision_keeps_collection_details_editable() {
         let error = ServerFnError::new(crate::api::collection::COLLECTION_NAME_TAKEN);
         let failure = CollectionEditSaveStage::Details.failure(&error);
-        assert_eq!(failure.message, crate::api::collection::COLLECTION_NAME_TAKEN);
+        assert_eq!(
+            failure.message,
+            crate::api::collection::COLLECTION_NAME_TAKEN
+        );
         assert!(!failure.unconfirmed);
     }
 

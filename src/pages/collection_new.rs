@@ -196,11 +196,19 @@ mod tests {
         let conflict = ServerFnError::new(crate::api::collection::COLLECTION_NAME_TAKEN);
         let (message, unconfirmed) = collection_creation_failure(&conflict);
         assert_eq!(message, crate::api::collection::COLLECTION_NAME_TAKEN);
-        assert!(!collection_creation_submit_blocked(false, unconfirmed, false));
+        assert!(!collection_creation_submit_blocked(
+            false,
+            unconfirmed,
+            false
+        ));
         let (message, unconfirmed) =
             collection_creation_failure(&ServerFnError::new("Request timed out"));
         assert_eq!(message, UNCONFIRMED_COLLECTION_CREATION_MESSAGE);
-        assert!(collection_creation_submit_blocked(false, unconfirmed, false));
+        assert!(collection_creation_submit_blocked(
+            false,
+            unconfirmed,
+            false
+        ));
     }
 
     const PARENT_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
