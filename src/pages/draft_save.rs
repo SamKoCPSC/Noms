@@ -216,9 +216,7 @@ pub(super) fn recipe_name_conflict(error: &ServerFnError) -> bool {
 mod name_conflict_tests {
     #[test]
     fn confirmed_name_conflicts_allow_renaming_without_unknown_write_feedback() {
-        let error = dioxus::prelude::ServerFnError::new(
-            crate::api::recipe::RECIPE_NAME_TAKEN,
-        );
+        let error = dioxus::prelude::ServerFnError::new(crate::api::recipe::RECIPE_NAME_TAKEN);
         assert!(super::recipe_name_conflict(&error));
         assert_eq!(
             super::recipe_write_feedback(super::RecipeWriteAction::Publish, &error),

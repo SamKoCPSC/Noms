@@ -44,7 +44,6 @@ async fn bounded_database_operation<T>(
         .map_err(recipe_database_error)
 }
 
-
 #[cfg(feature = "server")]
 fn recipe_database_error(error: crate::db::DbError) -> ServerFnError {
     match error {
