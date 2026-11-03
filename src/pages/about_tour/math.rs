@@ -53,12 +53,14 @@ pub fn transform(pos: [f32; 3], rot: [f32; 3], size: [f32; 3]) -> Mat4 {
         scale(size[0], size[1], size[2]),
     )
 }
+#[cfg(target_arch = "wasm32")]
 pub fn norm(v: [f32; 3]) -> [f32; 3] {
     let d = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
         .sqrt()
         .max(0.00001);
     [v[0] / d, v[1] / d, v[2] / d]
 }
+#[cfg(target_arch = "wasm32")]
 pub fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     [
         a[1] * b[2] - a[2] * b[1],
@@ -66,9 +68,11 @@ pub fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
         a[0] * b[1] - a[1] * b[0],
     ]
 }
+#[cfg(target_arch = "wasm32")]
 pub fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
+#[cfg(target_arch = "wasm32")]
 pub fn look_at(eye: [f32; 3], target: [f32; 3]) -> Mat4 {
     let z = norm([eye[0] - target[0], eye[1] - target[1], eye[2] - target[2]]);
     let x = norm(cross([0., 1., 0.], z));
@@ -92,6 +96,7 @@ pub fn look_at(eye: [f32; 3], target: [f32; 3]) -> Mat4 {
         1.,
     ]
 }
+#[cfg(target_arch = "wasm32")]
 pub fn perspective(fov: f32, aspect: f32) -> Mat4 {
     let f = 1. / (fov * 0.5).tan();
     let (n, far) = (0.1, 100.);
@@ -114,6 +119,7 @@ pub fn perspective(fov: f32, aspect: f32) -> Mat4 {
         0.,
     ]
 }
+#[cfg(target_arch = "wasm32")]
 pub fn smooth(a: f32, b: f32, x: f32) -> f32 {
     let t = ((x - a) / (b - a)).clamp(0., 1.);
     t * t * (3. - 2. * t)

@@ -15,9 +15,14 @@ varying vec3 v_normal; varying vec3 v_world; varying vec2 v_uv; varying vec4 v_c
 void main(){vec4 w=u_model*vec4(a_pos,1.0);v_world=w.xyz;v_normal=normalize(u_normal*a_normal);v_uv=a_uv;v_color=a_color;gl_Position=u_vp*w;}
 "#;
 const FRAGMENT: &str = r#"
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 uniform vec4 u_color; uniform vec3 u_eye; uniform sampler2D u_texture;
 uniform float u_textured; uniform float u_shadow; uniform float u_reveal; uniform float u_diorama;
+uniform float u_enter;
 varying vec3 v_normal; varying vec3 v_world; varying vec2 v_uv; varying vec4 v_color;
 // The glTF diorama palettes are scene-linear; display encoding happens after lighting.
 vec3 display_srgb(vec3 c){
@@ -34,12 +39,20 @@ vec3 diorama_agx(vec3 color){
  vec3 x=clamp((log2(max(inset*to2020*color,vec3(0.00001)))+12.47393)/16.5,0.0,1.0);
  vec3 x2=x*x;vec3 x4=x2*x2;
  x=15.5*x4*x2-40.14*x4*x+31.96*x4-6.868*x2*x+0.4298*x2+0.1191*x-0.00232;
- // A modest contrast/saturation look approximates the master's Medium High Contrast setting.
- x=pow(max(x,vec3(0.0)),vec3(1.25));
- x=mix(vec3(dot(x,vec3(0.2126,0.7152,0.0722))),x,1.50);
+ // Ease saturation on red/orange/yellow materials while preserving cool accents.
+ // A smooth hue mask avoids abrupt transitions on textured surfaces.
+ float peak=max(max(color.r,color.g),max(color.b,0.00001));
+ float warmth=smoothstep(0.02,0.16,(color.r-color.b)/peak)
+              *(1.0-smoothstep(0.0,0.18,(color.g-color.r)/peak));
+ x=pow(max(x,vec3(0.0)),vec3(1.30));
+ x=mix(vec3(dot(x,vec3(0.2126,0.7152,0.0722))),x,mix(1.80,1.45,warmth));
  return clamp(toSRGB*pow(max(outset*x,vec3(0.0)),vec3(2.2)),0.0,1.0);
 }
+// Ordered coverage preserves opaque depth and glass ordering while surfaces emerge.
+float bayer2(vec2 p){return 2.0*mod(p.x+p.y,2.0)+mod(p.y,2.0);}
+float coverage(vec2 p){p=floor(p);return (16.0*bayer2(mod(p,2.0))+4.0*bayer2(mod(floor(p/2.0),2.0))+bayer2(mod(floor(p/4.0),2.0))+0.5)/64.0;}
 void main(){
+ if(u_enter<1.0 && coverage(gl_FragCoord.xy)>u_enter)discard;
  if(v_uv.x>u_reveal)discard;
  if(u_shadow>0.5){float r=length(v_uv*2.0-1.0);gl_FragColor=vec4(u_color.rgb,u_color.a*exp(-3.2*r*r)*(1.0-smoothstep(0.65,1.0,r)));return;}
  vec3 n=normalize(v_normal);vec3 light=normalize(vec3(-3.0,7.0,5.0));
@@ -56,7 +69,7 @@ void main(){
   float illumination=0.95+0.55*key+0.20*fill;
   vec3 halfway=normalize(light+normalize(u_eye-v_world));
   float spec=pow(max(dot(n,halfway),0.0),48.0)*0.025;
-  vec3 radiance=base*illumination*2.00+vec3(spec);
+  vec3 radiance=base*illumination*1.80+vec3(spec);
   gl_FragColor=vec4(display_srgb(diorama_agx(radiance)),u_color.a);
   return;
  }
@@ -74,6 +87,7 @@ struct Mesh {
 struct DioramaDraw {
     mesh: Mesh,
     part: super::gltf::DioramaPart,
+    motion: super::assembly::Motion,
 }
 #[derive(Default)]
 struct Diorama {
@@ -90,6 +104,7 @@ struct Uniforms {
     shadow: WebGlUniformLocation,
     reveal: WebGlUniformLocation,
     diorama: WebGlUniformLocation,
+    enter: WebGlUniformLocation,
 }
 pub struct Renderer {
     gl: Gl,
@@ -113,6 +128,7 @@ pub struct Renderer {
     a_normal: u32,
     a_uv: u32,
     a_color: u32,
+    max_render_size: f64,
 }
 impl Renderer {
     pub fn new(canvas: HtmlCanvasElement, doc: &Document) -> Result<Self, JsValue> {
@@ -120,6 +136,14 @@ impl Renderer {
             .get_context("webgl")?
             .ok_or_else(|| JsValue::from_str("WebGL unavailable"))?
             .dyn_into()?;
+        // Respect hardware limits when allocating a high-density drawing buffer.
+        let viewport = js_sys::Int32Array::new(&gl.get_parameter(Gl::MAX_VIEWPORT_DIMS)?);
+        let max_render_size = gl
+            .get_parameter(Gl::MAX_RENDERBUFFER_SIZE)?
+            .as_f64()
+            .unwrap_or(4096.)
+            .min(viewport.get_index(0) as f64)
+            .min(viewport.get_index(1) as f64);
         let vert = shader(&gl, Gl::VERTEX_SHADER, VERTEX)?;
         let frag = shader(&gl, Gl::FRAGMENT_SHADER, FRAGMENT)?;
         let program = gl
@@ -154,7 +178,9 @@ impl Renderer {
             shadow: uniform("u_shadow")?,
             reveal: uniform("u_reveal")?,
             diorama: uniform("u_diorama")?,
+            enter: uniform("u_enter")?,
         };
+        gl.uniform1f(Some(&uniforms.enter), 1.);
         let a_pos = gl.get_attrib_location(&program, "a_pos") as u32;
         let a_normal = gl.get_attrib_location(&program, "a_normal") as u32;
         let a_uv = gl.get_attrib_location(&program, "a_uv") as u32;
@@ -196,13 +222,17 @@ impl Renderer {
             a_normal,
             a_uv,
             a_color,
+            max_render_size,
         })
     }
     fn upload_diorama(
         &mut self,
         data: &super::gltf::DioramaMesh,
         images: &[HtmlImageElement],
+        room: Room,
     ) -> Result<Diorama, JsValue> {
+        let prepared = super::assembly::prepare(data, room);
+        let data = &prepared;
         if data.parts.iter().any(|part| part.texture > images.len()) {
             return Err(JsValue::from_str("Missing diorama texture"));
         }
@@ -223,6 +253,7 @@ impl Renderer {
             diorama.draws.push(DioramaDraw {
                 mesh: model,
                 part: part.clone(),
+                motion: super::assembly::Motion::new(data, part, room),
             });
         }
         // Draw glazing last and without depth writes, exposing the PC interior.
@@ -237,11 +268,11 @@ impl Renderer {
     ) -> Result<(), JsValue> {
         let [(kitchen, kitchen_images), (office, office_images), (potluck, potluck_images), (bedroom, bedroom_images), (garden, garden_images)] =
             models;
-        self.kitchen = self.upload_diorama(kitchen, kitchen_images)?;
-        self.office = self.upload_diorama(office, office_images)?;
-        self.potluck = self.upload_diorama(potluck, potluck_images)?;
-        self.bedroom = self.upload_diorama(bedroom, bedroom_images)?;
-        self.garden = self.upload_diorama(garden, garden_images)?;
+        self.kitchen = self.upload_diorama(kitchen, kitchen_images, Room::Kitchen)?;
+        self.office = self.upload_diorama(office, office_images, Room::Office)?;
+        self.potluck = self.upload_diorama(potluck, potluck_images, Room::Potluck)?;
+        self.bedroom = self.upload_diorama(bedroom, bedroom_images, Room::Bedroom)?;
+        self.garden = self.upload_diorama(garden, garden_images, Room::Garden)?;
         for (name, data) in [
             ("kitchen", kitchen),
             ("office", office),
@@ -263,8 +294,16 @@ impl Renderer {
     }
     pub fn resize(&self, dpr: f64) {
         let rect = self.canvas.get_bounding_client_rect();
-        let w = (rect.width() * dpr.min(1.5)).round().max(1.) as u32;
-        let h = (rect.height() * dpr.min(1.5)).round().max(1.) as u32;
+        let width = rect.width().max(1.);
+        let height = rect.height().max(1.);
+        // Supersample standard displays and retain up to native 3x detail on phones.
+        // A 10-megapixel ceiling bounds GPU allocation on large / zoomed displays.
+        let scale = dpr
+            .clamp(1.5, 3.)
+            .min((10_000_000. / (width * height)).sqrt())
+            .min(self.max_render_size / width.max(height));
+        let w = (width * scale).floor().max(1.) as u32;
+        let h = (height * scale).floor().max(1.) as u32;
         if self.canvas.width() != w || self.canvas.height() != h {
             self.canvas.set_width(w);
             self.canvas.set_height(h);
@@ -688,19 +727,12 @@ impl Renderer {
     fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32, room: Room) {
         for draw in &diorama.draws {
             let p = &draw.part;
-            let t = room.amount(frame, p.start, p.end);
-            if t <= 0. {
+            let pose = draw.motion.pose(frame, room);
+            if pose.reveal <= 0. {
                 continue;
             }
-            let pose = super::assembly::arrival_pose(p.pivot, p.offset, t, room);
-            let local = mul(
-                translate(
-                    pose.translation[0],
-                    pose.translation[1],
-                    pose.translation[2],
-                ),
-                scale(pose.scale, pose.scale, pose.scale),
-            );
+            let local = pose.matrix;
+            self.gl.uniform1f(Some(&self.uniforms.enter), pose.reveal);
             self.gl.depth_mask(p.opacity >= 1.);
             self.draw(
                 &draw.mesh,
@@ -716,6 +748,7 @@ impl Renderer {
             );
         }
         self.gl.depth_mask(true);
+        self.gl.uniform1f(Some(&self.uniforms.enter), 1.);
     }
     /// Warm all five scenes, including prints and transparent PC surfaces, before entry.
     pub fn warm_models(&self, aspect: f32, mobile: bool) -> bool {
@@ -1106,5 +1139,25 @@ fn image_texture(gl: &Gl, image: &HtmlImageElement) -> Result<WebGlTexture, JsVa
     gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
     gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);
     gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::CLAMP_TO_EDGE as i32);
+    // Preserve printed details on angled screens, books and packaging.
+    if gl
+        .get_extension("EXT_texture_filter_anisotropic")
+        .ok()
+        .flatten()
+        .is_some()
+    {
+        const MAX_TEXTURE_MAX_ANISOTROPY_EXT: u32 = 0x84FF;
+        const TEXTURE_MAX_ANISOTROPY_EXT: u32 = 0x84FE;
+        let maximum = gl
+            .get_parameter(MAX_TEXTURE_MAX_ANISOTROPY_EXT)
+            .ok()
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.);
+        gl.tex_parameterf(
+            Gl::TEXTURE_2D,
+            TEXTURE_MAX_ANISOTROPY_EXT,
+            maximum.min(8.) as f32,
+        );
+    }
     Ok(tex)
 }
