@@ -12,7 +12,7 @@ Display spelling is preserved. Renaming to the same normalized name is allowed;
 renaming or deleting a resource releases the old name.
 
 The database unique indexes are authoritative, including direct and concurrent
-writes. There are no name-availability queries or background client checks.
+writes. There are no name-availability endpoints or background client checks.
 Only violations of the relevant indexes become typed name conflicts; the API
 owns friendly collision messages. Create and rename forms retain inputs and
 permit a new name after a confirmed rejection. Unknown write outcomes keep the

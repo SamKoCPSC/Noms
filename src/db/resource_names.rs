@@ -122,9 +122,11 @@ mod tests {
             .await
             .unwrap();
         let mut connection = pool.acquire().await.unwrap();
-        let result = sqlx::raw_sql(include_str!("../../migrations/resource-owner-name-unique.sql"))
-            .execute(&mut *connection)
-            .await;
+        let result = sqlx::raw_sql(include_str!(
+            "../../migrations/resource-owner-name-unique.sql"
+        ))
+        .execute(&mut *connection)
+        .await;
         assert!(result.is_err());
         sqlx::query("ROLLBACK")
             .execute(&mut *connection)
@@ -141,11 +143,12 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(count, 0);
-        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM kitchen_profiles WHERE owner_id=$1")
-            .bind(owner.id)
-            .fetch_one(&mut *connection)
-            .await
-            .unwrap();
+        let count: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM kitchen_profiles WHERE owner_id=$1")
+                .bind(owner.id)
+                .fetch_one(&mut *connection)
+                .await
+                .unwrap();
         assert_eq!(count, 2);
     }
 }
