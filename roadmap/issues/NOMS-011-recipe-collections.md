@@ -1,6 +1,10 @@
 # NOMS-011: Recipe Collections
 
-**Status:** ⚪ Backlog  
+> **Current-state review — 2026-11-03:** Hierarchy, membership, moves/reorder, sharing/visibility and cover images exist. PR #56 supersedes sibling-only names with owner-wide normalized uniqueness across all folders. Portability is NOMS-016.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — collection baseline implemented
 **Phase:** Phase 2 (organization)  
 **Revised:** 2026-07-15
 **Depends on:** NOMS-008 (Recipe CRUD); NOMS-010 dashboard/recipe-detail integration may land in parallel

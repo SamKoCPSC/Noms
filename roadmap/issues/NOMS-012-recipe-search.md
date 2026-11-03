@@ -1,6 +1,10 @@
 # NOMS-012: Recipe Search
 
-**Status:** ⚪ Backlog  
+> **Current-state review — 2026-11-03:** Recipe/user/collection/All search and live title suggestions (PR #50) are implemented. Full anonymous Search remains NOMS-021; public Explore/suggestions do not complete it.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — authenticated search baseline implemented
 **Phase:** Phase 2 (discovery and organization)  
 **Revised:** 2026-08-01
 **Depends on:** NOMS-008 current recipe model; NOMS-011 collection hierarchy for collection search; NOMS-010 may be implemented in parallel

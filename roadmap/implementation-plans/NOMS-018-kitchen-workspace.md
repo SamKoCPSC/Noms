@@ -1,7 +1,11 @@
 # NOMS-018: Kitchen workspace unification
 
+> **Current-state review — 2026-11-03:** PR #26 unifies Pantry/Groceries; ingredient suggestions and Kitchen heading/navigation artwork are merged. Later name uniqueness is PR #56.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
 **Updated:** 2026-10-26
-**Status:** Implemented and locally validated.
+**Status:** ✅ Done — unified workspace baseline implemented
 **Scope:** Follow-up to grocery lists ([PR #21](https://github.com/SamKoCPSC/Noms/pull/21)) and pantry inventory ([PR #25](https://github.com/SamKoCPSC/Noms/pull/25)).
 
 ## Product decisions

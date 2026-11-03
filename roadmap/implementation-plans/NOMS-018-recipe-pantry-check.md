@@ -1,6 +1,10 @@
 # NOMS-018 — Recipe detail pantry check
 
-**Status:** Presence-only checks implemented and locally validated (2026-10-26).
+> **Current-state review — 2026-11-03:** PR #29 is merged. All primaries, including optional ones, still count; alternatives do not satisfy the check. Changing this is proposed NOMS-023.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — presence-only recipe check implemented
 
 ## Scope
 

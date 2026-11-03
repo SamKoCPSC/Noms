@@ -2,7 +2,7 @@
 
 ## Home — finalized 2026-10-16
 
-Approved direction: **H1 Kitchen cottage**, selected from six Home concepts. Asset: [home-v1.png](home-v1.png), a standalone transparent PNG generated from the selected concept with the built-in image tool. Cream cottage, rounded olive roof, coral arched door and chimney cap, four-pane window, and olive doorstep. Preserve the painted texture, warm upper-left light, alpha, and aspect ratio. `PageIconKind::Home` uses the shared 192 × 192 WebP pipeline for 32px artwork in Home drawer destinations and the Noms introduction link. Home page headings retain their original presentation.
+Approved direction: **H1 Kitchen cottage**, selected from six Home concepts. Asset: [home-v1.png](home-v1.png), a standalone transparent PNG generated from the selected concept with the built-in image tool. Cream cottage, rounded olive roof, coral arched door and chimney cap, four-pane window, and olive doorstep. Preserve the painted texture, warm upper-left light, alpha, and aspect ratio. `PageIconKind::Home` uses the shared 192 × 192 WebP pipeline for 32px artwork in Home drawer destinations. Introduction now has its own open-door artwork. Home page headings retain their original presentation.
 
 ## Recipe import — 2026-10-07
 
@@ -85,3 +85,12 @@ Asset: [settings-v1.png](settings-v1.png). Reference: [selected design](../../..
 Prompt:
 
 Use case: logo-brand. Create ONE standalone transparent PNG icon for the NOMS settings page. Input image is the selected design reference: reproduce ONLY Standalone ST4B compact control panel: compact landscape olive housing approximate 1.5:1 face ratio, cream face with continuous coral inner rim. Exactly THREE horizontal olive slider grooves with coral handles on left; ONE cream rotary knob with coral indicator upper right; exactly THREE buttons olive/coral/olive beneath knob. Keep the selected object's proportions, arrangement, gentle three-quarter angle, cozy mature matte painted olive/cream/coral surfaces, restrained brushwork, sculpted rounded bevels and crisp warm upper-left lighting with cooler olive shadows. Center the complete object on a square canvas with approximately 10% transparent padding around its longest dimension. Genuine transparent alpha background, clean cutout edges, no floor, no broad cast shadow, no ivory backdrop, no checkerboard. Remove ALL labels and captions. No words, no watermark, no extra props, no comparison grid. High-resolution web asset, not glossy plastic or flat vector. Preserve the selected design rather than redesigning it.
+
+## Kitchen, Introduction and Accounts — merged in PR #49
+
+The Kitchen basket, Introduction doorway and Accounts profile/gear use the
+shared transparent PNG and 192px WebP pipeline. Kitchen appears in navigation,
+workspace headings and pantry/grocery creation links. Accounts appears in the
+hub heading and Linked accounts link/page. Source notes:
+[Kitchen](kitchen-v1.md), [Introduction](introduction-v1.md),
+[Accounts](accounts-v1.md). These are delivered identities, not pending designs.

@@ -1,6 +1,10 @@
 # NOMS-008: Recipe CRUD + Visibility & Discovery
 
-**Status:** 🔵 Ready  
+> **Current-state review — 2026-11-03:** Creation, reading, editing, deletion, visibility and scaling exist. NOMS-010 supersedes overwrite-only edits with drafts/full snapshots. PR #51 makes saved recipe names unique per owner.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — recipe CRUD baseline implemented
 **Phase:** Phase 1 (core content creation + discovery)  
 **Depends on:** NOMS-004 (OAuth authentication), NOMS-005 (user profile)
 

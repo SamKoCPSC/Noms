@@ -1,6 +1,10 @@
 # NOMS-021: Production Readiness and Reliability Follow-ups
 
-**Status:** 🔵 Ready
+> **Current-state review — 2026-11-03:** Use the review checkpoint matrix for current triage: image termination and the CI thread cap exist; residual bounds/cleanup/metadata/public-Search/coverage work remains. Explore tags are now informational, and PR #56 includes a fixture-cleanup fix.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** 🟡 In Progress — checkpoints partly implemented
 **Phase:** Production hardening
 **Created:** 2026-09-08
 **Depends on:** NOMS-015

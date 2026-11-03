@@ -13,10 +13,10 @@ Noms is a full-stack recipe management and sharing platform that combines person
 
 - **Version history** — Track how a recipe evolves over time with full history of changes
 - **Fork model** — Iterate on other user recipes while tracking attribution
-- **URL import** — Import recipe data from other websites
+- **Recipe import and export** — Paste recipe-page clipboard content into an editable private draft, import/export Noms JSON/ZIP, or export offline HTML recipes and cookbooks. Direct URL/Schema.org integration remains planned.
 - **Collections** — Organize recipes in folders
 - **Kitchen workspace** — Manage separate pantries and grocery lists in one place. Track ingredient amounts and availability, find owned and collected recipes with all ingredients available, check individual recipes against a selected pantry, or build independent shopping lists from accessible recipes and manual items with serving-aware quantities and recipe context. Optional ingredient-name suggestions support pantry and grocery entry alongside custom names and household supplies.
-- **Community interactions** — Public profiles, shareable links, likes, and comments
+- **Discovery and sharing** — Public profiles, recipe/collection visibility, shareable links, public Explore and authenticated full Search. Likes and comment threads remain future work.
 - **Built-in calculator** — Easily scale recipes to specific proportions
 - **Precise unit suggestions** — Compact local weight and volume autocomplete in recipes, pantries and grocery lists. Enter or closing a nonblank query confirms the first match unless another option was selected. APIs standardize recognized aliases and require a supported unit; blank units are invalid. Whole portions must be entered as measured quantities. See [unit suggestions](docs/ingredient-unit-autocomplete.md).
 - **Public informational pages** — Server-rendered Home, About, and task-oriented How-to pages
@@ -25,7 +25,15 @@ Built with **Rust** and **Dioxus**, Noms compiles to a single codebase that runs
 
 ## Roadmap Status
 
-**NOMS-013 — Marketing Pages & 3D Feasibility Experiment:** In progress. The conventional Home, About, and How-to implementation is merged. Editorial approval, visual/asset documentation, the custom icon family, the complete production release gate, and the isolated 3D feasibility experiment remain outstanding. See the [NOMS-013 implementation plan](roadmap/implementation-plans/NOMS-013-marketing-pages-3d-experience.md) for checkpoint-level evidence and remaining work.
+The [roadmap board](roadmap/README.md) and
+[2026-11-03 current-state review](roadmap/reviews/2026-11-03-current-state.md)
+separate merged baselines from partial features and release acceptance.
+Core authoring, media, collections, search, Kitchen and responsive layouts are
+implemented. Optional/substitute-aware Kitchen checks, missing-only shopping
+lists and specific production/acceptance follow-ups remain. The About page now
+contains a five-scene Rust tour; its earlier no-production-3D plan is historical.
+Desktop/mobile build features exist, but native packaging and PWA/offline
+delivery are not claimed as completed releases.
 
 ## Local Development Setup
 

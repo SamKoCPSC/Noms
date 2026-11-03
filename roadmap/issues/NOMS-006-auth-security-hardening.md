@@ -1,6 +1,10 @@
 # NOMS-006: Auth Security Hardening
 
-**Status:** ✅ DONE  
+> **Current-state review — 2026-11-03:** Current logout uses the POST/same-origin contract in the implementation. Earlier GET-logout checklist wording is historical; final integrated release review remains NOMS-015/021.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — historical auth-hardening baseline
 **Phase:** Phase 1.5 (security fixes before production)  
 **Depends on:** NOMS-004 (OAuth authentication), NOMS-005 (user profile)
 
