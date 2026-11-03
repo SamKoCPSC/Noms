@@ -4,6 +4,9 @@ on:
     branches: [codex/database-isolation-evidence]
 permissions:
   contents: read
+concurrency:
+  group: noms-database-isolation-evidence
+  cancel-in-progress: true
 env:
   CARGO_TERM_COLOR: always
   SQLX_OFFLINE: "true"
