@@ -46,7 +46,7 @@ impl std::fmt::Display for CollectionApiError {
             Self::InvalidImage => "Collection image is invalid",
             Self::CollectionNotFound => "Collection not found",
             Self::ParentNotFound => "Parent collection not found",
-            Self::NameTaken => "A sibling collection already uses this name",
+            Self::NameTaken => "You already have a collection with this name. Choose a different name.",
             Self::CollectionCycle => "A collection cannot be moved into itself or a descendant",
             Self::RecipeNotAccessible => "Recipe not accessible",
             Self::RecipeAlreadyInCollection => "Recipe is already in this collection",
@@ -1389,7 +1389,7 @@ mod tests {
         );
         let duplicate_parent = service
             .create(
-                "Weeknight".to_string(),
+                "Archive weeknight".to_string(),
                 None,
                 Some(archive.id.to_string()),
                 crate::types::CollectionVisibility::Private,
@@ -1440,12 +1440,11 @@ mod tests {
                 .await,
             Err(CollectionApiError::CollectionCycle)
         );
-        assert_eq!(
-            service
-                .move_to(child.id.to_string(), Some(archive.id.to_string()))
-                .await,
-            Err(CollectionApiError::NameTaken)
-        );
+        let moved_to_archive = service
+            .move_to(child.id.to_string(), Some(archive.id.to_string()))
+            .await
+            .unwrap();
+        assert_eq!(moved_to_archive.parent_collection_id, Some(archive.id));
         let moved = service
             .move_to(child.id.to_string(), Some(duplicate_parent.id.to_string()))
             .await

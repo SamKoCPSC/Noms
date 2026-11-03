@@ -3,6 +3,21 @@ use crate::grocery::*;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
+pub(crate) const GROCERY_LIST_NAME_TAKEN: &str =
+    "You already have a grocery list with this name. Choose a different name.";
+
+pub(crate) fn is_name_conflict(error: &ServerFnError) -> bool {
+    matches!(error, ServerFnError::ServerError { message, .. } if message == GROCERY_LIST_NAME_TAKEN)
+}
+
+#[cfg(feature = "server")]
+fn database_error(error: crate::db::grocery::GroceryError) -> ServerFnError {
+    match error {
+        crate::db::grocery::GroceryError::NameTaken => ServerFnError::new(GROCERY_LIST_NAME_TAKEN),
+        _ => ServerFnError::new(error.to_string()),
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct GroceryRecipeOption {
     pub id: Uuid,
@@ -34,7 +49,7 @@ async fn budget<T>(
         .map_err(|_| {
             ServerFnError::new("This grocery request timed out. Retry to confirm its result.")
         })?
-        .map_err(|error| ServerFnError::new(error.to_string()))
+        .map_err(database_error)
 }
 
 #[server]
@@ -201,4 +216,18 @@ pub async fn delete_grocery_list(
         expected_revision,
     ))
     .await
+}
+
+#[cfg(all(test, feature = "server"))]
+mod name_conflict_tests {
+    use super::*;
+
+    #[test]
+    fn name_conflict_is_friendly_and_unknown_outcomes_are_distinct() {
+        let error = database_error(crate::db::grocery::GroceryError::NameTaken);
+        assert!(is_name_conflict(&error));
+        assert!(matches!(error, ServerFnError::ServerError { message, .. } if message == GROCERY_LIST_NAME_TAKEN));
+        assert!(!is_name_conflict(&ServerFnError::new("Request timed out")));
+        assert!(!is_name_conflict(&database_error(crate::db::grocery::GroceryError::Conflict)));
+    }
 }

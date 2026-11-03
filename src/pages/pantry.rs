@@ -13,6 +13,9 @@ use crate::Route;
 use dioxus::prelude::*;
 use uuid::Uuid;
 fn feedback(error: &ServerFnError) -> String {
+    if crate::api::pantry::is_name_conflict(error) {
+        return PANTRY_NAME_TAKEN.to_string();
+    }
     crate::auth::account_binding::account_error_feedback(error)
         .map(str::to_string)
         .unwrap_or_else(|| error.to_string())
@@ -534,7 +537,9 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                                             Err(e) => {
                                                                 // A revision conflict is a definite pre-insert rejection.
                                                                 // Allow a fresh duplicate after loading the new source.
-                                                                if e.to_string().contains("changed in another session") {
+                                                                if e.to_string().contains("changed in another session")
+                                                                    || crate::api::pantry::is_name_conflict(&e)
+                                                                {
                                                                     duplicate.set(None);
                                                                     refresh += 1;
                                                                 }
@@ -1204,7 +1209,12 @@ pub fn PantryNew() -> Element {
                                                     error.set(Some(ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into()));
                                                 }
                                             }
-                                            Err(e) => error.set(Some(feedback(&e))),
+                                            Err(e) => {
+                                                if crate::api::pantry::is_name_conflict(&e) {
+                                                    pending.set(None);
+                                                }
+                                                error.set(Some(feedback(&e)));
+                                            }
                                         }
                                     });
                                 },

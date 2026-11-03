@@ -2,6 +2,21 @@
 use crate::pantry::*;
 use dioxus::prelude::*;
 use uuid::Uuid;
+
+pub(crate) const PANTRY_NAME_TAKEN: &str =
+    "You already have a pantry with this name. Choose a different name.";
+
+pub(crate) fn is_name_conflict(error: &ServerFnError) -> bool {
+    matches!(error, ServerFnError::ServerError { message, .. } if message == PANTRY_NAME_TAKEN)
+}
+
+#[cfg(feature = "server")]
+fn database_error(error: crate::db::pantry::PantryError) -> ServerFnError {
+    match error {
+        crate::db::pantry::PantryError::NameTaken => ServerFnError::new(PANTRY_NAME_TAKEN),
+        _ => ServerFnError::new(error.to_string()),
+    }
+}
 #[cfg(feature = "server")]
 async fn actor(expected: Option<Uuid>, mutation: bool) -> Result<Uuid, ServerFnError> {
     let id = crate::auth::account_binding::require_form_account(expected).await?;
@@ -25,7 +40,7 @@ async fn budget<T>(
         .map_err(|_| {
             ServerFnError::new("This pantry request timed out. Retry to confirm its result.")
         })?
-        .map_err(|e| ServerFnError::new(e.to_string()))
+        .map_err(database_error)
 }
 #[server]
 pub async fn list_kitchens(
@@ -186,4 +201,18 @@ pub async fn delete_kitchen(
         expected_revision,
     ))
     .await
+}
+
+#[cfg(all(test, feature = "server"))]
+mod name_conflict_tests {
+    use super::*;
+
+    #[test]
+    fn name_conflict_is_friendly_and_unknown_outcomes_are_distinct() {
+        let error = database_error(crate::db::pantry::PantryError::NameTaken);
+        assert!(is_name_conflict(&error));
+        assert!(matches!(error, ServerFnError::ServerError { message, .. } if message == PANTRY_NAME_TAKEN));
+        assert!(!is_name_conflict(&ServerFnError::new("Request timed out")));
+        assert!(!is_name_conflict(&database_error(crate::db::pantry::PantryError::Conflict)));
+    }
 }

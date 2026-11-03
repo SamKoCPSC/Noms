@@ -8,6 +8,7 @@ pub enum PantryError {
     Invalid(String),
     Missing,
     Conflict,
+    NameTaken,
     RetryMismatch,
     Limit,
     Database(sqlx::Error),
@@ -15,12 +16,17 @@ pub enum PantryError {
 impl std::fmt::Display for PantryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self{
+Self::NameTaken => f.write_str("pantry name is already taken"),
 Self::Invalid(s)=>f.write_str(s),Self::Missing=>f.write_str("Pantry or inventory item not found."),Self::Conflict=>f.write_str("This pantry changed in another session. Refresh saved data before retrying."),Self::RetryMismatch=>f.write_str("This request was already used for different contents. Refresh the pantry before starting a new request."),Self::Limit=>f.write_str("This pantry exceeds the supported size or account limit."),Self::Database(e)=>{tracing::warn!(error=%e,"Pantry database operation failed");f.write_str("Your pantry could not be saved. Please retry.")}}
     }
 }
 impl From<sqlx::Error> for PantryError {
     fn from(e: sqlx::Error) -> Self {
-        Self::Database(e)
+        if super::resource_names::is_name_conflict(&e, "idx_kitchen_profiles_owner_name_unique") {
+            Self::NameTaken
+        } else {
+            Self::Database(e)
+        }
     }
 }
 impl From<String> for PantryError {

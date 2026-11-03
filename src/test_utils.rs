@@ -481,6 +481,10 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .execute(pool)
         .await
         .expect("failed to create pantry tables");
+    sqlx::raw_sql(include_str!("../migrations/resource-owner-name-unique.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create resource name indexes");
 
     let schema = include_str!("../migrations/schema.sql");
     let start = schema

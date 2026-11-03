@@ -365,6 +365,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_sibling_name
     ON collections(owner_id, parent_collection_id, lower(name))
     NULLS NOT DISTINCT;
 
+-- Owner-wide names also prevent ambiguous labels across folders.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_owner_name_unique
+ON collections (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
+
 CREATE INDEX IF NOT EXISTS idx_collections_search
 ON collections USING bm25 (
     id,
@@ -409,6 +413,9 @@ CREATE TABLE IF NOT EXISTS grocery_lists (
 CREATE INDEX IF NOT EXISTS idx_grocery_lists_owner_order
     ON grocery_lists(owner_id, created_at DESC, id DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_grocery_lists_owner_name_unique
+ON grocery_lists (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
+
 CREATE TABLE IF NOT EXISTS grocery_list_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     list_id UUID NOT NULL REFERENCES grocery_lists(id) ON DELETE CASCADE,
@@ -447,6 +454,9 @@ CREATE TABLE IF NOT EXISTS kitchen_profiles (
 );
 CREATE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_order
 ON kitchen_profiles (owner_id, created_at DESC, id DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_name_unique
+ON kitchen_profiles (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
 
 CREATE TABLE IF NOT EXISTS pantry_ingredients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

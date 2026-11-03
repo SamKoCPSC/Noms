@@ -13,6 +13,9 @@ use dioxus::prelude::*;
 use uuid::Uuid;
 
 fn feedback(error: &ServerFnError) -> String {
+    if crate::api::grocery_list::is_name_conflict(error) {
+        return GROCERY_LIST_NAME_TAKEN.to_string();
+    }
     crate::auth::account_binding::account_error_feedback(error)
         .map(str::to_string)
         .unwrap_or_else(|| error.to_string())
@@ -1748,6 +1751,9 @@ pub fn GroceryListNew() -> Element {
                                                 }
                                             }
                                             Err(problem) => {
+                                                if crate::api::grocery_list::is_name_conflict(&problem) {
+                                                    pending.set(None);
+                                                }
                                                 let text = feedback(&problem);
                                                 if text.contains("selected recipe changed")
                                                     || text.contains("Recipe not accessible")
