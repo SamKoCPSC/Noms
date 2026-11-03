@@ -1,0 +1,109 @@
+# Chef Penguini
+
+Approved penguin mascot assets, selected and refined on 2026-11-03. Chef Penguini
+wears a cream chef hat and terracotta apron, without a neckerchief. These assets
+are ready for integration; no app page currently displays the mascot.
+
+## Approved animations
+
+| Asset | Behavior | Duration |
+| --- | --- | --- |
+| [Idle](animations/idle.svg) | Gentle sway, breathing, and occasional blinks | 6-second repeating motion |
+| [Jump and wave](animations/excited.svg) | Two excited hops, a wave, and a gradual flipper recovery | 6.6 seconds |
+| [Shy hello](animations/shy-hello.svg) | A small wave with a warm smile and head tilt | 5.2 seconds |
+| [Sleepy moment](animations/sleepy.svg) | Dozes, jolts awake with wide eyes and a flipper flinch, then settles | 6.4 seconds |
+| [Happy dance](animations/happy-dance.svg) | A small side-to-side dance | 5.8 seconds |
+
+[still.svg](still.svg) provides the neutral resting pose. Standalone activities
+play once and finish at that pose; idle repeats. Every animated SVG respects
+`prefers-reduced-motion`. All SVGs have a transparent background and the same
+`1200 × 1390` viewBox, preserving size when switching between them.
+
+The thinking, tummy-pat, chef's-kiss, and hat-adjustment experiments were not
+approved and are not included in the animation registry. Review videos,
+screenshots, concept sheets, and download archives are also excluded.
+
+## Preview
+
+From the repository root:
+
+```sh
+python3 -m http.server 8080 --bind 127.0.0.1 --directory assets/brand/penguini
+```
+
+Open `http://127.0.0.1:8080/preview.html`. The preview uses local files and no
+external services. Choose a single activity, random playback, or all activities
+in order. Pause/resume and reduced-motion behavior are available in the preview.
+
+## Web integration
+
+For a standalone activity, use its animated SVG as an image. Reserve dimensions
+in the `1200:1390` aspect ratio (for example `240 × 278`) and use `alt=""` when
+decorative beside existing content. A meaningful standalone image needs an
+appropriate accessible description. Provide a pause control for repeating motion;
+an image-based implementation can swap to `still.svg`.
+
+For the reusable player, insert `source/rig.svg` inline and load `clips.js` and
+`player.js` locally, then initialize:
+
+```js
+const player = new PenguiniPlayer(svgElement, {
+  idle: PenguiniClips.idle,
+  animations: Object.values(PenguiniClips).filter(clip => clip.id !== "idle"),
+  idleDurationMs: 4000,
+  transitionMs: 240,
+});
+```
+
+The player spends four seconds in idle, selects a registered activity at random,
+lets it finish, and returns to idle. Brief 240ms blends join the phases. Repeats
+are allowed. Each activity starts and ends in the resting pose, with a settled
+tail before returning to idle. The jump flipper lowers gradually over 1.2 seconds.
+
+Connect visible controls to `player.pause()` and `player.play()`. Call
+`player.destroy()` on unmount. The player pauses when hidden or offscreen, keeps
+manual pause state, and displays a still pose for reduced-motion preferences.
+Use one inline rig per player; give SVG definition IDs unique names when mounting
+multiple inline mascots in one document. Import assets through the app's asset
+pipeline when adding a Dioxus component; this folder is not globally loaded by
+`Dioxus.toml`.
+
+## Editing and extending
+
+- `source/rig.svg` contains the shared illustration and separately animated parts.
+- `source/clips.json` is the canonical registry of approved animation keyframes.
+- `player.js` owns playback, selection, transitions, and lifecycle behavior.
+- `clips.js`, `still.svg`, and `animations/*.svg` are generated assets.
+
+After changing the rig or keyframes, regenerate and verify from the repo root:
+
+```sh
+python3 scripts/build-mascot-assets.py
+python3 scripts/build-mascot-assets.py --check
+```
+
+The embedded illustration is deliberately shared across the generated files so
+each SVG remains self-contained and works in an `img` without external resource
+requests. Do not edit those generated copies by hand. The generator uses only
+Python's standard library.
+
+New activities can be added to the source registry, or registered at runtime with
+`player.registerAnimation({ id, label, durationMs, tracks })`. Tracks target the
+rig's existing selectors and contain Web Animations `transform`/`opacity`
+keyframes. Use unique IDs; `idle` is reserved. Preserve matching resting endpoints
+and leave time for recovery. Unspecified parts retain their resting pose.
+
+## Artwork provenance
+
+Generated with the image-generation tool and refined with user feedback. The
+selected concept was Chef Penguini: a rounded charcoal-and-cream penguin with a
+floppy chef hat. Subsequent revisions added the terracotta apron, removed the
+sage neckerchief, enlarged the open eyes, and separated the head/flipper for
+animation. The rig embeds the transparent raster illustration and adds vector
+facial features; these are not pure-vector illustrations. Preserve the warm
+palette, soft outlines, aspect ratio, and alpha when preparing derivatives.
+
+Validation covers the approved clips' resting endpoints, the sleepy jolt,
+random/ordered selection, pause/resume, offscreen behavior, and reduced motion.
+The gallery and standalone SVGs are the review surfaces; captured review media
+remain outside the repository.
