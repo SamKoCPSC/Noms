@@ -24,8 +24,8 @@ jobs:
           pg_config --bindir >> "$GITHUB_PATH"
       - name: Inventory temporary database construction and exported URIs
         run: |
-          rg --line-number 'pgtemp::|connection_uri\(' src
-          if rg --line-number 'pgtemp::' src --glob '!test_database.rs' --glob '!lib.rs'; then
+          git grep -n -E 'pgtemp::|connection_uri\(' -- src
+          if git grep -n 'pgtemp::' -- src ':(exclude)src/test_database.rs' ':(exclude)src/lib.rs'; then
             echo "An unconverted raw pgtemp caller remains."
             exit 1
           fi
