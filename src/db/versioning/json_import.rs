@@ -43,7 +43,8 @@ pub async fn create_collection_json_import(
         ));
     }
     let existing_names: Vec<String> = sqlx::query_scalar(
-        "SELECT lower(name) FROM collections WHERE owner_id=$1 AND parent_collection_id IS NULL",
+        "SELECT lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))
+         FROM collections WHERE owner_id=$1",
     )
     .bind(user)
     .fetch_all(&mut *tx)
@@ -52,7 +53,13 @@ pub async fn create_collection_json_import(
     let original_name = &nodes[0].name;
     let mut root_name = original_name.clone();
     for copy in 1..=crate::security::MAX_COLLECTION_CHILDREN + 1 {
-        if !existing_names.contains(&root_name.to_lowercase()) {
+        if !existing_names.contains(
+            &root_name
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .to_lowercase(),
+        ) {
             break;
         }
         let suffix = if copy == 1 {

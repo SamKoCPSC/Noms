@@ -56,8 +56,15 @@ struct CollectionEditSaveFailure {
 
 impl CollectionEditSaveStage {
     fn failure(self, problem: &ServerFnError) -> CollectionEditSaveFailure {
-        // Only the explicit pre-write identity rejection proves this request did
-        // not commit. A transport/error response otherwise cannot settle outcome.
+        // A typed details-name collision rolls back its transaction.
+        if matches!(self, Self::Details) && crate::api::collection::is_name_conflict(problem) {
+            return CollectionEditSaveFailure {
+                message: crate::api::collection::COLLECTION_NAME_TAKEN.into(),
+                unconfirmed: false,
+            };
+        }
+        // A pre-write identity rejection also proves this request did not commit.
+        // Transport/error responses otherwise cannot settle the outcome.
         if let Some(feedback) = crate::auth::account_binding::account_error_feedback(problem) {
             let confirmed = match self {
                 Self::Details => "",
@@ -339,6 +346,17 @@ pub fn CollectionEdit(id: String) -> Element {
 mod tests {
     use super::*;
     use dioxus::router::components::HistoryProvider;
+
+    #[test]
+    fn confirmed_name_collision_keeps_collection_details_editable() {
+        let error = ServerFnError::new(crate::api::collection::COLLECTION_NAME_TAKEN);
+        let failure = CollectionEditSaveStage::Details.failure(&error);
+        assert_eq!(
+            failure.message,
+            crate::api::collection::COLLECTION_NAME_TAKEN
+        );
+        assert!(!failure.unconfirmed);
+    }
 
     #[test]
     fn collection_edit_checks_each_completion_before_followup_or_navigation() {

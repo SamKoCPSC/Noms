@@ -481,6 +481,10 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .execute(pool)
         .await
         .expect("failed to create pantry tables");
+    sqlx::raw_sql(include_str!("../migrations/resource-owner-name-unique.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create resource name indexes");
 
     let schema = include_str!("../migrations/schema.sql");
     let start = schema
@@ -2503,15 +2507,20 @@ mod search_integration_tests {
             .unwrap()
             .into_iter()
             .collect();
-        assert!(browse.recipes.windows(2).all(|recipes| {
-            let left = (
-                recipe_update_times[&recipes[0].recipe.id],
-                recipes[0].recipe.id,
-            );
-            let right = (
-                recipe_update_times[&recipes[1].recipe.id],
-                recipes[1].recipe.id,
-            );
+        // Parallel search fixtures can be deleted between browse and this lookup.
+        // The remaining results must still be a correctly ordered subsequence.
+        let surviving_recipes = browse
+            .recipes
+            .iter()
+            .filter_map(|result| {
+                recipe_update_times
+                    .get(&result.recipe.id)
+                    .map(|updated_at| (*updated_at, result.recipe.id))
+            })
+            .collect::<Vec<_>>();
+        assert!(surviving_recipes.windows(2).all(|recipes| {
+            let left = recipes[0];
+            let right = recipes[1];
             left.0 > right.0 || (left.0 == right.0 && left.1 <= right.1)
         }));
         assert!(browse.collections.windows(2).all(|collections| {

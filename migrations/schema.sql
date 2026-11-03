@@ -365,6 +365,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_sibling_name
     ON collections(owner_id, parent_collection_id, lower(name))
     NULLS NOT DISTINCT;
 
+-- Owner-wide names also prevent ambiguous labels across folders.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_owner_name_unique
+ON collections (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
+
 CREATE INDEX IF NOT EXISTS idx_collections_search
 ON collections USING bm25 (
     id,
@@ -484,6 +488,12 @@ CREATE TABLE IF NOT EXISTS pantry_equipment (
     CHECK ((add_key IS NULL AND add_hash IS NULL) OR
            (add_key IS NOT NULL AND add_hash IS NOT NULL AND length(add_hash) = 64))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_grocery_lists_owner_name_unique
+ON grocery_lists (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_name_unique
+ON kitchen_profiles (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
 
 -- NOMS-017: maintained ingredient suggestions. The seed CLI owns these rows;
 -- authored recipe text and optional IDs remain in existing JSON snapshots.

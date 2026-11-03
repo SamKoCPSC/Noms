@@ -168,6 +168,7 @@ pub(crate) async fn import_for_user(
         crate::db::create_collection_json_import(pool, user, parsed.snapshot.collections, prepared, covers, warnings)
     ).await.map_err(|_| ServerFnError::new("Import could not be confirmed in time. Check your collections before retrying."))?
         .map_err(|error| match error {
+            crate::db::DbError::CollectionNameTaken => ServerFnError::new("A collection in this import uses a name you already have, or repeats a name within the import. Rename the collection in the import file and try again."),
             crate::db::DbError::RecipeNameTaken => ServerFnError::new("A recipe in this collection uses a name you already have. Rename the recipe in the import file and try again."),
             crate::db::DbError::ResourceLimitExceeded(_) | crate::db::DbError::CollectionLimitExceeded(_) => ServerFnError::new("Import exceeds your collection, recipe-version or image-review draft capacity. Free some capacity or import a smaller collection."),
             _ => ServerFnError::new("The collection import could not be completed. Check your collections before retrying."),

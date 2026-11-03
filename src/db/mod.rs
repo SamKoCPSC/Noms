@@ -22,6 +22,7 @@ mod versioning;
 mod display_name_tests;
 #[cfg(test)]
 mod media_asset_tests;
+mod resource_names;
 
 pub use media_assets::*;
 #[allow(unused_imports)]
@@ -112,7 +113,7 @@ pub enum DbError {
     CollectionNotFound(Uuid),
     /// The requested parent collection was not found for the current owner.
     CollectionParentNotFound(Uuid),
-    /// A sibling collection already has this name, ignoring case.
+    /// This owner already has a collection with the same normalized name.
     CollectionNameTaken,
     /// A collection cannot be moved into itself or a descendant.
     CollectionCycle,
@@ -171,7 +172,7 @@ impl std::fmt::Display for DbError {
             DbError::CollectionNotFound(id) => write!(f, "collection not found: {id}"),
             DbError::CollectionParentNotFound(id) => write!(f, "collection parent not found: {id}"),
             DbError::CollectionNameTaken => {
-                write!(f, "collection name is already used by a sibling")
+                write!(f, "collection name is already taken")
             }
             DbError::CollectionCycle => write!(f, "collection move would create a cycle"),
             DbError::RecipeNotAccessible(id) => write!(f, "recipe is not accessible: {id}"),
@@ -748,11 +749,8 @@ fn validate_collection_recipe_card_output(recipes: &[RecipeCardSummary]) -> Resu
 }
 
 fn collection_query_error(error: sqlx::Error) -> DbError {
-    if error
-        .as_database_error()
-        .and_then(|database_error| database_error.code())
-        .as_deref()
-        == Some("23505")
+    if resource_names::is_name_conflict(&error, "idx_collections_owner_name_unique")
+        || resource_names::is_name_conflict(&error, "idx_collections_sibling_name")
     {
         DbError::CollectionNameTaken
     } else {
@@ -7685,7 +7683,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_collection_name_uniqueness_is_case_insensitive_per_parent() {
+    async fn test_collection_name_uniqueness_is_normalized_per_owner() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let owner = test_utils::insert_test_user(&pool).await;
         let first = test_utils::insert_test_collection(&pool, owner.id, None, "Recipes").await;
@@ -7702,9 +7700,19 @@ mod tests {
         .await;
         assert!(matches!(duplicate, Err(DbError::CollectionNameTaken)));
 
-        let nested =
-            test_utils::insert_test_collection(&pool, owner.id, Some(first.id), "recipes").await;
-        assert_eq!(nested.parent_collection_id, Some(first.id));
+        let duplicate = insert_collection(
+            &pool,
+            owner.id,
+            Some(first.id),
+            "  RECIPES  ",
+            None,
+            CollectionVisibility::Private,
+            None,
+        )
+        .await;
+        assert!(matches!(duplicate, Err(DbError::CollectionNameTaken)));
+        let other = test_utils::insert_test_user(&pool).await;
+        test_utils::insert_test_collection(&pool, other.id, None, "recipes").await;
     }
 
     #[tokio::test]
@@ -7824,16 +7832,17 @@ mod tests {
             1
         );
 
-        let conflict =
-            test_utils::insert_test_collection(&pool, owner.id, Some(destination.id), "Child")
-                .await;
-        assert!(matches!(
-            move_collection(&pool, child.id, owner.id, Some(destination.id)).await,
-            Err(DbError::CollectionNameTaken)
-        ));
-        delete_collection(&pool, conflict.id, owner.id)
-            .await
-            .unwrap();
+        let conflict = insert_collection(
+            &pool,
+            owner.id,
+            Some(destination.id),
+            "Child",
+            None,
+            CollectionVisibility::Private,
+            None,
+        )
+        .await;
+        assert!(matches!(conflict, Err(DbError::CollectionNameTaken)));
 
         let moved = move_collection(&pool, child.id, owner.id, Some(destination.id))
             .await

@@ -518,10 +518,43 @@ fn renamed_import(json: &str, suffix: &str) -> String {
     let file: crate::collection_json::CollectionFile = serde_json::from_str(json).unwrap();
     let mut snapshot: crate::collection_json::CollectionSnapshot =
         serde_json::from_value(file.snapshot).unwrap();
+    // The root retains its name to exercise imported-root copy naming.
+    for node in snapshot.collections.iter_mut().skip(1) {
+        node.name.push_str(suffix);
+    }
     for recipe in &mut snapshot.recipes {
         let title = recipe.snapshot["title"].as_str().unwrap().to_string();
         recipe.snapshot["title"] = json!(format!("{title}{suffix}"));
         recipe.snapshot_digest = crate::recipe_json::digest(&recipe.snapshot).unwrap();
     }
     crate::collection_json::export(snapshot).unwrap()
+}
+
+#[tokio::test]
+async fn collection_name_collision_rolls_back_new_recipes_and_the_imported_tree() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let (owner, root, _) = tree(&pool).await;
+    let original = db::export_collection_json(&pool, owner.id, root)
+        .await
+        .unwrap();
+    let importer = user(&pool, "name-conflict").await;
+    let storage = crate::storage::StorageClient::for_test();
+    // A conflict in a nested node must undo recipes and a root already inserted.
+    db::insert_collection(
+        &pool,
+        importer.id,
+        None,
+        "Weeknights",
+        None,
+        crate::types::CollectionVisibility::Private,
+        None,
+    )
+    .await
+    .unwrap();
+    let before = counts(&pool, importer.id).await;
+    let error = import_for_user(&pool, &storage, importer.id, &original, &[])
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("A collection in this import"));
+    assert_eq!(counts(&pool, importer.id).await, before);
 }

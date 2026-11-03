@@ -10,6 +10,7 @@ pub enum GroceryError {
     Invalid(String),
     Missing,
     Conflict,
+    NameTaken,
     SourceChanged,
     RetryMismatch,
     Limit,
@@ -18,6 +19,7 @@ pub enum GroceryError {
 impl std::fmt::Display for GroceryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::NameTaken => f.write_str("grocery list name is already taken"),
             Self::Invalid(message)=>f.write_str(message),
             Self::Missing=>f.write_str("Grocery list or item not found."),
             Self::Conflict=>f.write_str("This list changed in another session. Refresh it before retrying."),
@@ -30,7 +32,11 @@ impl std::fmt::Display for GroceryError {
 }
 impl From<sqlx::Error> for GroceryError {
     fn from(error: sqlx::Error) -> Self {
-        Self::Database(error)
+        if super::resource_names::is_name_conflict(&error, "idx_grocery_lists_owner_name_unique") {
+            Self::NameTaken
+        } else {
+            Self::Database(error)
+        }
     }
 }
 impl From<String> for GroceryError {
