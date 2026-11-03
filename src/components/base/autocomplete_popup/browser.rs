@@ -28,6 +28,14 @@ impl Popup {
             .ok()??
             .dyn_into::<HtmlElement>()
             .ok()?;
+        // Search bars include an icon and submit button. Align their menu with
+        // the entire surface, while keeping focus/reveal tied to the input.
+        let surface = anchor
+            .closest("[data-autocomplete-anchor]")
+            .ok()
+            .flatten()
+            .and_then(|element| element.dyn_into::<HtmlElement>().ok())
+            .unwrap_or_else(|| anchor.clone());
         let window = web_sys::window()?;
         let style = window.get_computed_style(&panel).ok()??;
         let pixels = |name| {
@@ -51,13 +59,23 @@ impl Popup {
         let active = Rc::new(Cell::new(active));
         let reveal_input = Rc::new(Cell::new(true));
         let update = Rc::new(dom::AnimationFrame::new({
-            let (panel, anchor, active, reveal) = (
+            let (panel, anchor, surface, active, reveal) = (
                 panel.clone(),
                 anchor.clone(),
+                surface,
                 active.clone(),
                 reveal_input.clone(),
             );
-            move || position(&panel, &anchor, limits, active.get(), reveal.replace(false))
+            move || {
+                position(
+                    &panel,
+                    &anchor,
+                    &surface,
+                    limits,
+                    active.get(),
+                    reveal.replace(false),
+                )
+            }
         }));
         update.request();
         let mut listeners = Vec::new();
@@ -175,6 +193,7 @@ fn reveal(anchor: &HtmlElement, view: Rect) {
 fn position(
     panel: &HtmlElement,
     anchor: &HtmlElement,
+    surface: &HtmlElement,
     limits: Limits,
     active: Option<usize>,
     reveal_input: bool,
@@ -186,7 +205,7 @@ fn position(
     if reveal_input {
         reveal(anchor, view);
     }
-    let anchor_rect = rect(anchor);
+    let anchor_rect = rect(surface);
     let width = (anchor_rect.right - anchor_rect.left).max(limits.min_width);
     let width = width.min((view.right - view.left - 16.).max(0.));
     dom::css(panel, "width", &format!("{width}px"));
