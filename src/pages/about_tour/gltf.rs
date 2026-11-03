@@ -11,9 +11,12 @@ pub struct DioramaPart {
     pub first: usize,
     pub count: usize,
     pub name: String,
+    // Authored metadata is validated while decoding; live motion uses mesh bounds.
+    #[cfg(test)]
     pub pivot: [f32; 3],
     pub offset: [f32; 3],
     pub start: f32,
+    #[cfg(test)]
     pub end: f32,
     pub texture: usize,
     pub opacity: f32,
@@ -241,13 +244,16 @@ pub fn decode(bytes: &[u8]) -> Result<DioramaMesh, String> {
             {
                 return Err(invalid());
             }
+            let _pivot = vector("pivot")?;
             parts.push(DioramaPart {
                 first,
                 count,
                 name: meta["name"].as_str().ok_or_else(invalid)?.into(),
-                pivot: vector("pivot")?,
+                #[cfg(test)]
+                pivot: _pivot,
                 offset: vector("offset")?,
                 start,
+                #[cfg(test)]
                 end,
                 texture,
                 opacity,
@@ -257,9 +263,11 @@ pub fn decode(bytes: &[u8]) -> Result<DioramaMesh, String> {
                 first,
                 count,
                 name: String::new(),
+                #[cfg(test)]
                 pivot: [0.; 3],
                 offset: [0.; 3],
                 start: 0.,
+                #[cfg(test)]
                 end: 1.,
                 texture: 0,
                 opacity: 1.,

@@ -1,5 +1,8 @@
-//! One-time model arrivals; scrolling triggers entrances without scrubbing them.
-const DURATION: f32 = 3.;
+//! Staged, once-only assembly with bounded curved paths and gradual surface reveals.
+use super::gltf::{DioramaMesh, DioramaPart};
+use super::math::{identity, mul, transform, translate, Mat4};
+use std::f32::consts::PI;
+const DURATION: f32 = 3.0;
 #[derive(Default)]
 pub struct Playback {
     elapsed: f32,
@@ -15,7 +18,7 @@ impl Playback {
         self.elapsed >= DURATION
     }
     pub fn frame(&self) -> f32 {
-        40. + 120. * (self.elapsed / DURATION)
+        1. + 159. * self.elapsed / DURATION
     }
 }
 pub struct ChapterArrival {
@@ -32,7 +35,6 @@ impl ChapterArrival {
         }
     }
     pub fn advance(&mut self, progress: f32, seconds: f32) {
-        // Direct chapter entry and approaches from either direction share a trigger.
         self.started |= (self.chapter - 0.28..=self.chapter + 0.28).contains(&progress);
         if self.started {
             self.playback.advance(seconds);
@@ -42,30 +44,10 @@ impl ChapterArrival {
         self.started && !self.playback.finished()
     }
     pub fn frame(&self) -> f32 {
-        // Later rooms use the entire authored sequence, unlike the kitchen intro.
-        1. + 159. * (self.playback.elapsed / DURATION)
+        self.playback.frame()
     }
 }
-pub fn amount(frame: f32, start: f32, end: f32) -> f32 {
-    // Keep the architectural shell intact before appliances begin to arrive.
-    group_amount(frame, start, end, 60.)
-}
-pub fn office_amount(frame: f32, start: f32, end: f32) -> f32 {
-    group_amount(frame, start, end, 25.)
-}
-fn group_amount(frame: f32, start: f32, end: f32, foundation_end: f32) -> f32 {
-    if end <= foundation_end {
-        return 1.;
-    }
-    let t = ((frame - start) / (end - start)).clamp(0., 1.);
-    t * t * (3. - 2. * t)
-}
-
-pub struct ArrivalPose {
-    pub scale: f32,
-    pub translation: [f32; 3],
-}
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Room {
     Kitchen,
     Office,
@@ -73,291 +55,513 @@ pub enum Room {
     Bedroom,
     Garden,
 }
-impl Room {
-    pub fn amount(self, frame: f32, start: f32, end: f32) -> f32 {
-        match self {
-            Self::Kitchen => amount(frame, start, end),
-            Self::Office | Self::Potluck | Self::Bedroom | Self::Garden => {
-                office_amount(frame, start, end)
-            }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Kind {
+    Floor,
+    BackWall,
+    SideWall,
+    RightFence,
+    Furniture,
+    Detail,
+}
+#[derive(Clone, Copy, Debug)]
+pub struct Bounds {
+    pub min: [f32; 3],
+    pub max: [f32; 3],
+}
+impl Bounds {
+    fn empty() -> Self {
+        Self {
+            min: [f32::INFINITY; 3],
+            max: [f32::NEG_INFINITY; 3],
         }
     }
-}
-pub fn arrival_pose(pivot: [f32; 3], authored: [f32; 3], t: f32, room: Room) -> ArrivalPose {
-    // glTF Y is up. All rooms have a back wall at -Z; the kitchen/potluck side
-    // wall is at -X and the office's window wall is at +X. Enter diagonally
-    // through the open front/side, including groups authored as vertical drops.
-    // The garden has fences on both sides: approach only through its open front.
-    let incoming = if room == Room::Garden {
-        [0., 0.075, authored[2].abs().max(2.4)]
-    } else {
-        [
-            authored[0].abs().max(0.75) * if room == Room::Office { -1. } else { 1. },
-            (authored[1].abs() * 0.25).min(0.45),
-            authored[2].abs().max(1.2),
-        ]
-    };
-    let scale = 0.85 + 0.15 * t;
-    let mut translation = [0.; 3];
-    for axis in 0..3 {
-        translation[axis] = pivot[axis] * (1. - scale) + incoming[axis] * (1. - t);
+    fn add(&mut self, v: &[f32]) {
+        for (i, &x) in v.iter().take(3).enumerate() {
+            self.min[i] = self.min[i].min(x);
+            self.max[i] = self.max[i].max(x);
+        }
     }
-    ArrivalPose { scale, translation }
+    fn center(self) -> [f32; 3] {
+        std::array::from_fn(|i| (self.min[i] + self.max[i]) * 0.5)
+    }
+    fn size(self) -> [f32; 3] {
+        std::array::from_fn(|i| self.max[i] - self.min[i])
+    }
+    pub fn transformed(self, m: Mat4) -> Self {
+        let mut b = Self::empty();
+        for bits in 0..8 {
+            let v: [f32; 3] = std::array::from_fn(|i| {
+                if bits & (1 << i) == 0 {
+                    self.min[i]
+                } else {
+                    self.max[i]
+                }
+            });
+            let w: [f32; 3] = std::array::from_fn(|i| {
+                m[i] * v[0] + m[4 + i] * v[1] + m[8 + i] * v[2] + m[12 + i]
+            });
+            b.add(&w);
+        }
+        b
+    }
+}
+fn bounds(data: &DioramaMesh, part: &DioramaPart) -> Bounds {
+    let mut b = Bounds::empty();
+    for v in data.vertices[part.first * 12..(part.first + part.count) * 12]
+        .as_chunks::<12>()
+        .0
+        .iter()
+    {
+        b.add(v);
+    }
+    b
+}
+/// Split exported combined architecture into independently animated panels.
+/// Every original triangle and vertex attribute is retained verbatim.
+pub fn prepare(data: &DioramaMesh, room: Room) -> DioramaMesh {
+    let mut out = DioramaMesh {
+        vertices: Vec::with_capacity(data.vertices.len()),
+        parts: Vec::new(),
+    };
+    for p in &data.parts {
+        let name = p.name.to_lowercase();
+        let shell = name.contains("room shell")
+            || name.contains("continuous shell")
+            || name.contains("continuous room shell")
+            || name == "asm_02_room";
+        let fence = room == Room::Garden && name.contains("timber garden fence");
+        if !shell && !fence {
+            let mut part = p.clone();
+            part.first = out.vertices.len() / 12;
+            out.vertices
+                .extend_from_slice(&data.vertices[p.first * 12..(p.first + p.count) * 12]);
+            out.parts.push(part);
+            continue;
+        }
+        let b = bounds(data, p);
+        let mut buckets: [Vec<f32>; 4] = std::array::from_fn(|_| Vec::new());
+        for tri in data.vertices[p.first * 12..(p.first + p.count) * 12]
+            .as_chunks::<36>()
+            .0
+            .iter()
+        {
+            let cx = (tri[0] + tri[12] + tri[24]) / 3.;
+            let cz = (tri[2] + tri[14] + tri[26]) / 3.;
+            let side_x = if room == Room::Office {
+                b.max[0]
+            } else {
+                b.min[0]
+            };
+            let mut index = if (cx - side_x).abs() < (cz - b.min[2]).abs() {
+                2
+            } else {
+                1
+            };
+            if fence && (cx - b.max[0]).abs() < (cx - b.min[0]).abs().min((cz - b.min[2]).abs()) {
+                index = 3;
+            }
+            if shell && name != "asm_02_room" && tri[1].max(tri[13]).max(tri[25]) <= 0.08 {
+                index = 0;
+            }
+            buckets[index].extend_from_slice(tri);
+        }
+        for (i, verts) in buckets.into_iter().enumerate() {
+            if verts.is_empty() {
+                continue;
+            }
+            let mut part = p.clone();
+            part.first = out.vertices.len() / 12;
+            part.count = verts.len() / 12;
+            part.name = format!(
+                "{} / {}",
+                p.name,
+                ["floor", "back wall", "side wall", "right fence"][i]
+            );
+            out.vertices.extend(verts);
+            out.parts.push(part);
+        }
+    }
+    out
+}
+#[derive(Clone, Debug)]
+pub struct Motion {
+    pub kind: Kind,
+    pub bounds: Bounds,
+    pub start: f32,
+    pub end: f32,
+    pivot: [f32; 3],
+    offset: [f32; 3],
+    variant: f32,
+}
+pub struct ArrivalPose {
+    pub matrix: Mat4,
+    pub reveal: f32,
+}
+fn smooth(t: f32) -> f32 {
+    let t = t.clamp(0., 1.) as f64;
+    (t * t * t * (t * (t * 6. - 15.) + 10.)).clamp(0., 1.) as f32
+}
+impl Motion {
+    pub fn new(data: &DioramaMesh, p: &DioramaPart, room: Room) -> Self {
+        // Prints and transparent pieces use exactly the same bounds, timing and pose.
+        let mut b = Bounds::empty();
+        for other in data.parts.iter().filter(|o| o.name == p.name) {
+            let ob = bounds(data, other);
+            b.add(&ob.min);
+            b.add(&ob.max);
+        }
+        let name = p.name.to_lowercase();
+        let kind =
+            if name.ends_with("/ floor") || name == "asm_01_floor" || name.contains("rounded lawn")
+            {
+                Kind::Floor
+            } else if name.ends_with("/ back wall")
+                || name.contains("house facade")
+                || name.contains("bed alcove root")
+            {
+                Kind::BackWall
+            } else if name.ends_with("/ side wall") {
+                Kind::SideWall
+            } else if name.ends_with("/ right fence") {
+                Kind::RightFence
+            } else if p.start >= if room == Room::Kitchen { 92. } else { 75. } {
+                Kind::Detail
+            } else {
+                Kind::Furniture
+            };
+        let seed = p
+            .name
+            .bytes()
+            .fold(0u32, |h, c| h.wrapping_mul(31).wrapping_add(c as u32));
+        let variant = (seed % 101) as f32 / 50. - 1.;
+        let (start, end) = match kind {
+            Kind::Floor => (1., 24.),
+            Kind::BackWall => (9., 45.),
+            Kind::SideWall => (17., 53.),
+            Kind::RightFence => (23., 59.),
+            Kind::Furniture => {
+                let s = 43. + (p.start.clamp(18., 88.) - 18.) * 0.65;
+                (s, s + 39.)
+            }
+            Kind::Detail => {
+                let s = 92. + (p.start.clamp(75., 120.) - 75.) * 0.62;
+                (s, s + 33.)
+            }
+        };
+        let mut pivot = b.center();
+        if matches!(kind, Kind::BackWall | Kind::SideWall | Kind::RightFence) {
+            pivot[1] = b.min[1];
+        }
+        Self {
+            kind,
+            bounds: b,
+            start,
+            end,
+            pivot,
+            offset: p.offset,
+            variant,
+        }
+    }
+    pub fn amount(&self, frame: f32) -> f32 {
+        ((frame - self.start) / (self.end - self.start)).clamp(0., 1.)
+    }
+    pub fn pose(&self, frame: f32, room: Room) -> ArrivalPose {
+        let u = self.amount(frame);
+        // Exact identity at completion prevents settling jitter and preserves the master.
+        if u >= 1. {
+            return ArrivalPose {
+                matrix: identity(),
+                reveal: 1.,
+            };
+        }
+        let q = smooth(u);
+        let rest = 1. - q;
+        let sign = if room == Room::Office { -1. } else { 1. };
+        let mut size = [1.; 3];
+        let mut rot = [0.; 3];
+        let mut delta = [0.; 3];
+        match self.kind {
+            Kind::Floor => {
+                size = [0.94 + 0.06 * q; 3];
+                delta[1] = -0.20 * rest;
+            }
+            Kind::BackWall | Kind::SideWall | Kind::RightFence => {
+                // Grow from the lower edge and unfold gently toward the room interior.
+                size[1] = 0.16 + 0.84 * q;
+                if self.kind == Kind::BackWall {
+                    rot[0] = 0.32 * rest;
+                } else {
+                    rot[2] = if self.kind == Kind::RightFence {
+                        0.30 * rest
+                    } else {
+                        -sign * 0.30 * rest
+                    };
+                }
+                delta[1] = 0.16 * rest;
+            }
+            Kind::Furniture | Kind::Detail => {
+                let detail = self.kind == Kind::Detail;
+                let arc = 16. * u * u * (1. - u) * (1. - u);
+                let footprint = self.bounds.size();
+                // Long assemblies get a smaller yaw, keeping their sweep controlled.
+                let turn = (1.6 / footprint[0].max(footprint[2]).max(1.6)).min(1.);
+                size = [if detail {
+                    0.68 + 0.32 * q
+                } else {
+                    0.86 + 0.14 * q
+                }; 3];
+                rot = [
+                    0.09 * rest * turn,
+                    self.variant * 0.30 * rest * turn,
+                    self.variant * 0.045 * arc * turn,
+                ];
+                delta[0] = if room == Room::Garden {
+                    self.variant * 0.12 * arc
+                } else {
+                    sign * (self.offset[0].abs().max(0.85) * rest + 0.35 * arc)
+                };
+                delta[2] = self.offset[2]
+                    .abs()
+                    .max(if room == Room::Garden { 2.2 } else { 1.4 })
+                    * rest
+                    + 0.22 * arc;
+                let settle = if u > 0.78 {
+                    ((u - 0.78) / 0.22 * PI).sin().powi(2) * 0.035
+                } else {
+                    0.
+                };
+                delta[1] = 0.20 * rest + if detail { 0.62 * arc } else { 0.28 * arc } + settle;
+            }
+        }
+        let center = std::array::from_fn(|i| self.pivot[i] + delta[i]);
+        let mut matrix = mul(
+            transform(center, rot, size),
+            translate(-self.pivot[0], -self.pivot[1], -self.pivot[2]),
+        );
+        if self.kind != Kind::Floor {
+            let mut moved = self.bounds.transformed(matrix);
+            // Keep the whole rotated AABB on the open side of the original wall planes.
+            matrix[14] += (self.bounds.min[2] - moved.min[2]).max(0.);
+            matrix[13] += (self.bounds.min[1] - moved.min[1]).max(0.);
+            if room == Room::Garden {
+                let lo = (-7.6_f32).min(self.bounds.min[0]);
+                let hi = 7.5_f32.max(self.bounds.max[0]);
+                if moved.max[0] - moved.min[0] > hi - lo {
+                    // Fence panels may span the whole plot; shrink the horizontal sweep.
+                    let factor = (hi - lo) / (moved.max[0] - moved.min[0]);
+                    for c in 0..3 {
+                        matrix[c * 4] *= factor;
+                    }
+                    matrix[12] *= factor;
+                    moved = self.bounds.transformed(matrix);
+                }
+                matrix[12] += (lo - moved.min[0]).max(0.) - (moved.max[0] - hi).max(0.);
+            } else if room == Room::Office {
+                matrix[12] -= (moved.max[0] - self.bounds.max[0]).max(0.);
+            } else {
+                matrix[12] += (self.bounds.min[0] - moved.min[0]).max(0.);
+            }
+        }
+        ArrivalPose {
+            matrix,
+            reveal: smooth(u / 0.42),
+        }
+    }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn garden_waits_for_fifth_chapter_then_arrives_once() {
-        for entry in [3.8, 4.] {
-            let mut garden = ChapterArrival::new(4);
-            for progress in [0., 1., 2., 3.] {
-                garden.advance(progress, 60.);
-                assert_eq!(garden.frame(), 1.);
-            }
-            garden.advance(entry, DURATION / 2.);
-            assert!(garden.animating());
-            garden.advance(entry, DURATION);
-            for progress in [0., 3., 4.] {
-                garden.advance(progress, 1.);
-                assert_eq!(garden.frame(), 160.);
-                assert!(!garden.animating());
-            }
-        }
-    }
-
-    #[test]
-    fn garden_arrivals_remain_between_both_side_fences_and_in_front_of_house() {
-        let model =
-            super::super::gltf::decode(include_bytes!("../../../assets/about/sams-garden.glb"))
-                .unwrap();
-        for part in &model.parts {
-            if part.end <= 25. {
-                assert_eq!(Room::Garden.amount(1., part.start, part.end), 1.);
-                continue;
-            }
-            let vertices = &model.vertices[part.first * 12..(part.first + part.count) * 12];
-            let min_x = vertices
-                .chunks_exact(12)
-                .map(|v| v[0])
-                .fold(f32::INFINITY, f32::min);
-            let max_x = vertices
-                .chunks_exact(12)
-                .map(|v| v[0])
-                .fold(f32::NEG_INFINITY, f32::max);
-            let min_z = vertices
-                .chunks_exact(12)
-                .map(|v| v[2])
-                .fold(f32::INFINITY, f32::min);
-            for frame in 1..=160 {
-                let t = Room::Garden.amount(frame as f32, part.start, part.end);
-                let pose = arrival_pose(part.pivot, part.offset, t, Room::Garden);
-                // The front is open. Stay inside both fence planes, allowing
-                // only the existing mounted extent of any boundary fixtures.
-                assert!(
-                    min_x * pose.scale + pose.translation[0] >= (-7.6_f32).min(min_x) - 0.001,
-                    "{} left fence",
-                    part.name
-                );
-                assert!(
-                    max_x * pose.scale + pose.translation[0] <= 7.5_f32.max(max_x) + 0.001,
-                    "{} right fence",
-                    part.name
-                );
-                assert!(
-                    min_z * pose.scale + pose.translation[2] >= min_z - 0.001,
-                    "{} back wall",
-                    part.name
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn intro_advances_without_scrolling_and_stays_complete() {
-        let mut playback = Playback::default();
-        assert_eq!(playback.frame(), 40.);
-        assert!(!playback.finished());
-        playback.advance(DURATION / 2.);
-        assert_eq!(playback.frame(), 100.);
-        playback.advance(DURATION);
-        assert_eq!(playback.frame(), 160.);
-        assert!(playback.finished());
-        playback.advance(-DURATION);
-        playback.advance(60.);
-        assert_eq!(playback.frame(), 160.);
-    }
-    #[test]
-    fn direct_chapter_entry_can_skip_an_unseen_intro() {
-        let mut playback = Playback::default();
-        playback.finish();
-        assert!(playback.finished());
-        assert_eq!(playback.frame(), 160.);
-    }
-    #[test]
-    fn foundations_are_complete_at_the_start() {
-        for (start, end) in [(1., 18.), (12., 40.), (30., 60.)] {
-            assert_eq!(amount(40., start, end), 1.);
-        }
-    }
-    #[test]
-    fn groups_ease_into_place_during_the_intro() {
-        assert_eq!(amount(-20., 112., 142.), 0.);
-        assert_eq!(amount(160., 112., 142.), 1.);
-        let mut playback = Playback::default();
-        let mut previous = 0.;
-        for _ in 0..100 {
-            playback.advance(DURATION / 90.);
-            let position = amount(playback.frame(), 112., 142.);
-            assert!(position >= previous);
-            previous = position;
-        }
-        assert_eq!(previous, 1.);
-    }
-
-    #[test]
-    fn office_waits_for_approach_then_plays_independently_of_scroll() {
-        let mut office = ChapterArrival::new(1);
-        office.advance(0., 60.);
-        assert_eq!(office.frame(), 1.);
-        assert!(!office.animating());
-        office.advance(0.8, 0.);
-        assert!(office.animating());
-        office.advance(0.8, DURATION / 2.);
-        assert_eq!(office.frame(), 80.5);
-        // Leaving the stop never reverses or resets an entrance already in progress.
-        office.advance(3., DURATION);
-        assert_eq!(office.frame(), 160.);
-        assert!(!office.animating());
-        for progress in [0., 1., 2., 1.] {
-            office.advance(progress, 1.);
-            assert_eq!(office.frame(), 160.);
-            assert!(!office.animating());
-        }
-    }
-
-    #[test]
-    fn office_direct_entry_and_reverse_approach_start_the_entrance() {
-        for progress in [1., 1.2] {
-            let mut office = ChapterArrival::new(1);
-            office.advance(2., 60.);
-            assert_eq!(office.frame(), 1.);
-            office.advance(progress, DURATION / 2.);
-            assert_eq!(office.frame(), 80.5);
-            assert!(office.animating());
-        }
-    }
-
-    #[test]
-    fn philosophy_room_waits_for_its_chapter_and_never_replays() {
-        let mut arrival = ChapterArrival::new(3);
-        for progress in [0., 1., 2., 2.5] {
-            arrival.advance(progress, 10.);
-            assert_eq!(arrival.frame(), 1.);
-        }
-        arrival.advance(2.8, DURATION / 2.);
-        assert!(arrival.animating());
-        assert_eq!(arrival.frame(), 80.5);
-        arrival.advance(1., DURATION);
-        for progress in [3., 0., 3.] {
-            arrival.advance(progress, 1.);
-            assert_eq!(arrival.frame(), 160.);
-            assert!(!arrival.animating());
-        }
-        let mut direct = ChapterArrival::new(3);
-        direct.advance(3., DURATION);
-        assert_eq!(direct.frame(), 160.);
-        assert_eq!(Room::Potluck.amount(1., 1., 25.), 1.);
-        assert_eq!(Room::Potluck.amount(1., 115., 146.), 0.);
-    }
-
-    #[test]
-    fn bedroom_arrives_once_when_creator_chapter_is_approached() {
-        let mut arrival = ChapterArrival::new(2);
-        arrival.advance(0., 60.);
-        assert_eq!(arrival.frame(), 1.);
-        arrival.advance(1.8, DURATION / 2.);
-        assert!(arrival.animating());
-        arrival.advance(2., DURATION);
-        for progress in [3., 0., 2.] {
-            arrival.advance(progress, 1.);
-            assert_eq!(arrival.frame(), 160.);
-            assert!(!arrival.animating());
-        }
-        assert_eq!(Room::Bedroom.amount(1., 1., 25.), 1.);
-        assert_eq!(Room::Bedroom.amount(1., 76., 110.), 0.);
-    }
-
-    #[test]
-    fn office_shell_is_present_while_furniture_and_accessories_arrive() {
-        assert_eq!(office_amount(1., 1., 25.), 1.);
-        for (start, end) in [(18., 48.), (32., 65.), (72., 104.), (116., 145.)] {
-            assert_eq!(office_amount(1., start, end), 0.);
-            assert_eq!(office_amount((start + end) / 2., start, end), 0.5);
-            assert_eq!(office_amount(160., start, end), 1.);
-        }
-    }
-
-    #[test]
-    fn model_arrivals_stay_on_the_open_sides_of_all_rooms() {
-        // Validate the actual exported geometry, including shared pivots for
-        // transparent and printed surfaces. Positive uniform scale means its
-        // transformed AABB exactly bounds every triangle throughout the path.
-        for (bytes, room) in [
+    fn models() -> Vec<(Room, DioramaMesh)> {
+        [
             (
-                include_bytes!("../../../assets/about/sams-kitchen-detailed.glb").as_slice(),
                 Room::Kitchen,
+                include_bytes!("../../../assets/about/sams-kitchen-detailed.glb").as_slice(),
             ),
             (
-                include_bytes!("../../../assets/about/sams-office.glb").as_slice(),
                 Room::Office,
+                include_bytes!("../../../assets/about/sams-office.glb").as_slice(),
             ),
             (
-                include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
-                Room::Potluck,
-            ),
-            (
-                include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
                 Room::Bedroom,
+                include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
             ),
-        ] {
-            let model = super::super::gltf::decode(bytes).unwrap();
-            for part in model.parts {
-                let mut min = [f32::INFINITY; 3];
-                let mut max = [f32::NEG_INFINITY; 3];
-                for vertex in
-                    model.vertices[part.first * 12..(part.first + part.count) * 12].chunks_exact(12)
-                {
-                    for axis in 0..3 {
-                        min[axis] = min[axis].min(vertex[axis]);
-                        max[axis] = max[axis].max(vertex[axis]);
-                    }
-                }
-                for frame in 1..=160 {
-                    let t = room.amount(frame as f32, part.start, part.end);
-                    let pose = arrival_pose(part.pivot, part.offset, t, room);
-                    // Wall-mounted fixtures can already sit in a wall recess at
-                    // rest. No moving part may extend farther through either
-                    // wall plane than its approved, fully assembled bounds.
-                    let side_clearance = if room == Room::Office {
-                        max[0] - (max[0] * pose.scale + pose.translation[0])
-                    } else {
-                        min[0] * pose.scale + pose.translation[0] - min[0]
-                    };
-                    let back_clearance = min[2] * pose.scale + pose.translation[2] - min[2];
-                    assert!(
-                        side_clearance >= -0.00001 && back_clearance >= -0.00001,
-                        "{} crosses a wall at frame {frame}",
-                        part.name
+            (
+                Room::Potluck,
+                include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
+            ),
+            (
+                Room::Garden,
+                include_bytes!("../../../assets/about/sams-garden.glb").as_slice(),
+            ),
+        ]
+        .into_iter()
+        .map(|(room, bytes)| (room, super::super::gltf::decode(bytes).unwrap()))
+        .collect()
+    }
+    fn fingerprint(m: &DioramaMesh) -> Vec<u64> {
+        let mut result: Vec<_> = m
+            .vertices
+            .as_chunks::<36>()
+            .0
+            .iter()
+            .map(|t| {
+                t.iter().fold(14695981039346656037u64, |h, v| {
+                    (h ^ v.to_bits() as u64).wrapping_mul(1099511628211)
+                })
+            })
+            .collect();
+        result.sort_unstable();
+        result
+    }
+    #[test]
+    fn entrances_start_at_zero_and_never_replay() {
+        let mut p = Playback::default();
+        assert_eq!(p.frame(), 1.);
+        p.advance(DURATION);
+        assert_eq!(p.frame(), 160.);
+        p.advance(-10.);
+        assert!(p.finished());
+        let mut skipped = Playback::default();
+        skipped.finish();
+        assert_eq!(skipped.frame(), 160.);
+        for chapter in 1..5 {
+            let mut a = ChapterArrival::new(chapter);
+            a.advance(0., 20.);
+            assert_eq!(a.frame(), 1.);
+            a.advance(chapter as f32 - 0.2, 0.1);
+            assert!(a.animating());
+            a.advance(0., DURATION);
+            for stop in [0., 4., chapter as f32] {
+                a.advance(stop, 1.);
+                assert_eq!(a.frame(), 160.);
+                assert!(!a.animating());
+            }
+        }
+    }
+    #[test]
+    fn splitting_architecture_preserves_every_triangle_and_final_placement() {
+        for (room, original) in models() {
+            let m = prepare(&original, room);
+            assert_eq!(fingerprint(&original), fingerprint(&m));
+            let mut walls = 0;
+            let mut floors = 0;
+            for p in &m.parts {
+                let motion = Motion::new(&m, p, room);
+                let rest = motion.pose(160., room);
+                assert_eq!(rest.matrix, identity());
+                assert_eq!(rest.reveal, 1.);
+                if matches!(
+                    motion.kind,
+                    Kind::BackWall | Kind::SideWall | Kind::RightFence
+                ) {
+                    walls += 1;
+                    assert_eq!(motion.pose(1., room).reveal, 0.);
+                    assert_ne!(
+                        motion.pose((motion.start + motion.end) * 0.5, room).matrix,
+                        identity()
                     );
-                    if t < 1. {
-                        assert!(side_clearance > 0. && back_clearance > 0.);
+                }
+                if motion.kind == Kind::Floor {
+                    floors += 1;
+                }
+            }
+            assert!(walls >= 2, "{room:?}");
+            assert!(floors > 0);
+        }
+    }
+    #[test]
+    fn all_rotated_groups_stay_clear_of_wall_and_fence_planes() {
+        for (room, original) in models() {
+            let m = prepare(&original, room);
+            for p in &m.parts {
+                let motion = Motion::new(&m, p, room);
+                if motion.kind == Kind::Floor {
+                    continue;
+                }
+                for frame in 0..=320 {
+                    let pose = motion.pose(frame as f32 / 2., room);
+                    let b = motion.bounds.transformed(pose.matrix);
+                    let rest = motion.bounds;
+                    assert!(pose.matrix.iter().all(|v| v.is_finite()));
+                    assert!(
+                        b.min[1] >= rest.min[1] - 0.00002,
+                        "{} floor {frame}",
+                        p.name
+                    );
+                    assert!(
+                        b.min[2] >= rest.min[2] - 0.00002,
+                        "{} back wall {frame}",
+                        p.name
+                    );
+                    if room == Room::Garden {
+                        assert!(
+                            b.min[0] >= (-7.6_f32).min(rest.min[0]) - 0.00002,
+                            "{} left {frame}",
+                            p.name
+                        );
+                        assert!(
+                            b.max[0] <= 7.5_f32.max(rest.max[0]) + 0.00002,
+                            "{} right {frame}",
+                            p.name
+                        );
+                    } else if room == Room::Office {
+                        assert!(b.max[0] <= rest.max[0] + 0.00002, "{} side {frame}", p.name);
                     } else {
-                        assert_eq!(pose.scale, 1.);
-                        assert_eq!(pose.translation, [0.; 3]);
+                        assert!(b.min[0] >= rest.min[0] - 0.00002, "{} side {frame}", p.name);
                     }
                 }
             }
+        }
+    }
+    #[test]
+    fn reveals_are_gradual_and_prints_stay_attached() {
+        for (room, original) in models() {
+            let m = prepare(&original, room);
+            for p in &m.parts {
+                let motion = Motion::new(&m, p, room);
+                let first = motion.pose(motion.start, room);
+                assert_eq!(first.reveal, 0.);
+                let early = motion.pose(motion.start + (motion.end - motion.start) * 0.1, room);
+                assert!(early.reveal > 0. && early.reveal < 0.5);
+                let mut prev = 0.;
+                for i in 0..101 {
+                    let pose = motion.pose(
+                        motion.start + (motion.end - motion.start) * i as f32 / 100.,
+                        room,
+                    );
+                    assert!(pose.reveal >= prev);
+                    prev = pose.reveal;
+                }
+                for same in m.parts.iter().filter(|other| other.name == p.name) {
+                    let other = Motion::new(&m, same, room);
+                    for frame in [25., 55., 90., 125., 160.] {
+                        assert_eq!(
+                            motion.pose(frame, room).matrix,
+                            other.pose(frame, room).matrix
+                        );
+                    }
+                }
+            }
+        }
+    }
+    #[test]
+    fn furniture_has_curved_travel_and_rotation() {
+        for (room, original) in models() {
+            let m = prepare(&original, room);
+            let p = m
+                .parts
+                .iter()
+                .find(|p| Motion::new(&m, p, room).kind == Kind::Furniture)
+                .unwrap();
+            let motion = Motion::new(&m, p, room);
+            let start = motion.pose(motion.start, room).matrix;
+            let mid = motion.pose((motion.start + motion.end) * 0.5, room).matrix;
+            assert!(mid[1].abs() + mid[2].abs() + mid[4].abs() + mid[6].abs() > 0.001);
+            assert!(
+                mid[13] > (start[13] + motion.pose(motion.end, room).matrix[13]) * 0.5,
+                "{room:?} vertical arc"
+            );
         }
     }
 }
