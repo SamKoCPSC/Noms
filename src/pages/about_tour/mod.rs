@@ -14,3 +14,6 @@ mod math;
 mod scene;
 #[cfg(target_arch = "wasm32")]
 pub(super) use browser::{start, stop};
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) use browser::capture_entry_fragment;

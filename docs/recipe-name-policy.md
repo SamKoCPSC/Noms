@@ -18,7 +18,9 @@ no preflight name queries, availability endpoint, background editor checks or
 name-based publication disabling.
 
 When a create or rename violates this specific index, the database layer maps it
-to a recipe-name conflict. The API returns the clear message: "You already have
+to a typed recipe-name conflict. As with display-name saves, the API owns the
+user-facing wording in a shared constant, and the client uses that same constant
+to recognize confirmed collisions. The API returns the clear message: "You already have
 a recipe with this name. Choose a different name to publish." The editor displays
 that confirmed failure and permits renaming and retrying. Other database errors
 retain their existing handling.

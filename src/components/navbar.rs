@@ -231,7 +231,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                             (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", Some(PageIconKind::Home)),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
-                            (Route::Pantry {}, "Kitchen", None),
+                            (Route::Pantry {}, "Kitchen", Some(PageIconKind::Kitchen)),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
                             (Route::Search { query: Default::default() }, "Search", Some(PageIconKind::Search)),
                             (Route::RecipeNew {}, "New recipe", Some(PageIconKind::Editor)),
@@ -250,7 +250,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                         }
                     }
                     if is_signed_in {
-                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Home) } span { "Noms introduction" } }
+                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Introduction) } span { "Introduction" } }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {

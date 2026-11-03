@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 async fn user(pool: &PgPool) -> Uuid {
     let id = Uuid::new_v4();
-    sqlx::query("INSERT INTO users(id,username,display_name,email) VALUES($1,$2,'Cook tester',$3)")
+    sqlx::query("INSERT INTO users(id,username,display_name,email) VALUES($1,$2,$2,$3)")
         .bind(id)
         .bind(format!("cook_{}", &id.simple().to_string()[..20]))
         .bind(format!("{id}@example.test"))

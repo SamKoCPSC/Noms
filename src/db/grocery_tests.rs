@@ -6,15 +6,13 @@ use uuid::Uuid;
 async fn user(pool: &PgPool) -> Uuid {
     let id = Uuid::new_v4();
     let suffix = id.simple().to_string();
-    sqlx::query(
-        "INSERT INTO users(id,username,display_name,email) VALUES($1,$2,'Grocery tester',$3)",
-    )
-    .bind(id)
-    .bind(&suffix[..24])
-    .bind(format!("{suffix}@example.test"))
-    .execute(pool)
-    .await
-    .unwrap();
+    sqlx::query("INSERT INTO users(id,username,display_name,email) VALUES($1,$2,$2,$3)")
+        .bind(id)
+        .bind(&suffix[..24])
+        .bind(format!("{suffix}@example.test"))
+        .execute(pool)
+        .await
+        .unwrap();
     id
 }
 fn fields(name: &str, amount: &str, unit: &str) -> ItemFields {

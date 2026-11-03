@@ -1,6 +1,8 @@
 //! Mobile presentation shares the existing routes, session and write handlers.
 use crate::auth::context::use_auth;
-use crate::components::base::{Avatar, AvatarSize, NavigationArtwork, PageIconKind, SharedModal};
+use crate::components::base::{
+    Avatar, AvatarSize, NavigationArtwork, PageIcon, PageIconKind, SharedModal,
+};
 use crate::components::kitchen::SectionLink;
 use crate::utils::theme::UseTheme;
 use crate::Route;
@@ -154,8 +156,8 @@ pub fn MobileCreateButton() -> Element {
                         ("New recipe", "Start with a title and a little inspiration.", PageIconKind::Editor, Route::RecipeNew {}),
                         ("Import recipe", "Paste content from a recipe page.", PageIconKind::Import, Route::RecipeImport {}),
                         ("New collection", "Give your recipes a place.", PageIconKind::Collections, Route::CollectionNew { parent: None }),
-                        ("New grocery list", "Recipes, essentials, or a blank list.", PageIconKind::Collections, Route::GroceryListNew {}),
-                        ("New pantry", "Keep track of the ingredients you have.", PageIconKind::Collections, Route::PantryNew {}),
+                        ("New grocery list", "Recipes, essentials, or a blank list.", PageIconKind::Kitchen, Route::GroceryListNew {}),
+                        ("New pantry", "Keep track of the ingredients you have.", PageIconKind::Kitchen, Route::PantryNew {}),
                     ] {
                         Link { to: target, class: "mobile-hub-row", onclick: move |_| open.set(false), NavigationArtwork { kind: Some(kind) } div { strong { "{label}" } small { "{detail}" } } span { aria_hidden: "true", "›" } }
                     }
@@ -171,18 +173,22 @@ pub fn MobileYou() -> Element {
     let theme = use_context::<UseTheme>();
     rsx! {
         div { class: "container mobile-you-page",
+            h1 { class: "brand-title mobile-account-title",
+                PageIcon { kind: PageIconKind::Accounts }
+                span { "Your account" }
+            }
             header { class: "mobile-you-heading",
                 if let Some(user) = &auth.current_user {
                     Avatar { size: AvatarSize::Large, src: user.avatar_url.clone(), username: user.username.clone() }
-                    div { h1 { if user.display_name.is_empty() { "{user.username}" } else { "{user.display_name}" } } p { "@{user.username}" } Link { to: Route::UserProfile { username: user.username.clone() }, "View public profile →" } }
+                    div { h2 { if user.display_name.is_empty() { "{user.username}" } else { "{user.display_name}" } } p { "@{user.username}" } Link { to: Route::UserProfile { username: user.username.clone() }, "View public profile →" } }
                 } else {
-                    div { h1 { "Make yourself at home." } p { "Sign in to keep your recipes and make them your own." } Link { to: Route::Login {}, class: "btn btn-primary touch-target", "Sign in" } }
+                    div { h2 { "Make yourself at home." } p { "Sign in to keep your recipes and make them your own." } Link { to: Route::Login {}, class: "btn btn-primary touch-target", "Sign in" } }
                 }
             }
             if auth.is_authenticated {
                 section { class: "neumo-card mobile-hub-group", aria_label: "Your account",
                     Link { to: Route::SettingsProfile {}, class: "mobile-hub-row", NavigationArtwork { kind: Some(PageIconKind::Profile) } div { strong { "Profile settings" } small { "Your name, photo, and bio" } } span { aria_hidden: "true", "›" } }
-                    Link { to: Route::SettingsAccounts {}, class: "mobile-hub-row", NavigationArtwork { kind: Some(PageIconKind::Settings) } div { strong { "Linked accounts" } small { "Manage your ways to sign in" } } span { aria_hidden: "true", "›" } }
+                    Link { to: Route::SettingsAccounts {}, class: "mobile-hub-row", NavigationArtwork { kind: Some(PageIconKind::Accounts) } div { strong { "Linked accounts" } small { "Manage your ways to sign in" } } span { aria_hidden: "true", "›" } }
                 }
             }
             section { class: "neumo-card mobile-hub-group", aria_label: "Appearance and help",
@@ -190,7 +196,7 @@ pub fn MobileYou() -> Element {
                 for (label, detail, kind, destination) in [
                     ("How to use Noms", "Create, organize, and evolve recipes", PageIconKind::HowTo, Route::HowTo {}), ("About Noms", "Good recipes deserve a home", PageIconKind::About, Route::About {}),
                 ] { Link { to: destination, class: "mobile-hub-row", NavigationArtwork { kind: Some(kind) } div { strong { "{label}" } small { "{detail}" } } span { aria_hidden: "true", "›" } } }
-                Link { to: Route::Home {}, class: "mobile-hub-row", div { strong { "Noms introduction" } small { "The public welcome page" } } span { aria_hidden: "true", "›" } }
+                Link { to: Route::Home {}, class: "mobile-hub-row", NavigationArtwork { kind: Some(PageIconKind::Introduction) } div { strong { "Introduction" } small { "The public welcome page" } } span { aria_hidden: "true", "›" } }
             }
             if auth.is_authenticated { form { method: "post", action: "/auth/logout?redirect_uri=/", button { r#type: "submit", class: "btn btn-secondary touch-target mobile-you-signout", "Sign Out" } } }
         }

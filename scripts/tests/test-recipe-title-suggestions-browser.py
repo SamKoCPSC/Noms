@@ -81,10 +81,10 @@ async def main(args):
             await page.wait_for_url(base + '/**')
             profile = await (await context.request.get(base + '/api/user_profile')).json()
             owner = str(uuid.UUID(profile['current_user_id']))
-            sql("INSERT INTO users(id,username,display_name,email) VALUES(:'id'::uuid,:'name','Other title fixture',:'email');",
+            sql("INSERT INTO users(id,username,display_name,email) VALUES(:'id'::uuid,:'name',:'name',:'email');",
                 id=other, name='title_other_' + suffix, email=f'other-{suffix}@example.test')
             sql("""INSERT INTO users(id,username,display_name,email)
-                SELECT id,'dup_' || replace(id::text,'-','')::varchar(20),'Other title fixture',id::text || '@example.test'
+                SELECT id,'dup_' || replace(id::text,'-','')::varchar(20),'Title fixture ' || id::text,id::text || '@example.test'
                 FROM jsonb_to_recordset(:'users'::jsonb) AS r(id uuid);""",
                 users=json.dumps([dict(id=user) for user in duplicate_owners]))
             records = []

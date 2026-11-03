@@ -58,3 +58,6 @@ pub use settings::SettingsProfile;
 pub use user_profile::UserProfile;
 
 pub use crate::components::mobile::MobileYou;
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) use about_tour::capture_entry_fragment as capture_about_entry_fragment;

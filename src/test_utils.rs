@@ -121,6 +121,14 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .expect("failed to create users table");
 
     sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS users_display_name_unique \
+         ON users (lower(btrim(display_name)))",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create display-name uniqueness index");
+
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS oauth_accounts (\
          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\
          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,\
@@ -569,7 +577,7 @@ pub async fn insert_test_user(pool: &PgPool) -> crate::db::User {
     crate::db::insert_user(
         pool,
         &format!("collections_{suffix}"),
-        "Collections Test User",
+        &format!("Collections Test User {suffix}"),
         &format!("collections_{suffix}@example.com"),
         None,
     )

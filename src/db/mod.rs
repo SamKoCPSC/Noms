@@ -19,6 +19,8 @@ pub mod pantry_recipes;
 mod versioning;
 
 #[cfg(test)]
+mod display_name_tests;
+#[cfg(test)]
 mod media_asset_tests;
 
 pub use media_assets::*;
@@ -75,6 +77,8 @@ pub enum DbError {
     UsernameTaken,
     /// This owner already has a saved recipe with the same normalized title.
     RecipeNameTaken,
+    /// The requested display name is already taken, ignoring case and spaces.
+    DisplayNameTaken,
     /// The session was not found, revoked, or expired.
     SessionInvalid,
     /// The requested recipe was not found.
@@ -134,10 +138,8 @@ impl std::fmt::Display for DbError {
             DbError::InvalidConfiguration(e) => write!(f, "database configuration failed: {e}"),
             DbError::Query(e) => write!(f, "database query failed: {e}"),
             DbError::UsernameTaken => write!(f, "username is already taken"),
-            DbError::RecipeNameTaken => write!(
-                f,
-                "You already have a recipe with this name. Choose a different name to publish."
-            ),
+            DbError::RecipeNameTaken => write!(f, "recipe name is already taken"),
+            DbError::DisplayNameTaken => write!(f, "display name is already taken"),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
             DbError::RecipeNotFound(id) => write!(f, "recipe not found: {id}"),
             DbError::VersionNotFound {
@@ -196,6 +198,7 @@ impl std::error::Error for DbError {
             DbError::MissingUrl | DbError::InvalidConfiguration(_) => None,
             DbError::Connection(e) | DbError::Query(e) => Some(e),
             DbError::UsernameTaken | DbError::RecipeNameTaken => None,
+            DbError::DisplayNameTaken => None,
             DbError::SessionInvalid => None,
             DbError::RecipeNotFound(_) => None,
             DbError::VersionNotFound { .. }
@@ -2906,6 +2909,19 @@ pub async fn count_oauth_accounts(
 
 // ── User queries ────────────────────────────────────────────────────────────
 
+fn user_write_error(error: sqlx::Error) -> DbError {
+    if let sqlx::Error::Database(ref database_error) = error {
+        if database_error.is_unique_violation() {
+            match database_error.constraint() {
+                Some("users_display_name_unique") => return DbError::DisplayNameTaken,
+                Some("users_username_key") => return DbError::UsernameTaken,
+                _ => {}
+            }
+        }
+    }
+    DbError::Query(error)
+}
+
 /// Insert a new user. Returns the created user with the generated ID.
 pub async fn insert_user(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
@@ -2920,13 +2936,13 @@ pub async fn insert_user(
          VALUES ($1, $2, $3, $4) \
          RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
         username,
-        display_name,
+        display_name.trim(),
         email,
         avatar_url,
     )
     .fetch_one(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(user_write_error)
 }
 
 /// Insert a new OAuth account linked to a user.
@@ -3167,17 +3183,31 @@ pub async fn update_user_profile(
     display_name: &str,
     bio: Option<&str>,
 ) -> Result<User, DbError> {
+    update_user_profile_and_username(pool, user_id, display_name, bio, None).await
+}
+
+/// A profile save is atomic, including an optional username change. The unique
+/// indexes arbitrate races; a rejected name must never partially save a profile.
+pub async fn update_user_profile_and_username(
+    pool: &PgPool,
+    user_id: Uuid,
+    display_name: &str,
+    bio: Option<&str>,
+    username: Option<&str>,
+) -> Result<User, DbError> {
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
     sqlx::query(
-        "UPDATE users SET display_name = $2, bio = $3, updated_at = NOW() \
+        "UPDATE users SET display_name = $2, bio = $3, \
+         username = COALESCE($4, username), updated_at = NOW() \
          WHERE id = $1",
     )
     .bind(user_id)
-    .bind(display_name)
+    .bind(display_name.trim())
     .bind(bio)
+    .bind(username)
     .execute(&mut *transaction)
     .await
-    .map_err(DbError::Query)?;
+    .map_err(user_write_error)?;
     let updated = get_user_by_id(&mut *transaction, user_id)
         .await?
         .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;

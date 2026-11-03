@@ -23,7 +23,7 @@ pub(super) fn recipe_write_feedback(
         return feedback;
     }
     if recipe_name_conflict(error) {
-        return "You already have a recipe with this name. Choose a different name to publish.";
+        return crate::api::recipe::RECIPE_NAME_TAKEN;
     }
     if matches!(action, RecipeWriteAction::CreateDraft) {
         return UNCONFIRMED_DRAFT_CREATION_MESSAGE;
@@ -209,7 +209,7 @@ mod tests {
 
 pub(super) fn recipe_name_conflict(error: &ServerFnError) -> bool {
     matches!(error, ServerFnError::ServerError { message, .. }
-        if message == "You already have a recipe with this name. Choose a different name to publish.")
+        if message == crate::api::recipe::RECIPE_NAME_TAKEN)
 }
 
 #[cfg(test)]
@@ -217,12 +217,12 @@ mod name_conflict_tests {
     #[test]
     fn confirmed_name_conflicts_allow_renaming_without_unknown_write_feedback() {
         let error = dioxus::prelude::ServerFnError::new(
-            "You already have a recipe with this name. Choose a different name to publish.",
+            crate::api::recipe::RECIPE_NAME_TAKEN,
         );
         assert!(super::recipe_name_conflict(&error));
         assert_eq!(
             super::recipe_write_feedback(super::RecipeWriteAction::Publish, &error),
-            "You already have a recipe with this name. Choose a different name to publish."
+            crate::api::recipe::RECIPE_NAME_TAKEN
         );
         assert!(!super::recipe_name_conflict(
             &dioxus::prelude::ServerFnError::new("Database operation timed out")

@@ -1,0 +1,14 @@
+{
+  "source_revision": 18,
+  "source_sha256": "1f97b7b32ef46d39406c3e9ae228989ae8b85928d2fb4ddf97d3268e7be2d092",
+  "triangles": 342007,
+  "draw_calls": 36,
+  "textures": 1,
+  "assembly_groups": 32,
+  "contact_shading": "vertex ambient occlusion, glazing excluded",
+  "glb_bytes": 11796564,
+  "native_master_unchanged": true,
+  "position_quantum": 9.900721949225679e-05,
+  "quantization": "KHR_mesh_quantization",
+  "materials": 36
+}

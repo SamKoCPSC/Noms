@@ -554,6 +554,8 @@ mod server_tests {
 
 #[cfg(not(feature = "server"))]
 fn main() {
+    #[cfg(target_arch = "wasm32")]
+    pages::capture_about_entry_fragment();
     dioxus::launch(App);
 }
 

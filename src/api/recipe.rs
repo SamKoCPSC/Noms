@@ -7,6 +7,9 @@
 
 use dioxus::prelude::*;
 
+pub(crate) const RECIPE_NAME_TAKEN: &str =
+    "You already have a recipe with this name. Choose a different name to publish.";
+
 #[cfg(feature = "server")]
 use crate::types::{RecipeImage, RecipeStep};
 
@@ -38,7 +41,16 @@ async fn bounded_database_operation<T>(
     crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, operation)
         .await
         .map_err(|_| ServerFnError::new("Database operation timed out"))?
-        .map_err(|error| ServerFnError::new(error.to_string()))
+        .map_err(recipe_database_error)
+}
+
+
+#[cfg(feature = "server")]
+fn recipe_database_error(error: crate::db::DbError) -> ServerFnError {
+    match error {
+        crate::db::DbError::RecipeNameTaken => ServerFnError::new(RECIPE_NAME_TAKEN),
+        _ => ServerFnError::new(error.to_string()),
+    }
 }
 
 #[cfg(feature = "server")]
@@ -2410,4 +2422,22 @@ pub async fn export_recipe_html(
     .await
     .map_err(|_| ServerFnError::new("Exports are busy. Try again shortly."))?
     .map_err(ServerFnError::new)
+}
+
+#[cfg(all(test, feature = "server"))]
+mod recipe_name_error_tests {
+    use super::*;
+
+    #[test]
+    fn typed_name_conflict_uses_api_wording_instead_of_database_display_text() {
+        let error = recipe_database_error(crate::db::DbError::RecipeNameTaken);
+        assert!(matches!(
+            error,
+            ServerFnError::ServerError { message, .. } if message == RECIPE_NAME_TAKEN
+        ));
+        assert_ne!(
+            crate::db::DbError::RecipeNameTaken.to_string(),
+            RECIPE_NAME_TAKEN
+        );
+    }
 }
