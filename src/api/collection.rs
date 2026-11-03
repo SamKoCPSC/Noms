@@ -3,6 +3,12 @@
 use dioxus::prelude::*;
 use uuid::Uuid;
 
+pub(crate) const COLLECTION_NAME_TAKEN: &str = "You already have a collection with this name.";
+
+pub(crate) fn is_name_conflict(error: &ServerFnError) -> bool {
+    matches!(error, ServerFnError::ServerError { message, .. } if message == COLLECTION_NAME_TAKEN)
+}
+
 #[cfg(feature = "server")]
 use sqlx::PgPool;
 
@@ -46,9 +52,7 @@ impl std::fmt::Display for CollectionApiError {
             Self::InvalidImage => "Collection image is invalid",
             Self::CollectionNotFound => "Collection not found",
             Self::ParentNotFound => "Parent collection not found",
-            Self::NameTaken => {
-                "You already have a collection with this name. Choose a different name."
-            }
+            Self::NameTaken => COLLECTION_NAME_TAKEN,
             Self::CollectionCycle => "A collection cannot be moved into itself or a descendant",
             Self::RecipeNotAccessible => "Recipe not accessible",
             Self::RecipeAlreadyInCollection => "Recipe is already in this collection",
