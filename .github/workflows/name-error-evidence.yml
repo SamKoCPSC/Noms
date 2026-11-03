@@ -1,0 +1,148 @@
+name: Capture resource name errors
+on:
+  push:
+    branches: [codex/name-conflict-client-evidence]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_DEV_INCREMENTAL: "false"
+      SQLX_OFFLINE: "true"
+      NOMS_ENV: local
+      BASE_URL: http://127.0.0.1:8080
+      DATABASE_URL: postgres://noms_ci:noms_ci_pass@127.0.0.1:5432/noms_name_errors
+      SESSION_SECRET: synthetic-name-error-browser-evidence-only-2026
+      R2_ENDPOINT: http://127.0.0.1:9000
+      R2_ACCESS_KEY_ID: synthetic-local-key
+      R2_SECRET_ACCESS_KEY: synthetic-local-secret
+      R2_BUCKET: noms-media
+      R2_PUBLIC_URL: http://127.0.0.1:9000/noms-media
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
+        with:
+          shared-key: name-error-browser
+      - name: Install browser and pinned build tools
+        run: |
+          python3 -m venv /tmp/name-error-python
+          /tmp/name-error-python/bin/pip install playwright==1.58.0
+          /tmp/name-error-python/bin/python -m playwright install --with-deps chromium
+          mkdir -p /tmp/name-error-dx
+          curl --fail --location --retry 3 \
+            https://github.com/DioxusLabs/dioxus/releases/download/v0.7.9/dx-x86_64-unknown-linux-gnu.tar.gz \
+            --output /tmp/name-error-dx.tar.gz
+          echo '3b132551b480bc96f938f9f0d37936ee1190f994977539dcc347eaf38540d005  /tmp/name-error-dx.tar.gz' | sha256sum --check
+          tar -xzf /tmp/name-error-dx.tar.gz -C /tmp/name-error-dx
+          dx_path="$(find /tmp/name-error-dx -type f -name dx -print -quit)"
+          install -m 755 "$dx_path" /usr/local/bin/dx
+          go install github.com/pgplex/pgschema@v1.12.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Start disposable PostgreSQL and apply schema
+        run: |
+          docker build --tag noms-name-error-postgres docker/postgres
+          docker run --detach --name noms-name-error-postgres --publish 127.0.0.1:5432:5432 \
+            --env POSTGRES_USER=noms_ci --env POSTGRES_PASSWORD=noms_ci_pass \
+            --env POSTGRES_DB=noms_name_errors noms-name-error-postgres
+          for attempt in {1..60}; do
+            if docker exec noms-name-error-postgres pg_isready -U noms_ci -d noms_name_errors; then break; fi
+            sleep 2
+          done
+          docker exec --interactive noms-name-error-postgres \
+            psql --set ON_ERROR_STOP=1 --username noms_ci --dbname noms_name_errors < migrations/extensions.sql
+          pgschema apply \
+            --host localhost --port 5432 --db noms_name_errors --user noms_ci --password noms_ci_pass \
+            --plan-host localhost --plan-port 5432 --plan-db noms_name_errors \
+            --plan-user noms_ci --plan-password noms_ci_pass \
+            --file migrations/schema.sql --schema public --auto-approve
+      - name: Build and start the real client and server
+        run: |
+          dx serve --platform web --addr 127.0.0.1 --port 8080 \
+            --open false --interactive false --force-sequential true --debug-symbols false \
+            > /tmp/name-error-app.log 2>&1 &
+          echo "$!" > /tmp/name-error-app.pid
+          for attempt in {1..1200}; do
+            if curl --fail --silent http://127.0.0.1:8080/api/user_profile | python3 -c 'import json,sys; assert isinstance(json.load(sys.stdin),dict)' 2>/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/name-error-app.pid)" 2>/dev/null; then
+              tail -n 160 /tmp/name-error-app.log
+              exit 1
+            fi
+            sleep 2
+          done
+          tail -n 160 /tmp/name-error-app.log
+          exit 1
+      - name: Capture real duplicate-name rejections
+        run: /tmp/name-error-python/bin/python scripts/tests/test-resource-name-errors-browser.py --output /tmp/name-error-screenshots
+      - name: Upload screenshots and checks
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: resource-name-error-screenshots
+          path: /tmp/name-error-screenshots/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Show application diagnostics on failure
+        if: failure()
+        run: tail -n 160 /tmp/name-error-app.log || true
+      - name: Stop disposable PostgreSQL
+        if: always()
+        run: docker rm --force noms-name-error-postgres || true
+  publish-evidence:
+    needs: capture
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: resource-name-error-screenshots
+          path: evidence
+      - name: Publish synthetic screenshots on a separate evidence branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, pathlib, urllib.request
+          root = pathlib.Path("evidence")
+          branch = "codex/name-error-screenshots-" + os.environ["RUN_ID"]
+          def api(path, body):
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/" + os.environ["REPOSITORY"] + path,
+                  data=json.dumps(body).encode(),
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json",
+                           "X-GitHub-Api-Version": "2022-11-28"}, method="POST")
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+          (root / "README.md").write_text(
+              "# Noms name conflict screenshots\n\n"
+              "Real hydrated client, synthetic data, actual database uniqueness violations.\n\n"
+              "Source: " + os.environ["SOURCE_SHA"] + "\n")
+          entries = []
+          for path in sorted(root.iterdir()):
+              if path.is_file() and path.suffix in {".png", ".html", ".json", ".md"}:
+                  blob = api("/git/blobs", {"content": base64.b64encode(path.read_bytes()).decode(), "encoding": "base64"})
+                  entries.append({"path": path.name, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+          tree = api("/git/trees", {"tree": entries})
+          commit = api("/git/commits", {"message": "Capture Noms name-conflict client examples", "tree": tree["sha"], "parents": []})
+          api("/git/refs", {"ref": "refs/heads/" + branch, "sha": commit["sha"]})
+          print("Evidence branch: " + branch)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write("Screenshots: https://github.com/" + os.environ["REPOSITORY"] + "/tree/" + branch + "\n")
+          PY
