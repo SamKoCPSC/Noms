@@ -38,9 +38,12 @@ impl TestDatabase {
                         let starting = match &error {
                             sqlx::Error::Io(cause) => matches!(
                                 cause.kind(),
-                                std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
+                                std::io::ErrorKind::NotFound
+                                    | std::io::ErrorKind::ConnectionRefused
                             ),
-                            sqlx::Error::Database(cause) => cause.code().as_deref() == Some("57P03"),
+                            sqlx::Error::Database(cause) => {
+                                cause.code().as_deref() == Some("57P03")
+                            }
                             _ => false,
                         };
                         assert!(starting, "temporary PostgreSQL startup failed: {error}");
@@ -139,8 +142,8 @@ mod tests {
     #[tokio::test]
     async fn socket_uri_with_spaces_round_trips_through_sqlx_and_psql() {
         // macOS TMPDIR is deeply nested; keep this Unix socket path below its length limit.
-        let directory =
-            std::path::Path::new("/tmp").join(format!("noms socket {}", uuid::Uuid::new_v4().simple()));
+        let directory = std::path::Path::new("/tmp")
+            .join(format!("noms socket {}", uuid::Uuid::new_v4().simple()));
         std::fs::create_dir(&directory).unwrap();
         let database = TestDatabase::from_builder(
             pgtemp::PgTempDB::builder().with_data_dir_prefix(&directory),
