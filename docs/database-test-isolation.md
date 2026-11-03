@@ -30,6 +30,13 @@ The exported URI supports SQLx, psql and local browser fixtures. Socket paths
 are percent encoded, including spaces; URI query values must not use the
 form-encoding '+' convention for spaces.
 
+pgtemp also returns after a fixed 100 ms delay rather than checking readiness.
+Under parallel CI load the socket can still be absent. The helper therefore
+waits up to ten seconds for a successful connection to its private socket,
+retrying only missing/refused sockets and PostgreSQL's starting-up response
+(57P03). All other errors fail immediately. The readiness connection is closed
+before the fixture schema is applied.
+
 No production database settings, application queries, schema or test
 parallelism change. These tests remain concurrent and do not retry failed
 application assertions or silently ignore database setup errors.

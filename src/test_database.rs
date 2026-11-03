@@ -5,6 +5,9 @@
 //! cluster. Disable TCP and use the socket inside each cluster's unique directory.
 //! Keep the handle alive until every connection to that cluster is finished.
 
+use sqlx::Connection;
+use std::time::Duration;
+
 pub struct TestDatabase {
     inner: pgtemp::PgTempDB,
 }
@@ -15,12 +18,43 @@ impl TestDatabase {
     }
 
     async fn from_builder(builder: pgtemp::PgTempDBBuilder) -> Self {
-        Self {
+        let database = Self {
             inner: builder
                 .with_config_param("listen_addresses", "")
                 .start_async()
                 .await,
-        }
+        };
+        database.wait_until_ready().await;
+        database
+    }
+
+    async fn wait_until_ready(&self) {
+        let uri = self.connection_uri();
+        let connection = tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                match sqlx::PgConnection::connect(&uri).await {
+                    Ok(connection) => break connection,
+                    Err(error) => {
+                        let starting = match &error {
+                            sqlx::Error::Io(cause) => matches!(
+                                cause.kind(),
+                                std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
+                            ),
+                            sqlx::Error::Database(cause) => cause.code().as_deref() == Some("57P03"),
+                            _ => false,
+                        };
+                        assert!(starting, "temporary PostgreSQL startup failed: {error}");
+                        tokio::time::sleep(Duration::from_millis(10)).await;
+                    }
+                }
+            }
+        })
+        .await
+        .expect("temporary PostgreSQL socket did not become ready within 10 seconds");
+        connection
+            .close()
+            .await
+            .expect("failed to close the temporary PostgreSQL readiness connection");
     }
 
     /// The same URI works with SQLx, libpq/psql and local browser fixtures.
@@ -104,8 +138,9 @@ mod tests {
 
     #[tokio::test]
     async fn socket_uri_with_spaces_round_trips_through_sqlx_and_psql() {
+        // macOS TMPDIR is deeply nested; keep this Unix socket path below its length limit.
         let directory =
-            std::env::temp_dir().join(format!("noms socket {}", uuid::Uuid::new_v4().simple()));
+            std::path::Path::new("/tmp").join(format!("noms socket {}", uuid::Uuid::new_v4().simple()));
         std::fs::create_dir(&directory).unwrap();
         let database = TestDatabase::from_builder(
             pgtemp::PgTempDB::builder().with_data_dir_prefix(&directory),
