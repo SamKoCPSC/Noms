@@ -54,7 +54,11 @@ pub async fn create_collection_json_import(
     let mut root_name = original_name.clone();
     for copy in 1..=crate::security::MAX_COLLECTION_CHILDREN + 1 {
         if !existing_names.contains(
-            &root_name.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase(),
+            &root_name
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .to_lowercase(),
         ) {
             break;
         }

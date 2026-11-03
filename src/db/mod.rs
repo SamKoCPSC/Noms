@@ -20,9 +20,9 @@ mod versioning;
 
 #[cfg(test)]
 mod display_name_tests;
-mod resource_names;
 #[cfg(test)]
 mod media_asset_tests;
+mod resource_names;
 
 pub use media_assets::*;
 #[allow(unused_imports)]

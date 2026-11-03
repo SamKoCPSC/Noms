@@ -534,17 +534,27 @@ fn renamed_import(json: &str, suffix: &str) -> String {
 async fn collection_name_collision_rolls_back_new_recipes_and_the_imported_tree() {
     let (_db, pool) = crate::test_utils::setup_test_db().await;
     let (owner, root, _) = tree(&pool).await;
-    let original = db::export_collection_json(&pool, owner.id, root).await.unwrap();
+    let original = db::export_collection_json(&pool, owner.id, root)
+        .await
+        .unwrap();
     let importer = user(&pool, "name-conflict").await;
     let storage = crate::storage::StorageClient::for_test();
     // A conflict in a nested node must undo recipes and a root already inserted.
     db::insert_collection(
-        &pool, importer.id, None, "Weeknights", None,
-        crate::types::CollectionVisibility::Private, None,
-    ).await.unwrap();
+        &pool,
+        importer.id,
+        None,
+        "Weeknights",
+        None,
+        crate::types::CollectionVisibility::Private,
+        None,
+    )
+    .await
+    .unwrap();
     let before = counts(&pool, importer.id).await;
     let error = import_for_user(&pool, &storage, importer.id, &original, &[])
-        .await.unwrap_err();
+        .await
+        .unwrap_err();
     assert!(error.to_string().contains("A collection in this import"));
     assert_eq!(counts(&pool, importer.id).await, before);
 }

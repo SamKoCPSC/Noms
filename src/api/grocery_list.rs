@@ -226,8 +226,12 @@ mod name_conflict_tests {
     fn name_conflict_is_friendly_and_unknown_outcomes_are_distinct() {
         let error = database_error(crate::db::grocery::GroceryError::NameTaken);
         assert!(is_name_conflict(&error));
-        assert!(matches!(error, ServerFnError::ServerError { message, .. } if message == GROCERY_LIST_NAME_TAKEN));
+        assert!(
+            matches!(error, ServerFnError::ServerError { message, .. } if message == GROCERY_LIST_NAME_TAKEN)
+        );
         assert!(!is_name_conflict(&ServerFnError::new("Request timed out")));
-        assert!(!is_name_conflict(&database_error(crate::db::grocery::GroceryError::Conflict)));
+        assert!(!is_name_conflict(&database_error(
+            crate::db::grocery::GroceryError::Conflict
+        )));
     }
 }

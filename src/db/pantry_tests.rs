@@ -440,15 +440,29 @@ async fn pantry_name_conflicts_preserve_inventory_revisions_and_copy_retries() {
     let mut copy = PantryCreate {
         request_id: Uuid::new_v4(),
         name: "home pantry".into(),
-        copy: Some(PantryCopy { id: saved.id, expected_revision: saved.revision }),
+        copy: Some(PantryCopy {
+            id: saved.id,
+            expected_revision: saved.revision,
+        }),
         ..Default::default()
     };
-    assert!(matches!(create(&pool, owner, copy.clone()).await, Err(PantryError::NameTaken)));
+    assert!(matches!(
+        create(&pool, owner, copy.clone()).await,
+        Err(PantryError::NameTaken)
+    ));
     assert_eq!(summaries(&pool, owner).await.unwrap().len(), 1);
     copy.name = "Cabin pantry".into();
     let second = create(&pool, owner, copy).await.unwrap();
     assert!(matches!(
-        edit_profile(&pool, owner, second.id, 0, "home pantry".into(), "Changed note".into()).await,
+        edit_profile(
+            &pool,
+            owner,
+            second.id,
+            0,
+            "home pantry".into(),
+            "Changed note".into()
+        )
+        .await,
         Err(PantryError::NameTaken)
     ));
     let unchanged = get(&pool, owner, second.id).await.unwrap();
@@ -456,5 +470,7 @@ async fn pantry_name_conflicts_preserve_inventory_revisions_and_copy_retries() {
     assert_eq!(unchanged.note, "");
     assert_eq!(unchanged.revision, 0);
     assert_eq!(unchanged.entries.len(), saved.entries.len());
-    edit_profile(&pool, owner, second.id, 0, "CABIN pantry".into(), "".into()).await.unwrap();
+    edit_profile(&pool, owner, second.id, 0, "CABIN pantry".into(), "".into())
+        .await
+        .unwrap();
 }

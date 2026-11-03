@@ -46,7 +46,9 @@ impl std::fmt::Display for CollectionApiError {
             Self::InvalidImage => "Collection image is invalid",
             Self::CollectionNotFound => "Collection not found",
             Self::ParentNotFound => "Parent collection not found",
-            Self::NameTaken => "You already have a collection with this name. Choose a different name.",
+            Self::NameTaken => {
+                "You already have a collection with this name. Choose a different name."
+            }
             Self::CollectionCycle => "A collection cannot be moved into itself or a descendant",
             Self::RecipeNotAccessible => "Recipe not accessible",
             Self::RecipeAlreadyInCollection => "Recipe is already in this collection",
