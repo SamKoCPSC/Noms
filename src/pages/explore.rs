@@ -411,7 +411,7 @@ mod tests {
             .unwrap();
         assert!(source.contains("framed: true"));
         assert!(source.contains("key: \"{recipe.id}\""));
-        assert!(source.contains("aria_label: \"Search public recipes\""));
+        assert!(source.contains("accessible_name: \"Search public recipes\""));
         assert!(source.contains("retry_generation()"));
         assert!(source.contains("\"Retry\""));
         assert!(!source.contains("selected_tag"));

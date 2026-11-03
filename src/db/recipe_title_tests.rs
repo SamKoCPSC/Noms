@@ -10,7 +10,7 @@ async fn search_integration_recipe_title_suggestions_are_live_distinct_bounded_a
     let term = format!("titlecheck{}", crate::test_utils::uid());
     for user in [viewer, other] {
         sqlx::query(
-            "INSERT INTO users(id,username,display_name,email) VALUES($1,$2,'Title test',$3)",
+            "INSERT INTO users(id,username,display_name,email) VALUES($1,$2,$2,$3)",
         )
         .bind(user)
         .bind(format!("title_{}", &user.simple().to_string()[..20]))

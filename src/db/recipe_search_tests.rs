@@ -11,7 +11,7 @@ async fn search_integration_summary_shares_index_scan_and_preserves_facet_bounda
     let term = format!("facetboundary{}", crate::test_utils::uid());
     for id in [owner, other] {
         sqlx::query(
-            "INSERT INTO users(id,username,display_name,email) VALUES($1,$2,'Facet test',$3)",
+            "INSERT INTO users(id,username,display_name,email) VALUES($1,$2,$2,$3)",
         )
         .bind(id)
         .bind(format!("facet_{}", &id.simple().to_string()[..20]))

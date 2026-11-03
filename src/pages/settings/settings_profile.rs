@@ -25,6 +25,7 @@ mod recovery_tests;
 
 // Matches users.display_name VARCHAR(100), including names imported by OAuth.
 const PROFILE_DISPLAY_NAME_MAX_CHARACTERS: usize = 100;
+const DISPLAY_NAME_TAKEN: &str = "That display name is already taken. Please choose another.";
 
 /// Shared display-name validation for the form and its server write boundary.
 fn validate_profile_display_name(name: &str) -> Result<(), &'static str> {
@@ -49,6 +50,7 @@ fn profile_save_feedback(error: &ServerFnError) -> &str {
             | "Display name must be 2-30 characters"
             | "Display name must be 2-100 characters"
             | "Bio must be 160 characters or less"
+            | DISPLAY_NAME_TAKEN
             | "That username is already taken. Please choose another." => return message,
             "Not authenticated" => return "Sign in again in another tab, then retry saving. Keep this page open to retain your entries.",
             _ => {}
@@ -294,23 +296,23 @@ pub async fn save_profile(
         }
     }
 
-    // --- Apply username change if provided ---
-    if let Some(ref username) = trimmed_username {
-        crate::db::update_username(&pool, user_id, username)
-            .await
-            .map_err(|e| match &e {
-                crate::db::DbError::UsernameTaken => {
-                    ServerFnError::new("That username is already taken. Please choose another.")
-                }
-                _ => ServerFnError::new(e.to_string()),
-            })?;
-    }
-
-    // --- Apply display_name + bio update ---
-    let updated =
-        crate::db::update_user_profile(&pool, user_id, &trimmed_name, trimmed_bio.as_deref())
-            .await
-            .map_err(|e| ServerFnError::new(e.to_string()))?;
+    // The database constraint also arbitrates concurrent claims. Keep the
+    // username, display name and bio in one transaction on any conflict.
+    let updated = crate::db::update_user_profile_and_username(
+        &pool,
+        user_id,
+        &trimmed_name,
+        trimmed_bio.as_deref(),
+        trimmed_username.as_deref(),
+    )
+    .await
+    .map_err(|error| match error {
+        crate::db::DbError::DisplayNameTaken => ServerFnError::new(DISPLAY_NAME_TAKEN),
+        crate::db::DbError::UsernameTaken => {
+            ServerFnError::new("That username is already taken. Please choose another.")
+        }
+        _ => ServerFnError::new("Could not save profile. Please try again."),
+    })?;
 
     Ok(UserProfile {
         id: updated.id,

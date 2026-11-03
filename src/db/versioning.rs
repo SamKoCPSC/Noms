@@ -4716,7 +4716,7 @@ mod tests {
         insert_user(
             pool,
             &format!("{prefix}_{suffix}"),
-            "Version Owner",
+            &format!("Version Owner {suffix}"),
             &format!("{prefix}_{suffix}@example.test"),
             None,
         )

@@ -17,14 +17,17 @@ const PAINTED_BOOK: Asset = asset!(
 pub enum PageIconKind {
     /// H1 kitchen cottage: the shared Home destination identity.
     Home,
+    Introduction,
     Dashboard,
     Explore,
     Search,
     Collections,
+    Kitchen,
     Editor,
     Import,
     History,
     Profile,
+    Accounts,
     Settings,
     About,
     HowTo,
@@ -37,6 +40,15 @@ impl PageIconKind {
         match self {
             Self::Home => asset!(
                 "/assets/brand/page-icons/home-v1.png",
+                ImageAssetOptions::new()
+                    .with_webp()
+                    .with_size(ImageSize::Manual {
+                        width: 192,
+                        height: 192
+                    })
+            ),
+            Self::Introduction => asset!(
+                "/assets/brand/page-icons/introduction-v1.png",
                 ImageAssetOptions::new()
                     .with_webp()
                     .with_size(ImageSize::Manual {
@@ -98,6 +110,15 @@ impl PageIconKind {
                         height: 192
                     })
             ),
+            Self::Kitchen => asset!(
+                "/assets/brand/page-icons/kitchen-v1.png",
+                ImageAssetOptions::new()
+                    .with_webp()
+                    .with_size(ImageSize::Manual {
+                        width: 192,
+                        height: 192
+                    })
+            ),
             Self::Editor => asset!(
                 "/assets/brand/page-icons/editor-v1.png",
                 ImageAssetOptions::new()
@@ -127,6 +148,15 @@ impl PageIconKind {
             ),
             Self::Profile => asset!(
                 "/assets/brand/page-icons/profile-v1.png",
+                ImageAssetOptions::new()
+                    .with_webp()
+                    .with_size(ImageSize::Manual {
+                        width: 192,
+                        height: 192
+                    })
+            ),
+            Self::Accounts => asset!(
+                "/assets/brand/page-icons/accounts-v1.png",
                 ImageAssetOptions::new()
                     .with_webp()
                     .with_size(ImageSize::Manual {
@@ -231,14 +261,17 @@ mod tests {
     fn all_page_identities_render_distinct_decorative_sized_assets() {
         let icons = [
             (PageIconKind::Home, "home-v1"),
+            (PageIconKind::Introduction, "introduction-v1"),
             (PageIconKind::Dashboard, "dashboard-v1"),
             (PageIconKind::Explore, "explore-v1"),
             (PageIconKind::Search, "search-v1"),
             (PageIconKind::Collections, "collections-v1"),
+            (PageIconKind::Kitchen, "kitchen-v1"),
             (PageIconKind::Editor, "editor-v1"),
             (PageIconKind::Import, "import-v1"),
             (PageIconKind::History, "history-v1"),
             (PageIconKind::Profile, "profile-v1"),
+            (PageIconKind::Accounts, "accounts-v1"),
             (PageIconKind::Settings, "settings-v1"),
             (PageIconKind::About, "about-v1"),
             (PageIconKind::HowTo, "how-to-v1"),

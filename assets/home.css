@@ -8,7 +8,7 @@
     --landing-accent: #985436;
     --landing-line: #302d2526;
     --landing-raised: 8px 8px 20px #302d251c, -7px -7px 20px #fff9ef;
-    --landing-inset: inset 5px 5px 11px #302d2519, inset -5px -5px 11px #fff9ef;
+    --landing-inset: var(--elevation-inset);
     background: var(--landing-bg);
     color: var(--landing-ink);
     padding-bottom: 35px;

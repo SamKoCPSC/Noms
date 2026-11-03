@@ -7,7 +7,7 @@ async fn owner(pool: &PgPool, prefix: &str) -> User {
     insert_user(
         pool,
         &format!("{prefix}_{suffix}"),
-        "Media Asset Owner",
+        &format!("Media Asset Owner {suffix}"),
         &format!("{prefix}_{suffix}@example.test"),
         None,
     )
