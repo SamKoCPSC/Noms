@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 pub mod diff;
 pub mod grocery;
+pub mod grocery_transfer;
 mod media_assets;
 pub mod pantry;
 pub mod pantry_recipes;

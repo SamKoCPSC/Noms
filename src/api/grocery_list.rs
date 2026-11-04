@@ -234,3 +234,24 @@ mod name_conflict_tests {
         )));
     }
 }
+
+/// Put away selected purchased rows without consuming or changing the shopping list.
+#[server]
+pub async fn transfer_purchased_groceries(
+    expected_account_id: Option<Uuid>,
+    list_id: Uuid,
+    expected_revision: i64,
+    pantry_id: Uuid,
+    item_ids: Vec<Uuid>,
+) -> Result<(), ServerFnError> {
+    let owner = actor(expected_account_id, true).await?;
+    budget(crate::db::grocery_transfer::transfer(
+        &crate::db::get_pool(),
+        owner,
+        list_id,
+        expected_revision,
+        pantry_id,
+        item_ids,
+    ))
+    .await
+}

@@ -322,6 +322,7 @@ fn GroceryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                     }
                                     div {
                                         class: "grocery-heading-actions",
+                                        super::grocery_transfer::PutAwayGroceries { key: "{list.id}-{list.revision}", list: list.clone(), disabled }
                                         button {
                                             class: "btn btn-secondary",
                                             disabled,

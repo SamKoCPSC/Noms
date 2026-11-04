@@ -2,6 +2,7 @@ mod pantry;
 mod pantry_recipes;
 pub use pantry::{Pantry, PantryDetail, PantryNew};
 mod grocery;
+mod grocery_transfer;
 pub use grocery::{GroceryListDetail, GroceryListFromPantry, GroceryListNew, GroceryLists};
 mod about;
 // The About route owns and disposes its client-side 3D runtime.

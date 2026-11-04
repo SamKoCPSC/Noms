@@ -128,7 +128,7 @@ pub async fn get(pool: &PgPool, owner: Uuid, id: Uuid) -> Result<GroceryList, Gr
     tx.commit().await?;
     Ok(result)
 }
-async fn load_owned(
+pub(super) async fn load_owned(
     conn: &mut PgConnection,
     owner: Uuid,
     id: Uuid,
