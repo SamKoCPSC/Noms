@@ -28,6 +28,8 @@ mod security;
 #[cfg(feature = "server")]
 mod storage;
 #[cfg(all(feature = "server", test))]
+mod test_database;
+#[cfg(all(feature = "server", test))]
 mod test_utils;
 mod types;
 #[cfg(all(feature = "server", test))]

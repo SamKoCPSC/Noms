@@ -2,3 +2,6 @@
 pub mod equipment;
 pub mod units;
 pub mod vocabulary;
+
+#[cfg(all(feature = "server", test))]
+mod test_database;

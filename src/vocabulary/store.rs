@@ -284,8 +284,13 @@ mod tests {
     // Keep ranking/transaction fixtures stable as the maintained catalog grows.
     // The full catalog is validated separately by vocabulary::tests and the seed CLI.
 
-    async fn popularity_db() -> (pgtemp::PgTempDB, PgPool, SeedFile, SourceManifest) {
-        let db = pgtemp::PgTempDB::async_new().await;
+    async fn popularity_db() -> (
+        crate::test_database::TestDatabase,
+        PgPool,
+        SeedFile,
+        SourceManifest,
+    ) {
+        let db = crate::test_database::TestDatabase::start().await;
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(12)
             .connect(&db.connection_uri())
@@ -680,7 +685,7 @@ mod tests {
 
     #[tokio::test]
     async fn seed_additions_are_visible_and_loading_is_atomic_and_idempotent() {
-        let db = pgtemp::PgTempDB::async_new().await;
+        let db = crate::test_database::TestDatabase::start().await;
         let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(1)
             .connect(&db.connection_uri())

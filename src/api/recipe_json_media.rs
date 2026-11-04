@@ -304,7 +304,7 @@ mod tests {
     use super::*;
     use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
     async fn fixture() -> (
-        pgtemp::PgTempDB,
+        crate::test_database::TestDatabase,
         sqlx::PgPool,
         MockServer,
         StorageClient,
