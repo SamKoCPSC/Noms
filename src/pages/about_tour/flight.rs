@@ -1,6 +1,8 @@
 use super::math::*;
 pub const COUNT: usize = super::super::about::IDS.len();
 pub const FOV: f32 = 0.88;
+// Keep in sync with the mobile card height in about-tour.css.
+pub const MOBILE_PANEL_TOP: f32 = 0.48;
 const EYES: [[f32; 3]; COUNT] = [
     [0., 3.1, 12.],
     [7., 3.9, -10.],
@@ -101,7 +103,7 @@ impl RoomFrame {
     }
     pub fn model(&self, w: f32, h: f32, rotation: Mat4) -> Mat4 {
         let (left, top, right, bottom) = if w <= 700. {
-            (12., 54., w - 12., h * 0.53 - 12.)
+            (8., 6., w - 8., h * MOBILE_PANEL_TOP - 10.)
         } else {
             (
                 w * 0.035 + (w * 0.4).clamp(320., 520.) + 16.,
@@ -123,12 +125,18 @@ impl RoomFrame {
                 }
             }
         }
+        // Width-limited rooms otherwise leave a large empty gap below them.
+        // Align the projected silhouette with the card, retaining the fit above.
+        let y = if w <= 700. {
+            self.outlines[1]
+                .iter()
+                .map(|&[p, z]| (h * 0.5 - bottom) * (distance - size * z) / focal - size * p)
+                .fold(f32::NEG_INFINITY, f32::max)
+        } else {
+            offset[1] * distance / focal
+        };
         mul(
-            translate(
-                offset[0] * distance / focal,
-                offset[1] * distance / focal,
-                -distance,
-            ),
+            translate(offset[0] * distance / focal, y, -distance),
             mul(
                 scale(size, size, size),
                 mul(
@@ -150,7 +158,7 @@ pub fn panel_model(i: usize, w: f32, h: f32, pw: f32, ph: f32) -> Mat4 {
         (w * 0.035 + pw * 0.5 - w * 0.5) * unit
     };
     let center = if mobile {
-        h * 0.53 + ph * 0.5
+        h * MOBILE_PANEL_TOP + ph * 0.5
     } else {
         (h * 0.52).min(h - 24. - ph * 0.5)
     };
@@ -176,6 +184,26 @@ pub fn css_projection(vp: Mat4, model: Mat4, w: f32, h: f32) -> (Mat4, f32) {
         out[c * 4 + 3] = m[c * 4 + 3];
     }
     (out, m[15])
+}
+
+/// Document-space reading and travel distances for a mobile chapter.
+pub struct MobileSection {
+    pub read: f32,
+    pub hold: f32,
+    pub travel: f32,
+}
+impl MobileSection {
+    pub fn new(viewport: f32, text: f32, visible_text: f32) -> Self {
+        let read = (text - visible_text).max(0.);
+        Self {
+            read,
+            hold: read + (viewport * 0.16).max(80.),
+            travel: (viewport * 1.5).max(480.),
+        }
+    }
+    pub fn progress(&self, distance: f32) -> f32 {
+        ((distance - self.hold) / self.travel).clamp(0., 1.)
+    }
 }
 
 #[cfg(test)]
@@ -242,7 +270,7 @@ mod tests {
                     }
                 }
                 let (left, top, right, bottom) = if w <= 700. {
-                    (12., 54., w - 12., h * 0.53 - 12.)
+                    (8., 6., w - 8., h * MOBILE_PANEL_TOP - 10.)
                 } else {
                     (
                         w * 0.035 + (w * 0.4).clamp(320., 520.) + 16.,
@@ -264,20 +292,57 @@ mod tests {
                         || (extent[1][1] - extent[0][1]) > (bottom - top) * 0.65
                 );
                 let pw = if w <= 700. {
-                    w - 36.
+                    w - 24.
                 } else {
                     (w * 0.4).clamp(320., 520.)
                 };
-                let ph = if w <= 700. { h * 0.47 - 18. } else { h - 104. };
+                let ph = if w <= 700. {
+                    h * (1. - MOBILE_PANEL_TOP) - 18.
+                } else {
+                    h - 104.
+                };
                 let (panel, _) = css_projection(camera.vp, panel_model(i, w, h, pw, ph), w, h);
                 let panel_top = panel[13] / panel[15];
                 assert!(panel_top >= 0. && panel_top + ph <= h - 17.);
                 if w <= 700. {
-                    assert!(extent[1][1] < panel_top);
+                    assert!(
+                        (panel_top - extent[1][1] - 10.).abs() < 0.1,
+                        "room {i} gap: {extent:?}"
+                    );
                 } else {
                     assert!(panel[12] / panel[15] + pw < extent[0][0]);
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod mobile_reading_tests {
+    use super::*;
+    #[test]
+    fn camera_waits_for_all_text_even_on_short_screens() {
+        for viewport in [308., 558., 770.] {
+            for text in [180., 600., 1600.] {
+                let visible = viewport * (1. - MOBILE_PANEL_TOP) - 18. - 50.;
+                let section = MobileSection::new(viewport, text, visible);
+                assert_eq!(section.progress(0.), 0.);
+                assert_eq!(section.progress(section.read), 0.);
+                assert_eq!(section.progress(section.hold), 0.);
+                assert!(
+                    (section.progress(section.hold + section.travel * 0.5) - 0.5).abs() < 0.0001
+                );
+                assert!((section.progress(section.hold + section.travel) - 1.).abs() < 0.0001);
+                // The end of the text is inside the visible reading area.
+                assert!(text - section.read <= visible + 0.001);
+            }
+        }
+    }
+    #[test]
+    fn longer_copy_adds_reading_distance_without_speeding_up_travel() {
+        let short = MobileSection::new(770., 600., 294.);
+        let long = MobileSection::new(770., 1600., 294.);
+        assert!((long.hold - short.hold - 1000.).abs() < 0.001);
+        assert_eq!(short.travel, long.travel);
     }
 }

@@ -56,3 +56,17 @@ html:has(.about-tour.is-flight){scrollbar-gutter:stable}
 /* Reserve a full scene above the text on phones, alongside it on wider screens. */
 .about-tour.is-flight .story-panel{width:clamp(320px,40vw,520px);max-height:calc(100svh - var(--tour-top) - var(--tour-bottom) - 104px)}
 @media(max-width:700px){.about-tour.is-flight .story-panel[id]{width:calc(100vw - 36px);max-height:calc((100svh - var(--tour-top) - var(--tour-bottom)) * .47 - 18px)}}
+
+/* Mobile reading uses document travel, never a nested card scrollbar. */
+@media screen and (max-width:700px){
+ .about-tour .site-header{display:none}
+ .about-tour.is-flight .story{touch-action:pan-y pinch-zoom}
+ .about-tour.is-flight .story-panel[id]{height:calc((100svh - var(--tour-top) - var(--tour-bottom)) * .52 - 18px);max-height:none;overflow:hidden;width:calc(100vw - 24px);padding:24px;touch-action:pan-y pinch-zoom}
+ .about-tour.is-flight .panel-viewport{height:100%;overflow:clip}
+ .about-tour.is-flight .panel-content{display:flow-root;transform:translateY(var(--reading-offset,0px));will-change:transform}
+ .about-tour :is(h1,h2){line-height:1.12;margin-bottom:16px}
+ .about-tour h1{font-size:34px}
+ .about-tour h2{font-size:31px}
+ .about-tour .lead{font-size:15px;line-height:1.6}
+ .about-tour .detail{font-size:12.5px;line-height:1.7}
+}

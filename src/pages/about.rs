@@ -256,6 +256,7 @@ pub fn About() -> Element {
       for i in 0..IDS.len() {
        article{id:"panel-{i}",class:"story-panel","data-panel":"{i}",aria_labelledby:"title-{i}",
         span{id:"{IDS[i]}",class:"reader-anchor",aria_hidden:"true"}
+        div{class:"panel-viewport",div{class:"panel-content",
         div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","0{i+1}"}}
         if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
         if i==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
@@ -269,6 +270,7 @@ pub fn About() -> Element {
          if i==0{"Continue the story"}else if i+1==IDS.len(){"Take the tour again"}else{"Continue the story"}
          span{class:"arrow",aria_hidden:"true"}
         }
+        }}
        }
       }
      }
