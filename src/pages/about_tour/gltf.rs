@@ -49,7 +49,9 @@ fn view<'a>(doc: &Value, data: &'a [u8], index: usize) -> Result<&'a [u8], Strin
 fn floats(doc: &Value, data: &[u8], index: usize, width: usize) -> Result<Vec<f32>, String> {
     let a = &doc["accessors"][index];
     if a["type"].as_str()
-        != Some(if width == 2 {
+        != Some(if width == 1 {
+            "SCALAR"
+        } else if width == 2 {
             "VEC2"
         } else if width == 4 {
             "VEC4"
@@ -168,6 +170,16 @@ pub fn decode(bytes: &[u8]) -> Result<DioramaMesh, String> {
         if normals.len() != pos.len() || colors.len() * 3 != pos.len() * color_width {
             return Err(invalid());
         }
+        let metallic = attr["_METALLIC"]
+            .as_u64()
+            .map(|i| floats(&doc, data, i as usize, 1))
+            .transpose()?;
+        if metallic
+            .as_ref()
+            .is_some_and(|m| m.len() * 3 != pos.len() || m.iter().any(|v| !(0.0..=1.0).contains(v)))
+        {
+            return Err(invalid());
+        }
         let a = &doc["accessors"][number(p, "indices")?];
         let count = number(a, "count")?;
         if count > MAX_TRIANGLES * 3
@@ -215,10 +227,14 @@ pub fn decode(bytes: &[u8]) -> Result<DioramaMesh, String> {
                     .get(i * color_width..i * color_width + 3)
                     .ok_or_else(invalid)?,
             );
-            vertices.push(1.);
+            // Pack the custom surface factor into the otherwise unused GPU color alpha.
+            vertices.push(metallic.as_ref().map_or(1., |m| m[i]));
         }
         let meta =
             &doc["materials"][p["material"].as_u64().unwrap_or(0) as usize]["extras"]["assembly"];
+        if meta["surfaceMaterials"].as_bool() == Some(true) && metallic.is_none() {
+            return Err(invalid());
+        }
         if meta.is_object() {
             let vector = |key: &str| -> Result<[f32; 3], String> {
                 let mut v = [0.; 3];
@@ -369,7 +385,15 @@ mod tests {
     fn delivered_kitchen_preserves_colors_and_fits_the_web_budget() {
         let bytes = include_bytes!("../../../assets/about/sams-kitchen-detailed.glb");
         let m = decode(bytes).unwrap();
-        assert!(bytes.len() < 6_000_000);
+        let json_len = word(bytes, 12).unwrap() as usize;
+        let doc: Value = serde_json::from_slice(&bytes[20..20 + json_len]).unwrap();
+        // A baked final-scene lightmap would bring back shadows from absent props.
+        for material in doc["materials"].as_array().unwrap() {
+            let meta = &material["extras"]["assembly"];
+            assert_eq!(meta["surfaceMaterials"].as_bool(), Some(true));
+            assert_eq!(meta["masterLighting"].as_bool(), Some(false));
+        }
+        assert!(bytes.len() < 9_000_000);
         assert!(m.vertices.len() / 36 < 200_000);
         assert!(m.vertices.len() / 36 > 10_000);
         assert!(m.vertices.iter().all(|v| v.is_finite()));
@@ -387,28 +411,47 @@ mod tests {
             cursor += p.count;
             assert!(p.start >= 1. && p.end <= 144. && p.end > p.start);
             assert!(p.pivot.iter().chain(p.offset.iter()).all(|x| x.is_finite()));
-            assert!(p.texture <= 2);
+            assert!((1..=3).contains(&p.texture));
             if p.texture > 0 {
                 let uv = m.vertices[p.first * 12..(p.first + p.count) * 12]
                     .chunks_exact(12)
                     .flat_map(|v| [v[6], v[7]])
                     .collect::<Vec<_>>();
                 assert!(uv.iter().all(|v| (0.0..=1.0).contains(v)));
-                assert!(uv.iter().any(|v| *v > 0.5));
+                // A collapsed (0, 1) UV passes range checks but samples a black
+                // atlas corner. Every assembly/print must cover both UV axes.
+                for axis in 0..2 {
+                    let values = uv.iter().skip(axis).step_by(2).copied();
+                    let low = values.clone().fold(f32::INFINITY, f32::min);
+                    let high = values.fold(f32::NEG_INFINITY, f32::max);
+                    assert!(high - low > 0.01, "Collapsed UVs in {}", p.name);
+                }
             }
         }
         assert_eq!(cursor, m.vertices.len() / 12);
-        assert_eq!(m.parts.iter().filter(|p| p.texture > 0).count(), 2);
+        assert_eq!(m.parts.iter().filter(|p| p.texture == 3).count(), 18);
+        assert_eq!(
+            m.parts
+                .iter()
+                .filter(|p| (1..=2).contains(&p.texture))
+                .count(),
+            2
+        );
 
-        let colors = m
+        // Surface-color data stays unlit. GPU color alpha carries source metallic values;
+        // local cavities and roughness are in the paired material atlases.
+        assert!(m
+            .vertices
+            .chunks_exact(12)
+            .any(|v| v[11] > 0.5 && v[11] < 0.9));
+        assert!(m.vertices.chunks_exact(12).any(|v| v[11] == 0.));
+        // Preserve the source palette, with no spatial AO or shadow gradients.
+        let palette = m
             .vertices
             .chunks_exact(12)
             .map(|v| [v[8].to_bits(), v[9].to_bits(), v[10].to_bits()])
             .collect::<std::collections::HashSet<_>>();
-        assert!(
-            colors.len() > 20,
-            "The material palette must survive export"
-        );
+        assert!(palette.len() > 20);
     }
 
     #[test]

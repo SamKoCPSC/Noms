@@ -52,6 +52,10 @@ fn about_renders_the_five_approved_chapters_and_readable_fallback() {
     assert!(html.contains("loading=\"lazy\""));
     let opening = html.split("id=\"panel-1\"").next().unwrap();
     assert!(opening.contains("kitchen-fallback"));
+    assert!(html.contains("data-kitchen-surface-color-url"));
+    assert!(html.contains("data-kitchen-surface-normal-url"));
+    assert!(!html.contains("data-kitchen-lighting-url"));
+    assert!(!html.contains("data-kitchen-arrival-lighting-url"));
     let reason = html
         .split("id=\"panel-1\"")
         .nth(1)
@@ -97,7 +101,7 @@ fn about_renders_the_five_approved_chapters_and_readable_fallback() {
     assert!(garden.contains("Take the tour again"));
     assert!(html.contains("data-garden-url"));
     assert!(html.contains("data-garden-pastry-url"));
-    assert!(html.contains("01 / 05"));
+    assert!(html.contains("id=\"tour-chapter-status\""));
     assert!(html.contains("Nowadays I continue to support the project"));
     assert!(!html.contains("How did Noms start"));
 }
@@ -107,7 +111,8 @@ fn about_provides_motion_and_reading_controls_before_enhancement() {
     let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
     assert!(html.contains("id=\"mode-toggle\""));
     assert!(html.contains("id=\"motion-toggle\""));
-    assert!(html.contains("Story chapters"));
+    assert!(!html.contains("id=\"tour-navigation\""));
+    assert_eq!(html.matches("class=\"next-link\"").count(), 5);
     for id in ["idea", "why", "creator", "community", "gather"] {
         assert!(html.contains(&format!("href=\"#{id}\"")));
     }

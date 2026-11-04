@@ -11,8 +11,8 @@ buf=bytearray();views=[];accessors=[];primitives=[];materials=[]
 def append(data,target):
  while len(buf)%4:buf.append(0)
  views.append({'buffer':0,'byteOffset':len(buf),'byteLength':len(data),'target':target});buf.extend(data);return len(views)-1
-def attr(values,width,kind,fmt,normalized=False):
- vi=append(struct.pack('<'+fmt*len(values),*values),34963 if width==1 else 34962)
+def attr(values,width,kind,fmt,normalized=False,target=None):
+ vi=append(struct.pack('<'+fmt*len(values),*values),target if target is not None else 34963 if width==1 else 34962)
  a={'bufferView':vi,'componentType':kind,'count':len(values)//width,'type':{1:'SCALAR',2:'VEC2',3:'VEC3',4:'VEC4'}[width]}
  if normalized:a['normalized']=True
  accessors.append(a);return len(accessors)-1
@@ -21,6 +21,9 @@ mins=[min(min(p[k::3]) for p in allpos) for k in range(3)];maxs=[max(max(p[k::3]
 for p,positions in zip(ps,allpos):
  normals=accessor(p['attributes']['NORMAL']);colors=accessor(p['attributes']['COLOR_0']);indices=accessor(p['indices']);count=len(positions)//3
  attributes={'POSITION':attr([round((v-mins[i%3])/extent*65535) for i,v in enumerate(positions)],3,5123,'H',True),'NORMAL':attr([max(-32767,min(32767,round(v*32767))) for v in normals],3,5122,'h',True),'COLOR_0':attr([max(0,min(255,round(v*255))) for v in colors],len(colors)//count,5121,'B',True)}
+ if '_METALLIC' in p['attributes']:
+  metallic=accessor(p['attributes']['_METALLIC']);assert len(metallic)==count and all(0<=v<=1 for v in metallic)
+  attributes['_METALLIC']=attr(metallic,1,5126,'f',target=34962)
  metadata=d['materials'][p['material']]['extras']['assembly']
  if metadata['texture']:
   uv=accessor(p['attributes']['TEXCOORD_0']);attributes['TEXCOORD_0']=attr([max(0,min(65535,round(v*65535)))for v in uv],2,5123,'H',True)
