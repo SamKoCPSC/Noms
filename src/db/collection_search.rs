@@ -106,8 +106,7 @@ pub(super) async fn autocomplete_collections(
         text: Some(text.trim().to_owned()),
         ..CollectionSearchRequest::default()
     };
-    let mut query =
-        QueryBuilder::<Postgres>::new("SELECT c.id, c.name FROM collections c WHERE ");
+    let mut query = QueryBuilder::<Postgres>::new("SELECT c.id, c.name FROM collections c WHERE ");
     push_visibility(&mut query, resolved_user_id);
     push_criteria(&mut query, &request);
     query
@@ -244,8 +243,7 @@ async fn fetch_count(
     user_id: Option<Uuid>,
     request: &CollectionSearchRequest,
 ) -> Result<i64, DbError> {
-    let mut query =
-        QueryBuilder::<Postgres>::new("SELECT COUNT(*) FROM collections c WHERE ");
+    let mut query = QueryBuilder::<Postgres>::new("SELECT COUNT(*) FROM collections c WHERE ");
     push_visibility(&mut query, user_id);
     push_criteria(&mut query, request);
     query

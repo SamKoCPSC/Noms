@@ -277,7 +277,10 @@ async fn fetch_count(
 
 /// Plan and execute the indexed match once for all counts. Facets omit only
 /// their own selected filter; authorization, text, tags and dates always apply.
-fn summary_query(user_id: Option<Uuid>, request: &RecipeSearchRequest) -> QueryBuilder<'static, Postgres> {
+fn summary_query(
+    user_id: Option<Uuid>,
+    request: &RecipeSearchRequest,
+) -> QueryBuilder<'static, Postgres> {
     let mut query = QueryBuilder::<Postgres>::new(
         "WITH candidates AS MATERIALIZED (SELECT r.id, r.visibility, r.servings, \
          CASE WHEN r.prep_time_minutes IS NULL AND r.cook_time_minutes IS NULL THEN NULL \

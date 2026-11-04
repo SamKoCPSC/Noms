@@ -272,7 +272,11 @@ pub fn Search(query: SearchRouteQuery) -> Element {
                 Ok(parsed) => Some(load_search(parsed.request).await),
                 Err(_) => None,
             };
-            SearchSnapshot { query, viewer, result }
+            SearchSnapshot {
+                query,
+                viewer,
+                result,
+            }
         },
     ));
 
@@ -946,7 +950,8 @@ fn SearchResults(props: SearchResultsProps) -> Element {
     let result = if pending {
         None
     } else {
-        props.resource
+        props
+            .resource
             .read()
             .as_ref()
             .filter(|snapshot| snapshot.is_current(&props.query, props.viewer))
@@ -2181,7 +2186,8 @@ mod public_landing_search_tests {
     fn landing_search_uses_the_shared_public_search_page_and_preserves_text() {
         let text = "soup & thyme + peppers";
         let url = super::public_recipe_search_url(text);
-        let parsed = crate::search_url::parse_search_query(url.strip_prefix("/search?").unwrap()).unwrap();
+        let parsed =
+            crate::search_url::parse_search_query(url.strip_prefix("/search?").unwrap()).unwrap();
         assert_eq!(parsed.request.text(), text);
     }
 }

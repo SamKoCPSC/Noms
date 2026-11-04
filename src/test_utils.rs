@@ -2273,7 +2273,20 @@ mod search_integration_tests {
         )
         .await
         .expect("collection browse fallback failed");
-        assert_eq!(browse.total_count, 5);
+        // Blank browsing now includes public collections from other owners,
+        // including fixtures created by earlier integration tests.
+        let visible_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM collections WHERE owner_id = $1 OR visibility = 'public'",
+        )
+        .bind(owner_id)
+        .fetch_one(&pool)
+        .await
+        .expect("failed to count visible collections");
+        assert_eq!(browse.total_count, visible_count);
+        assert!(!browse
+            .results
+            .iter()
+            .any(|result| result.collection.id == other_collection_id));
         assert!(browse
             .results
             .iter()

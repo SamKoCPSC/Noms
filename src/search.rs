@@ -178,7 +178,10 @@ pub fn validate_user_search_request(
 }
 
 fn field_term_count(field: &AdvancedTextField) -> usize {
-    field.include.iter().chain(field.exclude.iter())
+    field
+        .include
+        .iter()
+        .chain(field.exclude.iter())
         .map(|criterion| search_term_count(&criterion.text))
         .sum()
 }
@@ -845,7 +848,9 @@ mod public_search_limits {
         });
         let mut request = CollectionSearchRequest {
             advanced: Some(AdvancedCollectionSearchCriteria {
-                name, description: field(32), ..Default::default()
+                name,
+                description: field(32),
+                ..Default::default()
             }),
             ..Default::default()
         };
@@ -861,7 +866,9 @@ mod public_search_limits {
     fn user_limits_combine_terms_across_public_fields() {
         let mut request = UserSearchRequest {
             advanced: Some(crate::types::AdvancedUserSearchCriteria {
-                username: field(16), display_name: field(16), bio: field(32),
+                username: field(16),
+                display_name: field(16),
+                bio: field(32),
             }),
             ..Default::default()
         };
