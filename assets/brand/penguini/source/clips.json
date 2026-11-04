@@ -1627,5 +1627,773 @@
       }
     ],
     "renderer": "thinking"
+  },
+  "silly-dance": {
+    "id": "silly-dance",
+    "label": "Silly dance",
+    "durationMs": 7200,
+    "tracks": [
+      {
+        "selector": ".penguin",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "translate(0px,0px) rotate(0deg) skewX(0deg) scale(1,1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.03611111111111111,
+            "transform": "translate(0px,0px) rotate(0deg) skewX(0deg) scale(1,1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.08611111111111111,
+            "transform": "translate(0px,8px) rotate(0deg) skewX(0deg) scale(1.06,0.94)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.125,
+            "transform": "translate(-26px,-24px) rotate(-9deg) skewX(-2deg) scale(1,0.995)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.15833333333333333,
+            "transform": "translate(-10px,3px) rotate(-2deg) skewX(0deg) scale(1.035,0.965)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.19166666666666668,
+            "transform": "translate(26px,-25px) rotate(9deg) skewX(2deg) scale(1,0.995)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.225,
+            "transform": "translate(10px,3px) rotate(2deg) skewX(0deg) scale(1.035,0.965)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.25833333333333336,
+            "transform": "translate(-26px,-25px) rotate(-9deg) skewX(-2deg) scale(1,0.995)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.2916666666666667,
+            "transform": "translate(-10px,3px) rotate(-2deg) skewX(0deg) scale(1.035,0.965)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.325,
+            "transform": "translate(26px,-25px) rotate(9deg) skewX(2deg) scale(1,0.995)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.35833333333333334,
+            "transform": "translate(10px,3px) rotate(2deg) skewX(0deg) scale(1.035,0.965)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.39166666666666666,
+            "transform": "translate(-28px,-28px) rotate(-10deg) skewX(-2deg) scale(1,0.99)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.425,
+            "transform": "translate(-10px,3px) rotate(-2deg) skewX(0deg) scale(1.035,0.965)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4583333333333333,
+            "transform": "translate(28px,-28px) rotate(10deg) skewX(2deg) scale(1,0.99)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.49166666666666664,
+            "transform": "translate(0px,9px) rotate(0deg) skewX(0deg) scale(1.07,0.93)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5277777777777778,
+            "transform": "translate(-6px,-70px) rotate(-4deg) skewX(0deg) scale(0.985,1.015)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5625,
+            "transform": "translate(0px,10px) rotate(0deg) skewX(0deg) scale(1.08,0.92)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5972222222222222,
+            "transform": "translate(6px,-48px) rotate(4deg) skewX(0deg) scale(0.99,1.01)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6319444444444444,
+            "transform": "translate(0px,8px) rotate(0deg) skewX(0deg) scale(1.06,0.94)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6666666666666666,
+            "transform": "translate(0px,0px) rotate(0deg) skewX(0deg) scale(1,1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6986111111111111,
+            "transform": "translate(-12px,-12px) rotate(-5deg) skewX(-2deg) scale(1.025,0.98)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7305555555555555,
+            "transform": "translate(12px,-12px) rotate(5deg) skewX(2deg) scale(1.025,0.98)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7625,
+            "transform": "translate(-10px,-10px) rotate(-4deg) skewX(-1.5deg) scale(1.02,0.985)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7944444444444444,
+            "transform": "translate(8px,-8px) rotate(3deg) skewX(1deg) scale(1.015,0.99)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8611111111111112,
+            "transform": "translate(0px,0px) rotate(0deg) skewX(0deg) scale(1,1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.9444444444444444,
+            "transform": "translate(0px,0px) rotate(0deg) skewX(0deg) scale(1,1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "translate(0px,0px) rotate(0deg) skewX(0deg) scale(1,1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".flipper",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "rotate(88deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.03611111111111111,
+            "transform": "rotate(88deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.08611111111111111,
+            "transform": "rotate(100deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.125,
+            "transform": "rotate(18deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.19166666666666668,
+            "transform": "rotate(108deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.25833333333333336,
+            "transform": "rotate(18deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.325,
+            "transform": "rotate(108deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.39166666666666666,
+            "transform": "rotate(12deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4583333333333333,
+            "transform": "rotate(105deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.49166666666666664,
+            "transform": "rotate(75deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5277777777777778,
+            "transform": "rotate(-10deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5625,
+            "transform": "rotate(38deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5972222222222222,
+            "transform": "rotate(5deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6319444444444444,
+            "transform": "rotate(68deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6666666666666666,
+            "transform": "rotate(75deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6986111111111111,
+            "transform": "rotate(48deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7305555555555555,
+            "transform": "rotate(105deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7625,
+            "transform": "rotate(48deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7944444444444444,
+            "transform": "rotate(100deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8611111111111112,
+            "transform": "rotate(78deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.9236111111111112,
+            "transform": "rotate(88deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "rotate(88deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".head",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.03611111111111111,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.08611111111111111,
+            "transform": "translate(0px,10px) rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.1375,
+            "transform": "translate(0px,-4px) rotate(11deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.20416666666666666,
+            "transform": "translate(0px,-2px) rotate(-12deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.2708333333333333,
+            "transform": "translate(0px,-4px) rotate(12deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.3375,
+            "transform": "translate(0px,-2px) rotate(-12deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4041666666666667,
+            "transform": "translate(0px,-5px) rotate(13deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4708333333333333,
+            "transform": "translate(0px,-3px) rotate(-13deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.49722222222222223,
+            "transform": "translate(0px,10px) rotate(-4deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5402777777777777,
+            "transform": "translate(0px,-8px) rotate(9deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5680555555555555,
+            "transform": "translate(0px,10px) rotate(2deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6097222222222223,
+            "transform": "translate(0px,-6px) rotate(-8deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6416666666666667,
+            "transform": "translate(0px,7px) rotate(-3deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6791666666666667,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7097222222222223,
+            "transform": "translate(0px,0px) rotate(8deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7416666666666667,
+            "transform": "translate(0px,0px) rotate(-8deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7736111111111111,
+            "transform": "translate(0px,0px) rotate(7deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8055555555555556,
+            "transform": "translate(0px,0px) rotate(-5deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8680555555555556,
+            "transform": "translate(0px,0px) rotate(2deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.9236111111111112,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "translate(0px,0px) rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".eyes-open",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "opacity": "1",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.1111111111111111,
+            "opacity": "0",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.4305555555555556,
+            "opacity": "1",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.5361111111111111,
+            "opacity": "0",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.8472222222222222,
+            "opacity": "1",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 1.0,
+            "opacity": "1",
+            "easing": "steps(1,end)"
+          }
+        ]
+      },
+      {
+        "selector": ".eyes-happy",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "opacity": "0",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.1111111111111111,
+            "opacity": "1",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.4305555555555556,
+            "opacity": "0",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.5361111111111111,
+            "opacity": "1",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 0.8472222222222222,
+            "opacity": "0",
+            "easing": "steps(1,end)"
+          },
+          {
+            "offset": 1.0,
+            "opacity": "0",
+            "easing": "steps(1,end)"
+          }
+        ]
+      },
+      {
+        "selector": ".blink",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.04861111111111111,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.06527777777777778,
+            "transform": "scaleY(0.08)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.08194444444444444,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4305555555555556,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4861111111111111,
+            "transform": "scaleY(1.12)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5277777777777778,
+            "transform": "scaleY(1.12)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5555555555555556,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8611111111111112,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8763888888888889,
+            "transform": "scaleY(0.08)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8930555555555556,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".lower-beak",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "scaleY(0.45)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.03611111111111111,
+            "transform": "scaleY(0.45)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.1111111111111111,
+            "transform": "scaleY(0.85)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.19166666666666668,
+            "transform": "scaleY(0.75)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.25833333333333336,
+            "transform": "scaleY(0.95)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.325,
+            "transform": "scaleY(0.75)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.39166666666666666,
+            "transform": "scaleY(0.95)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4583333333333333,
+            "transform": "scaleY(0.85)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.49166666666666664,
+            "transform": "scaleY(0.7)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5277777777777778,
+            "transform": "scaleY(1.1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5625,
+            "transform": "scaleY(0.75)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5972222222222222,
+            "transform": "scaleY(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6319444444444444,
+            "transform": "scaleY(0.8)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6666666666666666,
+            "transform": "scaleY(0.8)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7944444444444444,
+            "transform": "scaleY(0.75)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8472222222222222,
+            "transform": "scaleY(0.7)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.9236111111111112,
+            "transform": "scaleY(0.45)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "scaleY(0.45)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".shadow",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "scaleX(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.49166666666666664,
+            "transform": "scaleX(1.04)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5277777777777778,
+            "transform": "scaleX(0.72)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5625,
+            "transform": "scaleX(1.08)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5972222222222222,
+            "transform": "scaleX(0.8)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6319444444444444,
+            "transform": "scaleX(1.05)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6666666666666666,
+            "transform": "scaleX(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "scaleX(1)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          }
+        ]
+      },
+      {
+        "selector": ".left-flipper",
+        "keyframes": [
+          {
+            "offset": 0.0,
+            "transform": "rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.03611111111111111,
+            "transform": "rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.08611111111111111,
+            "transform": "rotate(-8deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.125,
+            "transform": "rotate(-26deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.19166666666666668,
+            "transform": "rotate(38deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.25833333333333336,
+            "transform": "rotate(-24deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.325,
+            "transform": "rotate(38deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.39166666666666666,
+            "transform": "rotate(-28deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.4583333333333333,
+            "transform": "rotate(40deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.49166666666666664,
+            "transform": "rotate(-5deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5277777777777778,
+            "transform": "rotate(30deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5625,
+            "transform": "rotate(6deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.5972222222222222,
+            "transform": "rotate(34deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6319444444444444,
+            "transform": "rotate(-4deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6666666666666666,
+            "transform": "rotate(3deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.6986111111111111,
+            "transform": "rotate(-20deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7305555555555555,
+            "transform": "rotate(28deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7625,
+            "transform": "rotate(-20deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.7944444444444444,
+            "transform": "rotate(24deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.8611111111111112,
+            "transform": "rotate(6deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 0.9236111111111112,
+            "transform": "rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          },
+          {
+            "offset": 1.0,
+            "transform": "rotate(0deg)",
+            "easing": "cubic-bezier(.42,0,.58,1)"
+          }
+        ]
+      }
+    ],
+    "renderer": "dance"
   }
 }

@@ -33,6 +33,7 @@
 <script src="clips.js"></script>
 <script src="player.js"></script>
 <script src="thinking-rig.js"></script>
+<script src="dance-rig.js"></script>
 <script>
   (async () => {
     const status = document.querySelector("#status");
@@ -45,13 +46,15 @@
       svg.style.visibility = "hidden";
       document.querySelector("#stage").append(svg);
       const renderers = {};
-      try {
-        renderers.thinking = await PenguiniThinkingRig.create(svg);
-      } catch (error) {
-        const availability = document.querySelector("#availability");
-        availability.hidden = false;
-        availability.textContent = "Thinking is unavailable in this browser. The other animations are ready to play.";
-        console.warn(error);
+      for (const [name, renderer] of [["thinking", PenguiniThinkingRig], ["dance", PenguiniDanceRig]]) {
+        try {
+          renderers[name] = await renderer.create(svg);
+        } catch (error) {
+          const availability = document.querySelector("#availability");
+          availability.hidden = false;
+          availability.textContent = "Some animations are unavailable in this browser. The remaining animations are ready to play.";
+          console.warn(error);
+        }
       }
       const activities = Object.values(PenguiniClips).filter(clip => clip.id !== "idle" && (!clip.renderer || Object.hasOwn(renderers, clip.renderer)));
       const pause = document.querySelector("#pause");

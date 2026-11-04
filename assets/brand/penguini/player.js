@@ -21,9 +21,9 @@ class PenguiniPlayer {
     this.raf = null;
     this.lastTime = null;
     this.motion = matchMedia('(prefers-reduced-motion: reduce)');
-    this.parts = ['.penguin','.head','.flipper','.shadow','.eyes-open','.eyes-happy','.blink','.lower-beak','.front-arm','.front-flipper','.kiss-spark','.back-arm'].map(selector => ({selector, element: svg.querySelector(selector)}));
+    this.parts = ['.penguin','.head','.flipper','.shadow','.eyes-open','.eyes-happy','.blink','.lower-beak','.front-arm','.front-flipper','.kiss-spark','.back-arm','.left-flipper'].map(selector => ({selector, element: svg.querySelector(selector)}));
     if (this.parts.some(p => !p.element)) throw new TypeError('The mascot rig is incomplete.');
-    const origins = ['580px 990px','350px 740px','1305px 610px','580px 1000px',null,null,'350px 550px','355px 610px',null,'1305px 610px','1020px 330px',null];
+    const origins = ['580px 990px','350px 740px','1305px 610px','580px 1000px',null,null,'350px 550px','355px 610px',null,'1305px 610px','1020px 330px',null,null];
     this.parts.forEach((p,i) => { if (origins[i]) p.element.style.transformOrigin = origins[i]; });
     this._validate(this.idle);
     for (const clip of animations) this.registerAnimation(clip);

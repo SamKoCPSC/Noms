@@ -11,7 +11,7 @@ from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parents[1] / "assets/brand/penguini"
 BASE_STYLE = """
-.penguin,.head,.flipper,.shadow,.eyes-open,.eyes-happy,.blink,.lower-beak,.front-arm,.front-flipper,.kiss-spark,.back-arm{transform:none;opacity:1}
+.penguin,.head,.flipper,.shadow,.eyes-open,.eyes-happy,.blink,.lower-beak,.front-arm,.front-flipper,.kiss-spark,.back-arm,.left-flipper{transform:none;opacity:1}
 .penguin{transform-origin:580px 990px}.head{transform-origin:350px 740px}
 .flipper,.front-flipper{transform-origin:1305px 610px;transform:rotate(88deg)}
 .shadow{transform-origin:580px 1000px;opacity:.13}.blink{transform-origin:350px 550px}

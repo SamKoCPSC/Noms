@@ -3,7 +3,7 @@
 <desc id="desc">A smiling penguin in a chef hat and terracotta apron.</desc>
 
 <style>
-.penguin,.head,.flipper,.shadow,.eyes-open,.eyes-happy,.blink,.lower-beak,.front-arm,.front-flipper,.kiss-spark,.back-arm{transform:none;opacity:1}
+.penguin,.head,.flipper,.shadow,.eyes-open,.eyes-happy,.blink,.lower-beak,.front-arm,.front-flipper,.kiss-spark,.back-arm,.left-flipper{transform:none;opacity:1}
 .penguin{transform-origin:580px 990px}.head{transform-origin:350px 740px}
 .flipper,.front-flipper{transform-origin:1305px 610px;transform:rotate(88deg)}
 .shadow{transform-origin:580px 1000px;opacity:.13}.blink{transform-origin:350px 550px}
@@ -16,7 +16,7 @@
 <clipPath id="flipper-clip"><rect x="1240" y="330" width="290" height="350"/></clipPath>
 </defs>
 <ellipse class="shadow" cx="580" cy="1000" rx="255" ry="24" fill="#675140" opacity=".13"/>
-<g class="penguin">
+<g class="penguin"><g class="left-flipper"/>
 <g class="back-arm"><g transform="translate(-560 -70)"><g class="flipper"><use xlink:href="#art" clip-path="url(#flipper-clip)"/></g></g></g>
 <g transform="translate(-330 165)"><use xlink:href="#art" clip-path="url(#body-clip)"/></g>
 <g transform="translate(247 -185)"><g class="head">

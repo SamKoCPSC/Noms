@@ -1,6 +1,6 @@
 # Chef Penguini
 
-Approved penguin mascot assets, selected and refined on 2026-11-03. Chef Penguini
+Approved penguin mascot assets, selected and refined on 2026-11-03–04. Chef Penguini
 wears a cream chef hat and terracotta apron, without a neckerchief. These assets
 are ready for integration; no app page currently displays the mascot.
 
@@ -14,17 +14,20 @@ are ready for integration; no app page currently displays the mascot.
 | [Sleepy moment](animations/sleepy.svg) | Dozes, jolts awake with wide eyes and a flipper flinch, then settles | 6.4 seconds |
 | [Happy dance](animations/happy-dance.svg) | A small side-to-side dance | 5.8 seconds |
 | [Thinking](preview.html?animation=thinking) | A gentle elbow bend to the chin, head tilt, and thoughtful squint | 6.8 seconds |
+| [Silly dance](preview.html?animation=silly-dance) | Alternating flipper swings, waddling steps, two hops, and a finishing shimmy | 7.2 seconds |
 
 [still.svg](still.svg) provides the neutral resting pose. Standalone activities
 play once and finish at that pose; idle repeats. Every animated SVG respects
 `prefers-reduced-motion`. All SVGs have a transparent background and the same
 `1200 × 1390` viewBox, preserving size when switching between them.
 
-Thinking uses the inline player and a WebGL renderer for its articulated flipper;
-its individual preview is linked above. The approved version keeps the original
-artwork solid over the torso, with a low reach, soft easing, and a 25% faster
-lift and recovery than the preceding review draft. It joins the random and
-ordered activity sets. The other activities retain their standalone SVGs.
+Thinking and Silly dance use the inline player and WebGL renderers for their
+articulated flippers; their individual previews are linked above. Thinking keeps
+the original artwork solid over the torso, with a low reach, soft easing, and a 25% faster
+lift and recovery than the preceding review draft. Silly dance moves both flippers
+independently, with a continuous shoulder join that avoids a background notch
+under the lowered left flipper. Both join the random and ordered activity sets
+and return smoothly to idle. The other activities retain their standalone SVGs.
 
 The tummy-pat, chef's-kiss, and hat-adjustment experiments were not
 approved and are not included in the animation registry. Review videos,
@@ -51,14 +54,15 @@ appropriate accessible description. Provide a pause control for repeating motion
 an image-based implementation can swap to `still.svg`.
 
 For the reusable player, insert `source/rig.svg` inline and load `clips.js`,
-`player.js`, and `thinking-rig.js` locally, then initialize:
+`player.js`, `thinking-rig.js`, and `dance-rig.js` locally, then initialize:
 
 ```js
 const thinking = await PenguiniThinkingRig.create(svgElement);
+const dance = await PenguiniDanceRig.create(svgElement);
 const player = new PenguiniPlayer(svgElement, {
   idle: PenguiniClips.idle,
   animations: Object.values(PenguiniClips).filter(clip => clip.id !== "idle"),
-  renderers: {thinking},
+  renderers: {thinking, dance},
   idleDurationMs: 4000,
   transitionMs: 240,
 });
@@ -70,8 +74,9 @@ are allowed. Each activity starts and ends in the resting pose, with a settled
 tail before returning to idle. The jump flipper lowers gradually over 1.2 seconds.
 
 Connect visible controls to `player.pause()` and `player.play()`. Call
-`player.destroy()` and then `thinking.destroy()` on unmount. The renderer is
-borrowed by the player and can be reused when replacing a player on the same rig.
+`player.destroy()`, then `thinking.destroy()` and `dance.destroy()` on unmount.
+Renderers are borrowed by the player and can be reused when replacing a player
+on the same rig. Each renderer restores the original artwork when inactive.
 The player pauses when hidden or offscreen, keeps manual pause state, and
 displays a still pose for reduced-motion preferences.
 Use one inline rig per player; give SVG definition IDs unique names when mounting
@@ -79,13 +84,14 @@ multiple inline mascots in one document. Import assets through the app's asset
 pipeline when adding a Dioxus component; this folder is not globally loaded by
 `Dioxus.toml`.
 
-`PenguiniThinkingRig.create()` resolves after decoding the embedded artwork and
-preparing its mesh. If WebGL is unavailable, omit clips with a `renderer` field
-and use the existing SVG activities; the preview demonstrates this fallback.
-Registering Thinking without its renderer fails explicitly, so the gesture
-cannot silently play with only its face animated. Its eyelid masks and mesh are
-created at runtime and removed on renderer disposal; the canonical illustration
-and the other standalone SVGs are unchanged.
+`PenguiniThinkingRig.create()` and `PenguiniDanceRig.create()` resolve after decoding
+the embedded artwork and preparing their meshes. If WebGL is unavailable, omit
+clips with a `renderer` field and use the existing SVG activities; the preview
+demonstrates this fallback.
+Registering either activity without its renderer fails explicitly, so a gesture
+cannot silently play without its articulated flipper. Meshes and clip masks are
+created at runtime and removed on renderer disposal. The shared illustration
+and the other animations' appearance are unchanged.
 
 ## Editing and extending
 
@@ -93,6 +99,7 @@ and the other standalone SVGs are unchanged.
 - `source/clips.json` is the canonical registry of approved animation keyframes.
 - `player.js` owns playback, selection, transitions, and lifecycle behavior.
 - `thinking-rig.js` owns the articulated arm, squint, and approved movement timing.
+- `dance-rig.js` deforms the left flipper using the `.left-flipper` control track.
 - `clips.js`, `still.svg`, and `animations/*.svg` are generated assets.
 
 After changing the rig or keyframes, regenerate and verify from the repo root:
@@ -131,7 +138,8 @@ palette, soft outlines, aspect ratio, and alpha when preparing derivatives.
 
 Validation covers the approved clips' resting endpoints, the sleepy jolt,
 random/ordered selection, pause/resume, offscreen behavior, and reduced motion.
-Thinking is also checked against the approved review poses, with browser checks
-for switching to other activities, renderer disposal, and the WebGL fallback.
+Thinking and Silly dance are also checked against their approved review poses,
+with browser checks for switching to other activities, renderer disposal, and
+the WebGL fallback.
 The gallery and standalone SVGs are the review surfaces; captured review media
 remain outside the repository.
