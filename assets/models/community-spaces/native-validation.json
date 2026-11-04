@@ -1,0 +1,67 @@
+[
+  {
+    "file": "artisan-bakery.blend",
+    "objects": 674,
+    "assembly_groups": 11,
+    "packed_texture_images": 3,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  },
+  {
+    "file": "farmers-market.blend",
+    "objects": 1102,
+    "assembly_groups": 8,
+    "packed_texture_images": 0,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  },
+  {
+    "file": "night-market.blend",
+    "objects": 1160,
+    "assembly_groups": 8,
+    "packed_texture_images": 0,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  },
+  {
+    "file": "recipe-library.blend",
+    "objects": 1188,
+    "assembly_groups": 11,
+    "packed_texture_images": 0,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  },
+  {
+    "file": "specialty-coffee-shop.blend",
+    "objects": 615,
+    "assembly_groups": 11,
+    "packed_texture_images": 3,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  }
+]
