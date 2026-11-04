@@ -85,6 +85,7 @@
 .recipe-pantry__controls select:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
 .recipe-pantry__hint { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 8px 0; }
 .recipe-pantry__verdict { font-weight: 800; font-size: 18px; margin: 0 0 12px; }
+.recipe-pantry__optional-heading { font-weight: 800; margin: 18px 0 10px; }
 .recipe-pantry__ingredients { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .recipe-pantry__ingredient { padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); line-height: 1.5; overflow-wrap: anywhere; }
 

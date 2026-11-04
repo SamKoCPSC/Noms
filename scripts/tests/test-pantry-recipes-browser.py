@@ -83,14 +83,14 @@ async def main(args):
             await expect(page.get_by_role("heading", name="What can I cook?", exact=True)).to_be_visible()
             return page.url, str(uuid.UUID(page.url.rsplit("/", 1)[1]))
 
-        home, home_id = await create_pantry("Home pantry", [("Rice", "0", "kg"), ("Salt", "", "")])
+        home, home_id = await create_pantry("Home pantry", [("Rice", "0", "kg"), ("Salt", "", "g")])
         section = page.locator(".pantry-cookable")
         await expect(section).to_contain_text("No matching recipes yet")
-        cabin, cabin_id = await create_pantry("Cabin pantry", [("rice", "1", "cup")])
+        cabin, cabin_id = await create_pantry("Cabin pantry", [("rice", "1", "US cup")])
         other = str(uuid.uuid4())
         root, child, outsider_collection = [str(uuid.uuid4()) for _ in range(3)]
         sql(args.instance, f"""
-INSERT INTO users(id,username,display_name,email) VALUES('{other}','other_{other[:8]}','Other cook','{other}@example.test');
+INSERT INTO users(id,username,display_name,email) VALUES('{other}','other_{other[:8]}','Other cook {other[:8]}','{other}@example.test');
 INSERT INTO collections(id,owner_id,name) VALUES('{root}','{owner}','Favourites'),('{outsider_collection}','{other}','Other collection');
 INSERT INTO collections(id,owner_id,name,parent_collection_id) VALUES('{child}','{owner}','Weeknight meals','{root}');
 INSERT INTO pantry_equipment(profile_id,name,position,available) VALUES('{home_id}','Pot',0,TRUE);
@@ -245,6 +245,38 @@ INSERT INTO recipe_drafts(user_id,snapshot) VALUES('{owner}','{{"title":"Unpubli
         await anon_page.goto(home, wait_until="networkidle")
         await expect(anon_page.locator(".pantry-cookable")).to_have_count(0)
         passed("cross-owner API access, spoofed account binding, invalid cursor/revision and anonymous access are rejected")
+        optional_id = str(uuid.uuid4())
+        ingredients = json.dumps([{"name": "Rice", "amount": "1", "unit": "g"}, {"name": "Parsley", "amount": "1", "unit": "g", "optional": True}])
+        sql(args.instance, f"INSERT INTO recipes(id,user_id,title,ingredients) VALUES('{optional_id}','{owner}','Optional garnish supper',{literal(ingredients)}::jsonb);")
+        await page.goto(home, wait_until="networkidle")
+        match = section.locator('.pantry-cookable-match').filter(has_text='Optional garnish supper')
+        await expect(match).to_contain_text('1 optional ingredient missing')
+        await expect(section).to_contain_text('All ingredients available')
+        response = await post(ctx, 'find_pantry_recipes', body)
+        payload = await response.json()
+        assert payload['optional_ingredients_missing'][optional_id] == 1
+        for width in [390, 1440]:
+            await page.set_viewport_size({"width": width, "height": 1100})
+            await expect(match).to_be_visible()
+            assert await page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            await section.screenshot(path=str(args.output / f'optional-recipes-{width}.png'))
+        await match.get_by_role('link').first.click()
+        await page.get_by_role('button', name='Check pantry', exact=True).click()
+        await page.get_by_label('Pantry', exact=True).select_option(home_id)
+        await expect(page.locator('.recipe-pantry__verdict')).to_have_text('Optional ingredients missing')
+        await expect(page.locator('.recipe-pantry__ingredients--optional')).to_contain_text('Parsley')
+        await expect(page.locator('.recipe-pantry__result')).not_to_contain_text('Rice')
+        await page.locator('.recipe-pantry__result').screenshot(path=str(args.output / 'optional-recipe-detail.png'))
+        # Marking that same name required must exclude the recipe on the next read.
+        sql(args.instance, f"UPDATE recipes SET ingredients=jsonb_set(ingredients,'{{1,optional}}','false') WHERE id='{optional_id}';")
+        await page.goto(home, wait_until='networkidle')
+        await expect(section).not_to_contain_text('Optional garnish supper')
+        # Explicit availability of the optional ingredient upgrades the result to a full match.
+        sql(args.instance, f"UPDATE recipes SET ingredients=jsonb_set(ingredients,'{{1,optional}}','true') WHERE id='{optional_id}'; INSERT INTO pantry_ingredients(profile_id,name,amount,unit,position,available) VALUES('{home_id}','Parsley','1','g',999,TRUE);")
+        await page.reload(wait_until='networkidle')
+        await expect(match).to_contain_text('All ingredients available')
+        await expect(match).not_to_contain_text('optional ingredient missing')
+        passed('optional-only shortages remain cookable with distinct badges; required shortages exclude; availability restores full matches; detail and library agree')
         await anonymous.close()
         await stranger.close()
         assert not errors, errors

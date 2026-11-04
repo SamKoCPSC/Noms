@@ -25,7 +25,7 @@ pub(super) fn PantryRecipes(pantry_id: Uuid, revision: i64, on_retry: EventHandl
                 "Recipes you own or have saved in collections, using the ingredients available in this pantry."
             }
             p { class: "grocery-muted pantry-cookable-hint",
-                "Ingredient names ignore capitalization. Quantities and equipment aren’t checked."
+                "Optional ingredients don’t block matches. Ingredient names ignore capitalization. Quantities and equipment aren’t checked."
             }
             if auth.read().current_user_id != account() {
                 p { role: "status", "Your account changed. Reload this page to check your recipes." }
@@ -41,7 +41,16 @@ pub(super) fn PantryRecipes(pantry_id: Uuid, revision: i64, on_retry: EventHandl
                         } else {
                             div { class: "pantry-cookable-grid",
                                 for recipe in &page.recipes {
-                                    RecipeCard { key: "{recipe.id}", recipe: recipe.clone(), framed: true }
+                                    div { key: "{recipe.id}", class: "pantry-cookable-match",
+                                        if let Some(count) = page.optional_ingredients_missing.get(&recipe.id) {
+                                            p { class: "pantry-cookable-match__status pantry-cookable-match__status--optional",
+                                                if *count == 1 { "1 optional ingredient missing" } else { "{count} optional ingredients missing" }
+                                            }
+                                        } else {
+                                            p { class: "pantry-cookable-match__status", "All ingredients available" }
+                                        }
+                                        RecipeCard { recipe: recipe.clone(), framed: true }
+                                    }
                                 }
                             }
                         }

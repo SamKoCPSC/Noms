@@ -12,7 +12,7 @@ Server validation permits at most ten substitutes per primary ingredient, 500 ch
 
 Recipe details, historical versions, mobile cooking views, session scaling, and HTML reading copies display the authored metadata. Substitute quantities scale independently using their authored amounts. JSON exports retain all structured fields.
 
-Kitchen behavior is intentionally unchanged in this phase: pantry matching still checks every primary ingredient's name, including optional ingredients; alternatives do not satisfy pantry checks. Grocery lists still copy primary names and quantities as before. A later change can explicitly define optional and substitute handling in those workflows.
+The original authoring-only slice left Kitchen unchanged. The 2026-11-04 follow-up now makes missing structured optional ingredients nonblocking in both recipe-detail and pantry-library checks, with distinct optional-missing and full-match results. Alternatives still do not satisfy pantry checks. Grocery lists still copy primary names and quantities as before. A later change can explicitly define optional and substitute handling in those workflows.
 
 Validation covers legacy JSON shape, structured export/import, draft/publish validation, immutable history/fork preservation, unchanged pantry matching, and the real create/edit browser workflow at mobile and desktop widths.
 

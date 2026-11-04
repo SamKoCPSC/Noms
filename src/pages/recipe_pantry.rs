@@ -188,6 +188,11 @@ fn PantryCheckResult(check: PantryCheck) -> Element {
         .iter()
         .filter(|row| row.status == IngredientStatus::Missing)
         .collect();
+    let optional: Vec<_> = check
+        .ingredients
+        .iter()
+        .filter(|row| row.status == IngredientStatus::OptionalMissing)
+        .collect();
     rsx! {
         div { class: "recipe-pantry__result",
             p { role: "status", class: "recipe-pantry__verdict", "{label}" }
@@ -202,6 +207,16 @@ fn PantryCheckResult(check: PantryCheck) -> Element {
                     }
                 }
             }
+            if !optional.is_empty() {
+                if !missing.is_empty() {
+                    p { class: "recipe-pantry__optional-heading", "Optional ingredients missing" }
+                }
+                ul { class: "recipe-pantry__ingredients recipe-pantry__ingredients--optional",
+                    for (index, row) in optional.iter().enumerate() {
+                        li { key: "{index}", class: "recipe-pantry__ingredient", strong { "{row.name}" } }
+                    }
+                }
+            }
         }
     }
 }
@@ -209,6 +224,20 @@ fn PantryCheckResult(check: PantryCheck) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn optional_missing_result_is_distinct_and_lists_only_missing_items() {
+        use crate::pantry::feasibility::IngredientCheck;
+        let html = dioxus_ssr::render_element(rsx! {
+            PantryCheckResult { check: PantryCheck { ingredients: vec![
+                IngredientCheck { name: "Parsley".into(), status: IngredientStatus::OptionalMissing },
+                IngredientCheck { name: "Rice".into(), status: IngredientStatus::Available },
+            ] } }
+        });
+        assert!(html.contains("Optional ingredients missing"));
+        assert!(html.contains("Parsley"));
+        assert!(!html.contains("All ingredients available"));
+        assert!(!html.contains("Rice"));
+    }
     #[test]
     fn result_lists_missing_ingredients_and_announces_the_verdict() {
         let mut dom = VirtualDom::new(|| {
