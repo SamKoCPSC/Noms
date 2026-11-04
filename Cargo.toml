@@ -59,7 +59,7 @@ web-sys = { version = "0.3.98", features = [
     "DataTransfer", "DataTransferItem",
     "DragEvent", "KeyboardEvent", "Event", "EventTarget", "HtmlElement", "HtmlDialogElement",
     "CssStyleDeclaration", "DomRect", "DomRectList", "NodeList", "FocusOptions",
-    "MediaQueryList", "WebGlRenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlUniformLocation", "WebGlTexture", "WebGlContextEvent", "ScrollToOptions",
+    "MediaQueryList", "WebGlRenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlUniformLocation", "WebGlTexture", "WebGlFramebuffer", "WebGlRenderbuffer", "WebGlContextEvent", "ScrollToOptions",
     "VisualViewport", "ResizeObserver", "ScrollIntoViewOptions", "ScrollLogicalPosition", "ScrollBehavior",
     "Cache", "CacheStorage", "Response", "RequestCache", "AbortController", "AbortSignal"
 ] }

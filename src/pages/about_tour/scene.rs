@@ -1,7 +1,11 @@
 use super::assembly::Room;
 use super::flight::{self, Camera};
 use super::math::*;
-use std::f32::consts::PI;
+use super::{
+    shadow_map::ShadowMap,
+    shadows::{LightFrame, LIGHT},
+};
+use std::{cell::RefCell, f32::consts::PI};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     CanvasRenderingContext2d, Document, HtmlCanvasElement, HtmlImageElement, WebGlBuffer,
@@ -10,9 +14,10 @@ use web_sys::{
 
 const VERTEX: &str = r#"
 attribute vec3 a_pos; attribute vec3 a_normal; attribute vec2 a_uv; attribute vec4 a_color;
-uniform mat4 u_model; uniform mat4 u_vp; uniform mat3 u_normal;
+uniform mat4 u_light_mvp; varying vec4 v_light;
+uniform mat4 u_model; uniform mat4 u_vp; uniform mediump mat3 u_normal;
 varying vec3 v_normal; varying vec3 v_world; varying vec2 v_uv; varying vec4 v_color;
-void main(){vec4 w=u_model*vec4(a_pos,1.0);v_world=w.xyz;v_normal=normalize(u_normal*a_normal);v_uv=a_uv;v_color=a_color;gl_Position=u_vp*w;}
+void main(){v_light=u_light_mvp*vec4(a_pos,1.0);vec4 w=u_model*vec4(a_pos,1.0);v_world=w.xyz;v_normal=normalize(u_normal*a_normal);v_uv=a_uv;v_color=a_color;gl_Position=u_vp*w;}
 "#;
 const FRAGMENT: &str = r#"
 #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -22,7 +27,31 @@ precision mediump float;
 #endif
 uniform vec4 u_color; uniform vec3 u_eye; uniform sampler2D u_texture;
 uniform float u_textured; uniform float u_shadow; uniform float u_reveal; uniform float u_diorama;
-uniform float u_enter;
+uniform float u_enter; uniform float u_material_mode;
+uniform sampler2D u_surface_normal; uniform mediump mat3 u_normal;
+uniform vec3 u_fill_light; uniform vec3 u_rim_light; uniform vec3 u_room_up;
+uniform sampler2D u_depth_map; uniform float u_shadow_enabled; uniform float u_shadow_texel;
+uniform float u_shadow_depth; uniform vec3 u_key_light; varying vec4 v_light;
+uniform vec3 u_shadow_u; uniform vec3 u_shadow_v;
+float shadow_visibility(vec3 n){
+ if(u_shadow_enabled<=0.0)return 1.0;
+ vec3 p=v_light.xyz/v_light.w*0.5+0.5;
+ if(any(lessThan(p,vec3(0.0))) || any(greaterThan(p,vec3(1.0))))return 1.0;
+ // Compare every filtered tap at the receiver plane's depth. A constant depth
+ // across the PCF footprint causes diagonal self-shadow stripes on large lawns.
+ float cosine=max(dot(n,u_key_light),0.0);
+ vec2 gradient=vec2(dot(n,u_shadow_u),dot(n,u_shadow_v))/max(cosine,0.08)*step(0.08,cosine);
+ float bias=(0.003+0.009*(1.0-cosine))/u_shadow_depth
+            +0.65*u_shadow_texel*(abs(gradient.x)+abs(gradient.y));
+ float lit=0.0;
+ for(int y=-1;y<=1;y++)for(int x=-1;x<=1;x++){
+  vec2 offset=vec2(float(x),float(y))*u_shadow_texel*1.25;
+  vec3 encoded_depth=texture2D(u_depth_map,p.xy+offset).rgb;
+  float depth=dot(encoded_depth,vec3(1.0,1.0/255.0,1.0/65025.0));
+  lit+=step(p.z+dot(gradient,offset)-bias,depth);
+ }
+ return mix(1.0,lit/9.0,u_shadow_enabled);
+}
 varying vec3 v_normal; varying vec3 v_world; varying vec2 v_uv; varying vec4 v_color;
 // The glTF diorama palettes are scene-linear; display encoding happens after lighting.
 vec3 display_srgb(vec3 c){
@@ -45,8 +74,29 @@ vec3 diorama_agx(vec3 color){
  float warmth=smoothstep(0.02,0.16,(color.r-color.b)/peak)
               *(1.0-smoothstep(0.0,0.18,(color.g-color.r)/peak));
  x=pow(max(x,vec3(0.0)),vec3(1.30));
- x=mix(vec3(dot(x,vec3(0.2126,0.7152,0.0722))),x,mix(1.80,1.45,warmth));
+ float saturation=mix(1.28,1.12,warmth);
+ x=mix(vec3(dot(x,vec3(0.2126,0.7152,0.0722))),x,saturation);
  return clamp(toSRGB*pow(max(outset*x,vec3(0.0)),vec3(2.2)),0.0,1.0);
+}
+// Keep the master's surface detail with a softer, matte illustrated finish.
+// Retain the assets' surface detail; moving cast shadows use the live depth map.
+vec3 matte_finish(vec3 albedo,vec3 n,float roughness,float metallic,float cavity,float visibility){
+ // Preserve material variation while broadening and reducing glossy reflections.
+ roughness=mix(0.72,1.0,roughness);
+ vec3 view=normalize(u_eye-v_world);
+ float key=max(dot(n,u_key_light),0.0);
+ float fill=max(dot(n,u_fill_light),0.0);
+ float rim=max(dot(n,u_rim_light),0.0);
+ float hemi=0.5+0.5*dot(n,u_room_up);
+ vec3 f0=mix(vec3(0.04),albedo,metallic);
+ vec3 fresnel=f0+(1.0-f0)*pow(1.0-max(dot(n,view),0.0),5.0);
+ float power=mix(64.0,8.0,roughness);
+ float key_spec=pow(max(dot(n,normalize(u_key_light+view)),0.0),power)*key*visibility;
+ float fill_spec=pow(max(dot(n,normalize(u_fill_light+view)),0.0),power*0.65)*fill;
+ float rim_spec=pow(max(dot(n,normalize(u_rim_light+view)),0.0),power*0.55)*rim;
+ vec3 diffuse=albedo*(1.0-0.70*metallic)*((0.70+0.18*hemi)*cavity+0.70*key*visibility+0.22*fill+0.12*rim);
+ vec3 specular=fresnel*(key_spec*2.8+fill_spec*1.5+rim_spec+0.25*hemi*cavity)*mix(0.24,0.38,metallic);
+ return diorama_agx((diffuse+specular)*1.75);
 }
 // Ordered coverage preserves opaque depth and glass ordering while surfaces emerge.
 float bayer2(vec2 p){return 2.0*mod(p.x+p.y,2.0)+mod(p.y,2.0);}
@@ -64,13 +114,23 @@ void main(){
    vec3 tex=texture2D(u_texture,v_uv).rgb;
    base=u_color.rgb*v_color.rgb*mix(tex/12.92,pow((tex+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),tex));
   }
-  float key=max(dot(n,normalize(vec3(-3.0,7.0,5.0))),0.0);
-  float fill=max(dot(n,normalize(vec3(5.0,3.0,-2.0))),0.0);
-  float illumination=0.95+0.55*key+0.20*fill;
-  vec3 halfway=normalize(light+normalize(u_eye-v_world));
-  float spec=pow(max(dot(n,halfway),0.0),48.0)*0.025;
-  vec3 radiance=base*illumination*1.80+vec3(spec);
-  gl_FragColor=vec4(display_srgb(diorama_agx(radiance)),u_color.a);
+  if(u_material_mode>0.5){
+   float visibility=shadow_visibility(n);
+   if(u_material_mode>2.5){
+    vec4 material=texture2D(u_texture,v_uv);
+    vec4 surface=texture2D(u_surface_normal,v_uv);
+    vec2 oct=surface.rg*2.0-1.0;
+    vec3 source_normal=vec3(oct,1.0-abs(oct.x)-abs(oct.y));
+    if(source_normal.z<0.0)source_normal.xy=(1.0-abs(source_normal.yx))*sign(source_normal.xy);
+    // Blender object normals are Z-up, matching the retained master textures.
+    n=normalize(u_normal*vec3(source_normal.x,source_normal.z,-source_normal.y));
+    vec3 albedo=mix(material.rgb/12.92,pow((material.rgb+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),material.rgb));
+    gl_FragColor=vec4(display_srgb(matte_finish(albedo,n,clamp(surface.b,0.08,1.0),v_color.a,material.a,visibility)),u_color.a);return;
+   }
+   if(u_material_mode>1.5){gl_FragColor=vec4(display_srgb(base*(0.82+0.18*visibility)),u_color.a);return;}
+   gl_FragColor=vec4(display_srgb(matte_finish(base,n,0.65,0.0,1.0,visibility)),u_color.a);return;
+  }
+  gl_FragColor=vec4(display_srgb(base),u_color.a);
   return;
  }
  vec3 lighting=vec3(0.44,0.45,0.39)+vec3(0.47,0.45,0.39)*diffuse+vec3(0.13)*hemi;
@@ -79,6 +139,18 @@ void main(){
  gl_FragColor=vec4(mix(base*lighting+spec,vec3(0.933,0.937,0.885),fog),u_color.a);
 }
 "#;
+fn room_rotation(room: Room, mobile: bool) -> Mat4 {
+    if matches!(room, Room::Kitchen) {
+        // Match the master camera: upright walls and the approved elevation/azimuth.
+        mul(rx(0.522718), ry(-0.655696))
+    } else if matches!(room, Room::Office) {
+        mul(rx(0.58), ry(0.62))
+    } else if matches!(room, Room::Garden) && mobile {
+        transform([0.; 3], [0.9, -0.4, 0.], [1.; 3])
+    } else {
+        transform([0.; 3], [0.58, -0.62, 0.], [1.; 3])
+    }
+}
 struct Mesh {
     buffer: WebGlBuffer,
     count: i32,
@@ -93,6 +165,10 @@ struct DioramaDraw {
 struct Diorama {
     draws: Vec<DioramaDraw>,
     texture_base: usize,
+    framing: [flight::RoomFrame; 2],
+    light: Option<LightFrame>,
+    settled_frame: f32,
+    shadow_map: RefCell<Option<ShadowMap>>,
 }
 struct Uniforms {
     model: WebGlUniformLocation,
@@ -105,6 +181,17 @@ struct Uniforms {
     reveal: WebGlUniformLocation,
     diorama: WebGlUniformLocation,
     enter: WebGlUniformLocation,
+    material_mode: WebGlUniformLocation,
+    light_mvp: WebGlUniformLocation,
+    shadow_enabled: WebGlUniformLocation,
+    shadow_texel: WebGlUniformLocation,
+    shadow_depth: WebGlUniformLocation,
+    shadow_u: WebGlUniformLocation,
+    shadow_v: WebGlUniformLocation,
+    key_light: WebGlUniformLocation,
+    fill_light: WebGlUniformLocation,
+    rim_light: WebGlUniformLocation,
+    room_up: WebGlUniformLocation,
 }
 pub struct Renderer {
     gl: Gl,
@@ -117,7 +204,6 @@ pub struct Renderer {
     platform: Mesh,
     thread: Mesh,
     grid: Mesh,
-    arch: Mesh,
     textures: Vec<WebGlTexture>,
     kitchen: Diorama,
     office: Diorama,
@@ -179,8 +265,21 @@ impl Renderer {
             reveal: uniform("u_reveal")?,
             diorama: uniform("u_diorama")?,
             enter: uniform("u_enter")?,
+            material_mode: uniform("u_material_mode")?,
+            light_mvp: uniform("u_light_mvp")?,
+            shadow_enabled: uniform("u_shadow_enabled")?,
+            shadow_texel: uniform("u_shadow_texel")?,
+            shadow_depth: uniform("u_shadow_depth")?,
+            shadow_u: uniform("u_shadow_u")?,
+            shadow_v: uniform("u_shadow_v")?,
+            key_light: uniform("u_key_light")?,
+            fill_light: uniform("u_fill_light")?,
+            rim_light: uniform("u_rim_light")?,
+            room_up: uniform("u_room_up")?,
         };
         gl.uniform1f(Some(&uniforms.enter), 1.);
+        gl.uniform1i(Some(&uniform("u_depth_map")?), 1);
+        gl.uniform1i(Some(&uniform("u_surface_normal")?), 2);
         let a_pos = gl.get_attrib_location(&program, "a_pos") as u32;
         let a_normal = gl.get_attrib_location(&program, "a_normal") as u32;
         let a_uv = gl.get_attrib_location(&program, "a_uv") as u32;
@@ -191,10 +290,15 @@ impl Renderer {
         let platform = mesh(&gl, &cylinder_vertices())?;
         let thread = mesh(&gl, &route_vertices())?;
         let grid = mesh(&gl, &grid_vertices())?;
-        let arch = mesh(&gl, &arch_vertices())?;
         let textures = (0..5)
             .map(|i| texture(&gl, doc, i))
             .collect::<Result<Vec<_>, _>>()?;
+        // All sampler units must hold complete textures, even with shadows disabled.
+        gl.active_texture(Gl::TEXTURE2);
+        gl.bind_texture(Gl::TEXTURE_2D, Some(&textures[0]));
+        gl.active_texture(Gl::TEXTURE1);
+        gl.bind_texture(Gl::TEXTURE_2D, Some(&textures[0]));
+        gl.active_texture(Gl::TEXTURE0);
         gl.enable(Gl::DEPTH_TEST);
         gl.depth_func(Gl::LEQUAL);
         gl.enable(Gl::BLEND);
@@ -211,7 +315,6 @@ impl Renderer {
             platform,
             thread,
             grid,
-            arch,
             textures,
             kitchen: Diorama::default(),
             office: Diorama::default(),
@@ -233,12 +336,28 @@ impl Renderer {
     ) -> Result<Diorama, JsValue> {
         let prepared = super::assembly::prepare(data, room);
         let data = &prepared;
-        if data.parts.iter().any(|part| part.texture > images.len()) {
+        if (room == Room::Kitchen && images.len() != 4)
+            || data.parts.iter().any(|part| part.texture > images.len())
+        {
             return Err(JsValue::from_str("Missing diorama texture"));
         }
         let mut diorama = Diorama {
             draws: Vec::new(),
             texture_base: self.textures.len(),
+            light: None,
+            settled_frame: 160.,
+            shadow_map: RefCell::new(ShadowMap::new(&self.gl).ok()),
+            framing: [false, true].map(|mobile| {
+                let rotation = room_rotation(room, mobile);
+                flight::RoomFrame::new(
+                    data.vertices
+                        .as_chunks::<12>()
+                        .0
+                        .iter()
+                        .map(|v| flight::point(rotation, [v[0], v[1], v[2]]))
+                        .collect(),
+                )
+            }),
         };
         for image in images {
             self.textures.push(image_texture(&self.gl, image)?);
@@ -250,12 +369,16 @@ impl Renderer {
             )?;
             model.count = part.count as i32;
             model.colored = true;
+            let motion = super::assembly::Motion::new(data, part, room);
             diorama.draws.push(DioramaDraw {
                 mesh: model,
                 part: part.clone(),
-                motion: super::assembly::Motion::new(data, part, room),
+                motion,
             });
         }
+        let motions: Vec<_> = diorama.draws.iter().map(|d| d.motion.clone()).collect();
+        diorama.light = Some(LightFrame::new(&motions, room));
+        diorama.settled_frame = motions.iter().map(|m| m.end).fold(1., f32::max);
         // Draw glazing last and without depth writes, exposing the PC interior.
         diorama
             .draws
@@ -492,7 +615,15 @@ impl Renderer {
     }
     pub fn render(&self, camera: &Camera, time: f32, motion: bool, mobile: bool, frames: [f32; 5]) {
         let gl = &self.gl;
+        self.update_shadows(camera.progress, frames, mobile);
         gl.use_program(Some(&self.program));
+        gl.viewport(
+            0,
+            0,
+            self.canvas.width() as i32,
+            self.canvas.height() as i32,
+        );
+        gl.clear_color(0., 0., 0., 0.);
         gl.clear(Gl::COLOR_BUFFER_BIT | Gl::DEPTH_BUFFER_BIT);
         gl.uniform_matrix4fv_with_f32_array(Some(&self.uniforms.vp), false, &camera.vp);
         gl.uniform3fv_with_f32_array(Some(&self.uniforms.eye), &camera.eye);
@@ -514,72 +645,7 @@ impl Renderer {
             if !(-42.0..=6.0).contains(&(flight::point(root, [0., 0., -10.])[2] - camera.eye[2])) {
                 continue;
             }
-            let color = if i % 2 == 0 {
-                [0.70, 0.77, 0.58, 1.]
-            } else {
-                [0.80, 0.67, 0.51, 1.]
-            };
-            // Each arch belongs to the world; the camera flies through it en route.
-            self.draw(&self.arch, root, color, None, false, 2.);
             if matches!(i, 0..=4) {
-                let ratio = self.canvas.width() as f32 / self.canvas.height().max(1) as f32;
-                let short_mobile = self.canvas.get_bounding_client_rect().height() < 600.;
-                let (x, y, sc) = if i == 4 {
-                    if mobile {
-                        (0., 3.05, if short_mobile { 0.15 } else { 0.23 })
-                    } else {
-                        (ratio * 2.35, -1.2, 0.36)
-                    }
-                } else if mobile && i != 0 {
-                    if short_mobile {
-                        (
-                            0.,
-                            3.1,
-                            if i == 2 {
-                                0.22
-                            } else if i == 3 {
-                                0.25
-                            } else {
-                                0.28
-                            },
-                        )
-                    } else {
-                        (
-                            0.,
-                            if i == 3 { 3.15 } else { 3.25 },
-                            if i == 2 {
-                                0.29
-                            } else if i == 3 {
-                                0.30
-                            } else {
-                                0.33
-                            },
-                        )
-                    }
-                } else if mobile {
-                    (0., 2.7, 0.34)
-                } else {
-                    (ratio * 2.35, -1.45, if i == 3 { 0.68 } else { 0.78 })
-                };
-                let pose = if i == 4 && mobile {
-                    transform([x, y, -11.7], [0.9, -0.4, 0.], [sc; 3])
-                } else if i != 1 {
-                    transform([x, y, -11.7], [0.58, -0.62, 0.], [sc; 3])
-                } else {
-                    // Turn the room before pitching it, keeping vertical walls upright.
-                    mul(
-                        translate(x, y, -11.7),
-                        mul(rx(0.58), mul(ry(0.62), scale(sc, sc, sc))),
-                    )
-                };
-                let model = mul(
-                    root,
-                    if i == 3 {
-                        mul(pose, translate(1.6, 0., -0.35))
-                    } else {
-                        pose
-                    },
-                );
                 let (diorama, frame, room) = match i {
                     0 => (&self.kitchen, frames[0], Room::Kitchen),
                     1 => (&self.office, frames[1], Room::Office),
@@ -587,7 +653,19 @@ impl Renderer {
                     3 => (&self.potluck, frames[2], Room::Potluck),
                     _ => (&self.garden, frames[4], Room::Garden),
                 };
-                self.draw_diorama(model, diorama, frame, room);
+                let rect = self.canvas.get_bounding_client_rect();
+                let model = mul(
+                    root,
+                    diorama.framing[usize::from(mobile)].model(
+                        rect.width() as f32,
+                        rect.height() as f32,
+                        room_rotation(room, mobile),
+                    ),
+                );
+                let visibility = 1. - smooth(0.28, 0.85, (camera.progress - i as f32).abs());
+                if visibility > 0. {
+                    self.draw_diorama(model, diorama, frame, room, visibility);
+                }
                 continue;
             }
             // The creator now has its own placeholder exhibit; the kitchen belongs to the idea.
@@ -724,7 +802,162 @@ impl Renderer {
             );
         }
     }
-    fn draw_diorama(&self, model: Mat4, diorama: &Diorama, frame: f32, room: Room) {
+    // Chapter order differs from the authored frame array (potluck precedes bedroom).
+    fn rooms(&self) -> [(&Diorama, Room, usize, &'static str); 5] {
+        [
+            (&self.kitchen, Room::Kitchen, 0, "kitchen"),
+            (&self.office, Room::Office, 1, "office"),
+            (&self.bedroom, Room::Bedroom, 3, "bedroom"),
+            (&self.potluck, Room::Potluck, 2, "potluck"),
+            (&self.garden, Room::Garden, 4, "garden"),
+        ]
+    }
+    pub fn release_shadows(&self) {
+        self.update_shadows(-10., [160.; 5], false);
+    }
+    pub fn observe_shadow_frame(&self, milliseconds: f64, frames: [f32; 5]) {
+        for (diorama, _, index, _) in self.rooms() {
+            if frames[index] < diorama.settled_frame {
+                if let Some(map) = diorama.shadow_map.borrow_mut().as_mut() {
+                    if map.size() > 0 {
+                        map.observe(milliseconds);
+                    }
+                }
+            }
+        }
+    }
+    fn update_shadows(&self, progress: f32, frames: [f32; 5], mobile: bool) {
+        let gl = &self.gl;
+        // Unbind sampled targets before rendering their next shadow pass.
+        gl.active_texture(Gl::TEXTURE1);
+        gl.bind_texture(Gl::TEXTURE_2D, Some(&self.textures[0]));
+        gl.active_texture(Gl::TEXTURE0);
+        let mut targets = 0;
+        let mut active_size = 0;
+        let mut active_updates = 0;
+        let mut active_name = "none";
+        for (stop, (diorama, room, index, name)) in self.rooms().into_iter().enumerate() {
+            let visible = (progress - stop as f32).abs() < 0.85;
+            let frame = frames[index];
+            let mut shadow = diorama.shadow_map.borrow_mut();
+            if let Some(map) = shadow.as_mut() {
+                if visible {
+                    if let Some(light) = &diorama.light {
+                        if map.begin(frame.min(diorama.settled_frame), mobile) {
+                            for draw in &diorama.draws {
+                                let pose = draw.motion.pose(frame, room);
+                                // Glazing transmits light and must not black out the PC or drinks.
+                                if pose.reveal <= 0. || draw.part.opacity < 0.5 {
+                                    continue;
+                                }
+                                map.draw(
+                                    mul(light.matrix, pose.matrix),
+                                    &draw.mesh.buffer,
+                                    draw.mesh.count,
+                                    pose.reveal * draw.part.opacity,
+                                );
+                            }
+                            map.finish();
+                        }
+                    }
+                } else {
+                    map.release();
+                }
+            }
+            let size = shadow.as_ref().map_or(0, |m| m.size());
+            let updates = shadow.as_ref().map_or(0, |m| m.updates);
+            targets += usize::from(size > 0);
+            let _ = self
+                .canvas
+                .set_attribute(&format!("data-{name}-shadow-size"), &size.to_string());
+            let _ = self
+                .canvas
+                .set_attribute(&format!("data-{name}-shadow-updates"), &updates.to_string());
+            if (progress - stop as f32).abs() <= 0.5 {
+                active_size = size;
+                active_updates = updates;
+                active_name = name;
+            }
+        }
+        let _ = self
+            .canvas
+            .set_attribute("data-shadow-size", &active_size.to_string());
+        let _ = self
+            .canvas
+            .set_attribute("data-shadow-updates", &active_updates.to_string());
+        let _ = self.canvas.set_attribute("data-shadow-room", active_name);
+        let _ = self
+            .canvas
+            .set_attribute("data-shadow-targets", &targets.to_string());
+        gl.active_texture(Gl::TEXTURE0);
+        gl.bind_texture(Gl::TEXTURE_2D, Some(&self.textures[0]));
+    }
+    fn draw_diorama(
+        &self,
+        model: Mat4,
+        diorama: &Diorama,
+        frame: f32,
+        room: Room,
+        visibility: f32,
+    ) {
+        if let Some(light) = &diorama.light {
+            self.gl.active_texture(Gl::TEXTURE2);
+            // Only the kitchen needs an extra normal atlas; other rooms retain their
+            // authored vertex normals and printed artwork with the same matte light rig.
+            let normal_texture = if room == Room::Kitchen {
+                diorama.texture_base + 3
+            } else {
+                0
+            };
+            self.gl
+                .bind_texture(Gl::TEXTURE_2D, Some(&self.textures[normal_texture]));
+            let shadow = diorama.shadow_map.borrow();
+            self.gl.active_texture(Gl::TEXTURE1);
+            self.gl.bind_texture(
+                Gl::TEXTURE_2D,
+                shadow
+                    .as_ref()
+                    .and_then(|m| m.texture())
+                    .or(Some(&self.textures[0])),
+            );
+            self.gl.active_texture(Gl::TEXTURE0);
+            let direction = |v: [f32; 3]| {
+                norm(std::array::from_fn(|r| {
+                    model[r] * v[0] + model[4 + r] * v[1] + model[8 + r] * v[2]
+                }))
+            };
+            self.gl.uniform3fv_with_f32_array(
+                Some(&self.uniforms.fill_light),
+                &direction([5., 7., 0.5]),
+            );
+            self.gl.uniform3fv_with_f32_array(
+                Some(&self.uniforms.rim_light),
+                &direction([0., 8., -4.]),
+            );
+            self.gl
+                .uniform3fv_with_f32_array(Some(&self.uniforms.room_up), &direction([0., 1., 0.]));
+            let size = shadow.as_ref().map_or(0, |m| m.size());
+            let key = norm(std::array::from_fn(|r| {
+                model[r] * LIGHT[0] + model[4 + r] * LIGHT[1] + model[8 + r] * LIGHT[2]
+            }));
+            self.gl
+                .uniform3fv_with_f32_array(Some(&self.uniforms.key_light), &key);
+            self.gl.uniform1f(
+                Some(&self.uniforms.shadow_enabled),
+                if size > 0 { visibility } else { 0. },
+            );
+            self.gl
+                .uniform1f(Some(&self.uniforms.shadow_texel), 1. / size.max(1) as f32);
+            self.gl
+                .uniform1f(Some(&self.uniforms.shadow_depth), light.depth);
+            for (uniform, axis) in [&self.uniforms.shadow_u, &self.uniforms.shadow_v]
+                .into_iter()
+                .zip(light.plane_axes)
+            {
+                let weighted = direction(axis).map(|v| v * dot(axis, axis).sqrt());
+                self.gl.uniform3fv_with_f32_array(Some(uniform), &weighted);
+            }
+        }
         for draw in &diorama.draws {
             let p = &draw.part;
             let pose = draw.motion.pose(frame, room);
@@ -732,7 +965,30 @@ impl Renderer {
                 continue;
             }
             let local = pose.matrix;
-            self.gl.uniform1f(Some(&self.uniforms.enter), pose.reveal);
+            if let Some(light) = &diorama.light {
+                self.gl.uniform_matrix4fv_with_f32_array(
+                    Some(&self.uniforms.light_mvp),
+                    false,
+                    &mul(light.matrix, local),
+                );
+            }
+            self.gl
+                .uniform1f(Some(&self.uniforms.enter), pose.reveal * visibility);
+            self.gl.uniform1f(
+                Some(&self.uniforms.material_mode),
+                if room == Room::Kitchen && p.texture == 3 {
+                    3.
+                } else if (room == Room::Potluck && p.texture == 3)
+                    || (room == Room::Garden && p.texture == 1)
+                {
+                    // Pastry photographs are surface color, not emissive screen artwork.
+                    1.
+                } else if p.texture > 0 {
+                    2.
+                } else {
+                    1.
+                },
+            );
             self.gl.depth_mask(p.opacity >= 1.);
             self.draw(
                 &draw.mesh,
@@ -747,6 +1003,8 @@ impl Renderer {
                 2.,
             );
         }
+        self.gl.uniform1f(Some(&self.uniforms.material_mode), 0.);
+        self.gl.uniform1f(Some(&self.uniforms.shadow_enabled), 0.);
         self.gl.depth_mask(true);
         self.gl.uniform1f(Some(&self.uniforms.enter), 1.);
     }
@@ -777,7 +1035,6 @@ impl Drop for Renderer {
             &self.platform,
             &self.thread,
             &self.grid,
-            &self.arch,
         ] {
             self.gl.delete_buffer(Some(&m.buffer));
         }
@@ -798,7 +1055,7 @@ impl Drop for Renderer {
         self.gl.delete_program(Some(&self.program));
     }
 }
-fn shader(gl: &Gl, kind: u32, source: &str) -> Result<WebGlShader, JsValue> {
+pub(super) fn shader(gl: &Gl, kind: u32, source: &str) -> Result<WebGlShader, JsValue> {
     let s = gl
         .create_shader(kind)
         .ok_or_else(|| JsValue::from_str("No shader"))?;
@@ -811,9 +1068,9 @@ fn shader(gl: &Gl, kind: u32, source: &str) -> Result<WebGlShader, JsValue> {
     {
         Ok(s)
     } else {
-        Err(JsValue::from_str(
-            &gl.get_shader_info_log(&s).unwrap_or_default(),
-        ))
+        let log = gl.get_shader_info_log(&s).unwrap_or_default();
+        gl.delete_shader(Some(&s));
+        Err(JsValue::from_str(&log))
     }
 }
 fn mesh(gl: &Gl, v: &[f32]) -> Result<Mesh, JsValue> {
@@ -954,33 +1211,6 @@ fn grid_vertices() -> Vec<f32> {
             [x - 0.012, -104.],
         ] {
             vertex(&mut v, [p[0], -1.338, p[1]], [0., 1., 0.], [0.; 2]);
-        }
-    }
-    v
-}
-fn arch_vertices() -> Vec<f32> {
-    let mut v = vec![];
-    let mut points = vec![[6.7, -4.9, -15.]];
-    for i in 0..=40 {
-        let a = i as f32 / 40. * PI;
-        points.push([6.7 * a.cos(), 3.9 + 6.7 * a.sin(), -15.]);
-    }
-    points.push([-6.7, -4.9, -15.]);
-    for pair in points.windows(2) {
-        let a = pair[0];
-        let b = pair[1];
-        let side = norm([b[1] - a[1], a[0] - b[0], 0.]);
-        for j in 0..12 {
-            for (p, k) in [(a, j), (b, j), (b, j + 1), (a, j), (b, j + 1), (a, j + 1)] {
-                let t = k as f32 / 12. * 2. * PI;
-                let n = [side[0] * t.cos(), side[1] * t.cos(), t.sin()];
-                vertex(
-                    &mut v,
-                    [p[0] + n[0] * 0.12, p[1] + n[1] * 0.12, p[2] + n[2] * 0.12],
-                    n,
-                    [0.; 2],
-                );
-            }
         }
     }
     v

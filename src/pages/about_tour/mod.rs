@@ -2,7 +2,7 @@
 mod assembly;
 #[cfg(target_arch = "wasm32")]
 mod browser;
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(target_arch = "wasm32", test))]
 mod flight;
 #[cfg(any(target_arch = "wasm32", test))]
 mod gltf;
@@ -17,3 +17,8 @@ pub(super) use browser::{start, stop};
 
 #[cfg(target_arch = "wasm32")]
 pub(crate) use browser::capture_entry_fragment;
+
+#[cfg(target_arch = "wasm32")]
+mod shadow_map;
+#[cfg(any(target_arch = "wasm32", test))]
+mod shadows;

@@ -44,7 +44,6 @@ struct State {
     media: MediaQueryList,
     panels: Vec<HtmlElement>,
     anchors: Vec<Element>,
-    nav: Vec<Element>,
     motion_button: Element,
     mode_button: Element,
     raf: Option<i32>,
@@ -62,6 +61,7 @@ struct State {
     flying: bool,
     dirty: bool,
     active: usize,
+    focus_destination: Option<usize>,
     last: f64,
     time: f32,
     frames: u64,
@@ -134,9 +134,6 @@ pub fn start() -> Result<(), JsValue> {
         anchors: (0..flight::COUNT)
             .map(|i| el(&doc, &format!("stop-{i}")))
             .collect::<Result<_, _>>()?,
-        nav: (0..flight::COUNT)
-            .map(|i| el(&doc, &format!("nav-{i}")))
-            .collect::<Result<_, _>>()?,
         motion_button: el(&doc, "motion-toggle")?,
         mode_button: el(&doc, "mode-toggle")?,
         raf: None,
@@ -158,6 +155,7 @@ pub fn start() -> Result<(), JsValue> {
         flying: false,
         dirty: true,
         active: usize::MAX,
+        focus_destination: None,
         last: 0.,
         time: 0.,
         frames: 0,
@@ -283,10 +281,10 @@ pub fn start() -> Result<(), JsValue> {
         };
         event.prevent_default();
         s.navigate(i, !s.reduced, true);
-        if s.flying && link.class_name().contains("next-link") {
-            if let Some(nav) = s.nav[i].dyn_ref::<HtmlElement>() {
-                let _ = nav.focus();
-            }
+        if s.flying {
+            s.focus_destination = Some(i);
+        } else {
+            s.focus_chapter(i);
         }
     });
     listen(&state, doc.clone().into(), "mousemove", |s, e| {
@@ -352,7 +350,13 @@ fn maybe_load_models(state: &StateRef) {
         let requests = [
             (
                 "kitchen",
-                ["data-kitchen-laptop-url", "data-kitchen-cookbook-url"].as_slice(),
+                [
+                    "data-kitchen-laptop-url",
+                    "data-kitchen-cookbook-url",
+                    "data-kitchen-surface-color-url",
+                    "data-kitchen-surface-normal-url",
+                ]
+                .as_slice(),
             ),
             (
                 "office",
@@ -582,7 +586,7 @@ impl State {
         if let Ok(loader) = el(&self.doc, "tour-loader") {
             let _ = loader.set_attribute("aria-hidden", if blocked { "false" } else { "true" });
         }
-        for id in ["story", "tour-header", "tour-navigation"] {
+        for id in ["story", "tour-header"] {
             if let Ok(e) = el(&self.doc, id) {
                 if blocked {
                     let _ = e.set_attribute("inert", "");
@@ -716,6 +720,9 @@ impl State {
             self.loading_phrase = (js_sys::Math::random() * LOADING_PHRASES.len() as f64) as usize;
             self.loading_status(LOADING_PHRASES[self.loading_phrase]);
         } else if !self.flying {
+            if let Some(renderer) = &self.renderer {
+                renderer.release_shadows();
+            }
             self.gate = Gate::Open;
         }
         self.sync_gate();
@@ -828,6 +835,20 @@ impl State {
         } else {
             ((now - self.last) * 0.001).clamp(0., 0.08) as f32
         };
+        if self.last != 0. && !self.gate.blocked() {
+            if let Some(renderer) = &self.renderer {
+                renderer.observe_shadow_frame(
+                    now - self.last,
+                    [
+                        self.assembly.frame(),
+                        self.office_arrival.frame(),
+                        self.potluck_arrival.frame(),
+                        self.bedroom_arrival.frame(),
+                        self.garden_arrival.frame(),
+                    ],
+                );
+            }
+        }
         self.last = now;
         let motion = !self.paused && !self.gate.blocked();
         // Warm-up stays behind the curtain. Only visible frames advance the intro;
@@ -863,23 +884,8 @@ impl State {
             .clamp(0., (flight::COUNT - 1) as f32) as usize;
         if self.active != active {
             self.active = active;
-            for i in 0..flight::COUNT {
-                let _ = self.nav[i]
-                    .set_attribute("aria-current", if i == active { "step" } else { "false" });
-            }
-            if let Ok(e) = el(&self.doc, "chapter-count") {
-                e.set_text_content(Some(&format!("{:02} / {:02}", active + 1, flight::COUNT)));
-            }
-            if let Ok(e) = el(&self.doc, "stop-name") {
+            if let Ok(e) = el(&self.doc, "tour-chapter-status") {
                 e.set_text_content(Some(NAMES[active]));
-            }
-        }
-        if let Ok(e) = el(&self.doc, "route-progress") {
-            if let Some(e) = e.dyn_ref::<HtmlElement>() {
-                let _ = e.style().set_property(
-                    "width",
-                    &format!("{}%", camera.progress * (100. / (flight::COUNT - 1) as f32)),
-                );
             }
         }
         for (i, panel) in self.panels.iter().enumerate() {
@@ -917,6 +923,10 @@ impl State {
             let _ = panel.set_attribute("aria-hidden", if interactive { "false" } else { "true" });
             if interactive {
                 let _ = panel.remove_attribute("inert");
+                if self.focus_destination == Some(i) {
+                    self.focus_chapter(i);
+                    self.focus_destination = None;
+                }
             } else {
                 let _ = panel.set_attribute("inert", "");
             }

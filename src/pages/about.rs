@@ -13,6 +13,14 @@ const KITCHEN_COOKBOOK: Asset = asset!(
     "/assets/about/kitchen-cookbook.webp",
     manganis::AssetOptions::builder()
 );
+const KITCHEN_SURFACE_COLOR: Asset = asset!(
+    "/assets/about/kitchen-surface-color.webp",
+    manganis::AssetOptions::builder()
+);
+const KITCHEN_SURFACE_NORMAL: Asset = asset!(
+    "/assets/about/kitchen-surface-normal.webp",
+    manganis::AssetOptions::builder()
+);
 const KITCHEN_POSTER: Asset = asset!(
     "/assets/about/sams-kitchen.webp",
     manganis::AssetOptions::builder()
@@ -214,7 +222,7 @@ pub fn About() -> Element {
     rsx! {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
-      div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,
+      div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
        "data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
        "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
        "data-garden-url":GARDEN_MODEL,"data-garden-pastry-url":GARDEN_PASTRY,
@@ -244,7 +252,6 @@ pub fn About() -> Element {
       }
      }
      div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}div{class:"world-vignette"}}
-     div{class:"journey-caption",aria_hidden:"true",span{"FOLLOW THE THREAD"}i{}span{id:"chapter-count","01 / 05"}}
      div{id:"story",class:"story",
       for i in 0..IDS.len() {
        article{id:"panel-{i}",class:"story-panel","data-panel":"{i}",aria_labelledby:"title-{i}",
@@ -268,12 +275,7 @@ pub fn About() -> Element {
      div{id:"scroll-track",class:"scroll-track",aria_hidden:"true",
       for i in 0..IDS.len() {div{id:"stop-{i}",class:"waypoint","data-waypoint":"{i}"}}
      }
-     nav{id:"tour-navigation",class:"tour-nav",aria_label:"Story chapters",
-      div{class:"nav-top",span{class:"tour-word","OUR STORY"}span{id:"stop-name",aria_live:"polite","The idea"}span{id:"scroll-hint",class:"scroll-hint","Scroll to travel"}}
-      div{class:"route",div{class:"route-line",span{id:"route-progress"}}
-       for i in 0..IDS.len() {a{id:"nav-{i}",href:"#{IDS[i]}",aria_label:"Chapter {i+1}: {NAMES[i]}",aria_current:if i==0{"step"}else{"false"},span{class:"route-dot"}span{class:"route-label","data-short":["Idea","Why","Creator","Philosophy","Gather"][i],"{NAMES[i]}"}}}
-      }
-     }
+     span{id:"tour-chapter-status",class:"sr-only",role:"status",aria_live:"polite","{NAMES[0]}"}
      footer{class:"reader-footer",p{"Noms · Making great meals more accessible."}
       a{href:"/explore",class:"btn btn-secondary","Explore recipes"}
      }
