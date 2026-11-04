@@ -114,13 +114,43 @@ pub enum GroceryItemChange {
     Checked(bool),
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct GroceryPantrySelection {
+    pub id: Uuid,
+    pub expected_revision: i64,
+}
+
+fn include_optional_default() -> bool {
+    true
+}
+fn is_true(value: &bool) -> bool {
+    *value
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GroceryCreate {
     pub request_id: Uuid,
     pub name: String,
     pub note: String,
     pub recipes: Vec<RecipeSelection>,
     pub manual_items: Vec<ItemFields>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pantry: Option<GroceryPantrySelection>,
+    #[serde(default = "include_optional_default", skip_serializing_if = "is_true")]
+    pub include_optional: bool,
+}
+impl Default for GroceryCreate {
+    fn default() -> Self {
+        Self {
+            request_id: Uuid::nil(),
+            name: String::new(),
+            note: String::new(),
+            recipes: Vec::new(),
+            manual_items: Vec::new(),
+            pantry: None,
+            include_optional: true,
+        }
+    }
 }
 impl GroceryCreate {
     pub fn validate_input(&self) -> Result<(), String> {
@@ -133,6 +163,16 @@ impl GroceryCreate {
 
     pub fn validate(&self) -> Result<(), String> {
         validate_list_name(&self.name)?;
+        if self
+            .pantry
+            .as_ref()
+            .is_some_and(|p| p.expected_revision < 0)
+            || (self.pantry.is_some() && self.recipes.is_empty())
+        {
+            return Err(
+                "Choose at least one recipe and a pantry to find missing ingredients.".into(),
+            );
+        }
         if self.note.chars().count() > 500 {
             return Err("List notes must be 500 characters or fewer.".into());
         }
@@ -291,7 +331,19 @@ pub(crate) fn quantity_is_zero(text: &str) -> Option<bool> {
     parse_quantity(text).map(|q| q.n == 0)
 }
 
+#[cfg(test)]
 pub fn build_requirements(previews: &[GroceryRecipePreview]) -> Result<Vec<GeneratedItem>, String> {
+    build_filtered_requirements(previews, None, true)
+}
+
+/// Filter authored occurrences before scaling/aggregation, retaining their original indices.
+/// Presence ignores quantities; manual extras are added separately and never filtered.
+pub fn build_filtered_requirements(
+    previews: &[GroceryRecipePreview],
+    pantry: Option<&[crate::pantry::PantryEntry]>,
+    include_optional: bool,
+) -> Result<Vec<GeneratedItem>, String> {
+    let matcher = pantry.map(crate::pantry::feasibility::PantryMatcher::new);
     if previews.len() > MAX_RECIPES {
         return Err("Select up to 20 recipes.".into());
     }
@@ -315,6 +367,13 @@ pub fn build_requirements(previews: &[GroceryRecipePreview]) -> Result<Vec<Gener
             base.unwrap_or(1) as i128,
         );
         for (index, ingredient) in preview.ingredients.iter().enumerate() {
+            if (!include_optional && ingredient.optional)
+                || matcher
+                    .as_ref()
+                    .is_some_and(|m| m.is_available(&ingredient.name))
+            {
+                continue;
+            }
             let original = ItemFields {
                 name: ingredient.name.clone(),
                 amount: ingredient.amount.clone(),
@@ -375,6 +434,35 @@ pub fn build_requirements(previews: &[GroceryRecipePreview]) -> Result<Vec<Gener
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn legacy_create_defaults_preserve_idempotency_hash_input() {
+        let legacy = serde_json::json!({"request_id":Uuid::new_v4(),"name":"Dinner","note":"","recipes":[],"manual_items":[]});
+        let request: GroceryCreate = serde_json::from_value(legacy.clone()).unwrap();
+        assert!(request.include_optional);
+        assert!(request.pantry.is_none());
+        assert_eq!(serde_json::to_value(&request).unwrap(), legacy);
+        assert!(GroceryCreate::default().include_optional);
+    }
+
+    #[test]
+    fn optional_exclusion_can_produce_empty_list_without_losing_required_duplicates() {
+        let mut input = recipe("Parsley", "5", "g", Some(2), Some(4));
+        input.ingredients[0].optional = true;
+        assert!(
+            build_filtered_requirements(&[input.clone()], Some(&[]), false)
+                .unwrap()
+                .is_empty()
+        );
+        let mut required = input.ingredients[0].clone();
+        required.optional = false;
+        required.amount = "20".into();
+        input.ingredients.push(required);
+        let list = build_filtered_requirements(&[input], Some(&[]), false).unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].fields.amount, "40");
+        assert_eq!(list[0].contributions[0].ingredient_index, 1);
+    }
+
     #[test]
     fn unit_input_policy_keeps_source_provenance_but_validates_manual_fields() {
         let mut fields = ItemFields {

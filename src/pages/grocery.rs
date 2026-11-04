@@ -1095,13 +1095,67 @@ fn recipe_reference(text: &str) -> Option<Uuid> {
 
 #[component]
 pub fn GroceryListNew() -> Element {
+    rsx! { GroceryListEditor {} }
+}
+
+#[component]
+pub fn GroceryListFromPantry(pantry_id: String, recipe_id: String) -> Element {
+    match (Uuid::parse_str(&pantry_id), Uuid::parse_str(&recipe_id)) {
+        (Ok(pantry), Ok(recipe)) => rsx! { GroceryListEditor { initial: Some((pantry, recipe)) } },
+        _ => rsx! { p { role: "alert", "This pantry or recipe link is invalid." } },
+    }
+}
+
+#[component]
+fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
     crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let form_account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let navigator = use_navigator();
     let mut name = use_signal(String::new);
     let mut note = use_signal(String::new);
-    let mut recipe_mode = use_signal(|| false);
+    let mut recipe_mode = use_signal(|| initial.is_some());
+    let mut missing_only = use_signal(|| initial.is_some());
+    let mut include_optional = use_signal(|| true);
+    let mut pantry_id = use_signal(|| initial.map(|(pantry, _)| pantry));
+    let mut pantry_retry = use_signal(|| 0_u64);
+    let pantries = use_resource(move || {
+        let owner = form_account();
+        let active = recipe_mode();
+        let _ = pantry_retry();
+        async move {
+            if active {
+                crate::api::pantry::list_kitchens(owner).await
+            } else {
+                Ok(Vec::new())
+            }
+        }
+    });
+    use_effect(move || {
+        if pantry_id().is_none() {
+            if let Some(Ok(rows)) = pantries.read().as_ref() {
+                let remembered = form_account().and_then(super::pantry::saved_selection);
+                let choice = remembered
+                    .filter(|id| rows.iter().any(|p| p.id == *id))
+                    .or_else(|| rows.first().map(|p| p.id));
+                if choice != pantry_id() {
+                    pantry_id.set(choice);
+                }
+            }
+        }
+    });
+    let pantry = use_resource(move || {
+        let owner = form_account();
+        let id = pantry_id();
+        let active = recipe_mode() && missing_only();
+        let _ = pantry_retry();
+        async move {
+            match (active, id) {
+                (true, Some(id)) => crate::api::pantry::get_kitchen(owner, id).await.map(Some),
+                _ => Ok(None),
+            }
+        }
+    });
     let mut manual = use_signal(Vec::<ItemFields>::new);
     let mut entry = use_signal(ItemFields::default);
     let mut selected = use_signal(Vec::<GroceryRecipePreview>::new);
@@ -1147,9 +1201,38 @@ pub fn GroceryListNew() -> Element {
             selecting.set(false);
         });
     };
+    let mut seeded = use_signal(|| false);
+    use_effect(move || {
+        if !seeded() {
+            seeded.set(true);
+            if let Some((_, recipe)) = initial {
+                add_recipe(recipe);
+            }
+        }
+    });
     let frozen = busy() || pending().is_some() || created().is_some();
+    let current_pantry = pantry
+        .read()
+        .as_ref()
+        .and_then(|r| r.as_ref().ok())
+        .cloned()
+        .flatten()
+        .filter(|p| Some(p.id) == pantry_id() && Some(p.owner_id) == form_account());
+    let pantry_pending = *pantry.state().read() == UseResourceState::Pending;
+    let pantry_ready = !missing_only() || (!pantry_pending && current_pantry.is_some());
     let account_changed = auth.read().current_user_id != form_account();
-    let preview = build_requirements(&selected());
+    let preview = if !pantry_ready {
+        Err("Choose a pantry and wait for its ingredients to load.".into())
+    } else {
+        build_filtered_requirements(
+            &selected(),
+            current_pantry
+                .as_ref()
+                .filter(|_| missing_only())
+                .map(|p| p.entries.as_slice()),
+            include_optional(),
+        )
+    };
     rsx! {
         AuthRequired {
 
@@ -1236,6 +1319,7 @@ pub fn GroceryListNew() -> Element {
                                 disabled: frozen || selecting(),
                                 onclick: move |_| {
                                     recipe_mode.set(false);
+                                    missing_only.set(false);
                                     selected.set(Vec::new());
                                     serving_inputs.write().clear();
                                 },
@@ -1276,6 +1360,42 @@ pub fn GroceryListNew() -> Element {
                             }
                         }
                         if recipe_mode() {
+                            section { class: "grocery-ingredient-options", aria_label: "Ingredient options",
+                                label { class: "grocery-option-toggle",
+                                    input { r#type: "checkbox", checked: missing_only(), disabled: frozen,
+                                        onchange: move |e| missing_only.set(e.checked()), }
+                                    span { "Only missing ingredients" }
+                                }
+                                if missing_only() {
+                                    label { r#for: "grocery-pantry", "Compare with pantry" }
+                                    select { id: "grocery-pantry", class: "neumo-inset input input--shared",
+                                        value: pantry_id().map(|id| id.to_string()).unwrap_or_default(), disabled: frozen,
+                                        onchange: move |e| pantry_id.set(Uuid::parse_str(&e.value()).ok()),
+                                        option { value: "", disabled: true, selected: pantry_id().is_none(), "Choose a pantry" }
+                                        if let Some(Ok(rows)) = pantries.read().as_ref() {
+                                            for row in rows {
+                                                option { value: "{row.id}", selected: pantry_id() == Some(row.id), "{row.name}" }
+                                            }
+                                        }
+                                    }
+                                    p { class: "grocery-muted", "Skip ingredients marked available in this pantry. Amounts aren't compared." }
+                                    if pantry_pending {
+                                        p { role: "status", "Loading pantry…" }
+                                    } else if matches!(pantry.read().as_ref(), Some(Err(_))) || matches!(pantries.read().as_ref(), Some(Err(_))) {
+                                        p { class: "grocery-error", role: "alert", "Your pantry couldn’t be loaded. Choose another pantry or retry." }
+                                        button { class: "btn btn-secondary", disabled: frozen,
+                                            onclick: move |_| pantry_retry += 1, "Retry pantry" }
+                                    } else if pantries.read().as_ref().is_some_and(|r| r.as_ref().is_ok_and(Vec::is_empty)) {
+                                        p { class: "grocery-muted", "Create a pantry first, or turn off ‘Only missing ingredients’ to copy all ingredients." }
+                                        Link { to: Route::PantryNew {}, "Create pantry" }
+                                    }
+                                }
+                                label { class: "grocery-option-toggle",
+                                    input { r#type: "checkbox", checked: include_optional(), disabled: frozen,
+                                        onchange: move |e| include_optional.set(e.checked()), }
+                                    span { "Include optional ingredients" }
+                                }
+                            }
                             section {
                                 class: "grocery-recipe-picker",
                                 aria_label: "Select recipes",
@@ -1630,6 +1750,9 @@ pub fn GroceryListNew() -> Element {
                                 }
                                 match preview {
                                     Ok(items) => rsx! {
+                                        if items.is_empty() {
+                                            p { role: "status", class: "grocery-muted", "No ingredients to add with these settings. You can still add your own items." }
+                                        }
                                         for (index, item) in items.iter().enumerate() {
                                             div {
                                                 key: "{index}",
@@ -1646,7 +1769,7 @@ pub fn GroceryListNew() -> Element {
                                         }
                                         p {
                                             class: "grocery-muted",
-                                            "Matching names and units are combined without conversion. Textual quantities keep their wording. Every ingredient is copied; edit or remove any item after saving."
+                                            "Matching names and units are combined without conversion. Textual quantities keep their wording. Edit or remove any item after saving."
                                         }
                                     },
                                     Err(problem) => rsx! {
@@ -1682,7 +1805,7 @@ pub fn GroceryListNew() -> Element {
                             }
                             button {
                                 class: "btn btn-primary",
-                                disabled: busy() || selecting() || created().is_some(),
+                                disabled: busy() || selecting() || created().is_some() || (pending().is_none() && !pantry_ready),
                                 onclick: move |_| {
                                     if busy() || selecting() || created().is_some() {
                                         return;
@@ -1719,12 +1842,20 @@ pub fn GroceryListNew() -> Element {
                                                 })
                                                 .collect(),
                                             manual_items: extras,
+                                            pantry: if missing_only() {
+                                                let Some(pantry) = current_pantry.as_ref().filter(|_| !pantry_pending) else {
+                                                    error.set(Some("Choose a pantry and wait for its ingredients to load.".into()));
+                                                    return;
+                                                };
+                                                Some(GroceryPantrySelection { id: pantry.id, expected_revision: pantry.revision })
+                                            } else { None },
+                                            include_optional: include_optional(),
                                         };
                                         if let Err(problem) = request.validate_input() {
                                             error.set(Some(problem));
                                             return;
                                         }
-                                        if let Err(problem) = build_requirements(&selected()) {
+                                        if let Err(problem) = build_filtered_requirements(&selected(), current_pantry.as_ref().filter(|_| missing_only()).map(|p| p.entries.as_slice()), include_optional()) {
                                             error.set(Some(problem));
                                             return;
                                         }
@@ -1755,6 +1886,10 @@ pub fn GroceryListNew() -> Element {
                                                     pending.set(None);
                                                 }
                                                 let text = feedback(&problem);
+                                                if text.contains("selected pantry changed") || text.contains("Pantry not accessible") {
+                                                    pending.set(None);
+                                                    pantry_retry += 1;
+                                                }
                                                 if text.contains("selected recipe changed")
                                                     || text.contains("Recipe not accessible")
                                                 {

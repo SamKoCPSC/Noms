@@ -16,6 +16,7 @@ pub fn focused_route(route: &Route) -> bool {
             | Route::About {}
             | Route::HowTo {}
             | Route::GroceryListNew {}
+            | Route::GroceryListFromPantry { .. }
             | Route::PantryNew {}
             | Route::RecipeNew {}
             | Route::RecipeImport {}
@@ -51,7 +52,9 @@ pub fn route_heading(route: &Route) -> Option<(&'static str, Route)> {
         Route::HowTo {} => Some(("How to use Noms", Route::MobileYou {})),
         Route::PantryNew {} => Some(("New pantry", Route::Pantry {})),
         Route::PantryDetail { .. } => Some(("Pantry", Route::Pantry {})),
-        Route::GroceryListNew {} => Some(("New grocery list", Route::GroceryLists {})),
+        Route::GroceryListNew {} | Route::GroceryListFromPantry { .. } => {
+            Some(("New grocery list", Route::GroceryLists {}))
+        }
         Route::GroceryListDetail { .. } => Some(("Grocery list", Route::GroceryLists {})),
         Route::RecipeNew {} => Some(("New recipe", Route::Dashboard {})),
         Route::RecipeImport {} => Some(("Import recipe", Route::Dashboard {})),
@@ -92,6 +95,7 @@ fn selected_tab(route: &Route) -> &'static str {
         | Route::PantryDetail { .. }
         | Route::GroceryLists {}
         | Route::GroceryListNew {}
+        | Route::GroceryListFromPantry { .. }
         | Route::GroceryListDetail { .. } => "Kitchen",
         Route::Explore {} | Route::Search { .. } => "Explore",
         Route::MobileYou {}
@@ -238,9 +242,22 @@ mod tests {
                 id: "weekly".into(),
             },
             Route::GroceryListNew {},
+            Route::GroceryListFromPantry {
+                pantry_id: "home".into(),
+                recipe_id: "dinner".into(),
+            },
         ] {
             assert_eq!(selected_tab(&route), "Kitchen");
         }
+        let missing = Route::GroceryListFromPantry {
+            pantry_id: "home".into(),
+            recipe_id: "dinner".into(),
+        };
+        assert!(focused_route(&missing));
+        assert_eq!(
+            route_heading(&missing),
+            Some(("New grocery list", Route::GroceryLists {}))
+        );
         assert_eq!(
             route_heading(&Route::PantryNew {}),
             Some(("New pantry", Route::Pantry {}))

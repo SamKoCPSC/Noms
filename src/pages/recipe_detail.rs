@@ -2779,6 +2779,7 @@ fn RecipeDetailContents(id: String) -> Element {
                     div { class: "recipe-detail__ingredients-section",
                         h2 { class: "recipe-detail__section-title", "Ingredients" }
                         super::recipe_pantry::RecipePantryCheck {
+                            recipe_id: recipe.id,
                             ingredients: recipe.ingredients.clone(),
                         }
                         ul { class: "recipe-detail__list",

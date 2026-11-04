@@ -905,3 +905,10 @@
 .grocery-edit-dialog input.input {
     min-height:44px;
 }
+
+/* Compact creation controls, with comfortable checkbox targets on mobile. */
+.grocery-ingredient-options { display:grid; gap:8px; margin:16px 0; min-width:0; }
+.grocery-option-toggle { display:flex; align-items:center; gap:10px; min-height:44px; cursor:pointer; }
+.grocery-option-toggle input { width:20px; height:20px; flex-shrink:0; accent-color:var(--accent); }
+.grocery-ingredient-options select { width:100%; min-width:0; }
+.grocery-ingredient-options p { margin:0; }

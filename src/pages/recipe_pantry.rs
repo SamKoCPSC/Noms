@@ -10,11 +10,11 @@ use dioxus::prelude::*;
 use uuid::Uuid;
 
 #[component]
-pub(super) fn RecipePantryCheck(ingredients: Vec<RecipeIngredient>) -> Element {
+pub(super) fn RecipePantryCheck(recipe_id: Uuid, ingredients: Vec<RecipeIngredient>) -> Element {
     let auth = crate::auth::context::use_auth();
     rsx! {
         if auth.is_authenticated {
-            SignedInPantryCheck { ingredients }
+            SignedInPantryCheck { recipe_id, ingredients }
         } else {
             p { class: "recipe-pantry__hint",
                 Link { to: Route::Login {}, "Sign in" }
@@ -25,7 +25,7 @@ pub(super) fn RecipePantryCheck(ingredients: Vec<RecipeIngredient>) -> Element {
 }
 
 #[component]
-fn SignedInPantryCheck(ingredients: Vec<RecipeIngredient>) -> Element {
+fn SignedInPantryCheck(recipe_id: Uuid, ingredients: Vec<RecipeIngredient>) -> Element {
     let account = use_form_account();
     let auth = use_context::<Signal<AuthContext>>();
     let mut expanded = use_signal(|| false);
@@ -165,6 +165,13 @@ fn SignedInPantryCheck(ingredients: Vec<RecipeIngredient>) -> Element {
                             PantryCheckResult { check: check_pantry(&ingredients, &current.entries) }
                             p { class: "recipe-pantry__hint",
                                 "Quantities aren’t checked. Ingredient names ignore capitalization. Equipment isn’t checked."
+                            }
+                            if check_pantry(&ingredients, &current.entries).ingredients.iter().any(|i| i.status != IngredientStatus::Available) {
+                                Link {
+                                    class: "btn btn-secondary touch-target",
+                                    to: Route::GroceryListFromPantry { pantry_id: current.id.to_string(), recipe_id: recipe_id.to_string() },
+                                    "Create list from missing ingredients"
+                                }
                             }
                             Link {
                                 to: Route::PantryDetail {
