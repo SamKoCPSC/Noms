@@ -2,7 +2,8 @@ use super::math::*;
 pub const COUNT: usize = super::super::about::IDS.len();
 pub const FOV: f32 = 0.88;
 // Keep in sync with the mobile card height in about-tour.css.
-pub const MOBILE_PANEL_TOP: f32 = 0.48;
+pub const MOBILE_PANEL_INSET: f32 = 8.;
+pub const MOBILE_TEXT_FRACTION: f32 = 0.45;
 const EYES: [[f32; 3]; COUNT] = [
     [0., 3.1, 12.],
     [7., 3.9, -10.],
@@ -56,6 +57,22 @@ pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
         progress: i as f32 + t,
     }
 }
+/// An upright three-quarter view matching the approved office reference.
+pub fn room_rotation(room: super::assembly::Room, mobile: bool) -> Mat4 {
+    let pitch = if room == super::assembly::Room::Garden {
+        0.72
+    } else {
+        0.58
+    };
+    // The lower mobile slot adds apparent elevation through perspective.
+    let pitch = if mobile { pitch - 0.30 } else { pitch };
+    let yaw = if room == super::assembly::Room::Office {
+        0.62
+    } else {
+        -0.62
+    };
+    mul(rx(pitch), ry(yaw))
+}
 /// Perspective framing needs the silhouette in X/Z and Y/Z, not the empty
 /// corners of a bounding box. Cache only those convex outlines, not the mesh.
 #[derive(Default)]
@@ -103,7 +120,7 @@ impl RoomFrame {
     }
     pub fn model(&self, w: f32, h: f32, rotation: Mat4) -> Mat4 {
         let (left, top, right, bottom) = if w <= 700. {
-            (8., 6., w - 8., h * MOBILE_PANEL_TOP - 10.)
+            (4., h * MOBILE_TEXT_FRACTION - 2., w - 4., h - 4.)
         } else {
             (
                 w * 0.035 + (w * 0.4).clamp(320., 520.) + 16.,
@@ -114,10 +131,14 @@ impl RoomFrame {
         };
         let focal = h * 0.5 / (FOV * 0.5).tan();
         let offset = [(left + right - w) * 0.5, (h - top - bottom) * 0.5];
-        let margin = [(right - left).max(1.) * 0.48, (bottom - top).max(1.) * 0.48];
+        let fill = if w <= 700. { 0.5 } else { 0.48 };
+        let margin = [(right - left).max(1.) * fill, (bottom - top).max(1.) * fill];
         let distance = 11.7;
         let mut size: f32 = 10.;
         for (k, outline) in self.outlines.iter().enumerate() {
+            if w <= 700. {
+                continue;
+            }
             for &[p, z] in outline {
                 let denominator = (focal * p + offset[k] * z).abs() + margin[k] * z;
                 if denominator > 0. {
@@ -125,18 +146,44 @@ impl RoomFrame {
                 }
             }
         }
-        // Width-limited rooms otherwise leave a large empty gap below them.
-        // Align the projected silhouette with the card, retaining the fit above.
-        let y = if w <= 700. {
-            self.outlines[1]
-                .iter()
-                .map(|&[p, z]| (h * 0.5 - bottom) * (distance - size * z) / focal - size * p)
-                .fold(f32::NEG_INFINITY, f32::max)
+        // Solve translation intervals for both axes so an asymmetric silhouette
+        // can fill the viewport without cropping. Align its top beneath the card.
+        let (x, y) = if w <= 700. {
+            let interval = |size: f32, axis: usize, min: f32, max: f32| {
+                let mut lower = f32::NEG_INFINITY;
+                let mut upper = f32::INFINITY;
+                for &[p, z] in &self.outlines[axis] {
+                    let depth = distance - size * z;
+                    if depth <= 0. {
+                        return (f32::INFINITY, f32::NEG_INFINITY);
+                    }
+                    lower = lower.max(min * depth / focal - size * p);
+                    upper = upper.min(max * depth / focal - size * p);
+                }
+                (lower, upper)
+            };
+            let horizontal = |size| interval(size, 0, left - w * 0.5, right - w * 0.5);
+            let vertical = |size| interval(size, 1, h * 0.5 - bottom, h * 0.5 - top);
+            let mut low = 0.;
+            let mut high = size;
+            for _ in 0..24 {
+                let mid = (low + high) * 0.5;
+                let (xl, xr) = horizontal(mid);
+                let (yl, yr) = vertical(mid);
+                if xl <= xr && yl <= yr {
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            }
+            size = low;
+            let (xl, xr) = horizontal(size);
+            ((xl + xr) * 0.5, vertical(size).1)
         } else {
-            offset[1] * distance / focal
+            (offset[0] * distance / focal, offset[1] * distance / focal)
         };
         mul(
-            translate(offset[0] * distance / focal, y, -distance),
+            translate(x, y, -distance),
             mul(
                 scale(size, size, size),
                 mul(
@@ -158,7 +205,7 @@ pub fn panel_model(i: usize, w: f32, h: f32, pw: f32, ph: f32) -> Mat4 {
         (w * 0.035 + pw * 0.5 - w * 0.5) * unit
     };
     let center = if mobile {
-        h * MOBILE_PANEL_TOP + ph * 0.5
+        MOBILE_PANEL_INSET + ph * 0.5
     } else {
         (h * 0.52).min(h - 24. - ph * 0.5)
     };
@@ -230,15 +277,14 @@ mod tests {
                 (1280., 796.),
                 (1920., 976.),
             ] {
-                let rotation = if i == 0 {
-                    mul(rx(0.522718), ry(-0.655696))
-                } else if i == 1 {
-                    mul(rx(0.58), ry(0.62))
-                } else if i == 4 && w <= 700. {
-                    transform([0.; 3], [0.9, -0.4, 0.], [1.; 3])
-                } else {
-                    transform([0.; 3], [0.58, -0.62, 0.], [1.; 3])
-                };
+                let room = [
+                    super::super::assembly::Room::Kitchen,
+                    super::super::assembly::Room::Office,
+                    super::super::assembly::Room::Bedroom,
+                    super::super::assembly::Room::Potluck,
+                    super::super::assembly::Room::Garden,
+                ][i];
+                let rotation = room_rotation(room, w <= 700.);
                 let points: Vec<_> = mesh
                     .vertices
                     .as_chunks::<12>()
@@ -257,7 +303,7 @@ mod tests {
                 let model = mul(station(i), frame.model(w, h, rotation));
                 let (projection, _) = css_projection(camera.vp, model, w, h);
                 let mut extent = [[f32::INFINITY; 2], [f32::NEG_INFINITY; 2]];
-                for p in points {
+                for &p in &points {
                     let q = point(projection, p);
                     let divisor = projection[3] * p[0]
                         + projection[7] * p[1]
@@ -270,7 +316,7 @@ mod tests {
                     }
                 }
                 let (left, top, right, bottom) = if w <= 700. {
-                    (8., 6., w - 8., h * MOBILE_PANEL_TOP - 10.)
+                    (4., h * MOBILE_TEXT_FRACTION - 2., w - 4., h - 4.)
                 } else {
                     (
                         w * 0.035 + (w * 0.4).clamp(320., 520.) + 16.,
@@ -297,7 +343,7 @@ mod tests {
                     (w * 0.4).clamp(320., 520.)
                 };
                 let ph = if w <= 700. {
-                    h * (1. - MOBILE_PANEL_TOP) - 18.
+                    h * MOBILE_TEXT_FRACTION - 18.
                 } else {
                     h - 104.
                 };
@@ -306,7 +352,11 @@ mod tests {
                 assert!(panel_top >= 0. && panel_top + ph <= h - 17.);
                 if w <= 700. {
                     assert!(
-                        (panel_top - extent[1][1] - 10.).abs() < 0.1,
+                        (extent[1][0] - extent[0][0]) >= (right - left) * 0.99
+                            || (extent[1][1] - extent[0][1]) >= (bottom - top) * 0.99
+                    );
+                    assert!(
+                        (extent[0][1] - (panel_top + ph) - 8.).abs() < 0.1,
                         "room {i} gap: {extent:?}"
                     );
                 } else {
@@ -324,7 +374,7 @@ mod mobile_reading_tests {
     fn camera_waits_for_all_text_even_on_short_screens() {
         for viewport in [308., 558., 770.] {
             for text in [180., 600., 1600.] {
-                let visible = viewport * (1. - MOBILE_PANEL_TOP) - 18. - 50.;
+                let visible = viewport * MOBILE_TEXT_FRACTION - 18. - 50.;
                 let section = MobileSection::new(viewport, text, visible);
                 assert_eq!(section.progress(0.), 0.);
                 assert_eq!(section.progress(section.read), 0.);

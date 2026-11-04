@@ -74,12 +74,17 @@ On screens up to 700px wide, the document scroll controls both reading and
 camera travel. Cards stay fixed while their text translates inside a clipped
 viewport; neither the card nor its contents captures native scroll gestures.
 Each chapter first spends enough scroll distance to bring the end of its text
-into view beneath the fixed model, followed by a brief reading pause and camera
+into view above the fixed model, followed by a brief reading pause and camera
 travel to the next room over 1.5 viewport heights. Longer copy extends the reading distance,
 without changing travel speed. Chapter links target the beginning of that
 chapter's reading interval. The redundant tour toolbar is hidden on mobile;
-the app navbar stays available. Models use the reclaimed upper space and sit
-10px above a wider fixed text card, which occupies the lower 52% of the tour.
+the app navbar stays available. The fixed text card sits first, directly below the app navbar, and occupies
+the upper 45% of the tour, leaving roughly 55% for the model. Models sit 8px beneath it, in a stronger upright
+three-quarter view matching the office reference. Mobile titles are smaller,
+with tighter spacing between the section label, heading and copy. Mobile framing
+fits the actual silhouette to the available width and height. The transparent
+canvas uses the app background color, without a separate green backdrop or
+decorative ground plane, so it matches the area behind the navbar.
 The loader's reading shortcut and reduced-motion fallback remain available.
 Reading mode restores normal document content.
 
@@ -137,7 +142,7 @@ The exporter reads `assembly-manifest.json` beside the master and never saves th
 
 ## Garden cookout
 
-The fifth chapter, “Around the table” (`#gather`), uses the approved **revision 6**
+The fifth chapter, “The Noms Philosophy” (`#gather`), uses the approved **revision 6**
 [garden model](https://chatgpt.com/space/page_7c6bf3f7c53081919c1588f851054446).
 It retains the shared meals, beer picnic table, enlarged centered spikeball net,
 sports equipment at the side, left fence and two striped lawn chairs.

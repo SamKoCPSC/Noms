@@ -43,7 +43,7 @@ fn about_renders_the_five_approved_chapters_and_readable_fallback() {
         "A side project that grew in to something larger.",
         "Hi, I&#39;m Sam!",
         "Just a simple and easy-to-use app.",
-        "Good food brings us together.",
+        "Building a community.",
     ] {
         assert!(html.contains(title), "Missing {title}");
     }

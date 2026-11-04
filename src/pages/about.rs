@@ -191,28 +191,28 @@ pub(super) const NAMES: [&str; 5] = [
     "The reason",
     "The creator",
     "The philosophy",
-    "Around the table",
+    "The Noms Philosophy",
 ];
 const EYEBROWS: [&str; 5] = [
     "About Noms",
     "Why was Noms created?",
     "About the creator",
     "The Noms Philosophy",
-    "Around the table",
+    "The Noms Philosophy",
 ];
 const TITLES: [&str; 5] = [
     "The Ultimate Recipe Manager",
     "A side project that grew in to something larger.",
     "Hi, I'm Sam!",
     "Just a simple and easy-to-use app.",
-    "Good food brings us together.",
+    "Building a community.",
 ];
 const CONTENT: [&[&str];5] = [
 &["Noms is designed to be the ultimate unified solution for managing all your recipes.", "With tools that help cooks save and share their signature recipes, iterate and develop new recipes, and organize and plan meals.", "Featuring an optimized search engine, recipe editor, ingredient-scaling calculator, cooking mode, a grocery organizer, and more."],
 &["Noms started a simple side project made to be presented on a resume.", "Motivated by the desire to solve the ongoing issue of needing to constantly write and rewrite disorganized recipes on Google Docs.", "What started as a side project idea later became an actual solution to a real problem, and has since grown in to a suite of tools for the everyday cook and the larger cooking community."],
 &["I'm a professional software engineer and casual computer science enthusiast from Vancouver, Canada who happens to enjoy cooking in his spare time.", "I enjoy experimenting with food, everything from sandwiches to pastas to breads, cakes, noodles, etc. And also beverages like coffee and tea.", "As a cooking hobbyist, some of the consistent inconveniences I had was organizing recipes that changed over time, keeping track of what changes worked and didn't work, finding out what I could cook with limited ingredients, and scaling recipes when certain ingredients had awkward proportions.", "I initially wondered if there existed an app that could solve these issues, and although some attempts seem to have been made, existing solutions consistently seemed to lack the user experience that I would consider ideal. As such, I set out to build my own solution.", "To be honest, it started out as a somewhat non-serious side project that was simply meant to support my ongoing job search at that time as software engineering job recruiters typically identify passion and interest through non-academic work particularly in inexperienced candidates.", "After securing a job I took a break from working on the project for about a year, but later decided to rewrite the app properly, but with the same fundamental idea.", "Nowadays I continue to support the project as it solves a genuine problem I have, and my hope is to be able to share the app with other people in the community."],
 &["Noms puts the user experience first.", "One of the fundamental problems with modern software these days seems to be the constant disruptive designs that make it difficult to simply enjoy the tool as a solution to a problem.", "Ultimately, every project does need a pathway to sustainability if it hopes to scale beyond one user, but usability should never be sacrificed for short-term profitability.", "As such, Noms aims to keep key features free and accessible without a subscription or inconvenient restrictions that you have to pay to remove.", "It aims to avoid any disruptive or instrusive advertising or sponsorships that get in the way actually using the app.", "And it commits to respecting user privacy by only collecting data that is necessary to specific features, being transparent about what data is collected, never selling or sharing the data for any reason, and not using the data to manipulate users in to making purchases.", "Noms philosophy is that its primary purpose is to be a great product that people can enjoy using."],
-&["Great food is even better when there is someone to share it with.", "From a family favorite to a dish brought to a potluck, the recipes we keep become part of the moments we share.", "Save what you love, make it your own, and bring something good to the table."]
+&["Noms is a community oriented space.", "Food and cooking is a key part of how we build relationships and connections and Noms wants to be here for that.", "Come join us at (TBD)."]
 ];
 
 #[component]
