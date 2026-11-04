@@ -18,6 +18,7 @@ are ready for integration; no app page currently displays the mascot.
 | [Sneeze](preview.html?animation=sneeze) | Two tiny inhalations, squeezed eyes, a quick sneeze, and a recovery blink | 5.2 seconds |
 | [Yawn](preview.html?animation=yawn) | Drooping eyes, a wide yawn and slow stretch, then a relaxed exhale | 7.2 seconds |
 | [Wiggle dance](preview.html?animation=wiggle-dance) | Planted feet, side-to-side body wiggles, alternating flippers, and a finishing shimmy | 6.4 seconds |
+| [Head wiggle](animations/head-wiggle.svg) | Soft alternating head tilts, expressive blinks, a happy smile, and a gradual return to rest | 5.2 seconds |
 
 [still.svg](still.svg) provides the neutral resting pose. Standalone activities
 play once and finish at that pose; idle repeats. Every animated SVG respects
@@ -33,6 +34,10 @@ under the lowered left flipper. Sneeze, Yawn, and Wiggle dance reuse that should
 mesh; the same renderer also manages their closed-eye expressions and breath cue.
 All join the random and ordered activity sets and return smoothly to idle.
 The other activities retain their standalone SVGs.
+
+Head wiggle also joins the random and ordered activity sets. Its individual
+preview is available at `preview.html?animation=head-wiggle`, and its standalone
+SVG plays without JavaScript or WebGL.
 
 The tummy-pat, chef's-kiss, and hat-adjustment experiments were not
 approved and are not included in the animation registry. Review videos,
