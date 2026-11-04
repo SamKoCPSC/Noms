@@ -37,19 +37,19 @@ numbered items are indexed here; older plans/checklists preserve design history.
 | [NOMS-015](issues/NOMS-015-security-hardening.md) | Integrated security hardening | 🟡 In Progress | OAuth, identity, media, quotas and bounded reads implemented. CP9C acceptance reconciliation and CP10 final independent review remain. |
 | [NOMS-016](implementation-plans/NOMS-016-recipe-import-export.md) | Recipe and collection portability | 🟡 In Progress | Clipboard/provider import, JSON/ZIP round trips and offline HTML implemented. Direct URL/Schema.org and compatibility closeout deferred. |
 | [NOMS-017](implementation-plans/NOMS-017-recipe-metadata-autocomplete-vocabulary.md) | Metadata and autocomplete | 🟡 In Progress | Ingredient vocabulary/cache, unit/equipment suggestions and structured ingredient options implemented. Wider metadata remains discovery. |
-| [NOMS-018](implementation-plans/NOMS-018-pantry-meal-planner-grocery-list.md) | Kitchen, pantries and groceries | 🟡 In Progress | Persistent lists/pantries, recipe-derived lists, presence checks and owned/collected cookable recipes implemented. Ingredient options, shortages and shopping/offline work remain. |
+| [NOMS-018](implementation-plans/NOMS-018-pantry-meal-planner-grocery-list.md) | Kitchen, pantries and groceries | 🟡 In Progress | Persistent lists/pantries, recipe-derived lists, presence checks and owned/collected cookable recipes implemented. Optional-aware checks are implemented; substitutions, shortages and shopping/offline work remain. |
 | [NOMS-019](implementation-plans/NOMS-019-visual-recipe-flow.md) | Visual recipe flow and cooking timeline | ⚪ Backlog | Discovery/prototype required; implemented version-history graphs are a different feature. |
 | [NOMS-020](implementation-plans/NOMS-020-checkpoint-0-baseline.md) | Visual design refinement | 🟡 In Progress | Page redesigns, overlays, painted icons and raised/inset refinements integrated. Final acceptance/device/screen-reader limitations remain. |
 | [NOMS-021](issues/NOMS-021-production-readiness-follow-ups.md) | Production readiness and reliability | 🟡 In Progress | Some checkpoints delivered. Reconciled residuals: projections, search/cleanup/lineage bounds, public Search, metadata, CI reliability and release coverage. |
 | [NOMS-022](issues/NOMS-022-mobile-responsive-design.md) | Mobile responsive baseline | ✅ Done | PR #6 merged; compact continuous editor and keyboard-aware popovers also merged. Physical-device/assistive-technology release checks remain. |
-| [NOMS-023](issues/NOMS-023-kitchen-ingredient-options.md) | Optional/substitute-aware Kitchen checks | ⚪ Backlog | Proposed next slice; behavior and implementation plan not yet approved. |
+| [NOMS-023](issues/NOMS-023-kitchen-ingredient-options.md) | Optional/substitute-aware Kitchen checks | 🟡 In Progress | Optional ingredients are nonblocking with distinct full/optional-missing results. Substitution semantics remain backlog. |
 
 ## Recommended next work
 
 These are proposed priorities, not approval to implement new features.
 
-1. **NOMS-023:** agree optional/substitute rules, then change both feasibility
-   paths together. Keep checks presence-based.
+1. **NOMS-023:** optional-only matching is implemented in both feasibility paths.
+   Agree substitute rules before extending it further; keep checks presence-based.
 2. **NOMS-018 shortages:** agree pantry, servings, optional/alternative choices
    before generating independent editable missing-ingredient lists.
 3. **NOMS-021 reliability:** verify recent fixture isolation and investigate

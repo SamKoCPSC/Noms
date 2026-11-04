@@ -1,12 +1,13 @@
 //! Read-only ingredient presence checks. Amounts and units are never consulted.
 use super::{PantryEntry, PantryKind};
 use crate::types::RecipeIngredient;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IngredientStatus {
     Available,
     Missing,
+    OptionalMissing,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -20,15 +21,28 @@ pub struct PantryCheck {
     pub ingredients: Vec<IngredientCheck>,
 }
 impl PantryCheck {
+    pub fn is_cookable(&self) -> bool {
+        !self.ingredients.is_empty()
+            && !self
+                .ingredients
+                .iter()
+                .any(|row| row.status == IngredientStatus::Missing)
+    }
+
+    pub fn missing_optional_count(&self) -> usize {
+        self.ingredients
+            .iter()
+            .filter(|row| row.status == IngredientStatus::OptionalMissing)
+            .count()
+    }
+
     pub fn label(&self) -> &'static str {
         if self.ingredients.is_empty() {
             "No ingredients to check"
-        } else if self
-            .ingredients
-            .iter()
-            .any(|row| row.status == IngredientStatus::Missing)
-        {
+        } else if !self.is_cookable() {
             "Missing ingredients"
+        } else if self.missing_optional_count() > 0 {
+            "Optional ingredients missing"
         } else {
             "All ingredients available"
         }
@@ -55,38 +69,42 @@ impl PantryMatcher {
         Self { available }
     }
 
-    /// Empty ingredient lists cannot establish that a recipe is cookable.
-    #[cfg(feature = "server")]
-    pub fn matches_names<'a>(&self, names: impl IntoIterator<Item = &'a str>) -> bool {
-        let mut any = false;
-        for name in names {
-            any = true;
-            if !self.available.contains(&name.to_lowercase()) {
-                return false;
-            }
-        }
-        any
+    pub fn check(&self, ingredients: &[RecipeIngredient]) -> PantryCheck {
+        self.check_requirements(ingredients.iter().map(|i| (i.name.as_str(), i.optional)))
     }
 
-    pub fn check(&self, ingredients: &[RecipeIngredient]) -> PantryCheck {
-        let mut seen = HashSet::new();
-        let ingredients = ingredients
-            .iter()
-            .filter_map(|ingredient| {
-                let name = ingredient.name.to_lowercase();
-                if !seen.insert(name.clone()) {
-                    return None;
+    /// A required occurrence wins over an optional one with the same name.
+    /// Keep the first authored spelling/order, regardless of occurrence order.
+    pub fn check_requirements<'a>(
+        &self,
+        requirements: impl IntoIterator<Item = (&'a str, bool)>,
+    ) -> PantryCheck {
+        let mut positions = HashMap::new();
+        let mut ingredients: Vec<IngredientCheck> = Vec::new();
+        for (name, optional) in requirements {
+            let key = name.to_lowercase();
+            let status = if name.trim().is_empty() {
+                IngredientStatus::Missing
+            } else if self.available.contains(&key) {
+                IngredientStatus::Available
+            } else if optional {
+                IngredientStatus::OptionalMissing
+            } else {
+                IngredientStatus::Missing
+            };
+            if let Some(&index) = positions.get(&key) {
+                let row: &mut IngredientCheck = &mut ingredients[index];
+                if status == IngredientStatus::Missing {
+                    row.status = status;
                 }
-                Some(IngredientCheck {
-                    name: ingredient.name.clone(),
-                    status: if self.available.contains(&name) {
-                        IngredientStatus::Available
-                    } else {
-                        IngredientStatus::Missing
-                    },
-                })
-            })
-            .collect();
+            } else {
+                positions.insert(key, ingredients.len());
+                ingredients.push(IngredientCheck {
+                    name: name.to_string(),
+                    status,
+                });
+            }
+        }
         PantryCheck { ingredients }
     }
 }
@@ -124,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn ingredient_options_do_not_change_kitchen_presence_matching_yet() {
+    fn optional_metadata_is_used_but_modifiers_and_substitutions_do_not_change_identity() {
         let mut rice = ingredient("Rice", "1", "cup");
         rice.optional = true;
         rice.text_before = "Acme".into();
@@ -132,7 +150,7 @@ mod tests {
         rice.substitutes.push(ingredient("Lentils", "300", "g"));
         assert_eq!(
             check_pantry(&[rice.clone()], &[stock("Lentils", "", "", true)]).label(),
-            "Missing ingredients"
+            "Optional ingredients missing"
         );
         assert_eq!(
             check_pantry(&[rice], &[stock("rice", "", "", true)]).label(),
@@ -243,5 +261,46 @@ mod tests {
     #[test]
     fn empty_recipe_does_not_claim_availability() {
         assert_eq!(check_pantry(&[], &[]).label(), "No ingredients to check");
+        assert!(!check_pantry(&[], &[]).is_cookable());
+    }
+
+    #[test]
+    fn missing_optional_items_allow_cooking_but_are_distinct_from_full_matches() {
+        let mut garnish = ingredient("Parsley", "1", "g");
+        garnish.optional = true;
+        let recipe = [ingredient("Rice", "100", "g"), garnish];
+        let partial = check_pantry(&recipe, &[stock("rice", "0", "kg", true)]);
+        assert!(partial.is_cookable());
+        assert_eq!(partial.label(), "Optional ingredients missing");
+        assert_eq!(partial.missing_optional_count(), 1);
+        let full = check_pantry(
+            &recipe,
+            &[stock("rice", "", "", true), stock("PARSLEY", "", "", true)],
+        );
+        assert!(full.is_cookable());
+        assert_eq!(full.label(), "All ingredients available");
+        assert_eq!(full.missing_optional_count(), 0);
+        let missing = check_pantry(&recipe, &[]);
+        assert!(!missing.is_cookable());
+        assert_eq!(missing.label(), "Missing ingredients");
+        assert_eq!(missing.missing_optional_count(), 1);
+    }
+
+    #[test]
+    fn required_duplicate_wins_in_either_order_and_optional_duplicates_count_once() {
+        let matcher = PantryMatcher::new(&[]);
+        for requirements in [
+            vec![("Salt", true), ("SALT", false)],
+            vec![("Salt", false), ("SALT", true)],
+        ] {
+            let result = matcher.check_requirements(requirements);
+            assert!(!result.is_cookable());
+            assert_eq!(result.ingredients.len(), 1);
+            assert_eq!(result.ingredients[0].name, "Salt");
+            assert_eq!(result.missing_optional_count(), 0);
+        }
+        let optional_only = matcher.check_requirements([("Salt", true), ("SALT", true)]);
+        assert!(optional_only.is_cookable());
+        assert_eq!(optional_only.missing_optional_count(), 1);
     }
 }

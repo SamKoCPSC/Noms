@@ -1,4 +1,4 @@
-//! Private library recipe checks. Stream names only, then hydrate one bounded card page.
+//! Private library checks. Stream names/optional flags, then hydrate bounded cards.
 use super::pantry::PantryError;
 use crate::pantry::{feasibility::PantryMatcher, PantryRecipePage};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
@@ -55,7 +55,11 @@ WITH library AS (
 SELECT r.id, r.updated_at,
        ARRAY(SELECT CASE WHEN jsonb_typeof(i->'name') = 'string' THEN i->>'name' END
              FROM jsonb_array_elements(CASE WHEN jsonb_typeof(r.ingredients) = 'array'
-                  THEN r.ingredients ELSE '[]'::jsonb END) AS i) AS names
+                  THEN r.ingredients ELSE '[]'::jsonb END) AS i) AS names,
+       ARRAY(SELECT CASE WHEN NOT (i ? 'optional') THEN false
+                    WHEN jsonb_typeof(i->'optional') = 'boolean' THEN i->'optional' = 'true'::jsonb END
+             FROM jsonb_array_elements(CASE WHEN jsonb_typeof(r.ingredients) = 'array'
+                  THEN r.ingredients ELSE '[]'::jsonb END) AS i) AS optional_flags
 FROM library l JOIN recipes r ON r.id = l.id
 WHERE (r.user_id = $1 OR r.visibility IN ('public', 'unlisted'))
   AND jsonb_typeof(r.ingredients) = 'array'
@@ -93,16 +97,28 @@ pub async fn find(
             .fetch(&mut *tx);
         while let Some(row) = candidates.try_next().await? {
             let names: Vec<Option<String>> = row.try_get("names")?;
+            let optional: Vec<Option<bool>> = row.try_get("optional_flags")?;
             if names
                 .iter()
                 .any(|n| n.as_ref().is_none_or(|n| n.trim().is_empty()))
             {
                 continue;
             }
-            if matcher.matches_names(names.iter().filter_map(|n| n.as_deref())) {
+            if optional.len() != names.len() || optional.iter().any(Option::is_none) {
+                continue;
+            }
+            let check =
+                matcher.check_requirements(names.iter().zip(&optional).map(|(name, optional)| {
+                    (
+                        name.as_deref().expect("validated name"),
+                        optional.expect("validated optional flag"),
+                    )
+                }));
+            if check.is_cookable() {
                 matches.push((
                     row.try_get::<Uuid, _>("id")?,
                     row.try_get::<DateTime<Utc>, _>("updated_at")?,
+                    check.missing_optional_count(),
                 ));
                 if matches.len() > PAGE_SIZE {
                     break;
@@ -112,7 +128,7 @@ pub async fn find(
     }
     let next_cursor = if matches.len() > PAGE_SIZE {
         matches.truncate(PAGE_SIZE);
-        let (recipe, updated) = *matches.last().expect("nonempty full page");
+        let (recipe, updated, _) = *matches.last().expect("nonempty full page");
         Some(
             URL_SAFE_NO_PAD.encode(
                 serde_json::to_vec(&Cursor {
@@ -127,7 +143,12 @@ pub async fn find(
     } else {
         None
     };
-    let ids: Vec<_> = matches.into_iter().map(|(id, _)| id).collect();
+    let optional_ingredients_missing = matches
+        .iter()
+        .filter(|(_, _, count)| *count > 0)
+        .map(|(id, _, count)| (*id, *count))
+        .collect();
+    let ids: Vec<_> = matches.into_iter().map(|(id, _, _)| id).collect();
     let recipes = if ids.is_empty() {
         Vec::new()
     } else {
@@ -154,6 +175,7 @@ pub async fn find(
         pantry_id,
         pantry_revision: revision,
         recipes,
+        optional_ingredients_missing,
         next_cursor,
     })
 }

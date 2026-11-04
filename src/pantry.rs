@@ -14,6 +14,9 @@ pub struct PantryRecipePage {
     pub pantry_id: Uuid,
     pub pantry_revision: i64,
     pub recipes: Vec<crate::types::RecipeCardSummary>,
+    /// Only returned recipes missing optional ingredients are included.
+    #[serde(default)]
+    pub optional_ingredients_missing: std::collections::BTreeMap<Uuid, usize>,
     pub next_cursor: Option<String>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
