@@ -70,9 +70,22 @@ cp /tmp/noms-potluck-web/{potluck-*.webp,sams-potluck.webp} assets/about/
 
 ## Runtime
 
+On screens up to 700px wide, the document scroll controls both reading and
+camera travel. Cards stay fixed while their text translates inside a clipped
+viewport; neither the card nor its contents captures native scroll gestures.
+Each chapter first spends enough scroll distance to bring the end of its text
+into view beneath the fixed model, followed by a brief reading pause and camera
+travel to the next room over 1.5 viewport heights. Longer copy extends the reading distance,
+without changing travel speed. Chapter links target the beginning of that
+chapter's reading interval. The redundant tour toolbar is hidden on mobile;
+the app navbar stays available. Models use the reclaimed upper space and sit
+10px above a wider fixed text card, which occupies the lower 52% of the tour.
+The loader's reading shortcut and reduced-motion fallback remain available.
+Reading mode restores normal document content.
+
 `src/pages/about_tour` ports the approved first-person Rust/WebGL prototype into the Dioxus About route. Semantic HTML contains all five complete chapters before enhancement. The camera and floating panels share the same projection, scoped beneath the existing app navbar. All five models, their thirteen print textures and the two kitchen surface atlases load from local Manganis URLs on entry, including direct chapter links. A loading curtain locks document scrolling and makes covered controls inert until all assets are uploaded, all five scenes have rendered with GPU completion, and an additional frame has presented. It opens at the requested chapter. Other routes, initial reading view and reduced motion do not fetch model or print assets. Leaving the loading tour invalidates pending work before another model can start downloading or upload to an obsolete renderer.
 
-After the loading curtain closes, the kitchen plays a three-second fly-in once per route visit, independently of scrolling. Frames 1–160 stage the floor and unfolding walls, then bring in counters, appliances, island, food, recipe book and laptop with curved travel and a gradual reveal. All parts remain in their final positions afterward. Mobile starts with ambient drift paused but still plays the intro; rendering stops when it finishes unless the camera is moving. Hidden tabs suspend playback. Scrolling or switching to reading view never resets it, and direct links to later chapters skip the unseen intro. All chapter steps are 160svh, with no extra opening assembly segment. Native scrolling continues to move the camera between chapters. Ambient pause stops continuous rendering after the intro without disabling scroll input. Pause/read controls, reduced-motion changes, WebGL/context-loss fallbacks and route unmounting stop rendering or dispose resources. Restoring graphics rebuilds the scene and reloads all five scenes if needed. Reading mode uses the lazy still image.
+After the loading curtain closes, the kitchen plays a three-second fly-in once per route visit, independently of scrolling. Frames 1–160 stage the floor and unfolding walls, then bring in counters, appliances, island, food, recipe book and laptop with curved travel and a gradual reveal. All parts remain in their final positions afterward. Mobile starts with ambient drift paused but still plays the intro; rendering stops when it finishes unless the camera is moving. Hidden tabs suspend playback. Scrolling or switching to reading view never resets it, and direct links to later chapters skip the unseen intro. Desktop chapter steps are 160svh; mobile steps include the measured reading interval and slower camera travel described above, with no extra opening assembly segment. Native scrolling continues to move the camera between chapters. Ambient pause stops continuous rendering after the intro without disabling scroll input. Pause/read controls, reduced-motion changes, WebGL/context-loss fallbacks and route unmounting stop rendering or dispose resources. Restoring graphics rebuilds the scene and reloads all five scenes if needed. Reading mode uses the lazy still image.
 
 The office at the second stop plays its own three-second entrance the first time the camera approaches from either direction, including direct `#why` entry. The floor and walls enter first; windows, furniture, monitors, PC, chair and accessories follow. Scroll triggers the entrance once and does not scrub or reverse it. The office remains assembled on later visits to the stop. Reading view, hidden tabs and the loading curtain suspend playback; ambient pause does not prevent the entrance. A settled, paused tour stops rendering. Its lazy still appears in the second reading-mode chapter.
 

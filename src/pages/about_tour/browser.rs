@@ -49,6 +49,7 @@ struct State {
     raf: Option<i32>,
     callback: Option<Closure<dyn FnMut(f64)>>,
     listeners: Vec<Listener>,
+    mobile_read: [f32; flight::COUNT],
     target: f32,
     progress: f32,
     pointer: [f32; 2],
@@ -139,6 +140,7 @@ pub fn start() -> Result<(), JsValue> {
         raf: None,
         callback: None,
         listeners: vec![],
+        mobile_read: [0.; flight::COUNT],
         target: 0.,
         progress: 0.,
         pointer: [0.; 2],
@@ -706,7 +708,11 @@ impl State {
                 },
             );
         }
+        for anchor in &self.anchors {
+            let _ = anchor.remove_attribute("style");
+        }
         for panel in &self.panels {
+            panel.set_scroll_top(0);
             let _ = panel.remove_attribute("style");
             let _ = panel.remove_attribute("inert");
             let _ = panel.remove_attribute("aria-hidden");
@@ -742,6 +748,7 @@ impl State {
         self.dirty = true;
     }
     fn navigate(&mut self, i: usize, smooth: bool, history: bool) {
+        self.measure();
         if history
             && !self
                 .doc
@@ -790,13 +797,66 @@ impl State {
             self.navigate(i, smooth, false);
         }
     }
+    fn mobile_section(&self, i: usize) -> flight::MobileSection {
+        let height = |selector| {
+            self.panels[i]
+                .query_selector(selector)
+                .ok()
+                .flatten()
+                .and_then(|el| el.dyn_into::<HtmlElement>().ok())
+                .map(|el| el.client_height() as f32)
+                .unwrap_or(0.)
+        };
+        flight::MobileSection::new(
+            self.height,
+            height(".panel-content"),
+            height(".panel-viewport"),
+        )
+    }
     fn measure(&mut self) {
         if self.flying {
             let y = self.window.scroll_y().unwrap_or(0.);
-            let a = self.anchors[0].get_bounding_client_rect().top() + y;
-            let step = self.anchors[2].get_bounding_client_rect().top()
-                - self.anchors[1].get_bounding_client_rect().top();
-            self.target = ((y - a) / step.max(1.)).clamp(0., (flight::COUNT - 1) as f64) as f32;
+            // Mobile has a single native document scroll. Each chapter reserves
+            // enough distance to reveal all its copy before camera travel begins.
+            for (i, anchor) in self.anchors.iter().enumerate() {
+                if let Some(el) = anchor.dyn_ref::<HtmlElement>() {
+                    if self.width <= 700. {
+                        let section = self.mobile_section(i);
+                        let tail = if i + 1 == flight::COUNT {
+                            self.window
+                                .inner_height()
+                                .ok()
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(self.height as f64) as f32
+                        } else {
+                            section.travel
+                        };
+                        let _ = el
+                            .style()
+                            .set_property("height", &format!("{}px", section.hold + tail));
+                    } else {
+                        let _ = el.style().remove_property("height");
+                    }
+                }
+            }
+            if self.width <= 700. {
+                self.target = 0.;
+                for (i, anchor) in self.anchors.iter().enumerate() {
+                    let start = anchor.get_bounding_client_rect().top() + y;
+                    let local = (y - start) as f32;
+                    let section = self.mobile_section(i);
+                    self.mobile_read[i] = local.clamp(0., section.read);
+                    if local >= 0. {
+                        self.target =
+                            (i as f32 + section.progress(local)).min((flight::COUNT - 1) as f32);
+                    }
+                }
+            } else {
+                let a = self.anchors[0].get_bounding_client_rect().top() + y;
+                let step = self.anchors[2].get_bounding_client_rect().top()
+                    - self.anchors[1].get_bounding_client_rect().top();
+                self.target = ((y - a) / step.max(1.)).clamp(0., (flight::COUNT - 1) as f64) as f32;
+            }
         } else {
             let mut closest = 0;
             let mut distance = f64::MAX;
@@ -911,7 +971,16 @@ impl State {
                 .map(|v| format!("{:.8}", v / 10.))
                 .collect::<Vec<_>>()
                 .join(",");
-            let _ = style.set_property("transform", &format!("matrix3d({matrix})"));
+            let transform = if self.width <= 700. {
+                format!(
+                    "translate3d(12px, {}px, 0)",
+                    self.height * flight::MOBILE_PANEL_TOP
+                )
+            } else {
+                format!("matrix3d({matrix})")
+            };
+            let _ = style.set_property("transform", &transform);
+            let _ = style.set_property("--reading-offset", &format!("{}px", -self.mobile_read[i]));
             let _ = style.set_property("opacity", &format!("{opacity:.4}"));
             let _ = style.set_property(
                 "visibility",
