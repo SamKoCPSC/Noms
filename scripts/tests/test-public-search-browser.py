@@ -214,7 +214,17 @@ async def main(args):
                 await client.add_cookies([{"name": "noms_session", "value": value, "url": base,
                                           "httpOnly": True, "sameSite": "Lax"}])
             await cookie(signed, token(session))
-            owner_response = await api("search_recipes", {"request": {"text": needle, "page_size": 100}}, signed)
+            async def all_recipes(client):
+                response = await api("search_recipes", {"request": {"text": needle}}, client)
+                rows = response["results"][:]
+                for page_number in range(2, (response["total_count"] + 19) // 20 + 1):
+                    next_page = await api("search_recipes", {"request": {"text": needle, "page": page_number}}, client)
+                    assert next_page["total_count"] == response["total_count"]
+                    rows.extend(next_page["results"])
+                response["results"] = rows
+                return response
+
+            owner_response = await all_recipes(signed)
             assert owner_response["total_count"] == 26
             assert {row["recipe"]["id"] for row in owner_response["results"]} == owned_ids
             owned_collections = await api("search_collections", {"request": {"text": needle}}, signed)
@@ -225,7 +235,7 @@ async def main(args):
             assert await api("suggest_recipe_titles", {"text": private_title, "public_only": False}) == []
             for invalid in ["invalid-token", token(session, expired=True), token(revoked)]:
                 await cookie(signed, invalid)
-                response = await api("search_recipes", {"request": {"text": needle, "page_size": 100}}, signed)
+                response = await all_recipes(signed)
                 assert {row["recipe"]["id"] for row in response["results"]} == public_ids
             passed("Sessions: own private/unlisted content remains searchable; missing/invalid/expired/revoked sessions see public only")
 
