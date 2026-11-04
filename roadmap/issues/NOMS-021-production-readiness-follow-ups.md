@@ -4,6 +4,8 @@
 > [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
 > acceptance lists below are historical; they do not override this summary.
 
+> **2026-11-04 implementation — PR #61:** CP2 and CP11 are implemented on the public-search branch, pending merge. See [the public Search contract and browser regression](../../docs/public-search.md) for scope and verification. Other checkpoints remain separate work.
+
 **Status:** 🟡 In Progress — checkpoints partly implemented
 **Phase:** Production hardening
 **Created:** 2026-09-08
