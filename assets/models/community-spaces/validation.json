@@ -1,0 +1,70 @@
+{
+  "checks": "GLB headers, buffer bounds, finite attributes/transforms, triangle indices, PBR material references, acyclic hierarchy, embedded images",
+  "models": [
+    {
+      "file": "artisan-bakery.glb",
+      "bytes": 26619984,
+      "assemblies": 11,
+      "nodes": 646,
+      "primitives": 635,
+      "vertices": 733076,
+      "triangles": 1232993,
+      "materials": 32,
+      "embedded_images": 3,
+      "sha256": "65e5f4c952af468c26ba86dea2c5c59173c2384e827f3b9d18f4e7a3c308ea2b",
+      "validation": "PASS"
+    },
+    {
+      "file": "farmers-market.glb",
+      "bytes": 13935708,
+      "assemblies": 8,
+      "nodes": 1091,
+      "primitives": 1083,
+      "vertices": 389232,
+      "triangles": 385293,
+      "materials": 28,
+      "embedded_images": 0,
+      "sha256": "a2bf280744d30ddbb53966b294fb80a66edf057aa574f85744d9509881fcbfbd",
+      "validation": "PASS"
+    },
+    {
+      "file": "night-market.glb",
+      "bytes": 13731060,
+      "assemblies": 8,
+      "nodes": 1143,
+      "primitives": 1135,
+      "vertices": 393396,
+      "triangles": 486210,
+      "materials": 35,
+      "embedded_images": 0,
+      "sha256": "5758b1e9ccc891448e4754f27e4b9db2e7ec814b7ef9bd5d1e06ecad955a7799",
+      "validation": "PASS"
+    },
+    {
+      "file": "recipe-library.glb",
+      "bytes": 18674060,
+      "assemblies": 11,
+      "nodes": 1176,
+      "primitives": 1165,
+      "vertices": 528318,
+      "triangles": 497828,
+      "materials": 30,
+      "embedded_images": 0,
+      "sha256": "b6be2fa5271414caa67baebddb4a6b5891dc80176b2035da9548637c2aae6d59",
+      "validation": "PASS"
+    },
+    {
+      "file": "specialty-coffee-shop.glb",
+      "bytes": 17421428,
+      "assemblies": 11,
+      "nodes": 606,
+      "primitives": 595,
+      "vertices": 452381,
+      "triangles": 699258,
+      "materials": 32,
+      "embedded_images": 3,
+      "sha256": "5fa65ffd2d5fe08510a7d08ffee77197f5ee30a8cd0d6e519b83faeb7813a7ed",
+      "validation": "PASS"
+    }
+  ]
+}

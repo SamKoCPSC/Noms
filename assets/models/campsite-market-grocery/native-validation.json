@@ -1,0 +1,41 @@
+[
+  {
+    "file": "cozy-campsite.blend",
+    "objects": 369,
+    "assembly_groups": 10,
+    "packed_texture_images": 0,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  },
+  {
+    "file": "neighborhood-grocery-store.blend",
+    "objects": 1399,
+    "assembly_groups": 10,
+    "packed_texture_images": 0,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  },
+  {
+    "file": "night-market-lantern-courtyard.blend",
+    "objects": 1329,
+    "assembly_groups": 8,
+    "packed_texture_images": 0,
+    "camera": "orthographic",
+    "render_resolution": [
+      1600,
+      1400
+    ],
+    "samples": 64,
+    "validation": "PASS"
+  }
+]
