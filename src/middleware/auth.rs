@@ -29,7 +29,6 @@ fn is_protected_path(path: &str) -> bool {
         path,
         "/home"
             | "/dashboard"
-            | "/search"
             | "/recipes/new"
             | "/collections"
             | "/collections/new"
@@ -420,8 +419,8 @@ mod tests {
     const COLLECTION_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
 
     #[test]
-    fn search_requires_authentication() {
-        assert!(is_protected_path("/search"));
+    fn search_is_public() {
+        assert!(!is_protected_path("/search"));
     }
 
     #[test]

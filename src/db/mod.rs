@@ -21,6 +21,8 @@ mod versioning;
 #[cfg(test)]
 mod display_name_tests;
 #[cfg(test)]
+mod public_search_tests;
+#[cfg(test)]
 mod media_asset_tests;
 mod resource_names;
 

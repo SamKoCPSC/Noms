@@ -61,7 +61,7 @@ const FEATURES: &[(PageIconKind, &str, &str)] = &[
     (PageIconKind::History, "Autosaved drafts", "Work on a private draft and keep your edits as you go. Publish when you’re ready."),
     (PageIconKind::Editor, "Clipboard import", "Paste a copied recipe from a supported website into an editable draft."),
     (PageIconKind::Collections, "Nested collections", "Group recipes in collections and subcollections, then arrange them in your own order."),
-    (PageIconKind::Explore, "Search and filters", "Browse public recipes in Explore. Sign in to search recipes, collections, and cooks with filters."),
+    (PageIconKind::Explore, "Search and filters", "Search public recipes, collections, and cooks with filters. Sign in to include your own saved recipes and collections."),
     (PageIconKind::Editor, "Servings calculator", "Adjust portions for your table and recalculate the ingredient quantities."),
     (PageIconKind::Editor, "Ingredient-based scaling", "Have a fixed amount of one ingredient? Scale the rest of the recipe around it."),
     (PageIconKind::Editor, "Ingredient checklist", "Check off ingredients as you prepare them in the mobile recipe view."),
@@ -205,7 +205,7 @@ fn LandingActions(
     };
     rsx! {
         if search {
-            form { class: "landing-recipe-search", role: "search", aria_label: "Find a recipe", action: "/explore", method: "get",
+            form { class: "landing-recipe-search", role: "search", aria_label: "Find a recipe", action: "/search", method: "get",
                 "data-autocomplete-anchor": "true",
                 onsubmit: move |event| { event.prevent_default(); submit(search_text()); },
                 label { class: "sr-only", r#for: "landing-recipe-query", "Search public recipes" }

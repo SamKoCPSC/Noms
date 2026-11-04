@@ -1,4 +1,4 @@
-//! Grouped search across recipes, owned collections, and public user profiles.
+//! Grouped search across recipes, visible collections, and public user profiles.
 
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -13,9 +13,10 @@ use crate::types::{AllSearchRequest, SearchResponse, SearchScope};
 /// Search each fixed section independently without comparing scores across indexes.
 pub async fn search_all(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: impl Into<Option<Uuid>>,
     request: &AllSearchRequest,
 ) -> Result<SearchResponse, DbError> {
+    let resolved_user_id = resolved_user_id.into();
     validate_all_search_request(request)
         .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
 
