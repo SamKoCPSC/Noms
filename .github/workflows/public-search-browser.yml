@@ -1,0 +1,106 @@
+name: Verify public search in browser
+on:
+  push:
+    branches: [codex/public-search-browser-check]
+concurrency:
+  group: public-search-browser
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_DEV_INCREMENTAL: "false"
+      SQLX_OFFLINE: "true"
+      NOMS_ENV: local
+      BASE_URL: http://127.0.0.1:8080
+      DATABASE_URL: postgres://noms_ci:noms_ci_pass@127.0.0.1:5432/noms_public_search
+      SESSION_SECRET: synthetic-public-search-browser-evidence-only-2026
+      R2_ENDPOINT: http://127.0.0.1:9000
+      R2_ACCESS_KEY_ID: synthetic-local-key
+      R2_SECRET_ACCESS_KEY: synthetic-local-secret
+      R2_BUCKET: noms-media
+      R2_PUBLIC_URL: http://127.0.0.1:9000/noms-media
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@a5f673d0ba8626c3977bb416a1612774bc82181b
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c
+        with:
+          shared-key: public-search-browser
+      - name: Install browser and pinned build tools
+        run: |
+          python3 -m venv /tmp/public-search-python
+          /tmp/public-search-python/bin/pip install playwright==1.58.0
+          /tmp/public-search-python/bin/python -m playwright install --with-deps chromium
+          mkdir -p /tmp/public-search-dx
+          curl --fail --location --retry 3 \
+            https://github.com/DioxusLabs/dioxus/releases/download/v0.7.9/dx-x86_64-unknown-linux-gnu.tar.gz \
+            --output /tmp/public-search-dx.tar.gz
+          echo '3b132551b480bc96f938f9f0d37936ee1190f994977539dcc347eaf38540d005  /tmp/public-search-dx.tar.gz' | sha256sum --check
+          tar -xzf /tmp/public-search-dx.tar.gz -C /tmp/public-search-dx
+          dx_path="$(find /tmp/public-search-dx -type f -name dx -print -quit)"
+          mkdir -p "$HOME/.local/bin"
+          install -m 755 "$dx_path" "$HOME/.local/bin/dx"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          go install github.com/pgplex/pgschema@v1.12.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Start disposable PostgreSQL and apply schema
+        run: |
+          docker build --tag noms-public-search-postgres docker/postgres
+          docker run --detach --name noms-public-search-postgres --publish 127.0.0.1:5432:5432 \
+            --env POSTGRES_USER=noms_ci --env POSTGRES_PASSWORD=noms_ci_pass \
+            --env POSTGRES_DB=noms_public_search --label com.noms.public-search-test=true noms-public-search-postgres
+          for attempt in {1..60}; do
+            if docker exec noms-public-search-postgres pg_isready -U noms_ci -d noms_public_search; then break; fi
+            sleep 2
+          done
+          docker exec --interactive noms-public-search-postgres \
+            psql --set ON_ERROR_STOP=1 --username noms_ci --dbname noms_public_search < migrations/extensions.sql
+          pgschema apply \
+            --host localhost --port 5432 --db noms_public_search --user noms_ci --password noms_ci_pass \
+            --plan-host localhost --plan-port 5432 --plan-db noms_public_search \
+            --plan-user noms_ci --plan-password noms_ci_pass \
+            --file migrations/schema.sql --schema public --auto-approve
+      - name: Build and start the real client and server
+        run: |
+          dx serve --platform web --addr 127.0.0.1 --port 8080 \
+            --open false --interactive false --force-sequential true --debug-symbols false \
+            > /tmp/public-search-app.log 2>&1 &
+          echo "$!" > /tmp/public-search-app.pid
+          for attempt in {1..1200}; do
+            if curl --fail --silent http://127.0.0.1:8080/api/user_profile | python3 -c 'import json,sys; assert isinstance(json.load(sys.stdin),dict)' 2>/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/public-search-app.pid)" 2>/dev/null; then
+              tail -n 160 /tmp/public-search-app.log
+              exit 1
+            fi
+            sleep 2
+          done
+          tail -n 160 /tmp/public-search-app.log
+          exit 1
+      - name: Verify real anonymous and authenticated search
+        run: /tmp/public-search-python/bin/python scripts/tests/test-resource-public-searchs-browser.py --output /tmp/public-search-screenshots
+      - name: Upload screenshots and checks
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: resource-public-search-screenshots
+          path: /tmp/public-search-screenshots/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Show application diagnostics on failure
+        if: failure()
+        run: tail -n 160 /tmp/public-search-app.log || true
+      - name: Stop disposable PostgreSQL
+        if: always()
+        run: docker rm --force noms-public-search-postgres || true
