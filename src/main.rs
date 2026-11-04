@@ -42,10 +42,10 @@ use auth::context::build_context_from_fullstack;
 use components::{AppLayout, ErrorFallback, KitchenLayout};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
-    Dashboard, Explore, GroceryListDetail, GroceryListNew, GroceryLists, Home, HowTo, Login,
-    MobileYou, NotFound, Pantry, PantryDetail, PantryNew, RecipeDetail, RecipeDraftEdit,
-    RecipeEdit, RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search,
-    SettingsAccounts, SettingsProfile, UserProfile,
+    Dashboard, Explore, GroceryListDetail, GroceryListFromPantry, GroceryListNew, GroceryLists,
+    Home, HowTo, Login, MobileYou, NotFound, Pantry, PantryDetail, PantryNew, RecipeDetail,
+    RecipeDraftEdit, RecipeEdit, RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph,
+    Search, SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 // The route inventory is shared by the generated renderer and the raw-query boundary.
@@ -97,6 +97,8 @@ enum GeneratedRoute {
         #[redirect("/grocery-lists/new", || Self::GroceryListNew {})]
         #[route("/kitchen/grocery-lists/new")]
         GroceryListNew {},
+        #[route("/kitchen/grocery-lists/new/from-pantry/:pantry_id/:recipe_id")]
+        GroceryListFromPantry { pantry_id: String, recipe_id: String },
         #[redirect("/grocery-lists/:id", |id: String| Self::GroceryListDetail { id })]
         #[route("/kitchen/grocery-lists/:id")]
         GroceryListDetail { id: String },

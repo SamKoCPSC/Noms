@@ -22,7 +22,7 @@ alternatives cannot satisfy a missing primary.
 - Keep explicit availability and presence-only checks. Ignore amounts, units,
   servings and equipment; keep modifiers outside identity.
 - Retain case-insensitive names unless a new identity policy is approved.
-- Keep grocery generation unchanged until its separate behavior is agreed.
+- Grocery optional filtering and missing-only lists are now authorized as a separate delivery (see below).
 
 ## Decisions before Ready
 
@@ -40,8 +40,8 @@ alternatives cannot satisfy a missing primary.
 Both surfaces agree for primary/alternative present, required missing and
 optional-only recipes. Cover repeats, out-of-stock entries, legacy metadata,
 case, empty recipes, access and pagination. Preserve authoring, exports and
-saved groceries. Missing-only lists, near-cookable ranking, conversion and
-automatic pantry amounts are later slices.
+saved groceries. Near-cookable ranking, conversion and automatic pantry amounts
+remain later slices.
 
 ## Authorized optional-only slice — 2026-11-04
 
@@ -68,3 +68,11 @@ this partial delivery does not complete the broader proposed item.
 - EXPLAIN (ANALYZE, BUFFERS) was captured for 326 candidates including 300
   unmatched recipes; execution was approximately 26 ms in the local fixture.
   This is supporting local evidence, not a production performance guarantee.
+
+## Missing-only grocery delivery — 2026-11-04
+
+The user authorized grocery creation from missing pantry ingredients, including
+optional ingredients by default with an exclusion toggle. This separate slice
+uses presence-only matching, serving-aware amounts and independent saved lists.
+See the [delivery contract](../implementation-plans/NOMS-018-pantry-meal-planner-grocery-list.md#missing-ingredient-grocery-lists--2026-11-04).
+Substitution behavior remains unapproved.

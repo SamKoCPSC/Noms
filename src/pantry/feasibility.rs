@@ -69,6 +69,10 @@ impl PantryMatcher {
         Self { available }
     }
 
+    pub fn is_available(&self, name: &str) -> bool {
+        !name.trim().is_empty() && self.available.contains(&name.to_lowercase())
+    }
+
     pub fn check(&self, ingredients: &[RecipeIngredient]) -> PantryCheck {
         self.check_requirements(ingredients.iter().map(|i| (i.name.as_str(), i.optional)))
     }
@@ -85,7 +89,7 @@ impl PantryMatcher {
             let key = name.to_lowercase();
             let status = if name.trim().is_empty() {
                 IngredientStatus::Missing
-            } else if self.available.contains(&key) {
+            } else if self.is_available(name) {
                 IngredientStatus::Available
             } else if optional {
                 IngredientStatus::OptionalMissing

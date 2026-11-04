@@ -325,3 +325,54 @@ occurrence of the same case-insensitive name is optional. Amounts, units,
 servings and equipment remain outside this check. Substitutions and independent
 grocery-list generation are unchanged. This delivers only the optional part
 of NOMS-023; alternative matching remains backlog.
+
+## Missing-ingredient grocery lists — 2026-11-04
+
+The grocery create form can now compare selected accessible recipes with one
+owned pantry and copy only ingredients that are absent or marked unavailable.
+The recipe-detail pantry check links into this form with that recipe and pantry
+selected. Users can add more recipes, set target servings, and add manual extras.
+
+“Include optional ingredients” defaults to on, in both full and missing-only
+recipe lists. Switching it off excludes structured optional occurrences before
+aggregation; a required occurrence of the same name remains, with its own amount.
+Legacy ingredients without an optional flag remain required. Alternatives and
+free-text modifiers do not change ingredient identity or contribute extra rows.
+
+Presence uses the shared case-insensitive pantry matcher. Amounts, units,
+equipment and recorded zero quantities do not determine presence; explicit
+availability does. Missing ingredients retain their full serving-scaled amount,
+original source index and recipe contribution. Exact-name/unit aggregation remains
+unchanged. Manual extras are never filtered, and the resulting saved list remains
+independently editable even after pantry or recipe changes/deletion.
+
+The existing create API accepts optional `pantry: {id, expected_revision}` and
+`include_optional` (default true). It derives ownership from the session, locks
+and validates the pantry revision, checks recipe access/revisions, and saves
+atomically. A stale pantry returns a reviewable error and reloads the preview;
+inaccessible pantries require another selection or full-copy mode. Successful
+retries return the original saved list before rechecking sources. Defaults omit
+new fields from the request fingerprint, preserving legacy idempotency. No schema
+migration or new index is needed: pantry reads use the existing owner/id lookup
+and profile child indexes, bounded to one pantry and at most 20 recipes.
+
+An empty result displays “No ingredients to add with these settings.” Users can
+still add extras or save an empty list. Substitution-aware matching, inventory
+quantity subtraction, near-cookable ranking and purchased-item transfer remain
+separate work.
+
+Verification: `scripts/tests/test-missing-groceries-browser.py` exercises the real
+recipe-to-form flow, toggles, serving scaling, mobile/desktop layout, stale pantry
+recovery, lost-response retry, persistence, multi-recipe aggregation, authorization,
+empty results and snapshot independence. Focused grocery and pantry tests cover
+filtering, retained original indices, default compatibility, access and atomicity.
+
+Validation completed: server/WebAssembly development build; strict WebAssembly
+Clippy with warnings denied; formatting and whitespace checks; 51 focused native
+tests (21 grocery and 30 pantry, including isolated PostgreSQL fixtures); eight
+real-app browser scenario groups with no JavaScript errors at 390px and 1440px.
+The browser checks also verify the new route's Kitchen selection and compact
+mobile creation header. PostgreSQL fixtures used memory-backed temporary
+clusters because the workspace filesystem is full.
+
+[Browser screenshot gallery](../assets/NOMS-018/missing-groceries/README.md): recipe entry point, optional inclusion/exclusion, saved desktop/mobile lists and empty result.

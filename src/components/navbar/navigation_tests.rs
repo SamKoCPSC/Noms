@@ -136,6 +136,10 @@ fn grocery_routes_keep_their_navigation_section_selected() {
     for route in [
         Route::GroceryLists {},
         Route::GroceryListNew {},
+        Route::GroceryListFromPantry {
+            pantry_id: "home".into(),
+            recipe_id: "dinner".into(),
+        },
         Route::GroceryListDetail { id: "list".into() },
     ] {
         assert!(navigation_is_current(&Route::Pantry {}, &route));

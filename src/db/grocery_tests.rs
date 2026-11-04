@@ -32,6 +32,7 @@ fn request(name: &str) -> GroceryCreate {
             fields("Dish soap", "1", "bottle"),
             fields("Coffee", "250", "g"),
         ],
+        ..Default::default()
     }
 }
 async fn recipe(pool: &PgPool, owner: Uuid, visibility: &str, amount: &str) -> Uuid {
@@ -389,4 +390,200 @@ async fn list_name_conflicts_preserve_items_revisions_and_retry_identity() {
     rename(&pool, owner, second.id, 0, "WEEKEND shop".into())
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn missing_groceries_preserve_quantities_optional_choices_and_snapshot_retries() {
+    use crate::pantry::{PantryCreate, PantryFields, PantryStock};
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let other = user(&pool).await;
+    let id = recipe(&pool, owner, "private", "1").await;
+    let ingredients = serde_json::json!([
+        {"name":"Rice","amount":"100","unit":"g"},
+        {"name":"Beans","amount":"200","unit":"g","optional":false},
+        {"name":"Parsley","amount":"5","unit":"g","optional":true},
+        {"name":"Beans","amount":"10","unit":"g","optional":true},
+        {"name":"Pepper","amount":"to taste","unit":"g","substitutes":[{"name":"Rice","amount":"1","unit":"g"}]}
+    ]);
+    sqlx::query("UPDATE recipes SET ingredients=$2 WHERE id=$1")
+        .bind(id)
+        .bind(ingredients)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let pantry = super::pantry::create(
+        &pool,
+        owner,
+        PantryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Home".into(),
+            ingredients: vec![
+                PantryStock {
+                    fields: PantryFields {
+                        name: "RICE".into(),
+                        amount: "0".into(),
+                        unit: "ml".into(),
+                    },
+                    available: true,
+                },
+                PantryStock {
+                    fields: PantryFields {
+                        name: "Beans".into(),
+                        amount: "999".into(),
+                        unit: "g".into(),
+                    },
+                    available: false,
+                },
+            ],
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let chosen = selection(&pool, owner, id, Some(4)).await;
+    let req = GroceryCreate {
+        request_id: Uuid::new_v4(),
+        name: "Missing groceries".into(),
+        recipes: vec![chosen.clone()],
+        pantry: Some(GroceryPantrySelection {
+            id: pantry.id,
+            expected_revision: pantry.revision,
+        }),
+        manual_items: vec![fields("Rice", "20", "g")],
+        ..Default::default()
+    };
+    let saved = create(&pool, owner, req.clone()).await.unwrap();
+    assert_eq!(
+        saved
+            .items
+            .iter()
+            .map(|i| (i.fields.name.as_str(), i.fields.amount.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("Beans", "420"),
+            ("Parsley", "10"),
+            ("Pepper", "to taste"),
+            ("Rice", "20")
+        ]
+    );
+    assert_eq!(
+        saved.items[0]
+            .contributions
+            .iter()
+            .map(|c| c.ingredient_index)
+            .collect::<Vec<_>>(),
+        vec![1, 3]
+    );
+    let required = create(
+        &pool,
+        owner,
+        GroceryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Required groceries".into(),
+            include_optional: false,
+            ..req.clone()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(required.items[0].fields.amount, "400");
+    assert!(!required.items.iter().any(|i| i.fields.name == "Parsley"));
+    // All-ingredient mode still defaults to copying every primary, and ignores substitutes.
+    let all = create(
+        &pool,
+        owner,
+        GroceryCreate {
+            request_id: Uuid::new_v4(),
+            name: "All groceries".into(),
+            pantry: None,
+            manual_items: vec![],
+            ..req.clone()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(all.items[0].fields.amount, "200");
+    assert_eq!(all.items.len(), 4);
+    // Cross-owner pantry references fail before writing any rows.
+    let foreign = super::pantry::create(
+        &pool,
+        other,
+        PantryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Private".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let before = summaries(&pool, owner).await.unwrap().len();
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                request_id: Uuid::new_v4(),
+                name: "Forbidden".into(),
+                pantry: Some(GroceryPantrySelection {
+                    id: foreign.id,
+                    expected_revision: 0
+                }),
+                ..req.clone()
+            }
+        )
+        .await,
+        Err(GroceryError::PantryMissing)
+    ));
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                request_id: Uuid::new_v4(),
+                name: "Stale".into(),
+                pantry: Some(GroceryPantrySelection {
+                    id: pantry.id,
+                    expected_revision: 1
+                }),
+                ..req.clone()
+            }
+        )
+        .await,
+        Err(GroceryError::PantryChanged)
+    ));
+    assert_eq!(summaries(&pool, owner).await.unwrap().len(), before);
+    // Saved list is an independent snapshot; retries recover it after source deletion.
+    super::pantry::delete(&pool, owner, pantry.id, pantry.revision)
+        .await
+        .unwrap();
+    assert_eq!(
+        create(&pool, owner, req.clone()).await.unwrap().id,
+        saved.id
+    );
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                include_optional: false,
+                ..req.clone()
+            }
+        )
+        .await,
+        Err(GroceryError::RetryMismatch)
+    ));
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                request_id: Uuid::new_v4(),
+                name: "Deleted".into(),
+                ..req
+            }
+        )
+        .await,
+        Err(GroceryError::PantryMissing)
+    ));
 }

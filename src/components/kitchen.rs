@@ -16,9 +16,10 @@ impl KitchenView {
             Route::Pantry {} | Route::PantryNew {} | Route::PantryDetail { .. } => {
                 Some(Self::Pantry)
             }
-            Route::GroceryLists {} | Route::GroceryListNew {} | Route::GroceryListDetail { .. } => {
-                Some(Self::Groceries)
-            }
+            Route::GroceryLists {}
+            | Route::GroceryListNew {}
+            | Route::GroceryListFromPantry { .. }
+            | Route::GroceryListDetail { .. } => Some(Self::Groceries),
             _ => None,
         }
     }

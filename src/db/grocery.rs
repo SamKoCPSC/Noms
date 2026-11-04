@@ -12,6 +12,8 @@ pub enum GroceryError {
     Conflict,
     NameTaken,
     SourceChanged,
+    PantryChanged,
+    PantryMissing,
     RetryMismatch,
     Limit,
     Database(sqlx::Error),
@@ -23,6 +25,8 @@ impl std::fmt::Display for GroceryError {
             Self::Invalid(message)=>f.write_str(message),
             Self::Missing=>f.write_str("Grocery list or item not found."),
             Self::Conflict=>f.write_str("This list changed in another session. Refresh it before retrying."),
+            Self::PantryChanged=>f.write_str("The selected pantry changed. Review its updated missing ingredients before retrying."),
+            Self::PantryMissing=>f.write_str("Pantry not accessible. Choose another pantry or copy all ingredients."),
             Self::SourceChanged=>f.write_str("A selected recipe changed. Review its updated ingredients before retrying."),
             Self::RetryMismatch=>f.write_str("This request was already used for different contents. Review the saved list before starting a new request."),
             Self::Limit=>f.write_str("This list exceeds the supported size or account limit."),
@@ -231,6 +235,31 @@ pub async fn create(
     if count >= MAX_LISTS as i64 {
         return Err(GroceryError::Limit);
     }
+    // All pantry writes lock this parent first, keeping the reviewed inventory stable
+    // throughout list generation. Retries above recover an existing list even after deletion.
+    let pantry = if let Some(selection) = &request.pantry {
+        let revision: i64 = sqlx::query_scalar(
+            "SELECT revision FROM kitchen_profiles WHERE id=$1 AND owner_id=$2 FOR SHARE",
+        )
+        .bind(selection.id)
+        .bind(owner)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(GroceryError::PantryMissing)?;
+        if revision != selection.expected_revision {
+            return Err(GroceryError::PantryChanged);
+        }
+        Some(
+            super::pantry::load(&mut tx, owner, selection.id)
+                .await
+                .map_err(|e| match e {
+                    super::pantry::PantryError::Database(e) => GroceryError::Database(e),
+                    _ => GroceryError::PantryMissing,
+                })?,
+        )
+    } else {
+        None
+    };
     // Consistent source-lock ordering avoids deadlocks for overlapping selections.
     let mut ordered = request.recipes.iter().collect::<Vec<_>>();
     ordered.sort_by_key(|r| r.recipe_id);
@@ -252,7 +281,11 @@ pub async fn create(
                 .expect("validated unique source")
         })
         .collect::<Vec<_>>();
-    let generated = build_requirements(&previews)?;
+    let generated = build_filtered_requirements(
+        &previews,
+        pantry.as_ref().map(|p| p.entries.as_slice()),
+        request.include_optional,
+    )?;
     if generated.len() + request.manual_items.len() > MAX_ITEMS {
         return Err(GroceryError::Limit);
     }
