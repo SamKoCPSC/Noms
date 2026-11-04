@@ -289,6 +289,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
     let parsed = id.as_deref().and_then(|s| Uuid::parse_str(s).ok());
     let invalid = id.is_some() && parsed.is_none();
     let mut refresh = use_signal(|| 0_u64);
+    let recipe_mode = use_signal(PantryRecipeMode::default);
     let summaries = use_resource(move || {
         let _ = refresh();
         let owner = account();
@@ -760,6 +761,7 @@ fn PantryWorkspace(#[props(default)] id: Option<String>) -> Element {
                                         key: "{p.id}:{p.revision}:{refresh}",
                                         pantry_id: p.id,
                                         revision: p.revision,
+                                        mode: recipe_mode,
                                         on_retry: move |_| refresh += 1,
                                     }
                                 }

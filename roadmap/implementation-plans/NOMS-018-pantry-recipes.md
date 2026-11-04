@@ -51,3 +51,11 @@ separate. Explicit availability controls both; amounts/units/servings/equipment
 remain ignored. Auth, cursors, revision checks and ordering are unchanged.
 No migration or new index is needed: the bounded candidate projection adds
 optional flags alongside names. Alternatives and grocery generation are unchanged.
+
+## Almost-cookable follow-up — 2026-11-04
+
+The [almost-cookable slice](NOMS-018-almost-cookable.md) adds a second readiness
+view for recipes missing one or two required ingredient names, ranked by fewest
+missing first. Cards name required shortages separately from optional ones.
+Presence matching and owned/saved-library access stay consistent with this
+baseline; no quantity inference, substitutions or schema changes are introduced.

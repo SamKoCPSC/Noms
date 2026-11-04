@@ -364,3 +364,225 @@ async fn pantry_recipes_enforce_owner_revision_cursor_and_current_visibility() {
         .recipes
         .is_empty());
 }
+
+async fn almost(
+    pool: &PgPool,
+    owner: Uuid,
+    p: &PantryKitchen,
+    cursor: Option<&str>,
+) -> Result<PantryRecipePage, pantry::PantryError> {
+    super::pantry_recipes::find_in_mode(
+        pool,
+        owner,
+        p.id,
+        p.revision,
+        cursor,
+        PantryRecipeMode::AlmostCookable,
+    )
+    .await
+}
+
+#[tokio::test]
+async fn almost_cookable_counts_distinct_required_names_without_optional_penalties() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let p = kitchen(&pool, owner).await;
+    let cases = [
+        ("Complete", serde_json::json!([{"name":"Rice"}]), None),
+        (
+            "Only optional missing",
+            serde_json::json!([{"name":"Parsley","optional":true}]),
+            None,
+        ),
+        (
+            "One missing",
+            serde_json::json!([{"name":"rice"},{"name":"Milk"},{"name":"Basil","optional":true}]),
+            Some(vec!["Milk"]),
+        ),
+        (
+            "Two missing",
+            serde_json::json!([{"name":"Milk"},{"name":"MILK"},{"name":"Jalapeño"}]),
+            Some(vec!["Milk", "Jalapeño"]),
+        ),
+        (
+            "Required wins",
+            serde_json::json!([{"name":"Milk","optional":true},{"name":"MILK"},{"name":"Pepper","optional":true}]),
+            Some(vec!["Milk"]),
+        ),
+        (
+            "Three missing",
+            serde_json::json!([{"name":"Milk"},{"name":"Basil"},{"name":"Pepper"}]),
+            None,
+        ),
+        (
+            "Malformed optional",
+            serde_json::json!([{"name":"Milk","optional":"true"}]),
+            None,
+        ),
+        ("Malformed name", serde_json::json!([{"name":3}]), None),
+        ("Blank name", serde_json::json!([{"name":" "}]), None),
+        ("Empty", serde_json::json!([]), None),
+    ];
+    let mut expected = std::collections::BTreeMap::new();
+    for (title, ingredients, missing) in cases {
+        let id = recipe(&pool, owner, title, "private", &["Rice"]).await;
+        sqlx::query("UPDATE recipes SET ingredients=$1 WHERE id=$2")
+            .bind(ingredients)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        if let Some(missing) = missing {
+            expected.insert(
+                id,
+                missing.into_iter().map(str::to_string).collect::<Vec<_>>(),
+            );
+        }
+    }
+    let page = almost(&pool, owner, &p, None).await.unwrap();
+    assert_eq!(page.mode, PantryRecipeMode::AlmostCookable);
+    assert_eq!(page.required_ingredients_missing, expected);
+    assert_eq!(page.recipes.len(), 3);
+    assert_eq!(page.optional_ingredients_missing.len(), 2);
+    assert!(page.next_cursor.is_none());
+    let json = serde_json::to_value(&page).unwrap();
+    assert!(json["recipes"][0].get("ingredients").is_none());
+    assert!(json["recipes"][0].get("instructions").is_none());
+}
+
+#[tokio::test]
+async fn almost_cookable_ranks_globally_and_paginates_across_missing_count_groups() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let p = kitchen(&pool, owner).await;
+    let c = collection(&pool, owner, None).await;
+    let mut one = Vec::new();
+    let mut two = Vec::new();
+    for i in 0..31 {
+        let names: &[&str] = if i % 2 == 0 {
+            &["Rice", "Milk"]
+        } else {
+            &["Rice", "Milk", "Basil"]
+        };
+        let id = recipe(&pool, owner, &format!("Ranked {i}"), "private", names).await;
+        save(&pool, c, id).await;
+        let time = if i % 2 == 0 {
+            "2020-01-01T00:00:00Z"
+        } else {
+            "2030-01-01T00:00:00Z"
+        };
+        sqlx::query("UPDATE recipes SET updated_at=$1::text::timestamptz WHERE id=$2")
+            .bind(time)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        if i % 2 == 0 {
+            one.push(id);
+        } else {
+            two.push(id);
+        }
+    }
+    one.sort_by(|a, b| b.cmp(a));
+    two.sort_by(|a, b| b.cmp(a));
+    let expected: Vec<_> = one.into_iter().chain(two).collect();
+    let mut seen = Vec::new();
+    let mut cursor = None;
+    let mut sizes = Vec::new();
+    loop {
+        let page = almost(&pool, owner, &p, cursor.as_deref()).await.unwrap();
+        sizes.push(page.recipes.len());
+        assert_eq!(page.required_ingredients_missing.len(), page.recipes.len());
+        assert!(page
+            .recipes
+            .iter()
+            .all(|r| page.required_ingredients_missing.contains_key(&r.id)));
+        seen.extend(page.recipes.iter().map(|r| r.id));
+        if let Some(value) = page.next_cursor.as_deref() {
+            assert!(matches!(
+                find(&pool, owner, p.id, p.revision, Some(value)).await,
+                Err(pantry::PantryError::Invalid(_))
+            ));
+        }
+        cursor = page.next_cursor;
+        if cursor.is_none() {
+            break;
+        }
+        assert!(sizes.len() < 4);
+    }
+    assert_eq!(seen, expected);
+    assert_eq!(sizes, vec![12, 12, 7]);
+}
+
+#[tokio::test]
+async fn almost_cookable_preserves_library_access_and_refreshes_after_inventory_changes() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let other = user(&pool).await;
+    let p = kitchen(&pool, owner).await;
+    let root = collection(&pool, owner, None).await;
+    let child = collection(&pool, owner, Some(root)).await;
+    let visible = recipe(&pool, other, "Saved public", "public", &["Rice", "Milk"]).await;
+    let unlisted = recipe(
+        &pool,
+        other,
+        "Saved unlisted",
+        "unlisted",
+        &["Rice", "Milk"],
+    )
+    .await;
+    let hidden = recipe(&pool, other, "Saved private", "private", &["Rice", "Milk"]).await;
+    recipe(&pool, other, "Unsaved public", "public", &["Rice", "Milk"]).await;
+    for id in [visible, unlisted, hidden] {
+        save(&pool, child, id).await;
+    }
+    save(&pool, root, visible).await;
+    assert!(matches!(
+        almost(&pool, other, &p, None).await,
+        Err(pantry::PantryError::Missing)
+    ));
+    let page = almost(&pool, owner, &p, None).await.unwrap();
+    assert_eq!(page.recipes.len(), 2);
+    assert!(page
+        .recipes
+        .iter()
+        .all(|r| [visible, unlisted].contains(&r.id)));
+    assert!(!page.required_ingredients_missing.contains_key(&hidden));
+    sqlx::query("UPDATE recipes SET visibility='private' WHERE id=$1")
+        .bind(visible)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        almost(&pool, owner, &p, None).await.unwrap().recipes.len(),
+        1
+    );
+    pantry::add(
+        &pool,
+        owner,
+        p.id,
+        PantryKind::Ingredient,
+        Uuid::new_v4(),
+        stock("MILK"),
+    )
+    .await
+    .unwrap();
+    assert!(matches!(
+        almost(&pool, owner, &p, None).await,
+        Err(pantry::PantryError::Conflict)
+    ));
+    let newer = pantry::get(&pool, owner, p.id).await.unwrap();
+    assert!(almost(&pool, owner, &newer, None)
+        .await
+        .unwrap()
+        .recipes
+        .is_empty());
+    assert_eq!(
+        find(&pool, owner, p.id, newer.revision, None)
+            .await
+            .unwrap()
+            .recipes[0]
+            .id,
+        unlisted
+    );
+}
