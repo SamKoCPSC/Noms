@@ -972,10 +972,7 @@ impl State {
                 .collect::<Vec<_>>()
                 .join(",");
             let transform = if self.width <= 700. {
-                format!(
-                    "translate3d(12px, {}px, 0)",
-                    self.height * flight::MOBILE_PANEL_TOP
-                )
+                format!("translate3d(12px, {}px, 0)", flight::MOBILE_PANEL_INSET)
             } else {
                 format!("matrix3d({matrix})")
             };

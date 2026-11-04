@@ -1,5 +1,5 @@
 use super::assembly::Room;
-use super::flight::{self, Camera};
+use super::flight::{self, room_rotation, Camera};
 use super::math::*;
 use super::{
     shadow_map::ShadowMap,
@@ -139,18 +139,6 @@ void main(){
  gl_FragColor=vec4(mix(base*lighting+spec,vec3(0.933,0.937,0.885),fog),u_color.a);
 }
 "#;
-fn room_rotation(room: Room, mobile: bool) -> Mat4 {
-    if matches!(room, Room::Kitchen) {
-        // Match the master camera: upright walls and the approved elevation/azimuth.
-        mul(rx(0.522718), ry(-0.655696))
-    } else if matches!(room, Room::Office) {
-        mul(rx(0.58), ry(0.62))
-    } else if matches!(room, Room::Garden) && mobile {
-        transform([0.; 3], [0.9, -0.4, 0.], [1.; 3])
-    } else {
-        transform([0.; 3], [0.58, -0.62, 0.], [1.; 3])
-    }
-}
 struct Mesh {
     buffer: WebGlBuffer,
     count: i32,
@@ -202,8 +190,6 @@ pub struct Renderer {
     sphere: Mesh,
     quad: Mesh,
     platform: Mesh,
-    thread: Mesh,
-    grid: Mesh,
     textures: Vec<WebGlTexture>,
     kitchen: Diorama,
     office: Diorama,
@@ -288,8 +274,6 @@ impl Renderer {
         let sphere = mesh(&gl, &sphere_vertices())?;
         let quad = mesh(&gl, &quad_vertices())?;
         let platform = mesh(&gl, &cylinder_vertices())?;
-        let thread = mesh(&gl, &route_vertices())?;
-        let grid = mesh(&gl, &grid_vertices())?;
         let textures = (0..5)
             .map(|i| texture(&gl, doc, i))
             .collect::<Result<Vec<_>, _>>()?;
@@ -313,8 +297,6 @@ impl Renderer {
             sphere,
             quad,
             platform,
-            thread,
-            grid,
             textures,
             kitchen: Diorama::default(),
             office: Diorama::default(),
@@ -627,18 +609,6 @@ impl Renderer {
         gl.clear(Gl::COLOR_BUFFER_BIT | Gl::DEPTH_BUFFER_BIT);
         gl.uniform_matrix4fv_with_f32_array(Some(&self.uniforms.vp), false, &camera.vp);
         gl.uniform3fv_with_f32_array(Some(&self.uniforms.eye), &camera.eye);
-        let base = identity();
-        // A continuous floor, route, and distant architecture make translation unmistakable.
-        self.draw(
-            &self.quad,
-            transform([0., -1.55, -36.], [0.; 3], [55., 1., 88.]),
-            [0.91, 0.92, 0.85, 1.],
-            None,
-            false,
-            2.,
-        );
-        self.draw(&self.grid, base, [0.80, 0.84, 0.74, 1.], None, false, 2.);
-        self.draw(&self.thread, base, [0.74, 0.40, 0.26, 1.], None, false, 2.);
         for i in 0..flight::COUNT {
             let artwork = [0, 1, 3, 4, 4][i];
             let root = flight::station(i);
@@ -654,6 +624,7 @@ impl Renderer {
                     _ => (&self.garden, frames[4], Room::Garden),
                 };
                 let rect = self.canvas.get_bounding_client_rect();
+                let mobile = rect.width() <= 700.;
                 let model = mul(
                     root,
                     diorama.framing[usize::from(mobile)].model(
@@ -1028,14 +999,7 @@ impl Renderer {
 }
 impl Drop for Renderer {
     fn drop(&mut self) {
-        for m in [
-            &self.rounded,
-            &self.sphere,
-            &self.quad,
-            &self.platform,
-            &self.thread,
-            &self.grid,
-        ] {
+        for m in [&self.rounded, &self.sphere, &self.quad, &self.platform] {
             self.gl.delete_buffer(Some(&m.buffer));
         }
         for draw in self
@@ -1181,54 +1145,6 @@ fn cylinder_vertices() -> Vec<f32> {
             (p[0], 1., p[1]),
         ] {
             vertex(&mut v, [x, y, z], [x, 0., z], [0., 0.]);
-        }
-    }
-    v
-}
-fn grid_vertices() -> Vec<f32> {
-    let mut v = vec![];
-    for k in 0..37 {
-        let z = 18. - k as f32 * 3.;
-        for p in [
-            [-28., z - 0.012],
-            [28., z - 0.012],
-            [28., z + 0.012],
-            [-28., z - 0.012],
-            [28., z + 0.012],
-            [-28., z + 0.012],
-        ] {
-            vertex(&mut v, [p[0], -1.338, p[1]], [0., 1., 0.], [0.; 2]);
-        }
-    }
-    for k in -8..9 {
-        let x = k as f32 * 3.;
-        for p in [
-            [x - 0.012, 32.],
-            [x + 0.012, 32.],
-            [x + 0.012, -104.],
-            [x - 0.012, 32.],
-            [x + 0.012, -104.],
-            [x - 0.012, -104.],
-        ] {
-            vertex(&mut v, [p[0], -1.338, p[1]], [0., 1., 0.], [0.; 2]);
-        }
-    }
-    v
-}
-fn route_vertices() -> Vec<f32> {
-    let mut v = vec![];
-    for i in 0..240 {
-        let t = i as f32 / 240.;
-        let u = (i + 1) as f32 / 240.;
-        let a = flight::camera(t * (flight::COUNT - 1) as f32, 1., [0.; 2]).eye;
-        let b = flight::camera(u * (flight::COUNT - 1) as f32, 1., [0.; 2]).eye;
-        for (p, side) in [(a, -1.), (b, -1.), (b, 1.), (a, -1.), (b, 1.), (a, 1.)] {
-            vertex(
-                &mut v,
-                [p[0] + side * 0.055, -1.31, p[2]],
-                [0., 1., 0.],
-                [t, 0.],
-            );
         }
     }
     v
