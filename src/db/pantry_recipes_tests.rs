@@ -146,6 +146,10 @@ async fn pantry_recipes_pages_are_bounded_stable_and_deduplicated() {
     let mut expected = Vec::new();
     for i in 0..30 {
         let id = recipe(&pool, owner, &format!("Ready {i}"), "private", &["Rice"]).await;
+        if i % 2 == 0 {
+            sqlx::query("UPDATE recipes SET ingredients=ingredients || '[{\"name\":\"Parsley\",\"optional\":true}]'::jsonb WHERE id=$1")
+                .bind(id).execute(&pool).await.unwrap();
+        }
         expected.push(id);
         save(&pool, c, id).await;
     }
@@ -166,6 +170,14 @@ async fn pantry_recipes_pages_are_bounded_stable_and_deduplicated() {
             .await
             .unwrap();
         sizes.push(page.recipes.len());
+        assert!(page
+            .optional_ingredients_missing
+            .keys()
+            .all(|id| page.recipes.iter().any(|r| r.id == *id)));
+        assert!(page
+            .optional_ingredients_missing
+            .values()
+            .all(|count| *count == 1));
         seen.extend(page.recipes.iter().map(|r| r.id));
         cursor = page.next_cursor;
         if cursor.is_none() {
@@ -175,6 +187,80 @@ async fn pantry_recipes_pages_are_bounded_stable_and_deduplicated() {
     }
     assert_eq!(sizes, [12, 12, 6]);
     assert_eq!(seen, expected);
+}
+
+#[tokio::test]
+async fn pantry_recipes_allow_optional_missing_and_keep_required_and_malformed_exclusions() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let p = kitchen(&pool, owner).await;
+    let cases = [
+        (
+            "Full optional",
+            serde_json::json!([{"name":"rice","optional":true}]),
+            Some(0),
+        ),
+        (
+            "Optional garnish",
+            serde_json::json!([{"name":"Rice"},{"name":"Parsley","optional":true},{"name":"PARSLEY","optional":true}]),
+            Some(1),
+        ),
+        (
+            "Optional only",
+            serde_json::json!([{"name":"Parsley","optional":true}]),
+            Some(1),
+        ),
+        (
+            "Required duplicate",
+            serde_json::json!([{"name":"Milk","optional":true},{"name":"MILK"}]),
+            None,
+        ),
+        (
+            "Required duplicate first",
+            serde_json::json!([{"name":"MILK"},{"name":"Milk","optional":true}]),
+            None,
+        ),
+        (
+            "Malformed flag",
+            serde_json::json!([{"name":"Rice","optional":"true"}]),
+            None,
+        ),
+        (
+            "Malformed name",
+            serde_json::json!([{"optional":true}]),
+            None,
+        ),
+        (
+            "Legacy required",
+            serde_json::json!([{"name":"Milk"}]),
+            None,
+        ),
+    ];
+    let mut expected = Vec::new();
+    for (title, ingredients, count) in cases {
+        let id = recipe(&pool, owner, title, "private", &["Rice"]).await;
+        sqlx::query("UPDATE recipes SET ingredients=$1 WHERE id=$2")
+            .bind(ingredients)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        if let Some(count) = count {
+            expected.push((id, count));
+        }
+    }
+    let page = find(&pool, owner, p.id, p.revision, None).await.unwrap();
+    assert_eq!(page.recipes.len(), expected.len());
+    for (id, count) in expected {
+        assert!(page.recipes.iter().any(|r| r.id == id));
+        assert_eq!(
+            page.optional_ingredients_missing
+                .get(&id)
+                .copied()
+                .unwrap_or(0),
+            count
+        );
+    }
 }
 
 #[tokio::test]

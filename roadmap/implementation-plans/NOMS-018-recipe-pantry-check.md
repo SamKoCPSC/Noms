@@ -65,3 +65,14 @@ Ingredient names now compare using Unicode lowercase on both recipe and pantry e
 All 18 focused pantry tests passed, including mixed-case and accented-name matching, deduplication, original display spelling, out-of-stock duplicates and the rendered missing-only result. The first native run could not bind temporary database ports in the default sandbox; rerunning the compiled tests with local network access passed all 18. Chromium passed all 8 scenario groups with zero JavaScript page errors, verifying capitalization changes still match while different ingredient names remain distinct. Current desktop/mobile screenshots and `result.json` are in `/workspace/noms-recipe-pantry-case-insensitive-e2e`.
 
 Strict WebAssembly Clippy passed with `-D warnings`; Rust formatting, Python syntax and patch whitespace checks passed. No schema or API changes were needed.
+
+## Optional ingredient follow-up — 2026-11-04
+
+Missing structured optional ingredients no longer block evaluation. Full matches
+retain “All ingredients available”; recipes missing only optional items show
+“Optional ingredients missing” and their names. When required items are missing,
+they remain under “Missing ingredients”, with a separate optional section.
+Duplicate names retain the first spelling/order, but any required occurrence
+wins over optional ones. Case-insensitive presence and explicit availability
+remain authoritative; quantities, equipment, modifiers and alternatives do not
+change the requirement check. Legacy ingredients without flags remain required.

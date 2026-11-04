@@ -315,3 +315,13 @@ Pantry uses the grocery list’s exact ingredient-name/unit matching rule. This 
 - [ ] Availability subtraction, aggregation, and checklist reconciliation rules are specified.
 - [ ] Authorization, profile/list lifecycle, and offline synchronization contracts are specified.
 - [x] Pantry inventory W01/C01 selection, implementation, and local verification are recorded in the Slice 2 plan. Recipe feasibility and shortage generation remain later slices.
+
+## Optional-aware presence checks — 2026-11-04
+
+Missing structured optional ingredients no longer block recipe-detail checks or
+Pantry's owned/collected recipe list. Full matches and optional-only shortages
+have distinct labels; required names still block, including when an earlier
+occurrence of the same case-insensitive name is optional. Amounts, units,
+servings and equipment remain outside this check. Substitutions and independent
+grocery-list generation are unchanged. This delivers only the optional part
+of NOMS-023; alternative matching remains backlog.
