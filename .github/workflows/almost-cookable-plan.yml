@@ -1,0 +1,26 @@
+name: Read almost-cookable performance evidence
+on:
+  push:
+    branches: [codex/almost-cookable-plan-evidence]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41766611156
+          name: almost-cookable-browser
+          path: evidence
+      - name: Read captured query plan and API timing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ["timing.json", "query-plan.txt", "checks.json"]:
+              print("EVIDENCE " + name, flush=True)
+              print((Path("evidence") / name).read_text(), flush=True)
+          PY
