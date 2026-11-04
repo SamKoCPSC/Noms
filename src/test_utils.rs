@@ -2273,7 +2273,14 @@ mod search_integration_tests {
         )
         .await
         .expect("collection browse fallback failed");
-        assert_eq!(browse.total_count, 5);
+        // Other integration tests concurrently create/remove public collections.
+        // The five owned fixtures must count; their exact total is checked above
+        // with fixture-specific text. Here we verify blank-query fallback sorting.
+        assert!(browse.total_count >= 5);
+        assert!(!browse
+            .results
+            .iter()
+            .any(|result| result.collection.id == other_collection_id));
         assert!(browse
             .results
             .iter()

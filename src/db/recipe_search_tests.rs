@@ -156,7 +156,7 @@ async fn search_integration_summary_shares_index_scan_and_preserves_facet_bounda
     assert!(response.facets.total_time.iter().all(|b| b.count == 0));
     assert!(response.facets.servings.iter().all(|b| b.count == 0));
 
-    let mut builder = summary_query(owner, &request);
+    let mut builder = summary_query(Some(owner), &request);
     let mut query = builder.build();
     let sql = format!("EXPLAIN (ANALYZE, BUFFERS) {}", query.sql());
     let arguments = query.take_arguments().unwrap().unwrap();

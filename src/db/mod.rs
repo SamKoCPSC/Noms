@@ -22,6 +22,8 @@ mod versioning;
 mod display_name_tests;
 #[cfg(test)]
 mod media_asset_tests;
+#[cfg(test)]
+mod public_search_tests;
 mod resource_names;
 
 pub use media_assets::*;

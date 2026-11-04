@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn application_router_renders_the_layout_and_preserves_search_gate_context() {
+    fn application_router_renders_public_search_and_preserves_query_context() {
         let target = "/search?q=tomato%20%26%20basil&scope=recipes&vis=mine";
         let mut dom = VirtualDom::new_with_props(
             ApplicationRouteTestRoot,
@@ -281,16 +281,14 @@ mod tests {
         );
         dom.rebuild(&mut NoOpMutations);
         let html = dioxus_ssr::render(&dom);
-        let encoded =
-            percent_encoding::utf8_percent_encode(target, percent_encoding::NON_ALPHANUMERIC);
         assert!(html.contains("Primary navigation"), "{html}");
         assert!(html.contains("<main"), "{html}");
         assert!(html.contains("Footer navigation"), "{html}");
-        assert!(html.contains("Sign in to continue"), "{html}");
-        assert!(
-            html.contains(&format!(r#"href="/login?redirect_uri={encoded}""#)),
-            "{html}"
-        );
+        assert!(!html.contains("Sign in to continue"), "{html}");
+        assert!(html.contains("Search Noms"), "{html}");
+        assert!(html.contains(r#"aria-label="Search recipes""#), "{html}");
+        assert!(html.contains("tomato &#38; basil"), "{html}");
+        assert!(html.contains("Mine only (sign in)"), "{html}");
     }
 
     // ── Test: Go Home link points to / ───────────────────────────────────

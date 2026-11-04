@@ -1,4 +1,4 @@
-//! Fixed owner-scoped collection-search queries.
+//! Fixed collection-search queries with public/owner authorization.
 
 use std::collections::HashMap;
 
@@ -58,12 +58,13 @@ struct SearchCollectionRow {
     relevance: Option<f32>,
 }
 
-/// Search only collections owned by `resolved_user_id`.
+/// Search public collections and the optional viewer's own collections.
 pub async fn search_collections(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: impl Into<Option<Uuid>>,
     request: &CollectionSearchRequest,
 ) -> Result<CollectionSearchResponse, DbError> {
+    let resolved_user_id = resolved_user_id.into();
     validate_collection_search_request(request)
         .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
 
@@ -78,7 +79,7 @@ pub async fn search_collections(
 
 pub(super) async fn search_collection_section(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: Option<Uuid>,
     text: &str,
     limit: u32,
 ) -> Result<(Vec<CollectionSearchResult>, i64), DbError> {
@@ -97,7 +98,7 @@ pub(super) async fn search_collection_section(
 
 pub(super) async fn autocomplete_collections(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: Option<Uuid>,
     text: &str,
     limit: u32,
 ) -> Result<Vec<SearchSuggestion>, DbError> {
@@ -105,9 +106,8 @@ pub(super) async fn autocomplete_collections(
         text: Some(text.trim().to_owned()),
         ..CollectionSearchRequest::default()
     };
-    let mut query =
-        QueryBuilder::<Postgres>::new("SELECT c.id, c.name FROM collections c WHERE c.owner_id = ");
-    query.push_bind(resolved_user_id);
+    let mut query = QueryBuilder::<Postgres>::new("SELECT c.id, c.name FROM collections c WHERE ");
+    push_visibility(&mut query, resolved_user_id);
     push_criteria(&mut query, &request);
     query
         .push(" ORDER BY pdb.score(c.id) DESC, c.id ASC LIMIT ")
@@ -139,7 +139,7 @@ pub(super) async fn autocomplete_collections(
 
 async fn fetch_results(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     request: &CollectionSearchRequest,
     positive_text: bool,
 ) -> Result<Vec<CollectionSearchResult>, DbError> {
@@ -150,9 +150,8 @@ async fn fetch_results(
     } else {
         query.push("NULL::real AS relevance ");
     }
-    query
-        .push("FROM collections c WHERE c.owner_id = ")
-        .push_bind(user_id);
+    query.push("FROM collections c WHERE ");
+    push_visibility(&mut query, user_id);
     push_criteria(&mut query, request);
     push_sort(&mut query, request.sort, positive_text);
     let offset = (request.page - 1) * request.page_size;
@@ -172,7 +171,7 @@ async fn fetch_results(
 
 async fn attach_breadcrumbs(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     rows: Vec<SearchCollectionRow>,
 ) -> Result<Vec<CollectionSearchResult>, DbError> {
     if rows.is_empty() {
@@ -198,7 +197,7 @@ async fn attach_breadcrumbs(
 
 async fn fetch_breadcrumbs(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     collection_ids: &[Uuid],
 ) -> Result<HashMap<Uuid, Vec<String>>, DbError> {
     if collection_ids.is_empty() {
@@ -206,16 +205,19 @@ async fn fetch_breadcrumbs(
     }
     let breadcrumb_rows = sqlx::query_as::<_, (Uuid, String, i32)>(
         "WITH RECURSIVE ancestors AS (
-             SELECT c.id AS collection_id, c.id AS ancestor_id, c.parent_collection_id,
+             SELECT c.id AS collection_id, c.id AS ancestor_id, c.owner_id, c.parent_collection_id,
                     c.name, 0 AS depth, ARRAY[c.id] AS path
              FROM collections c
-             WHERE c.owner_id = $1 AND c.id = ANY($2)
+             WHERE c.id = ANY($2) AND (c.owner_id = $1 OR c.visibility = 'public')
              UNION ALL
-             SELECT ancestors.collection_id, parent.id, parent.parent_collection_id,
+             SELECT ancestors.collection_id, parent.id, parent.owner_id, parent.parent_collection_id,
                     parent.name, ancestors.depth + 1, ancestors.path || parent.id
              FROM ancestors
              INNER JOIN collections parent ON parent.id = ancestors.parent_collection_id
-             WHERE parent.owner_id = $1 AND NOT parent.id = ANY(ancestors.path)
+             WHERE parent.owner_id = ancestors.owner_id
+               AND (parent.owner_id = $1 OR parent.visibility = 'public')
+               AND NOT parent.id = ANY(ancestors.path)
+               AND ancestors.depth < $3
          )
          SELECT collection_id, name, depth
          FROM ancestors
@@ -223,6 +225,7 @@ async fn fetch_breadcrumbs(
     )
     .bind(user_id)
     .bind(collection_ids)
+    .bind(crate::security::MAX_COLLECTION_DEPTH as i32)
     .fetch_all(pool)
     .await
     .map_err(DbError::Query)?;
@@ -237,18 +240,24 @@ async fn fetch_breadcrumbs(
 
 async fn fetch_count(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     request: &CollectionSearchRequest,
 ) -> Result<i64, DbError> {
-    let mut query =
-        QueryBuilder::<Postgres>::new("SELECT COUNT(*) FROM collections c WHERE c.owner_id = ");
-    query.push_bind(user_id);
+    let mut query = QueryBuilder::<Postgres>::new("SELECT COUNT(*) FROM collections c WHERE ");
+    push_visibility(&mut query, user_id);
     push_criteria(&mut query, request);
     query
         .build_query_scalar::<i64>()
         .fetch_one(pool)
         .await
         .map_err(DbError::Query)
+}
+
+fn push_visibility(query: &mut QueryBuilder<'_, Postgres>, viewer: Option<Uuid>) {
+    query
+        .push("(c.visibility = 'public' OR c.owner_id = ")
+        .push_bind(viewer)
+        .push(")");
 }
 
 fn push_criteria(query: &mut QueryBuilder<'_, Postgres>, request: &CollectionSearchRequest) {

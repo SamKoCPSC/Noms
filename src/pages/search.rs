@@ -6,7 +6,6 @@ use crate::api::search::{
     autocomplete_entities, search_all, search_collections, search_recipes, search_users,
 };
 use crate::components::base::{EmptyState, LoadingSpinner, RecipeCard};
-use crate::components::AuthRequired;
 use crate::search_url::{
     parse_search_query, parsed_from_request, ActiveAdvancedCriteria, ActiveSearchRequest,
     ParsedSearchQuery, SearchRouteQuery,
@@ -80,6 +79,19 @@ enum LoadedSearch {
     Users(UserSearchResponse),
 }
 
+#[derive(Clone)]
+struct SearchSnapshot {
+    query: SearchRouteQuery,
+    viewer: Option<uuid::Uuid>,
+    result: Option<Result<LoadedSearch, String>>,
+}
+
+impl SearchSnapshot {
+    fn is_current(&self, query: &SearchRouteQuery, viewer: Option<uuid::Uuid>) -> bool {
+        self.query == *query && self.viewer == viewer
+    }
+}
+
 pub fn landing_search_route(text: &str) -> Option<Route> {
     let text = text.trim();
     if text.is_empty() {
@@ -99,7 +111,7 @@ pub(crate) fn public_recipe_search_url(text: &str) -> String {
     let query = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("q", text.trim())
         .finish();
-    format!("/explore?{query}")
+    format!("/search?{query}")
 }
 
 fn navigate_route(target: Route, interaction: SearchInteraction) {
@@ -211,6 +223,8 @@ fn suggestion_route(suggestion: &SearchSuggestion) -> Option<Route> {
 
 #[component]
 pub fn Search(query: SearchRouteQuery) -> Element {
+    let auth = crate::auth::context::use_auth();
+    let viewer = auth.current_user_id.filter(|_| auth.is_authenticated);
     let parsed = parse_search_query(query.as_str());
     let initial_text = parsed
         .as_ref()
@@ -251,14 +265,22 @@ pub fn Search(query: SearchRouteQuery) -> Element {
         }
     }));
 
-    let results = use_resource(use_reactive((&query,), move |(query,)| async move {
-        match parse_search_query(query.as_str()) {
-            Ok(parsed) => Some(load_search(parsed.request).await),
-            Err(_) => None,
-        }
-    }));
+    let results = use_resource(use_reactive(
+        (&query, &viewer),
+        move |(query, viewer)| async move {
+            let result = match parse_search_query(query.as_str()) {
+                Ok(parsed) => Some(load_search(parsed.request).await),
+                Err(_) => None,
+            };
+            SearchSnapshot {
+                query,
+                viewer,
+                result,
+            }
+        },
+    ));
 
-    let suggestions = use_resource(move || {
+    let suggestions = use_resource(use_reactive((&viewer,), move |(viewer,)| {
         let text = input_text();
         let scope = active_scope();
         let focused = search_focused();
@@ -267,21 +289,25 @@ pub fn Search(query: SearchRouteQuery) -> Element {
                 || !focused
                 || text.trim().chars().count() < crate::search::MIN_AUTOCOMPLETE_CHARS
             {
-                return Ok(Vec::new());
+                return (text, scope, viewer, Ok(Vec::new()));
             }
             #[cfg(target_arch = "wasm32")]
             gloo_timers::future::TimeoutFuture::new(180).await;
-            autocomplete_entities(scope, text)
+            let response = autocomplete_entities(scope, text.clone())
                 .await
-                .map_err(|error| error.to_string())
+                .map_err(|error| error.to_string());
+            (text, scope, viewer, response)
         }
-    });
+    }));
 
     let parsed_for_view = parsed.clone();
     let suggestion_values = suggestions
         .read()
         .as_ref()
-        .and_then(|result| result.as_ref().ok())
+        .filter(|(text, scope, user, _)| {
+            text == &input_text() && *scope == active_scope() && *user == viewer
+        })
+        .and_then(|(_, _, _, result)| result.as_ref().ok())
         .cloned()
         .unwrap_or_default();
     let suggestions_open = search_focused()
@@ -295,8 +321,7 @@ pub fn Search(query: SearchRouteQuery) -> Element {
 
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("/assets/search.css") }
-        AuthRequired {
-            div { class: "container search-page",
+        div { class: "container search-page",
                 header { class: "search-hero",
                     div {
                         h1 { class: "brand-title", PageIcon { kind: PageIconKind::Search } span { "Search Noms" } }
@@ -386,6 +411,7 @@ pub fn Search(query: SearchRouteQuery) -> Element {
 
                         if !matches!(parsed.request, ActiveSearchRequest::All(_)) {
                             SearchControls {
+                                signed_in: viewer.is_some(),
                                 parsed: parsed.clone(),
                                 onchange: move |request| navigate_search(request, SearchInteraction::Filter),
                                 ontagsinput: move |request| navigate_search(request, SearchInteraction::Typing),
@@ -426,6 +452,8 @@ pub fn Search(query: SearchRouteQuery) -> Element {
 
                         SearchResults {
                             resource: results,
+                            query: query.clone(),
+                            viewer,
                             request: parsed.request.clone(),
                             onpage: {
                                 let base_request = parsed.request.clone();
@@ -438,7 +466,6 @@ pub fn Search(query: SearchRouteQuery) -> Element {
                         }
                     }
                 }
-            }
         }
     }
 }
@@ -593,6 +620,8 @@ fn ScopeTabs(props: ScopeTabsProps) -> Element {
 
 #[derive(Props, Clone, PartialEq)]
 struct SearchControlsProps {
+    #[props(default = true)]
+    signed_in: bool,
     parsed: ParsedSearchQuery,
     onchange: EventHandler<ActiveSearchRequest>,
     ontagsinput: EventHandler<ActiveSearchRequest>,
@@ -641,7 +670,11 @@ fn SearchControls(props: SearchControlsProps) -> Element {
                             }
                         },
                         option { value: "all", selected: recipe.visibility == RecipeSearchVisibility::AllVisible, "All visible" }
-                        option { value: "mine", selected: recipe.visibility == RecipeSearchVisibility::MineOnly, "Mine only" }
+                        if props.signed_in || recipe.visibility == RecipeSearchVisibility::MineOnly {
+                            option { value: "mine", selected: recipe.visibility == RecipeSearchVisibility::MineOnly, disabled: !props.signed_in,
+                                if props.signed_in { "Mine only" } else { "Mine only (sign in)" }
+                            }
+                        }
                         option { value: "public", selected: recipe.visibility == RecipeSearchVisibility::PublicOnly, "Public only" }
                     }
                 }
@@ -903,7 +936,9 @@ fn DateRangeInputs(props: DateRangeInputsProps) -> Element {
 
 #[derive(Props, Clone, PartialEq)]
 struct SearchResultsProps {
-    resource: Resource<Option<Result<LoadedSearch, String>>>,
+    resource: Resource<SearchSnapshot>,
+    query: SearchRouteQuery,
+    viewer: Option<uuid::Uuid>,
     request: ActiveSearchRequest,
     onpage: EventHandler<u32>,
 }
@@ -915,7 +950,12 @@ fn SearchResults(props: SearchResultsProps) -> Element {
     let result = if pending {
         None
     } else {
-        props.resource.read().clone()
+        props
+            .resource
+            .read()
+            .as_ref()
+            .filter(|snapshot| snapshot.is_current(&props.query, props.viewer))
+            .map(|snapshot| snapshot.result.clone())
     };
     let mut resource = props.resource;
     let pagination = match &props.request {
@@ -2099,5 +2139,55 @@ mod tests {
         assert_eq!(time_facet_label(&bucket(120, None)), "2+ hours");
         assert_eq!(servings_facet_label(&bucket(1, Some(3))), "1–2");
         assert_eq!(servings_facet_label(&bucket(9, None)), "9+");
+    }
+}
+
+#[cfg(test)]
+mod public_search_tests {
+    use super::*;
+
+    #[test]
+    fn previous_account_or_query_results_are_not_current() {
+        let query = SearchRouteQuery::new("q=soup");
+        let owner = uuid::Uuid::new_v4();
+        let snapshot = SearchSnapshot {
+            query: query.clone(),
+            viewer: Some(owner),
+            result: None,
+        };
+        assert!(snapshot.is_current(&query, Some(owner)));
+        assert!(!snapshot.is_current(&query, None));
+        assert!(!snapshot.is_current(&query, Some(uuid::Uuid::new_v4())));
+        assert!(!snapshot.is_current(&SearchRouteQuery::new("q=pasta"), Some(owner)));
+    }
+
+    #[component]
+    fn GuestControls() -> Element {
+        rsx! { SearchControls {
+            signed_in: false,
+            parsed: parse_search_query("scope=recipes").unwrap(),
+            onchange: |_| {}, ontagsinput: |_| {}, onsort: |_| {},
+        } }
+    }
+
+    #[test]
+    fn guest_controls_do_not_offer_owner_only_search() {
+        let mut dom = VirtualDom::new(GuestControls);
+        dom.rebuild(&mut dioxus_core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        assert!(!html.contains("Mine only"));
+        assert!(html.contains("All visible"));
+    }
+}
+
+#[cfg(test)]
+mod public_landing_search_tests {
+    #[test]
+    fn landing_search_uses_the_shared_public_search_page_and_preserves_text() {
+        let text = "soup & thyme + peppers";
+        let url = super::public_recipe_search_url(text);
+        let parsed =
+            crate::search_url::parse_search_query(url.strip_prefix("/search?").unwrap()).unwrap();
+        assert_eq!(parsed.request.text(), text);
     }
 }

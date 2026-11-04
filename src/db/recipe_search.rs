@@ -67,12 +67,13 @@ struct OmittedFilter {
     servings: bool,
 }
 
-/// Search the recipes visible to `resolved_user_id` using the fixed recipe contract.
+/// Search public recipes and the optional viewer's own recipes.
 pub async fn search_recipes(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: impl Into<Option<Uuid>>,
     request: &RecipeSearchRequest,
 ) -> Result<RecipeSearchResponse, DbError> {
+    let resolved_user_id = resolved_user_id.into();
     // Server functions validate before entering the DB layer. Keeping this check here protects
     // internal callers as well and prevents invalid pagination arithmetic or unbounded requests.
     validate_recipe_search_request(request)
@@ -97,7 +98,7 @@ pub async fn search_recipes(
 /// This deliberately skips recipe facets, which are not part of the grouped response.
 pub(super) async fn search_recipe_section(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: Option<Uuid>,
     text: &str,
     limit: u32,
 ) -> Result<(Vec<SearchResult>, i64), DbError> {
@@ -117,7 +118,7 @@ pub(super) async fn search_recipe_section(
 
 pub(super) async fn autocomplete_recipes(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: Option<Uuid>,
     text: &str,
     limit: u32,
 ) -> Result<Vec<SearchSuggestion>, DbError> {
@@ -219,7 +220,7 @@ mod tests;
 
 async fn fetch_results(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     request: &RecipeSearchRequest,
     positive_text: bool,
 ) -> Result<Vec<SearchResult>, DbError> {
@@ -262,7 +263,7 @@ async fn fetch_results(
 
 async fn fetch_count(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     request: &RecipeSearchRequest,
 ) -> Result<i64, DbError> {
     let mut query = QueryBuilder::<Postgres>::new("SELECT COUNT(*) FROM recipes r WHERE ");
@@ -276,7 +277,10 @@ async fn fetch_count(
 
 /// Plan and execute the indexed match once for all counts. Facets omit only
 /// their own selected filter; authorization, text, tags and dates always apply.
-fn summary_query(user_id: Uuid, request: &RecipeSearchRequest) -> QueryBuilder<'static, Postgres> {
+fn summary_query(
+    user_id: Option<Uuid>,
+    request: &RecipeSearchRequest,
+) -> QueryBuilder<'static, Postgres> {
     let mut query = QueryBuilder::<Postgres>::new(
         "WITH candidates AS MATERIALIZED (SELECT r.id, r.visibility, r.servings, \
          CASE WHEN r.prep_time_minutes IS NULL AND r.cook_time_minutes IS NULL THEN NULL \
@@ -386,7 +390,7 @@ fn push_selected_range(
 
 async fn fetch_summary(
     pool: &PgPool,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     request: &RecipeSearchRequest,
 ) -> Result<(i64, RecipeSearchFacets), DbError> {
     let row = summary_query(user_id, request)
@@ -446,7 +450,7 @@ impl IntegerFacet {
 
 fn push_criteria(
     query: &mut QueryBuilder<'_, Postgres>,
-    user_id: Uuid,
+    user_id: Option<Uuid>,
     request: &RecipeSearchRequest,
     omitted: OmittedFilter,
 ) {
