@@ -4,6 +4,10 @@ The approved [Chef Penguini mascot assets](penguini/README.md) are available
 alongside the book logo. They include standalone animations and a reusable
 player; app placement is a separate integration step.
 
+The selected [Marmalade, Nutmeg and Bao chef mascots](kitchen-crew/README.md)
+include editable vector artwork, excited jump-and-wave SVGs, and a replayable
+preview alongside Penguini.
+
 ## Second painted version
 
 [`noms-logo-painted-s3-v2.png`](noms-logo-painted-s3-v2.png) is the perspective-refinement variant generated with the built-in image tool on 2026-09-27 from v1. It retains the olive cover, cream NOMS plaque, coral closure/bookmark, slight tilt and painted finish, with more consistent alignment of the cover, plaque and page block. Selected as the production book logo on 2026-09-27; it replaces v1 in all shared BrandMark placements (navbar, footer and sign-in). V1 remains available as a historical source.
