@@ -1,0 +1,50 @@
+name: Export almost-cookable screenshots
+on:
+  push:
+    branches: [codex/almost-cookable-screenshot-export]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          github-token: ${{ github.token }}
+          run-id: 41766611156
+          name: almost-cookable-browser
+          path: evidence
+      - name: Export existing synthetic screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, pathlib, urllib.request
+          branch = "codex/almost-cookable-screenshots-" + os.environ["RUN_ID"]
+          def api(path, body):
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/" + os.environ["REPOSITORY"] + path,
+                  data=json.dumps(body).encode(),
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json",
+                           "X-GitHub-Api-Version": "2022-11-28"}, method="POST")
+              with urllib.request.urlopen(request) as response:
+                  return json.load(response)
+          root = pathlib.Path("evidence")
+          entries = []
+          for path in sorted(root.glob("*.png")):
+              blob = api("/git/blobs", {"content": base64.b64encode(path.read_bytes()).decode(), "encoding": "base64"})
+              entries.append({"path": path.name, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+          assert len(entries) == 3
+          tree = api("/git/trees", {"tree": entries})
+          commit = api("/git/commits", {"message": "Save existing almost-cookable screenshots from PR 63 browser checks",
+                                      "tree": tree["sha"], "parents": []})
+          api("/git/refs", {"ref": "refs/heads/" + branch, "sha": commit["sha"]})
+          print("SCREENSHOT_BRANCH " + branch)
+          for entry in entries:
+              print("SCREENSHOT " + entry["path"])
+          PY
