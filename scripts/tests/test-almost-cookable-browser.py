@@ -201,12 +201,13 @@ async def main(args):
             passed("API rejects cross-mode cursors, foreign pantries, stale revisions, invalid modes and anonymous reads")
 
             for width in [320, 390, 760, 1440]:
-                await page.set_viewport_size({"width": width, "height": 1100})
+                await page.set_viewport_size({"width": width, "height": 844 if width < 760 else 1000})
                 assert await page.evaluate("document.documentElement.scrollWidth <= innerWidth"), width
                 if width in [390, 1440]:
-                    await section.screenshot(path=str(args.output / f"almost-cookable-{width}.png"))
+                    await section.evaluate("el => {el.style.scrollMarginTop='110px'; el.scrollIntoView({block:'start',behavior:'instant'});}")
+                    await page.screenshot(path=str(args.output / f"almost-cookable-{width}.png"), full_page=False)
             await page.get_by_role("button", name="Toggle theme", exact=True).click()
-            await section.screenshot(path=str(args.output / "almost-cookable-dark.png"))
+            await page.screenshot(path=str(args.output / "almost-cookable-dark.png"), full_page=False)
             await page.get_by_role("button", name="Toggle theme", exact=True).click()
             passed("Missing-name cards fit mobile/desktop widths and light/dark themes")
 
