@@ -1,12 +1,14 @@
 //! Private library checks. Stream names/optional flags, then hydrate bounded cards.
 use super::pantry::PantryError;
-use crate::pantry::{feasibility::PantryMatcher, PantryRecipeMode, PantryRecipePage, MAX_ALMOST_COOKABLE_MISSING};
-use std::{cmp::Reverse, collections::BTreeMap};
+use crate::pantry::{
+    feasibility::PantryMatcher, PantryRecipeMode, PantryRecipePage, MAX_ALMOST_COOKABLE_MISSING,
+};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use chrono::{DateTime, Datelike, Utc};
 use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
+use std::{cmp::Reverse, collections::BTreeMap};
 use uuid::Uuid;
 
 const PAGE_SIZE: usize = crate::security::MAX_COLLECTION_RECIPE_CARDS_PER_PAGE;
@@ -42,7 +44,9 @@ fn decode_cursor(
         || cursor.mode != mode
         || match mode {
             PantryRecipeMode::Cookable => cursor.missing_required != 0,
-            PantryRecipeMode::AlmostCookable => !(1..=MAX_ALMOST_COOKABLE_MISSING).contains(&cursor.missing_required),
+            PantryRecipeMode::AlmostCookable => {
+                !(1..=MAX_ALMOST_COOKABLE_MISSING).contains(&cursor.missing_required)
+            }
         }
         || cursor.recipe.is_nil()
         || !(1..=9999).contains(&cursor.updated.year())
@@ -87,7 +91,15 @@ pub async fn find(
     revision: i64,
     cursor: Option<&str>,
 ) -> Result<PantryRecipePage, PantryError> {
-    find_in_mode(pool, owner, pantry_id, revision, cursor, PantryRecipeMode::Cookable).await
+    find_in_mode(
+        pool,
+        owner,
+        pantry_id,
+        revision,
+        cursor,
+        PantryRecipeMode::Cookable,
+    )
+    .await
 }
 
 type Rank = (Reverse<usize>, DateTime<Utc>, Uuid);
@@ -110,7 +122,9 @@ pub async fn find_in_mode(
         return Err(PantryError::Invalid("Invalid pantry reference.".into()));
     }
     let cursor = decode_cursor(cursor, pantry_id, revision, mode)?;
-    let cursor_rank = cursor.as_ref().map(|c| (Reverse(c.missing_required), c.updated, c.recipe));
+    let cursor_rank = cursor
+        .as_ref()
+        .map(|c| (Reverse(c.missing_required), c.updated, c.recipe));
     let mut tx = pool.begin().await?;
     sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
         .execute(&mut *tx)
@@ -134,42 +148,92 @@ pub async fn find_in_mode(
         while let Some(row) = candidates.try_next().await? {
             let names: Vec<Option<String>> = row.try_get("names")?;
             let optional: Vec<Option<bool>> = row.try_get("optional_flags")?;
-            if names.is_empty() || names.len() > crate::security::MAX_RECIPE_INGREDIENTS
-                || names.iter().any(|n| n.as_ref().is_none_or(|n| n.trim().is_empty() || n.chars().count() > 500))
-                || optional.len() != names.len() || optional.iter().any(Option::is_none)
+            if names.is_empty()
+                || names.len() > crate::security::MAX_RECIPE_INGREDIENTS
+                || names.iter().any(|n| {
+                    n.as_ref()
+                        .is_none_or(|n| n.trim().is_empty() || n.chars().count() > 500)
+                })
+                || optional.len() != names.len()
+                || optional.iter().any(Option::is_none)
             {
                 continue;
             }
-            let check = matcher.check_requirements(names.iter().zip(&optional).map(|(name, optional)| {
-                (name.as_deref().expect("validated name"), optional.expect("validated optional flag"))
-            }));
+            let check =
+                matcher.check_requirements(names.iter().zip(&optional).map(|(name, optional)| {
+                    (
+                        name.as_deref().expect("validated name"),
+                        optional.expect("validated optional flag"),
+                    )
+                }));
             let missing = check.missing_required_names();
             let accepted = match mode {
                 PantryRecipeMode::Cookable => missing.is_empty(),
-                PantryRecipeMode::AlmostCookable => (1..=MAX_ALMOST_COOKABLE_MISSING).contains(&missing.len()),
+                PantryRecipeMode::AlmostCookable => {
+                    (1..=MAX_ALMOST_COOKABLE_MISSING).contains(&missing.len())
+                }
             };
-            if !accepted { continue; }
-            let rank = (Reverse(missing.len()), row.try_get::<DateTime<Utc>, _>("updated_at")?, row.try_get::<Uuid, _>("id")?);
-            if cursor_rank.is_some_and(|cursor| rank >= cursor) { continue; }
-            matches.insert(rank, Match { missing, optional: check.missing_optional_count() });
+            if !accepted {
+                continue;
+            }
+            let rank = (
+                Reverse(missing.len()),
+                row.try_get::<DateTime<Utc>, _>("updated_at")?,
+                row.try_get::<Uuid, _>("id")?,
+            );
+            if cursor_rank.is_some_and(|cursor| rank >= cursor) {
+                continue;
+            }
+            matches.insert(
+                rank,
+                Match {
+                    missing,
+                    optional: check.missing_optional_count(),
+                },
+            );
             if matches.len() > PAGE_SIZE {
-                if ordered { break; }
-                if matches.len() > PAGE_SIZE + 1 { matches.pop_first(); }
+                if ordered {
+                    break;
+                }
+                if matches.len() > PAGE_SIZE + 1 {
+                    matches.pop_first();
+                }
             }
         }
     }
     let has_next = matches.len() > PAGE_SIZE;
-    if has_next { matches.pop_first(); }
+    if has_next {
+        matches.pop_first();
+    }
     let next_cursor = if has_next {
-        let (&(Reverse(missing_required), updated, recipe), _) = matches.first_key_value().expect("nonempty full page");
-        Some(URL_SAFE_NO_PAD.encode(serde_json::to_vec(&Cursor {
-            pantry: pantry_id, revision, updated, recipe, mode, missing_required,
-        }).map_err(|_| PantryError::Limit)?))
-    } else { None };
-    let optional_ingredients_missing = matches.iter()
-        .filter(|(_, row)| row.optional > 0).map(|(key, row)| (key.2, row.optional)).collect();
-    let required_ingredients_missing = matches.iter()
-        .filter(|(_, row)| !row.missing.is_empty()).map(|(key, row)| (key.2, row.missing.clone())).collect();
+        let (&(Reverse(missing_required), updated, recipe), _) =
+            matches.first_key_value().expect("nonempty full page");
+        Some(
+            URL_SAFE_NO_PAD.encode(
+                serde_json::to_vec(&Cursor {
+                    pantry: pantry_id,
+                    revision,
+                    updated,
+                    recipe,
+                    mode,
+                    missing_required,
+                })
+                .map_err(|_| PantryError::Limit)?,
+            ),
+        )
+    } else {
+        None
+    };
+    let optional_ingredients_missing = matches
+        .iter()
+        .filter(|(_, row)| row.optional > 0)
+        .map(|(key, row)| (key.2, row.optional))
+        .collect();
+    let required_ingredients_missing = matches
+        .iter()
+        .filter(|(_, row)| !row.missing.is_empty())
+        .map(|(key, row)| (key.2, row.missing.clone()))
+        .collect();
     let ids: Vec<_> = matches.keys().rev().map(|key| key.2).collect();
     let recipes = if ids.is_empty() {
         Vec::new()
@@ -181,15 +245,29 @@ pub async fn find_in_mode(
             super::recipe_card_read_columns("r", "u"),
             super::recipe_card_read_joins("r", "u"),
         );
-        let rows = sqlx::query(&query).bind(&ids).bind(owner).fetch_all(&mut *tx).await?;
-        rows.iter().map(super::recipe_card_from_row).collect::<Result<Vec<_>, _>>()?
+        let rows = sqlx::query(&query)
+            .bind(&ids)
+            .bind(owner)
+            .fetch_all(&mut *tx)
+            .await?;
+        rows.iter()
+            .map(super::recipe_card_from_row)
+            .collect::<Result<Vec<_>, _>>()?
     };
-    crate::security::validate_collection_recipe_card_page(&recipes).map_err(|_| PantryError::Limit)?;
+    crate::security::validate_collection_recipe_card_page(&recipes)
+        .map_err(|_| PantryError::Limit)?;
     let page = PantryRecipePage {
-        pantry_id, pantry_revision: revision, mode, recipes,
-        optional_ingredients_missing, required_ingredients_missing, next_cursor,
+        pantry_id,
+        pantry_revision: revision,
+        mode,
+        recipes,
+        optional_ingredients_missing,
+        required_ingredients_missing,
+        next_cursor,
     };
-    if serde_json::to_vec(&page).map_err(|_| PantryError::Limit)?.len()
+    if serde_json::to_vec(&page)
+        .map_err(|_| PantryError::Limit)?
+        .len()
         > crate::security::MAX_COLLECTION_RECIPE_CARD_PAGE_BYTES
     {
         return Err(PantryError::Limit);
@@ -217,19 +295,33 @@ mod tests {
         );
         assert!(decode_cursor(Some(&cursor), pantry, 3, PantryRecipeMode::Cookable).is_ok());
         assert!(decode_cursor(Some(&cursor), pantry, 3, PantryRecipeMode::AlmostCookable).is_err());
-        let legacy = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&serde_json::json!({
-            "pantry": pantry, "revision": 3, "updated": Utc::now(), "recipe": Uuid::new_v4(),
-        })).unwrap());
+        let legacy = URL_SAFE_NO_PAD.encode(
+            serde_json::to_vec(&serde_json::json!({
+                "pantry": pantry, "revision": 3, "updated": Utc::now(), "recipe": Uuid::new_v4(),
+            }))
+            .unwrap(),
+        );
         assert!(decode_cursor(Some(&legacy), pantry, 3, PantryRecipeMode::Cookable).is_ok());
         assert!(decode_cursor(Some(&legacy), pantry, 3, PantryRecipeMode::AlmostCookable).is_err());
         for missing in [0, MAX_ALMOST_COOKABLE_MISSING + 1] {
-            let invalid = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&Cursor {
-                pantry, revision: 3, updated: Utc::now(), recipe: Uuid::new_v4(),
-                mode: PantryRecipeMode::AlmostCookable, missing_required: missing,
-            }).unwrap());
-            assert!(decode_cursor(Some(&invalid), pantry, 3, PantryRecipeMode::AlmostCookable).is_err());
+            let invalid = URL_SAFE_NO_PAD.encode(
+                serde_json::to_vec(&Cursor {
+                    pantry,
+                    revision: 3,
+                    updated: Utc::now(),
+                    recipe: Uuid::new_v4(),
+                    mode: PantryRecipeMode::AlmostCookable,
+                    missing_required: missing,
+                })
+                .unwrap(),
+            );
+            assert!(
+                decode_cursor(Some(&invalid), pantry, 3, PantryRecipeMode::AlmostCookable).is_err()
+            );
         }
-        assert!(decode_cursor(Some(&cursor), Uuid::new_v4(), 3, PantryRecipeMode::Cookable).is_err());
+        assert!(
+            decode_cursor(Some(&cursor), Uuid::new_v4(), 3, PantryRecipeMode::Cookable).is_err()
+        );
         assert!(decode_cursor(Some(&cursor), pantry, 4, PantryRecipeMode::Cookable).is_err());
     }
 }

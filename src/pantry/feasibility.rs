@@ -29,6 +29,7 @@ impl PantryCheck {
                 .any(|row| row.status == IngredientStatus::Missing)
     }
 
+    #[cfg(any(feature = "server", test))]
     pub fn missing_required_names(&self) -> Vec<String> {
         self.ingredients
             .iter()

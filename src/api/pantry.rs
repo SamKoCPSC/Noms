@@ -66,14 +66,16 @@ pub async fn find_pantry_recipes(
     mode: Option<PantryRecipeMode>,
 ) -> Result<PantryRecipePage, ServerFnError> {
     let owner = actor(expected_account_id, false).await?;
-    crate::security::run_with_expensive_read_work_budget(budget(crate::db::pantry_recipes::find_in_mode(
-        &crate::db::get_pool(),
-        owner,
-        pantry_id,
-        pantry_revision,
-        cursor.as_deref(),
-        mode.unwrap_or_default(),
-    )))
+    crate::security::run_with_expensive_read_work_budget(budget(
+        crate::db::pantry_recipes::find_in_mode(
+            &crate::db::get_pool(),
+            owner,
+            pantry_id,
+            pantry_revision,
+            cursor.as_deref(),
+            mode.unwrap_or_default(),
+        ),
+    ))
     .await
     .map_err(|_| ServerFnError::new("Recipe checks are busy. Please try again."))?
 }
