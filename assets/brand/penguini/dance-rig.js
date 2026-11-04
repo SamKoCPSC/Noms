@@ -27,7 +27,7 @@ async function create(svg) {
   canvas.style.cssText = "width:850px;height:800px;display:block;pointer-events:none";
   surface.append(canvas);
   const gl = canvas.getContext("webgl", {alpha: true, antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: true});
-  if (!gl) throw new Error("Penguini's silly dance requires WebGL.");
+  if (!gl) throw new Error("Penguini's articulated gestures require WebGL.");
   const shaders = [];
   function shader(type, source) {
     const result = gl.createShader(type);
@@ -111,6 +111,45 @@ async function create(svg) {
   surface.style.display = "none";
   body.parentNode.insertBefore(surface, body);
 
+  // Expression overlays share the flipper renderer and the player's clock.
+  // Preserve the normal eyes while switching to a squeeze or relaxed closure.
+  const head = svg.querySelector(".head"), eyes = svg.querySelector(".eyes-open");
+  const originalVisibility = eyes.style.visibility;
+  const closed = element("g", {class: "gesture-closed-eyes", fill: "none", stroke: "#392519", "stroke-width": 11, "stroke-linecap": "round", "stroke-linejoin": "round"});
+  const leftEye = element("path"), rightEye = element("path");
+  closed.append(leftEye, rightEye); closed.style.display = "none"; head.append(closed);
+  const air = element("g", {class: "sneeze-air", fill: "none", stroke: "#a98e70", "stroke-width": 5, "stroke-linecap": "round"});
+  air.append(element("path", {d: "M4 -8 Q24 -14 38 -5"}), element("path", {d: "M10 7 Q38 5 53 24"}), element("path", {d: "M2 22 Q25 28 29 43"}));
+  air.style.display = "none"; head.append(air);
+  let hiddenEyes = false;
+  function showEyes(visible) {
+    if (visible === !hiddenEyes) return;
+    hiddenEyes = !visible;
+    eyes.style.visibility = visible ? originalVisibility : "hidden";
+  }
+  function face(state) {
+    const t = state.elapsedMs, sneeze = state.animation === "sneeze", yawn = state.animation === "yawn";
+    const start = sneeze ? 1980 : 1900, end = sneeze ? 2660 : 4700;
+    const shut = (sneeze || yawn) && t >= start && t <= end;
+    showEyes(!shut); closed.style.display = shut ? "" : "none";
+    if (shut) {
+      const depth = ease((t - start) / 160) * (1 - ease((t - (end - 140)) / 140));
+      if (sneeze) {
+        leftEye.setAttribute("d", `M242 ${550 - 15 * depth} L273 550 L242 ${550 + 15 * depth}`);
+        rightEye.setAttribute("d", `M456 ${541 - 15 * depth} L425 541 L456 ${541 + 15 * depth}`);
+      } else {
+        leftEye.setAttribute("d", `M241 551 Q265 ${551 + 10 * depth} 289 551`);
+        rightEye.setAttribute("d", `M409 541 Q433 ${541 + 10 * depth} 457 541`);
+      }
+    }
+    if (sneeze && t >= 2140 && t < 2500) {
+      const f = (t - 2140) / 360;
+      air.style.display = "";
+      air.style.opacity = .65 * ease(f / .18) * (1 - ease((f - .18) / .82));
+      air.setAttribute("transform", `translate(${398 + 55 * f} ${626 + 25 * f}) rotate(15) scale(${.5 + 1.2 * f})`);
+    } else air.style.display = "none";
+  }
+
   function pose(angle) {
     if (angle === lastAngle) return;
     lastAngle = angle;
@@ -123,16 +162,21 @@ async function create(svg) {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
     gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES, 0, indices.length);
   }
-  function reset() {
+  function resetFlipper() {
     surface.style.display = "none";
     if (active) { body.setAttribute("clip-path", originalClip); active = false; }
   }
+  function reset() {
+    resetFlipper(); showEyes(true);
+    closed.style.display = "none"; air.style.display = "none";
+  }
   function draw(state) {
     if (destroyed) return;
-    if (state.phase !== "activity" || state.animation !== "silly-dance" || state.reducedMotion || gl.isContextLost()) { reset(); return; }
+    if (state.phase !== "activity" || state.reducedMotion || gl.isContextLost()) { reset(); return; }
+    face(state);
     const matrix = new DOMMatrix(getComputedStyle(control).transform);
     const angle = Math.atan2(matrix.b, matrix.a);
-    if (Math.abs(angle) < 1e-7) { reset(); return; }
+    if (Math.abs(angle) < 1e-7) { resetFlipper(); return; }
     pose(angle);
     if (!active) { body.setAttribute("clip-path", `url(#${clipId})`); active = true; }
     surface.style.display = "";
@@ -140,7 +184,7 @@ async function create(svg) {
   function destroy() {
     if (destroyed) return;
     reset(); destroyed = true;
-    surface.remove(); defs.remove();
+    surface.remove(); defs.remove(); closed.remove(); air.remove();
     gl.deleteBuffer(buffer); gl.deleteTexture(texture); gl.deleteProgram(program);
     shaders.forEach(item => gl.deleteShader(item));
     gl.getExtension("WEBGL_lose_context")?.loseContext();

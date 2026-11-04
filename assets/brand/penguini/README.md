@@ -15,19 +15,24 @@ are ready for integration; no app page currently displays the mascot.
 | [Happy dance](animations/happy-dance.svg) | A small side-to-side dance | 5.8 seconds |
 | [Thinking](preview.html?animation=thinking) | A gentle elbow bend to the chin, head tilt, and thoughtful squint | 6.8 seconds |
 | [Silly dance](preview.html?animation=silly-dance) | Alternating flipper swings, waddling steps, two hops, and a finishing shimmy | 7.2 seconds |
+| [Sneeze](preview.html?animation=sneeze) | Two tiny inhalations, squeezed eyes, a quick sneeze, and a recovery blink | 5.2 seconds |
+| [Yawn](preview.html?animation=yawn) | Drooping eyes, a wide yawn and slow stretch, then a relaxed exhale | 7.2 seconds |
+| [Wiggle dance](preview.html?animation=wiggle-dance) | Planted feet, side-to-side body wiggles, alternating flippers, and a finishing shimmy | 6.4 seconds |
 
 [still.svg](still.svg) provides the neutral resting pose. Standalone activities
 play once and finish at that pose; idle repeats. Every animated SVG respects
 `prefers-reduced-motion`. All SVGs have a transparent background and the same
 `1200 × 1390` viewBox, preserving size when switching between them.
 
-Thinking and Silly dance use the inline player and WebGL renderers for their
-articulated flippers; their individual previews are linked above. Thinking keeps
+Thinking, Silly dance, Sneeze, Yawn, and Wiggle dance use the inline player and
+WebGL renderers; their individual previews are linked above. Thinking keeps
 the original artwork solid over the torso, with a low reach, soft easing, and a 25% faster
 lift and recovery than the preceding review draft. Silly dance moves both flippers
 independently, with a continuous shoulder join that avoids a background notch
-under the lowered left flipper. Both join the random and ordered activity sets
-and return smoothly to idle. The other activities retain their standalone SVGs.
+under the lowered left flipper. Sneeze, Yawn, and Wiggle dance reuse that shoulder
+mesh; the same renderer also manages their closed-eye expressions and breath cue.
+All join the random and ordered activity sets and return smoothly to idle.
+The other activities retain their standalone SVGs.
 
 The tummy-pat, chef's-kiss, and hat-adjustment experiments were not
 approved and are not included in the animation registry. Review videos,
@@ -88,7 +93,7 @@ pipeline when adding a Dioxus component; this folder is not globally loaded by
 the embedded artwork and preparing their meshes. If WebGL is unavailable, omit
 clips with a `renderer` field and use the existing SVG activities; the preview
 demonstrates this fallback.
-Registering either activity without its renderer fails explicitly, so a gesture
+Registering a procedural activity without its renderer fails explicitly, so a gesture
 cannot silently play without its articulated flipper. Meshes and clip masks are
 created at runtime and removed on renderer disposal. The shared illustration
 and the other animations' appearance are unchanged.
@@ -99,7 +104,8 @@ and the other animations' appearance are unchanged.
 - `source/clips.json` is the canonical registry of approved animation keyframes.
 - `player.js` owns playback, selection, transitions, and lifecycle behavior.
 - `thinking-rig.js` owns the articulated arm, squint, and approved movement timing.
-- `dance-rig.js` deforms the left flipper using the `.left-flipper` control track.
+- `dance-rig.js` deforms the left flipper using the `.left-flipper` control track
+  and manages the sneeze/yawn expressions and breath cue.
 - `clips.js`, `still.svg`, and `animations/*.svg` are generated assets.
 
 After changing the rig or keyframes, regenerate and verify from the repo root:
@@ -138,8 +144,8 @@ palette, soft outlines, aspect ratio, and alpha when preparing derivatives.
 
 Validation covers the approved clips' resting endpoints, the sleepy jolt,
 random/ordered selection, pause/resume, offscreen behavior, and reduced motion.
-Thinking and Silly dance are also checked against their approved review poses,
-with browser checks for switching to other activities, renderer disposal, and
-the WebGL fallback.
+Procedural gestures are also checked against their approved review poses, with
+browser checks for switching to other activities, expression restoration,
+renderer disposal, and the WebGL fallback.
 The gallery and standalone SVGs are the review surfaces; captured review media
 remain outside the repository.
