@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 672" width="512" height="672" role="img" aria-labelledby="nutmeg-excited-title nutmeg-excited-desc" id="nutmeg-excited" data-duration-ms="6600">
+<title id="nutmeg-excited-title">Nutmeg — excited jump and wave</title>
+<desc id="nutmeg-excited-desc">Nutmeg does two excited hops, waves, and settles into the original resting pose. The animation plays once in 6.6 seconds. Reduced motion shows the resting pose. Transparent, editable vector artwork with no scripts or external resources.</desc>
+<defs><linearGradient id="nutmeg-excited-fur-paint" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#bb8461" /><stop offset="1" stop-color="#8f5d43" /></linearGradient><linearGradient id="nutmeg-excited-cream-paint" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#fff8e8" /><stop offset="1" stop-color="#f5dfbc" /></linearGradient><linearGradient id="nutmeg-excited-apron-paint" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#e4b564" /><stop offset="1" stop-color="#c49c56" /></linearGradient><linearGradient id="nutmeg-excited-charcoal-paint" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#62564e" /><stop offset="1" stop-color="#413b38" /></linearGradient><linearGradient id="nutmeg-excited-bread-paint" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#f7cd80" /><stop offset="1" stop-color="#d89548" /></linearGradient></defs>
+<style>/* Nutmeg: 6.6-second two-hop celebration; plays once and returns to rest. */
+.nutmeg-excited-jump { animation: nutmeg-excited-jump-keys 6.6s linear 1 both; transform-box: view-box; transform-origin: 256px 512px; }
+@keyframes nutmeg-excited-jump-keys {
+  0.00000000% { animation-timing-function: ease; transform: translateY(0px) scale(1); }
+  4.90909091% { animation-timing-function: ease; transform: translateY(0px) scale(1); }
+  9.00000000% { animation-timing-function: cubic-bezier(0.15, 0.65, 0.35, 1); transform: translateY(3.68px) scale(1.055, 0.94); }
+  15.54545455% { animation-timing-function: cubic-bezier(0.65, 0, 0.85, 0.35); transform: translateY(-75.9px) scale(0.98, 1.025); }
+  21.27272727% { animation-timing-function: ease; transform: translateY(0px) scale(1); }
+  23.72727273% { animation-timing-function: cubic-bezier(0.15, 0.65, 0.35, 1); transform: translateY(3.68px) scale(1.06, 0.94); }
+  29.45454545% { animation-timing-function: cubic-bezier(0.65, 0, 0.85, 0.35); transform: translateY(-48.3px) scale(0.985, 1.015); }
+  34.36363636% { animation-timing-function: ease; transform: translateY(0px) scale(1); }
+  36.81818182% { animation-timing-function: ease; transform: translateY(1.84px) scale(1.035, 0.97); }
+  40.09090909% { animation-timing-function: ease; transform: translateY(0px) scale(1); }
+  100.00000000% { animation-timing-function: ease; transform: translateY(0px) scale(1); }
+}
+.nutmeg-excited-shadow { animation: nutmeg-excited-shadow-keys 6.6s linear 1 both; transform-box: view-box; transform-origin: 256px 516px; }
+@keyframes nutmeg-excited-shadow-keys {
+  0.00000000% { animation-timing-function: ease; opacity: 1.000000; transform: scaleX(1); }
+  9.00000000% { animation-timing-function: ease; opacity: 1.000000; transform: scaleX(1); }
+  15.54545455% { animation-timing-function: ease; opacity: 0.423077; transform: scaleX(0.65); }
+  21.27272727% { animation-timing-function: ease; opacity: 1.000000; transform: scaleX(1); }
+  23.72727273% { animation-timing-function: ease; opacity: 1.000000; transform: scaleX(1); }
+  29.45454545% { animation-timing-function: ease; opacity: 0.576923; transform: scaleX(0.77); }
+  34.36363636% { animation-timing-function: ease; opacity: 1.000000; transform: scaleX(1); }
+  100.00000000% { animation-timing-function: ease; opacity: 1.000000; transform: scaleX(1); }
+}
+.nutmeg-excited-head-motion { animation: nutmeg-excited-head-motion-keys 6.6s linear 1 both; transform-box: view-box; transform-origin: 256px 349px; }
+@keyframes nutmeg-excited-head-motion-keys {
+  0.00000000% { animation-timing-function: ease; transform: rotate(0deg); }
+  4.09090909% { animation-timing-function: ease; transform: rotate(0deg); }
+  9.00000000% { animation-timing-function: ease; transform: translateY(2.3px) rotate(-5deg); }
+  15.54545455% { animation-timing-function: ease; transform: translateY(-3.68px) rotate(6deg); }
+  23.72727273% { animation-timing-function: ease; transform: translateY(1.84px) rotate(-4deg); }
+  29.45454545% { animation-timing-function: ease; transform: translateY(-2.76px) rotate(-7deg); }
+  36.81818182% { animation-timing-function: ease; transform: translateY(1.84px) rotate(4deg); }
+  41.72727273% { animation-timing-function: ease; transform: rotate(-5deg); }
+  48.27272727% { animation-timing-function: ease; transform: rotate(7deg); }
+  54.81818182% { animation-timing-function: ease; transform: rotate(-5deg); }
+  61.36363636% { animation-timing-function: ease; transform: rotate(6deg); }
+  70.36363636% { animation-timing-function: ease; transform: rotate(3deg); }
+  90.90909091% { animation-timing-function: ease-in-out; transform: rotate(0deg); }
+  100.00000000% { animation-timing-function: ease-in-out; transform: rotate(0deg); }
+}
+.nutmeg-excited-left-motion { animation: nutmeg-excited-left-motion-keys 6.6s linear 1 both; transform-box: view-box; transform-origin: 176px 355px; }
+@keyframes nutmeg-excited-left-motion-keys {
+  0.00000000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  4.54500000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  15.90900000% { transform: rotate(22deg); animation-timing-function: ease-in-out; }
+  24.24200000% { transform: rotate(-7deg); animation-timing-function: ease-in-out; }
+  29.54500000% { transform: rotate(23deg); animation-timing-function: ease-in-out; }
+  36.36400000% { transform: rotate(-6deg); animation-timing-function: ease-in-out; }
+  42.42400000% { transform: rotate(25deg); animation-timing-function: ease-in-out; }
+  47.72700000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  53.03000000% { transform: rotate(25deg); animation-timing-function: ease-in-out; }
+  58.33300000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  63.63600000% { transform: rotate(24deg); animation-timing-function: ease-in-out; }
+  68.93900000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  72.72700000% { transform: rotate(8deg); animation-timing-function: ease-in-out; }
+  90.90900000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  100.00000000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+}
+.nutmeg-excited-right-motion { animation: nutmeg-excited-right-motion-keys 6.6s linear 1 both; transform-box: view-box; transform-origin: 336px 355px; }
+@keyframes nutmeg-excited-right-motion-keys {
+  0.00000000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  5.00000000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  9.00000000% { transform: rotate(4deg); animation-timing-function: ease-in-out; }
+  15.54500000% { transform: rotate(18deg); animation-timing-function: ease-in-out; }
+  23.72700000% { transform: rotate(3deg); animation-timing-function: ease-in-out; }
+  29.45500000% { transform: rotate(14deg); animation-timing-function: ease-in-out; }
+  36.81800000% { transform: rotate(7deg); animation-timing-function: ease-in-out; }
+  41.72700000% { transform: rotate(5deg); animation-timing-function: ease-in-out; }
+  48.27300000% { transform: rotate(17deg); animation-timing-function: ease-in-out; }
+  54.81800000% { transform: rotate(5deg); animation-timing-function: ease-in-out; }
+  61.36400000% { transform: rotate(16deg); animation-timing-function: ease-in-out; }
+  70.36400000% { transform: rotate(9deg); animation-timing-function: ease-in-out; }
+  90.90900000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+  100.00000000% { transform: rotate(0deg); animation-timing-function: ease-in-out; }
+}
+.nutmeg-excited-hat-motion { animation: nutmeg-excited-hat-motion-keys 6.6s linear 1 both; transform-box: view-box; transform-origin: 256px 176px; }
+@keyframes nutmeg-excited-hat-motion-keys {
+  0.00000000% { transform: translateY(0px) rotate(0deg); animation-timing-function: ease-in-out; }
+  9.00000000% { transform: translateY(1px) rotate(-1deg); animation-timing-function: ease-in-out; }
+  15.54500000% { transform: translateY(-3px) rotate(1deg); animation-timing-function: ease-in-out; }
+  21.50000000% { transform: translateY(0px) rotate(-1.8deg); animation-timing-function: ease-in-out; }
+  23.72700000% { transform: translateY(1px) rotate(1deg); animation-timing-function: ease-in-out; }
+  29.45500000% { transform: translateY(-2px) rotate(-1deg); animation-timing-function: ease-in-out; }
+  34.36400000% { transform: translateY(0px) rotate(1.5deg); animation-timing-function: ease-in-out; }
+  40.00000000% { transform: translateY(1px) rotate(-1deg); animation-timing-function: ease-in-out; }
+  49.00000000% { transform: translateY(0px) rotate(0deg); animation-timing-function: ease-in-out; }
+  90.90900000% { transform: translateY(0px) rotate(0deg); animation-timing-function: ease-in-out; }
+  100.00000000% { transform: translateY(0px) rotate(0deg); animation-timing-function: ease-in-out; }
+}
+.nutmeg-excited-eyes-rest { animation: nutmeg-excited-eyes-rest-keys 6.6s linear 1 both; }
+@keyframes nutmeg-excited-eyes-rest-keys {
+  0.00000000% { animation-timing-function: ease; opacity: 1; }
+  10.63636364% { animation-timing-function: ease; opacity: 1; }
+  13.09090909% { animation-timing-function: ease; opacity: 0; }
+  33.54545455% { animation-timing-function: ease; opacity: 0; }
+  36.00000000% { animation-timing-function: ease; opacity: 1; }
+  41.72727273% { animation-timing-function: ease; opacity: 1; }
+  44.18181818% { animation-timing-function: ease; opacity: 0; }
+  70.36363636% { animation-timing-function: steps(1,end); opacity: 0; }
+  87.87878788% { animation-timing-function: ease-in-out; opacity: 1; }
+  100.00000000% { animation-timing-function: ease-in-out; opacity: 1; }
+}
+.nutmeg-excited-eyes-happy { animation: nutmeg-excited-eyes-happy-keys 6.6s linear 1 both; }
+@keyframes nutmeg-excited-eyes-happy-keys {
+  0.00000000% { animation-timing-function: ease; opacity: 0; }
+  10.63636364% { animation-timing-function: ease; opacity: 0; }
+  13.09090909% { animation-timing-function: ease; opacity: 1; }
+  33.54545455% { animation-timing-function: ease; opacity: 1; }
+  36.00000000% { animation-timing-function: ease; opacity: 0; }
+  41.72727273% { animation-timing-function: ease; opacity: 0; }
+  44.18181818% { animation-timing-function: ease; opacity: 1; }
+  70.36363636% { animation-timing-function: steps(1,end); opacity: 1; }
+  87.87878788% { animation-timing-function: ease-in-out; opacity: 0; }
+  100.00000000% { animation-timing-function: ease-in-out; opacity: 0; }
+}
+.nutmeg-excited-blink { animation: nutmeg-excited-blink-keys 6.6s linear 1 both; transform-box: view-box; transform-origin: 256px 269px; }
+@keyframes nutmeg-excited-blink-keys {
+  0.00000000% { animation-timing-function: ease; transform: scaleY(1); }
+  4.09090909% { animation-timing-function: ease; transform: scaleY(1); }
+  6.13636364% { animation-timing-function: ease; transform: scaleY(0.08); }
+  8.18181818% { animation-timing-function: ease; transform: scaleY(1); }
+  36.00000000% { animation-timing-function: ease; transform: scaleY(1); }
+  38.04545455% { animation-timing-function: ease; transform: scaleY(0.08); }
+  40.09090909% { animation-timing-function: ease; transform: scaleY(1); }
+  84.84848485% { animation-timing-function: ease-in-out; transform: scaleY(1); }
+  87.87878788% { animation-timing-function: ease-in-out; transform: scaleY(.08); }
+  90.90909091% { animation-timing-function: ease-in-out; transform: scaleY(1); }
+  100.00000000% { animation-timing-function: ease-in-out; transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+.nutmeg-excited-jump,
+.nutmeg-excited-shadow,
+.nutmeg-excited-head-motion,
+.nutmeg-excited-left-motion,
+.nutmeg-excited-right-motion,
+.nutmeg-excited-hat-motion,
+.nutmeg-excited-eyes-rest,
+.nutmeg-excited-eyes-happy,
+.nutmeg-excited-blink { animation: none !important; }
+.nutmeg-excited-eyes-rest { opacity: 1; }
+.nutmeg-excited-eyes-happy { opacity: 0; }
+}
+</style><g stroke-linecap="round" stroke-linejoin="round" transform="translate(0 106)" id="nutmeg-excited-stage"><g id="nutmeg-excited-ground-shadow" class="nutmeg-excited-shadow"><ellipse cx="256" cy="516" rx="104" ry="10" fill="#77634c" stroke="none" stroke-width="6" opacity=".16" /></g><g id="nutmeg-excited-character" class="nutmeg-excited-jump"><g id="nutmeg-excited-left-motion" class="nutmeg-excited-left-motion"><g id="nutmeg-excited-left-arm" transform=""><path d="M187 341 C151 332 116 310 93 293 Q81 284 81 300 L87 314 Q63 303 75 327 L88 341 Q63 328 79 353 C98 381 143 394 176 374 Z" fill="url(#nutmeg-excited-fur-paint)" stroke="#493428" stroke-width="6" /><path d="M93 321 Q118 345 149 350 M94 348 Q115 363 142 367" fill="none" stroke="#493428" stroke-width="3.5" opacity=".65" /></g></g><g id="nutmeg-excited-right-motion" class="nutmeg-excited-right-motion"><g id="nutmeg-excited-right-arm" transform="translate(512 0) scale(-1 1)"><path d="M179 344 Q150 337 127 351 Q98 339 91 356 Q84 368 98 369 Q89 383 108 382 Q126 399 163 382 Q181 372 179 344 Z" fill="url(#nutmeg-excited-fur-paint)" stroke="#493428" stroke-width="6" /><path d="M105 365 Q122 375 142 370" fill="none" stroke="#493428" stroke-width="3.5" opacity=".65" /></g></g><g id="nutmeg-excited-body" transform="translate(256 347) scale(1.03 1) translate(-256 -347)"><g id="nutmeg-excited-feet"><path d="M203 474 Q194 480 190 502 Q191 513 202 508 L213 501 Q215 518 225 510 L234 497 L233 479 Z" fill="#e8ae58" stroke="#493428" stroke-width="5" /><path d="M280 479 L278 496 Q284 514 295 507 L303 500 Q315 514 324 506 Q329 497 312 478 Z" fill="#e8ae58" stroke="#493428" stroke-width="5" /></g><path d="M192 326 C165 342 151 381 155 425 C151 474 187 499 253 499 C321 499 355 477 357 431 C361 389 345 347 319 328 Z" fill="url(#nutmeg-excited-fur-paint)" stroke="#493428" stroke-width="6" /><ellipse cx="255" cy="410" rx="78" ry="79" fill="url(#nutmeg-excited-cream-paint)" stroke="none" stroke-width="6" /></g><g id="nutmeg-excited-apron" transform=""><path d="M184 335 L202 333 L211 387 L192 388 Z" fill="url(#nutmeg-excited-apron-paint)" stroke="#493428" stroke-width="6" /><path d="M306 334 L325 337 L318 390 L300 384 Z" fill="url(#nutmeg-excited-apron-paint)" stroke="#493428" stroke-width="6" /><path d="M174 390 Q144 384 140 399 Q137 412 162 413 L142 447 L158 455 L181 409 Z" fill="url(#nutmeg-excited-apron-paint)" stroke="#493428" stroke-width="5" /><path d="M336 390 Q364 384 371 399 Q374 412 351 413 L369 447 L351 456 L331 407 Z" fill="url(#nutmeg-excited-apron-paint)" stroke="#493428" stroke-width="5" /><path d="M192 372 Q255 381 319 372 Q338 411 344 474 Q258 507 167 475 Q172 411 192 372 Z" fill="url(#nutmeg-excited-apron-paint)" stroke="#493428" stroke-width="6" /><path d="M190 463 Q251 484 321 465" fill="none" stroke="#f9d4b3" stroke-width="3" opacity=".5" /><path d="M256 447 C232 431 234 418 245 417 Q253 416 256 425 Q260 414 270 418 C283 424 272 437 256 447 Z" fill="#ffedd5" stroke="none" stroke-width="6" /></g><g id="nutmeg-excited-whisk-motion" class="nutmeg-excited-right-motion"><g id="nutmeg-excited-whisk" transform="translate(39 0)"><path d="M370 383 L378 327" fill="none" stroke="#493428" stroke-width="16" /><path d="M370 381 L377 329" fill="none" stroke="#be8957" stroke-width="9" /><path d="M378 329 C343 305 355 267 382 265 C407 268 418 307 378 329 Z" fill="#e9e3ce" stroke="#493428" stroke-width="4" /><path d="M378 329 C366 310 367 277 382 266 C397 285 396 311 378 329 M378 329 L382 266" fill="none" stroke="#493428" stroke-width="3" /></g></g><g id="nutmeg-excited-head-motion" class="nutmeg-excited-head-motion"><g id="nutmeg-excited-head" transform="rotate(7 256 290)"><path d="M136 252 Q116 221 125 172 Q128 161 138 172 L183 195 Q256 163 328 194 L370 172 Q382 162 385 173 Q396 215 376 254 C390 316 346 367 256 374 C166 367 122 316 136 252 Z" fill="url(#nutmeg-excited-fur-paint)" stroke="#493428" stroke-width="6" /><path d="M137 190 L153 222 L181 208 M374 190 L357 222 L333 207" fill="#8f5d43" stroke="none" stroke-width="6" /><path d="M256 231 C222 192 168 211 156 253 C143 303 186 347 256 359 C325 348 368 303 357 253 C344 211 290 192 256 231 Z" fill="url(#nutmeg-excited-cream-paint)" stroke="none" stroke-width="6" /><g id="nutmeg-excited-blink" class="nutmeg-excited-blink"><g id="nutmeg-excited-eyes" class="nutmeg-excited-eyes-rest"><ellipse cx="211" cy="269" rx="9.5" ry="15.5" fill="#493428" stroke="none" stroke-width="6" /><ellipse cx="208.8" cy="264" rx="3" ry="4.2" fill="#fff9eb" stroke="none" stroke-width="6" /><path d="M291 272 Q301 259 311 272" fill="none" stroke="#493428" stroke-width="5" /></g><g id="nutmeg-excited-eyes-happy" class="nutmeg-excited-eyes-happy" opacity="0"><path d="M201 272 Q211 259 221 272" fill="none" stroke="#493428" stroke-width="5" /><path d="M291 272 Q301 259 311 272" fill="none" stroke="#493428" stroke-width="5" /></g></g><g id="nutmeg-excited-cheeks"><ellipse cx="186" cy="299" rx="17" ry="9" fill="#e5a28c" stroke="none" stroke-width="6" opacity=".58" /><ellipse cx="326" cy="299" rx="17" ry="9" fill="#e5a28c" stroke="none" stroke-width="6" opacity=".58" /></g><path d="M243 299 Q256 290 270 299 Q267 313 257 321 Q247 314 243 299 Z" fill="#e5a547" stroke="#493428" stroke-width="4" /><path d="M248 301 Q255 299 263 301" fill="none" stroke="#ffe4a0" stroke-width="3" /><path d="M230 337 L234 341 M254 341 L257 345 M278 337 L282 340" fill="none" stroke="#8f5d43" stroke-width="3.5" opacity=".55" /><g id="nutmeg-excited-hat-motion" class="nutmeg-excited-hat-motion"><g id="nutmeg-excited-hat"><path d="M185 182 L176 153 C145 151 139 124 153 104 C162 91 175 87 188 89 C189 56 217 39 241 44 C260 46 274 55 283 69 C306 55 335 67 337 90 C341 108 331 124 314 128 L324 181 Z" fill="url(#nutmeg-excited-cream-paint)" stroke="#493428" stroke-width="6" /><path d="M185 162 Q247 149 320 157 M191 130 Q224 138 239 111 Q268 119 283 93" fill="none" stroke="#493428" stroke-width="4.5" /><path d="M201 170 Q241 161 279 163" fill="none" stroke="#fffaf0" stroke-width="7" opacity=".65" /></g></g></g></g><g id="nutmeg-excited-tool-grip-motion" class="nutmeg-excited-right-motion"><g id="nutmeg-excited-tool-grip"><ellipse cx="410" cy="365" rx="16" ry="20" fill="url(#nutmeg-excited-fur-paint)" stroke="#493428" stroke-width="4" transform="rotate(10 410 365)" /></g></g><g id="nutmeg-excited-finger-motion" class="nutmeg-excited-right-motion"><path d="M405 361 L413 362 M403 369 L411 370" fill="none" stroke="#493428" stroke-width="2.5" opacity=".6" /></g></g></g>
+</svg>
