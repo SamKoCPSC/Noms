@@ -9,14 +9,30 @@ pub const MAX_INGREDIENTS: usize = 1_000;
 pub const MAX_EQUIPMENT: usize = 200;
 pub const MAX_PAYLOAD: usize = 2 * 1024 * 1024;
 
+/// Almost-cookable recipes are missing one or two distinct required names.
+pub const MAX_ALMOST_COOKABLE_MISSING: usize = 2;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PantryRecipeMode {
+    #[default]
+    Cookable,
+    AlmostCookable,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PantryRecipePage {
     pub pantry_id: Uuid,
     pub pantry_revision: i64,
+    #[serde(default)]
+    pub mode: PantryRecipeMode,
     pub recipes: Vec<crate::types::RecipeCardSummary>,
     /// Only returned recipes missing optional ingredients are included.
     #[serde(default)]
     pub optional_ingredients_missing: std::collections::BTreeMap<Uuid, usize>,
+    /// Only almost-cookable cards are included; names preserve authored spelling/order.
+    #[serde(default)]
+    pub required_ingredients_missing: std::collections::BTreeMap<Uuid, Vec<String>>,
     pub next_cursor: Option<String>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

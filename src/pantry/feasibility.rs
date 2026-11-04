@@ -29,6 +29,14 @@ impl PantryCheck {
                 .any(|row| row.status == IngredientStatus::Missing)
     }
 
+    pub fn missing_required_names(&self) -> Vec<String> {
+        self.ingredients
+            .iter()
+            .filter(|row| row.status == IngredientStatus::Missing)
+            .map(|row| row.name.clone())
+            .collect()
+    }
+
     pub fn missing_optional_count(&self) -> usize {
         self.ingredients
             .iter()
@@ -298,6 +306,7 @@ mod tests {
             assert_eq!(result.ingredients.len(), 1);
             assert_eq!(result.ingredients[0].name, "Salt");
             assert_eq!(result.missing_optional_count(), 0);
+            assert_eq!(result.missing_required_names(), vec!["Salt"]);
         }
         let optional_only = matcher.check_requirements([("Salt", true), ("SALT", true)]);
         assert!(optional_only.is_cookable());
