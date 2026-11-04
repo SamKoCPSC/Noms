@@ -36,3 +36,20 @@ The schema and indexes are unchanged. Database regressions cover anonymous
 visibility, authenticated ownership, counts/facets, pagination, ancestor
 privacy and all suggestion scopes. The pinned ParadeDB suite exercises text
 matching and title suggestions against the real search index.
+
+The browser/API regression is `scripts/tests/test-public-search-browser.py`.
+Run it with Python Playwright against a local-mode app on loopback and the
+disposable `noms-public-search-postgres` container (database `noms_public_search`,
+user `noms_ci`, label `com.noms.public-search-test=true`), using the same synthetic
+`SESSION_SECRET` as the app:
+
+```sh
+python scripts/tests/test-public-search-browser.py --output /tmp/public-search-checks
+```
+
+It creates and removes synthetic fixtures and sessions. Checks include all
+tabs, public-only suggestions, counts/facets, pagination, private ancestors,
+landing/navbar submissions, mobile rendering, session fallback, logout and
+anonymous rate limits including forged forwarding headers. It intentionally
+exhausts the disposable app's anonymous search budget, so restart that app
+before repeating the run.
