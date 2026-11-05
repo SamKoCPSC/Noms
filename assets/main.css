@@ -188,11 +188,14 @@ a:not(.btn):not(.navbar-link):hover {
         0 5px 12px color-mix(in srgb, var(--shadow-dark) 35%, transparent),
         2px 3px 6px color-mix(in srgb, var(--shadow-dark) 26%, transparent),
         -3px -3px 8px color-mix(in srgb, var(--shadow-light) 70%, transparent);
-    /* A raised rim defines the opening without flattening the recessed well. */
+    /* Cast beyond the opaque 5px rim while preserving the recessed well. */
     --elevation-inset-rim:
         0 0 0 5px color-mix(in srgb, var(--surface) 65%, var(--shadow-light) 35%),
         -1px -1px 2px 4px color-mix(in srgb, var(--shadow-light) 75%, transparent),
-        1px 1px 2px 4px color-mix(in srgb, var(--shadow-dark) 28%, transparent);
+        1px 1px 2px 4px color-mix(in srgb, var(--shadow-dark) 28%, transparent),
+        0 5px 12px 5px color-mix(in srgb, var(--shadow-dark) 35%, transparent),
+        2px 3px 6px 5px color-mix(in srgb, var(--shadow-dark) 26%, transparent),
+        -3px -3px 8px 5px color-mix(in srgb, var(--shadow-light) 70%, transparent);
     --elevation-inset:
         var(--elevation-inset-rim),
         inset 4px 4px 7px color-mix(in srgb, var(--shadow-dark) 64%, transparent),
