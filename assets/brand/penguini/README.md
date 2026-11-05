@@ -4,6 +4,10 @@ Approved penguin mascot assets, selected and refined on 2026-11-03–04. Chef Pe
 wears a cream chef hat and terracotta apron, without a neckerchief. These assets
 are ready for integration; no app page currently displays the mascot.
 
+The approved [3D model and excited jump-and-wave](3d/README.md) are also available
+as a GLB and editable Blender scenes. They include the connected limb revision
+and a 6.6-second animation with two hops, a wave, and facial expressions.
+
 ## Approved animations
 
 | Asset | Behavior | Duration |

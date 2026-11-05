@@ -1,0 +1,2 @@
+# Blender creates numbered backups when editing scenes.
+*.blend[0-9]*
