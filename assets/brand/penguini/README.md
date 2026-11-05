@@ -87,6 +87,11 @@ lets it finish, and returns to idle. Brief 240ms blends join the phases. Repeats
 are allowed. Each activity starts and ends in the resting pose, with a settled
 tail before returning to idle. The jump flipper lowers gradually over 1.2 seconds.
 
+Pass `initialAnimation: "excited"` to play that registered activity once before
+the usual idle/activity loop. The default remains idle. Reduced motion starts
+at rest. The About loading screen uses this intro and pauses playback as soon
+as loading finishes or the reader opens the reading view.
+
 Connect visible controls to `player.pause()` and `player.play()`. Call
 `player.destroy()`, then `thinking.destroy()` and `dance.destroy()` on unmount.
 Renderers are borrowed by the player and can be reused when replacing a player

@@ -4,6 +4,33 @@ const TOUR_CSS: Asset = asset!(
     "/assets/about-tour.css",
     CssAssetOptions::new().with_minify(false)
 );
+const PENGUINI_RIG: Asset = asset!("/assets/brand/penguini/still.svg");
+const PENGUINI_LOADER: Asset = asset!(
+    "/assets/about-penguini.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const PENGUINI_CLIPS: Asset = asset!(
+    "/assets/brand/penguini/clips.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const PENGUINI_PLAYER: Asset = asset!(
+    "/assets/brand/penguini/player.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const PENGUINI_THINKING: Asset = asset!(
+    "/assets/brand/penguini/thinking-rig.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const PENGUINI_DANCE: Asset = asset!(
+    "/assets/brand/penguini/dance-rig.js",
+    JsAssetOptions::new().with_minify(false)
+);
+// Recompute asset fingerprints when only the animation scripts change.
+const _: &[u8] = include_bytes!("../../assets/about-penguini.js");
+const _: &[u8] = include_bytes!("../../assets/brand/penguini/clips.js");
+const _: &[u8] = include_bytes!("../../assets/brand/penguini/player.js");
+const _: &[u8] = include_bytes!("../../assets/brand/penguini/thinking-rig.js");
+const _: &[u8] = include_bytes!("../../assets/brand/penguini/dance-rig.js");
 const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen-detailed.glb");
 const KITCHEN_LAPTOP: Asset = asset!(
     "/assets/about/kitchen-laptop.webp",
@@ -216,6 +243,37 @@ const CONTENT: [&[&str];5] = [
 ];
 
 #[component]
+fn LoadingPenguini() -> Element {
+    use_drop(|| {
+        let _ = document::eval("document.getElementById('tour-loader-penguini')?.dispatchEvent(new Event('noms-penguini-dispose'));");
+    });
+    rsx! {
+        div {
+            id: "tour-loader-penguini", class: "tour-loader-mascot", aria_hidden: "true",
+            onmounted: move |_| {
+                spawn(async move {
+                    let assets = serde_json::json!({
+                        "rig": PENGUINI_RIG.to_string(), "clips": PENGUINI_CLIPS.to_string(),
+                        "player": PENGUINI_PLAYER.to_string(), "thinking": PENGUINI_THINKING.to_string(),
+                        "dance": PENGUINI_DANCE.to_string(),
+                    });
+                    let module = serde_json::to_string(&PENGUINI_LOADER.to_string()).unwrap();
+                    let script = format!("const host = document.getElementById('tour-loader-penguini'); const {{mountLoadingPenguini}} = await import({module}); if (host?.isConnected) mountLoadingPenguini(host, {assets});");
+                    if let Err(error) = document::eval(&script).await {
+                        tracing::warn!(?error, "About loader uses Penguini's resting pose");
+                    }
+                });
+            },
+            img { src: PENGUINI_RIG, alt: "", width: 1200, height: 1390, loading: "lazy", decoding: "async" }
+        }
+        button {
+            class: "tour-loader-mascot-toggle", r#type: "button", hidden: true,
+            "data-penguini-pause": "", aria_pressed: "false", "Pause animation"
+        }
+    }
+}
+
+#[component]
 pub fn About() -> Element {
     #[cfg(target_arch = "wasm32")]
     use_drop(super::about_tour::stop);
@@ -233,7 +291,7 @@ pub fn About() -> Element {
         },
      section{id:"tour-loader",class:"tour-loader",aria_labelledby:"tour-loader-title",
       div{class:"tour-loader-card",
-       div{class:"tour-loader-book",aria_hidden:"true",span{}span{}span{}}
+       LoadingPenguini {}
        span{class:"eyebrow","ABOUT NOMS"}
        h2{id:"tour-loader-title","Setting the scene"}
        p{id:"tour-loading-status",aria_hidden:"true","{LOADING_PHRASES[0]}"}

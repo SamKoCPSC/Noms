@@ -3,7 +3,7 @@
 // Animation definitions are registered independently of the playback loop.
 // Scope one player to one inline SVG; no global selectors or network requests.
 class PenguiniPlayer {
-  constructor(svg, {idle, animations = [], renderers = {}, idleDurationMs = 4000, transitionMs = 240, autoplay = true, random = Math.random} = {}) {
+  constructor(svg, {idle, animations = [], renderers = {}, idleDurationMs = 4000, transitionMs = 240, initialAnimation = null, autoplay = true, random = Math.random} = {}) {
     if (!(svg instanceof SVGElement)) throw new TypeError('An inline SVG is required.');
     if (!Number.isFinite(idleDurationMs) || idleDurationMs <= 0 || !Number.isFinite(transitionMs) || transitionMs <= 0) throw new TypeError('Durations must be positive.');
     this.svg = svg;
@@ -27,7 +27,9 @@ class PenguiniPlayer {
     this.parts.forEach((p,i) => { if (origins[i]) p.element.style.transformOrigin = origins[i]; });
     this._validate(this.idle);
     for (const clip of animations) this.registerAnimation(clip);
-    this._begin(this.idle);
+    const initial = initialAnimation === null ? this.idle : this.registry.get(initialAnimation);
+    if (!initial) throw new TypeError('The initial animation must be registered.');
+    this._begin(this.motion.matches ? this.idle : initial);
     this.onVisibility = () => this._sync();
     this.onMotion = () => { this._begin(this.idle); this._sync(); };
     document.addEventListener('visibilitychange', this.onVisibility);
