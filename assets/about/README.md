@@ -87,6 +87,11 @@ canvas uses the app background color, without a separate green backdrop or
 decorative ground plane, so it matches the area behind the navbar.
 The loader's reading shortcut and reduced-motion fallback remain available.
 Reading mode restores normal document content.
+Canvas size changes are observed independently of window resize events, and each
+frame checks the current layout before projecting the scene. This keeps the first
+mobile render correctly proportioned when styles or browser chrome settle late.
+The browser regression is `scripts/tests/test-about-tour-resize-browser.py`; use
+`--base-url http://localhost:8080` or `--html /path/to/Noms-About.html`.
 
 `src/pages/about_tour` ports the approved first-person Rust/WebGL prototype into the Dioxus About route. Semantic HTML contains all five complete chapters before enhancement. The camera and floating panels share the same projection, scoped beneath the existing app navbar. All five models, their thirteen print textures and the two kitchen surface atlases load from local Manganis URLs on entry, including direct chapter links. A loading curtain locks document scrolling and makes covered controls inert until all assets are uploaded, all five scenes have rendered with GPU completion, and an additional frame has presented. It opens at the requested chapter. Other routes, initial reading view and reduced motion do not fetch model or print assets. Leaving the loading tour invalidates pending work before another model can start downloading or upload to an obsolete renderer.
 
