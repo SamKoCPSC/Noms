@@ -7,7 +7,7 @@ use std::{
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{
     Document, Element, Event, EventTarget, HtmlCanvasElement, HtmlElement, MediaQueryList,
-    MouseEvent, Window,
+    MouseEvent, ResizeObserver, Window,
 };
 type StateRef = Rc<RefCell<State>>;
 thread_local! {
@@ -35,6 +35,15 @@ impl Drop for Listener {
             .remove_event_listener_with_callback(self.name, self.callback.as_ref().unchecked_ref());
     }
 }
+struct CanvasObserver {
+    observer: ResizeObserver,
+    _callback: Closure<dyn FnMut()>,
+}
+impl Drop for CanvasObserver {
+    fn drop(&mut self) {
+        self.observer.disconnect();
+    }
+}
 struct State {
     window: Window,
     doc: Document,
@@ -49,6 +58,7 @@ struct State {
     raf: Option<i32>,
     callback: Option<Closure<dyn FnMut(f64)>>,
     listeners: Vec<Listener>,
+    canvas_observer: Option<CanvasObserver>,
     mobile_read: [f32; flight::COUNT],
     target: f32,
     progress: f32,
@@ -140,6 +150,7 @@ pub fn start() -> Result<(), JsValue> {
         raf: None,
         callback: None,
         listeners: vec![],
+        canvas_observer: None,
         mobile_read: [0.; flight::COUNT],
         target: 0.,
         progress: 0.,
@@ -329,6 +340,26 @@ pub fn start() -> Result<(), JsValue> {
         s.goto_hash(false);
         s.measure();
         s.progress = s.target;
+    }
+    // Stylesheets, hydration, and mobile browser chrome can resize the canvas
+    // without a window resize event. Wake the paused tour when its box changes.
+    let weak = Rc::downgrade(&state);
+    let callback = Closure::wrap(Box::new(move || {
+        if let Some(state) = weak.upgrade() {
+            {
+                let mut s = state.borrow_mut();
+                s.resize();
+                s.measure();
+            }
+            schedule(&state);
+        }
+    }) as Box<dyn FnMut()>);
+    if let Ok(observer) = ResizeObserver::new(callback.as_ref().unchecked_ref()) {
+        observer.observe(&state.borrow().canvas);
+        state.borrow_mut().canvas_observer = Some(CanvasObserver {
+            observer,
+            _callback: callback,
+        });
     }
     RUNTIME.with(|slot| *slot.borrow_mut() = Some(state.clone()));
     schedule(&state);
@@ -872,6 +903,17 @@ impl State {
         self.dirty = true;
     }
     fn tick(&mut self, now: f64) -> bool {
+        // Keep projection, framing, and drawing-buffer size on the same layout
+        // even on the first frame, before ResizeObserver has delivered its entry.
+        if self.flying {
+            let rect = self.canvas.get_bounding_client_rect();
+            if self.width != rect.width().max(1.) as f32
+                || self.height != rect.height().max(1.) as f32
+            {
+                self.resize();
+                self.measure();
+            }
+        }
         // Hydration/router scroll restoration and the first CSS layout can follow onmounted.
         // Re-align the fragment after those initial animation frames, then leave native scrolling alone.
         if self.initial_alignment > 0 {
