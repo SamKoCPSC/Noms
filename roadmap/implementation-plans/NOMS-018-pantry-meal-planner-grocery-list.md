@@ -420,10 +420,10 @@ unchecked and deselected rows stay. The grocery parent is locked for update and
 its revision is bumped on removal. Closing the dialog refreshes list details and
 counts.
 
-`grocery-pantry-transfers.sql` adds receipts keyed by session owner and submission
-UUID, with indexed cascading references to the source list and destination pantry.
-The server records a fingerprint of the immutable selection, mode and revisions.
-Retries return the saved result even after source rows were removed; reusing an
-ID with different contents is rejected. The form freezes submitted choices until
-completion or cancellation. Legacy callers without options retain keep behavior.
-The new DDL is mirrored in the declarative schema and isolated test setup.
+Transfers use the pantry/list transaction and grocery revision checks only.
+There are no transfer receipts or request fingerprints, and no schema change is
+required. Confirmed failures show the server's feedback and allow retrying. If
+the response is lost or the result cannot be confirmed, the dialog asks users to
+refresh their grocery list and pantry before retrying; closing it reloads the
+list. A removal that already committed makes the old list revision stale, so
+blind resubmission is rejected without further writes.

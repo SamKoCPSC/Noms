@@ -747,7 +747,7 @@ async fn purchased_groceries_transfer_atomically_and_retry_without_adding_amount
 }
 
 #[tokio::test]
-async fn purchased_transfer_removal_receipt_is_atomic_and_recovers_lost_response() {
+async fn purchased_transfer_removal_is_atomic_and_rejects_stale_retries() {
     use super::grocery_transfer::transfer_with_options;
     use crate::pantry::PantryCreate;
     let (_db, pool) = crate::test_utils::setup_test_db().await;
@@ -777,7 +777,6 @@ async fn purchased_transfer_removal_receipt_is_atomic_and_recovers_lost_response
     .unwrap();
     let list = get(&pool, owner, list.id).await.unwrap();
     let options = GroceryTransferOptions {
-        request_id: Uuid::new_v4(),
         remove_from_list: true,
     };
     let selected = vec![item.id, list.items[1].id];
@@ -819,30 +818,17 @@ async fn purchased_transfer_removal_receipt_is_atomic_and_recovers_lost_response
             Some(options.clone())
         )
     );
-    a.unwrap();
-    b.unwrap();
+    assert!(a.is_ok() ^ b.is_ok());
+    assert!(matches!(
+        a.err().or_else(|| b.err()),
+        Some(GroceryError::Conflict)
+    ));
     let after = get(&pool, owner, list.id).await.unwrap();
     assert_eq!(after.items.len(), 1);
     assert_eq!(after.items[0].id, list.items[1].id);
     assert_eq!(after.revision, list.revision + 1);
     let stock = super::pantry::get(&pool, owner, pantry.id).await.unwrap();
     assert_eq!(stock.entries.len(), 1);
-    transfer_with_options(
-        &pool,
-        owner,
-        list.id,
-        list.revision,
-        pantry.id,
-        ids.clone(),
-        Some(options.clone()),
-    )
-    .await
-    .unwrap();
-    assert_eq!(get(&pool, owner, list.id).await.unwrap(), after);
-    assert_eq!(
-        super::pantry::get(&pool, owner, pantry.id).await.unwrap(),
-        stock
-    );
     assert!(matches!(
         transfer_with_options(
             &pool,
@@ -851,12 +837,14 @@ async fn purchased_transfer_removal_receipt_is_atomic_and_recovers_lost_response
             list.revision,
             pantry.id,
             ids,
-            Some(GroceryTransferOptions {
-                remove_from_list: false,
-                ..options
-            })
+            Some(options)
         )
         .await,
-        Err(GroceryError::RetryMismatch)
+        Err(GroceryError::Conflict)
     ));
+    assert_eq!(get(&pool, owner, list.id).await.unwrap(), after);
+    assert_eq!(
+        super::pantry::get(&pool, owner, pantry.id).await.unwrap(),
+        stock
+    );
 }

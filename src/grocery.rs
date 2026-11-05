@@ -615,9 +615,8 @@ mod tests {
     }
 }
 
-/// One immutable put-away submission. Reuse the ID when retrying an uncertain save.
+/// Keep grocery rows by default; removal is part of the pantry transaction.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GroceryTransferOptions {
-    pub request_id: Uuid,
     pub remove_from_list: bool,
 }

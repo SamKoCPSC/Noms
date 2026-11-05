@@ -56,11 +56,26 @@ INSERT INTO kitchen_profiles(id,owner_id,name,request_id,request_hash) VALUES('{
             await expect(dialog).to_be_visible()
             assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth')
             await page.screenshot(path=str(args.output/f'put-away-{width}.png'))
+        # A request that never reaches the server leaves stock and groceries intact.
+        await page.route('**/api/transfer_purchased_groceries*',lambda route:route.abort(),times=1)
+        await dialog.get_by_role('button',name='Add to pantry',exact=True).click()
+        await expect(dialog).to_contain_text('We couldn’t confirm the save.')
+        assert sql(f"SELECT available::text FROM pantry_ingredients WHERE profile_id='{pantry}' AND name='RICE';")=='false'
+        await dialog.get_by_role('button',name='Close',exact=True).click()
+        await page.get_by_role('button',name='Add purchased to pantry',exact=True).click()
+        dialog=page.get_by_role('dialog')
+        await dialog.get_by_role('checkbox',name=re.compile('Dish soap')).uncheck()
         async def lose_response(route):await route.fetch();await route.abort()
         await page.route('**/api/transfer_purchased_groceries*',lose_response,times=1)
         await dialog.get_by_role('button',name='Add to pantry',exact=True).click()
         await expect(dialog.locator('.grocery-error')).to_be_visible()
-        await dialog.get_by_role('button',name='Retry add',exact=True).click()
+        await expect(dialog).to_contain_text('Refresh your grocery list and pantry before retrying.')
+        await expect(dialog.get_by_role('button',name='Add to pantry',exact=True)).to_be_disabled()
+        await dialog.get_by_role('button',name='Close',exact=True).click()
+        await page.get_by_role('button',name='Add purchased to pantry',exact=True).click()
+        dialog=page.get_by_role('dialog')
+        await dialog.get_by_role('checkbox',name=re.compile('Dish soap')).uncheck()
+        await dialog.get_by_role('button',name='Add to pantry',exact=True).click()
         await expect(dialog).to_contain_text('Your purchased ingredients are available')
         assert sql(f"SELECT count(*) FROM pantry_ingredients WHERE profile_id='{pantry}';")=='2'
         assert sql(f"SELECT amount||'|'||unit||'|'||available::text FROM pantry_ingredients WHERE profile_id='{pantry}' AND name='RICE';")=='2|kg|true'
@@ -77,7 +92,7 @@ INSERT INTO kitchen_profiles(id,owner_id,name,request_id,request_hash) VALUES('{
         assert (await post(payload)).status>=400
         payload['item_ids']=[rice];payload['expected_revision']=99
         assert (await post(payload)).status>=400
-        # Removal is opt-in, atomic, and the exact submission recovers after losing its response.
+        # Removal is opt-in and atomic; a lost response asks the user to refresh.
         await page.goto(base+f'/kitchen/grocery-lists/{list_id}',wait_until='networkidle')
         await page.get_by_role('button',name='Add purchased to pantry',exact=True).click()
         dialog=page.get_by_role('dialog')
@@ -90,14 +105,14 @@ INSERT INTO kitchen_profiles(id,owner_id,name,request_id,request_hash) VALUES('{
         await page.route('**/api/transfer_purchased_groceries*',lose_response,times=1)
         await dialog.get_by_role('button',name='Add to pantry',exact=True).click()
         await expect(dialog.locator('.grocery-error')).to_be_visible()
-        await dialog.get_by_role('button',name='Retry add',exact=True).click()
-        await expect(dialog).to_contain_text('Your purchased ingredients are available')
-        await dialog.get_by_role('button',name='Done',exact=True).click()
+        await expect(dialog).to_contain_text('Refresh your grocery list and pantry before retrying.')
+        await expect(dialog.get_by_role('button',name='Add to pantry',exact=True)).to_be_disabled()
+        await dialog.get_by_role('button',name='Close',exact=True).click()
         await expect(page.locator('.grocery-row')).to_have_count(2)
         assert sql(f"SELECT count(*) FROM pantry_ingredients WHERE profile_id='{pantry}';")=='2'
         assert sql(f"SELECT string_agg(name,',' ORDER BY position) FROM grocery_list_items WHERE list_id='{list_id}';")=='Dish soap,Parsley'
         assert not errors,errors
-        (args.output/'result.json').write_text(json.dumps({'passed':['purchased-only selection','manual item exclusion','mobile and desktop layout','lost-response retry','case-insensitive existing ingredient keeps amount','new ingredient copies amount','shopping list retained','persisted pantry navigation','foreign pantry rejected','unpurchased item rejected','stale list rejected','optional removal and exact retry recovery','list refreshed after removal'],'console_errors':errors},indent=2))
+        (args.output/'result.json').write_text(json.dumps({'passed':['purchased-only selection','manual item exclusion','mobile and desktop layout','failed request keeps data and can be retried after refresh','uncertain response requests refresh','case-insensitive existing ingredient keeps amount','new ingredient copies amount','shopping list retained','persisted pantry navigation','foreign pantry rejected','unpurchased item rejected','stale list rejected','optional removal stays atomic after lost response','list refreshed after removal'],'console_errors':errors},indent=2))
         await browser.close()
         print('PASS: purchased grocery put-away flow, persistence, retry and access checks',flush=True)
 

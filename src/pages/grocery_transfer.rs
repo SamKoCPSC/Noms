@@ -36,9 +36,8 @@ fn PutAwayDialog(list: GroceryList, onclose: EventHandler<()>) -> Element {
     let mut busy = use_signal(|| false);
     let mut done = use_signal(|| false);
     let mut remove = use_signal(|| false);
-    let mut pending =
-        use_signal(|| None::<(Uuid, Vec<Uuid>, crate::grocery::GroceryTransferOptions)>);
-    let frozen = busy() || pending().is_some();
+    let mut uncertain = use_signal(|| false);
+    let frozen = busy() || uncertain();
     let mut error = use_signal(|| None::<String>);
     let pantries = use_resource(move || {
         let owner = account();
@@ -102,24 +101,28 @@ fn PutAwayDialog(list: GroceryList, onclose: EventHandler<()>) -> Element {
                         }
                     }
                     if let Some(problem)=error() { p { class: "grocery-error", role: "alert", "{problem}" } }
-                    button { class: "btn btn-primary", disabled: busy() || pantry().is_none() || selected().is_empty(), onclick: move |_| {
+                    button { class: "btn btn-primary", disabled: frozen || pantry().is_none() || selected().is_empty(), onclick: move |_| {
                         let Some(id)=pantry() else { return; };
                         if busy() { return; }
                         busy.set(true);error.set(None);
-                        let (id,items,options)=pending().unwrap_or_else(||(id,selected().into_iter().collect(),crate::grocery::GroceryTransferOptions { request_id: Uuid::new_v4(),remove_from_list:remove() }));
-                        pending.set(Some((id,items.clone(),options.clone())));
+                        let items=selected().into_iter().collect();
+                        let options=crate::grocery::GroceryTransferOptions { remove_from_list:remove() };
                         let list_id=list.id;let revision=list.revision;
                         spawn(async move {
                             match crate::api::grocery_list::transfer_purchased_groceries(account(),list_id,revision,id,items,Some(options)).await {
                                 Ok(()) if auth.peek().current_user_id==account() => done.set(true),
                                 Ok(()) => error.set(Some("Your account changed. Reload the page to view the result.".into())),
-                                Err(e) => error.set(Some(e.to_string())),
+                                Err(ServerFnError::ServerError { message, .. }) if !message.contains("timed out") && !message.contains("could not be saved") => error.set(Some(message)),
+                                Err(_) => {
+                                    uncertain.set(true);
+                                    error.set(Some("We couldn’t confirm the save. Refresh your grocery list and pantry before retrying.".into()));
+                                },
                             }
                             busy.set(false);
                         });
-                    }, if busy() { "Adding…" } else if pending().is_some() { "Retry add" } else { "Add to pantry" } }
+                    }, if busy() { "Adding…" } else if error().is_some() && !uncertain() { "Retry add" } else { "Add to pantry" } }
                 }
-                button { id: "put-away-close", class: "btn btn-ghost", disabled: busy(), onclick: move |_| onclose.call(()), if done() { "Done" } else { "Cancel" } }
+                button { id: "put-away-close", class: "btn btn-ghost", disabled: busy(), onclick: move |_| onclose.call(()), if done() { "Done" } else if uncertain() { "Close" } else { "Cancel" } }
             }
         }
     }
