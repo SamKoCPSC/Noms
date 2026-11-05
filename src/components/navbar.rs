@@ -248,9 +248,9 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                 span { "{label}" }
                             }
                         }
-                    }
-                    if is_signed_in {
-                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Introduction) } span { "Introduction" } }
+                        if is_signed_in {
+                            Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Introduction) } span { "Introduction" } }
+                        }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {
