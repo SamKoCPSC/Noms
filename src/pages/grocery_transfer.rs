@@ -8,11 +8,15 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 #[component]
-pub(super) fn PutAwayGroceries(list: GroceryList, disabled: bool) -> Element {
+pub(super) fn PutAwayGroceries(
+    list: GroceryList,
+    disabled: bool,
+    onrefresh: EventHandler<()>,
+) -> Element {
     let mut open = use_signal(|| false);
     rsx! {
         button { class: "btn btn-secondary", disabled: disabled || !list.items.iter().any(|i| i.checked), onclick: move |_| open.set(true), "Add purchased to pantry" }
-        if open() { PutAwayDialog { list: list.clone(), onclose: move |_| open.set(false) } }
+        if open() { PutAwayDialog { list: list.clone(), onclose: move |_| { open.set(false); onrefresh.call(()); } } }
     }
 }
 
@@ -31,6 +35,10 @@ fn PutAwayDialog(list: GroceryList, onclose: EventHandler<()>) -> Element {
     let mut retry = use_signal(|| 0_u64);
     let mut busy = use_signal(|| false);
     let mut done = use_signal(|| false);
+    let mut remove = use_signal(|| false);
+    let mut pending =
+        use_signal(|| None::<(Uuid, Vec<Uuid>, crate::grocery::GroceryTransferOptions)>);
+    let frozen = busy() || pending().is_some();
     let mut error = use_signal(|| None::<String>);
     let pantries = use_resource(move || {
         let owner = account();
@@ -58,15 +66,15 @@ fn PutAwayDialog(list: GroceryList, onclose: EventHandler<()>) -> Element {
                 if account_changed { p { role: "alert", "Your account changed. Reload this page before continuing." } }
                 else if done() {
                     p { role: "status", "Your purchased ingredients are available in this pantry." }
+                    if remove() { p { "The selected ingredients were removed from your grocery list." } }
                     if let Some(id)=pantry() { Link { to: Route::PantryDetail { id: id.to_string() }, class: "btn btn-primary", "Open pantry" } }
                 } else {
-                    p { "Select ingredients to put away. Leave out household items." }
-                    p { class: "grocery-muted", "Existing ingredients are marked available and keep their amounts. New entries copy the grocery quantities. Your shopping list stays as it is." }
+                    p { "Select ingredients to add to a pantry." }
                     match pantries.read().as_ref() {
                         Some(Ok(rows)) if rows.is_empty() => rsx! { p { "Create a pantry first to put away your groceries." } Link { to: Route::PantryNew {}, "Create pantry" } },
                         Some(Ok(rows)) => rsx! {
                             label { r#for: "put-away-pantry", "Pantry" }
-                            select { id: "put-away-pantry", class: "neumo-inset input input--shared", disabled: busy(), value: pantry().map(|id|id.to_string()).unwrap_or_default(), onchange: move |e| pantry.set(Uuid::parse_str(&e.value()).ok()),
+                            select { id: "put-away-pantry", class: "neumo-inset input input--shared", disabled: frozen, value: pantry().map(|id|id.to_string()).unwrap_or_default(), onchange: move |e| pantry.set(Uuid::parse_str(&e.value()).ok()),
                                 option { value: "", disabled: true, "Choose a pantry" }
                                 for row in rows { option { value: "{row.id}", selected: pantry()==Some(row.id), "{row.name}" } }
                             }
@@ -77,9 +85,20 @@ fn PutAwayDialog(list: GroceryList, onclose: EventHandler<()>) -> Element {
                     div { class: "grocery-put-away-items",
                         for item in list.items.iter().filter(|i| i.checked) {
                             label { class: "grocery-option-toggle", key: "{item.id}",
-                                input { r#type: "checkbox", disabled: busy(), checked: selected().contains(&item.id), onchange: { let id=item.id; move |e: FormEvent| { if e.checked() { selected.write().insert(id); } else { selected.write().remove(&id); } } } }
+                                input { r#type: "checkbox", disabled: frozen, checked: selected().contains(&item.id), onchange: { let id=item.id; move |e: FormEvent| { if e.checked() { selected.write().insert(id); } else { selected.write().remove(&id); } } } }
                                 span { "{item.fields.name} · {item.fields.amount} {item.fields.unit}" }
                             }
+                        }
+                    }
+                    fieldset {
+                        legend { "After adding" }
+                        label { class: "grocery-option-toggle",
+                            input { r#type: "radio", name: "put-away-after", checked: !remove(), disabled: frozen, onchange: move |_| remove.set(false) }
+                            "Keep on grocery list"
+                        }
+                        label { class: "grocery-option-toggle",
+                            input { r#type: "radio", name: "put-away-after", checked: remove(), disabled: frozen, onchange: move |_| remove.set(true) }
+                            "Remove from grocery list"
                         }
                     }
                     if let Some(problem)=error() { p { class: "grocery-error", role: "alert", "{problem}" } }
@@ -87,16 +106,18 @@ fn PutAwayDialog(list: GroceryList, onclose: EventHandler<()>) -> Element {
                         let Some(id)=pantry() else { return; };
                         if busy() { return; }
                         busy.set(true);error.set(None);
-                        let items=selected().into_iter().collect();let list_id=list.id;let revision=list.revision;
+                        let (id,items,options)=pending().unwrap_or_else(||(id,selected().into_iter().collect(),crate::grocery::GroceryTransferOptions { request_id: Uuid::new_v4(),remove_from_list:remove() }));
+                        pending.set(Some((id,items.clone(),options.clone())));
+                        let list_id=list.id;let revision=list.revision;
                         spawn(async move {
-                            match crate::api::grocery_list::transfer_purchased_groceries(account(),list_id,revision,id,items).await {
+                            match crate::api::grocery_list::transfer_purchased_groceries(account(),list_id,revision,id,items,Some(options)).await {
                                 Ok(()) if auth.peek().current_user_id==account() => done.set(true),
                                 Ok(()) => error.set(Some("Your account changed. Reload the page to view the result.".into())),
                                 Err(e) => error.set(Some(e.to_string())),
                             }
                             busy.set(false);
                         });
-                    }, if busy() { "Adding…" } else { "Add to pantry" } }
+                    }, if busy() { "Adding…" } else if pending().is_some() { "Retry add" } else { "Add to pantry" } }
                 }
                 button { id: "put-away-close", class: "btn btn-ghost", disabled: busy(), onclick: move |_| onclose.call(()), if done() { "Done" } else { "Cancel" } }
             }

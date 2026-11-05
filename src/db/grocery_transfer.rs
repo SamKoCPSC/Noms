@@ -12,13 +12,62 @@ pub async fn transfer(
     pantry_id: Uuid,
     ids: Vec<Uuid>,
 ) -> Result<(), GroceryError> {
+    transfer_with_options(pool, owner, list_id, revision, pantry_id, ids, None).await
+}
+
+pub async fn transfer_with_options(
+    pool: &PgPool,
+    owner: Uuid,
+    list_id: Uuid,
+    revision: i64,
+    pantry_id: Uuid,
+    ids: Vec<Uuid>,
+    options: Option<crate::grocery::GroceryTransferOptions>,
+) -> Result<(), GroceryError> {
     let selected: HashSet<_> = ids.iter().copied().collect();
     if ids.is_empty() || ids.len() > crate::grocery::MAX_ITEMS || ids.len() != selected.len() {
         return Err(GroceryError::Invalid(
             "Select purchased ingredients to add to your pantry.".into(),
         ));
     }
+    let mut ordered = ids.clone();
+    ordered.sort();
+    use sha2::{Digest, Sha256};
+    let hash = format!(
+        "{:x}",
+        Sha256::digest(
+            serde_json::to_vec(&(
+                list_id,
+                revision,
+                pantry_id,
+                ordered,
+                options.as_ref().is_some_and(|o| o.remove_from_list)
+            ))
+            .map_err(|_| GroceryError::Limit)?
+        )
+    );
     let mut tx = pool.begin().await?;
+    if let Some(options) = &options {
+        sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE id=$1 FOR UPDATE")
+            .bind(owner)
+            .fetch_optional(&mut *tx)
+            .await?
+            .ok_or(GroceryError::Missing)?;
+        if let Some(saved) = sqlx::query_scalar::<_, String>(
+            "SELECT request_hash FROM grocery_pantry_transfers WHERE owner_id=$1 AND request_id=$2",
+        )
+        .bind(owner)
+        .bind(options.request_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        {
+            if saved != hash {
+                return Err(GroceryError::RetryMismatch);
+            }
+            tx.commit().await?;
+            return Ok(());
+        }
+    }
     sqlx::query_scalar::<_, i64>(
         "SELECT revision FROM kitchen_profiles WHERE id=$1 AND owner_id=$2 FOR UPDATE",
     )
@@ -28,7 +77,7 @@ pub async fn transfer(
     .await?
     .ok_or(GroceryError::PantryMissing)?;
     let current: i64 = sqlx::query_scalar(
-        "SELECT revision FROM grocery_lists WHERE id=$1 AND owner_id=$2 FOR SHARE",
+        "SELECT revision FROM grocery_lists WHERE id=$1 AND owner_id=$2 FOR UPDATE",
     )
     .bind(list_id)
     .bind(owner)
@@ -97,6 +146,17 @@ pub async fn transfer(
             .bind(pantry_id)
             .execute(&mut *tx)
             .await?;
+    }
+    if let Some(options) = &options {
+        if options.remove_from_list {
+            sqlx::query("DELETE FROM grocery_list_items WHERE list_id=$1 AND id=ANY($2)")
+                .bind(list_id)
+                .bind(&ids)
+                .execute(&mut *tx)
+                .await?;
+            sqlx::query("UPDATE grocery_lists SET revision=revision+1,updated_at=NOW() WHERE id=$1 AND owner_id=$2").bind(list_id).bind(owner).execute(&mut *tx).await?;
+        }
+        sqlx::query("INSERT INTO grocery_pantry_transfers(owner_id,request_id,list_id,pantry_id,request_hash) VALUES($1,$2,$3,$4,$5)").bind(owner).bind(options.request_id).bind(list_id).bind(pantry_id).bind(hash).execute(&mut *tx).await?;
     }
     tx.commit().await?;
     Ok(())

@@ -614,3 +614,10 @@ mod tests {
         assert!(row.checked);
     }
 }
+
+/// One immutable put-away submission. Reuse the ID when retrying an uncertain save.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct GroceryTransferOptions {
+    pub request_id: Uuid,
+    pub remove_from_list: bool,
+}

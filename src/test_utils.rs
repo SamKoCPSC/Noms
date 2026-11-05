@@ -486,6 +486,10 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .await
         .expect("failed to create resource name indexes");
 
+    sqlx::raw_sql(include_str!("../migrations/grocery-pantry-transfers.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create transfer receipts");
     let schema = include_str!("../migrations/schema.sql");
     let start = schema
         .find("-- NOMS-017: maintained")

@@ -410,3 +410,20 @@ temporary PostgreSQL clusters; task-generated test build outputs were removed
 after compiling because the workspace filesystem filled during validation.
 
 [Purchased-ingredient dialog screenshots](../assets/NOMS-018/purchased-pantry/README.md) show mobile and desktop selection.
+
+### Keep or remove purchased rows
+
+The dialog now says “Select ingredients to add to a pantry.” It offers **Keep
+on grocery list** (default) or **Remove from grocery list**. Removal applies
+only to selected purchased rows, in the same transaction as inventory updates;
+unchecked and deselected rows stay. The grocery parent is locked for update and
+its revision is bumped on removal. Closing the dialog refreshes list details and
+counts.
+
+`grocery-pantry-transfers.sql` adds receipts keyed by session owner and submission
+UUID, with indexed cascading references to the source list and destination pantry.
+The server records a fingerprint of the immutable selection, mode and revisions.
+Retries return the saved result even after source rows were removed; reusing an
+ID with different contents is rejected. The form freezes submitted choices until
+completion or cancellation. Legacy callers without options retain keep behavior.
+The new DDL is mirrored in the declarative schema and isolated test setup.
