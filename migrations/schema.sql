@@ -495,6 +495,19 @@ ON grocery_lists (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_name_unique
 ON kitchen_profiles (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
 
+-- Receipts recover transfers after a lost response, including removed source rows.
+CREATE TABLE IF NOT EXISTS grocery_pantry_transfers (
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    request_id UUID NOT NULL,
+    list_id UUID NOT NULL REFERENCES grocery_lists(id) ON DELETE CASCADE,
+    pantry_id UUID NOT NULL REFERENCES kitchen_profiles(id) ON DELETE CASCADE,
+    request_hash VARCHAR(64) NOT NULL CHECK (length(request_hash) = 64),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (owner_id, request_id)
+);
+CREATE INDEX IF NOT EXISTS idx_grocery_pantry_transfers_list ON grocery_pantry_transfers(list_id);
+CREATE INDEX IF NOT EXISTS idx_grocery_pantry_transfers_pantry ON grocery_pantry_transfers(pantry_id);
+
 -- NOMS-017: maintained ingredient suggestions. The seed CLI owns these rows;
 -- authored recipe text and optional IDs remain in existing JSON snapshots.
 CREATE TABLE IF NOT EXISTS vocabulary_entries (
@@ -597,16 +610,3 @@ $$;
 CREATE TRIGGER ingredient_recipe_counts
 AFTER INSERT OR UPDATE OF ingredients, visibility OR DELETE ON recipes
 FOR EACH ROW EXECUTE FUNCTION maintain_ingredient_recipe_counts();
-
--- Receipts recover transfers after a lost response, including removed source rows.
-CREATE TABLE IF NOT EXISTS grocery_pantry_transfers (
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    request_id UUID NOT NULL,
-    list_id UUID NOT NULL REFERENCES grocery_lists(id) ON DELETE CASCADE,
-    pantry_id UUID NOT NULL REFERENCES kitchen_profiles(id) ON DELETE CASCADE,
-    request_hash VARCHAR(64) NOT NULL CHECK (length(request_hash) = 64),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (owner_id, request_id)
-);
-CREATE INDEX IF NOT EXISTS idx_grocery_pantry_transfers_list ON grocery_pantry_transfers(list_id);
-CREATE INDEX IF NOT EXISTS idx_grocery_pantry_transfers_pantry ON grocery_pantry_transfers(pantry_id);
