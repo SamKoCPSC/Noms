@@ -376,3 +376,54 @@ mobile creation header. PostgreSQL fixtures used memory-backed temporary
 clusters because the workspace filesystem is full.
 
 [Browser screenshot gallery](../assets/NOMS-018/missing-groceries/README.md): recipe entry point, optional inclusion/exclusion, saved desktop/mobile lists and empty result.
+
+## Put away purchased ingredients — 2026-11-04
+
+Saved grocery lists offer **Add purchased to pantry** when at least one item is
+checked. The dialog lists purchased rows only, allows household items or other
+extras to be deselected, and offers a destination pantry. With no pantries, it
+links to pantry creation. Success links directly to the updated pantry.
+
+The session-owned operation validates both resources and the grocery revision,
+rejects unchecked/foreign/duplicate row IDs, and applies all selected rows in one
+transaction. It locks the pantry parent before the grocery parent, consistent
+with other Kitchen operations. Existing ingredients match by case-insensitive
+name, become available and retain their amounts/units. New rows copy authored
+quantities and units, including descriptive and legacy source values. Separate
+purchased rows for a previously absent name are retained independently so
+quantities with incompatible units are preserved without conversion.
+
+Repeating a submission finds those names already in the pantry, so it creates
+no further entries and adds no quantities. Available rows and no-op retries do
+not bump revisions. Changed inventory bumps the pantry revision to invalidate
+cookable-recipe cursors. Shopping items, their checked state and source recipe
+contributions stay intact. A stale list requires reloading and reviewing the
+selection; no partial update is saved. No new schema or indexes are required.
+
+Put-away validation passed: server/WebAssembly development builds, strict
+WebAssembly Clippy, formatting, 22 focused grocery tests including concurrent
+PostgreSQL transfers, and the real browser flow at 390px/1440px with no JavaScript
+errors. The browser checked item exclusion, lost-response recovery, preserved
+amounts, copied quantities, persisted pantry navigation, unchanged shopping
+history and foreign/unchecked/stale requests. Native fixtures used memory-backed
+temporary PostgreSQL clusters; task-generated test build outputs were removed
+after compiling because the workspace filesystem filled during validation.
+
+[Purchased-ingredient dialog screenshots](../assets/NOMS-018/purchased-pantry/README.md) show mobile and desktop selection.
+
+### Keep or remove purchased rows
+
+The dialog now says “Select ingredients to add to a pantry.” It offers **Keep
+on grocery list** (default) or **Remove from grocery list**. Removal applies
+only to selected purchased rows, in the same transaction as inventory updates;
+unchecked and deselected rows stay. The grocery parent is locked for update and
+its revision is bumped on removal. Closing the dialog refreshes list details and
+counts.
+
+Transfers use the pantry/list transaction and grocery revision checks only.
+There are no transfer receipts or request fingerprints, and no schema change is
+required. Confirmed failures show the server's feedback and allow retrying. If
+the response is lost or the result cannot be confirmed, the dialog asks users to
+refresh their grocery list and pantry before retrying; closing it reloads the
+list. A removal that already committed makes the old list revision stale, so
+blind resubmission is rejected without further writes.

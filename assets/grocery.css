@@ -912,3 +912,8 @@
 .grocery-option-toggle input { width:20px; height:20px; flex-shrink:0; accent-color:var(--accent); }
 .grocery-ingredient-options select { width:100%; min-width:0; }
 .grocery-ingredient-options p { margin:0; }
+.grocery-put-away-items { max-height:40vh; overflow-y:auto; margin:16px 0; }
+.grocery-put-away-items span { overflow-wrap:anywhere; }
+.grocery-put-away-items .grocery-option-toggle { display:flex; align-items:center; gap:10px; font-weight:500; margin:0; }
+.grocery-edit-dialog fieldset { border:0; padding:0; margin:12px 0; }
+.grocery-edit-dialog fieldset .grocery-option-toggle { display:flex; align-items:center; gap:10px; margin:0; font-weight:500; }

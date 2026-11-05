@@ -614,3 +614,9 @@ mod tests {
         assert!(row.checked);
     }
 }
+
+/// Keep grocery rows by default; removal is part of the pantry transaction.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct GroceryTransferOptions {
+    pub remove_from_list: bool,
+}
