@@ -26,7 +26,7 @@ async def main(args):
         else:
             raise AssertionError('Loading did not finish')
         print('READY', flush=True)
-        canvas = page.locator('canvas')
+        canvas = page.locator('#story-canvas')
         assert await canvas.get_attribute('data-scene-instances') == '12'
 
         async def go(i):
@@ -37,7 +37,7 @@ async def main(args):
             await go(i)
             card = page.locator('.story-panel[data-active=true]')
             assert await card.get_attribute('data-panel') == str(i)
-            state = await page.evaluate("()=>{let c=document.querySelector('canvas'),r=c.getBoundingClientRect(),p=document.querySelector('.story-panel[data-active=true]'),s=document.querySelector('#story').getBoundingClientRect(),pr=p.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,vw:document.documentElement.clientWidth,vh:innerHeight,aspect:c.width/c.height,overflow:p.scrollHeight>p.clientHeight+1,center:(pr.top+pr.bottom-s.top-s.bottom)/2}}")
+            state = await page.evaluate("()=>{let c=document.querySelector('#story-canvas'),r=c.getBoundingClientRect(),p=document.querySelector('.story-panel[data-active=true]'),s=document.querySelector('#story').getBoundingClientRect(),pr=p.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,vw:document.documentElement.clientWidth,vh:innerHeight,aspect:c.width/c.height,overflow:p.scrollHeight>p.clientHeight+1,center:(pr.top+pr.bottom-s.top-s.bottom)/2}}")
             assert state['x'] == state['y'] == 0, state
             assert 0 <= state['vw'] - state['w'] <= 16 and state['h'] == state['vh'], state
             assert abs(state['aspect'] - state['w'] / state['h']) < 0.003, state
@@ -63,8 +63,10 @@ async def main(args):
             await go(6)
             assert abs(float(await canvas.evaluate('c=>c.width/c.height-c.getBoundingClientRect().width/c.getBoundingClientRect().height'))) < 0.003
             assert await page.locator('.story-panel[data-active=true]').get_attribute('data-panel') == '6'
+            print('RESIZE', w, h, flush=True)
         await page.emulate_media(reduced_motion='reduce')
-        await page.wait_for_timeout(100)
+        await page.evaluate('step(2)')
+        await page.wait_for_selector('.about-tour.is-reader')
         assert await page.locator('.about-tour.is-reader').count() == 1
         assert await page.locator('.story-panel[inert]').count() == 0
         assert not errors, errors
