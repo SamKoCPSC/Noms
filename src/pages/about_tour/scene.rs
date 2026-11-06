@@ -156,7 +156,6 @@ struct Diorama {
     framing: [flight::RoomFrame; 2],
     light: Option<LightFrame>,
     settled_frame: f32,
-    shadow_map: RefCell<Option<ShadowMap>>,
 }
 struct Uniforms {
     model: WebGlUniformLocation,
@@ -201,6 +200,7 @@ pub struct Renderer {
     a_uv: u32,
     a_color: u32,
     max_render_size: f64,
+    stop_shadows: Vec<RefCell<Option<ShadowMap>>>,
 }
 impl Renderer {
     pub fn new(canvas: HtmlCanvasElement, doc: &Document) -> Result<Self, JsValue> {
@@ -288,7 +288,11 @@ impl Renderer {
         gl.enable(Gl::BLEND);
         gl.blend_func(Gl::SRC_ALPHA, Gl::ONE_MINUS_SRC_ALPHA);
         gl.clear_color(0., 0., 0., 0.);
+        let stop_shadows = (0..flight::COUNT)
+            .map(|_| RefCell::new(ShadowMap::new(&gl).ok()))
+            .collect();
         Ok(Self {
+            stop_shadows,
             gl,
             canvas,
             program,
@@ -328,7 +332,6 @@ impl Renderer {
             texture_base: self.textures.len(),
             light: None,
             settled_frame: 160.,
-            shadow_map: RefCell::new(ShadowMap::new(&self.gl).ok()),
             framing: [false, true].map(|mobile| {
                 let rotation = room_rotation(room, mobile);
                 flight::RoomFrame::new(
@@ -595,7 +598,14 @@ impl Renderer {
             2.,
         );
     }
-    pub fn render(&self, camera: &Camera, time: f32, motion: bool, mobile: bool, frames: [f32; 5]) {
+    pub fn render(
+        &self,
+        camera: &Camera,
+        time: f32,
+        motion: bool,
+        mobile: bool,
+        frames: [f32; flight::COUNT],
+    ) {
         let gl = &self.gl;
         self.update_shadows(camera.progress, frames, mobile);
         gl.use_program(Some(&self.program));
@@ -609,33 +619,45 @@ impl Renderer {
         gl.clear(Gl::COLOR_BUFFER_BIT | Gl::DEPTH_BUFFER_BIT);
         gl.uniform_matrix4fv_with_f32_array(Some(&self.uniforms.vp), false, &camera.vp);
         gl.uniform3fv_with_f32_array(Some(&self.uniforms.eye), &camera.eye);
-        for i in 0..flight::COUNT {
-            let artwork = [0, 1, 3, 4, 4][i];
+        for (i, &frame) in frames.iter().enumerate() {
+            let asset = crate::pages::about::MODEL_FOR_STOP[i];
+            let artwork = [0, 1, 3, 4, 4][asset];
             let root = flight::station(i);
-            if !(-42.0..=6.0).contains(&(flight::point(root, [0., 0., -10.])[2] - camera.eye[2])) {
-                continue;
-            }
-            if matches!(i, 0..=4) {
-                let (diorama, frame, room) = match i {
-                    0 => (&self.kitchen, frames[0], Room::Kitchen),
-                    1 => (&self.office, frames[1], Room::Office),
-                    2 => (&self.bedroom, frames[3], Room::Bedroom),
-                    3 => (&self.potluck, frames[2], Room::Potluck),
-                    _ => (&self.garden, frames[4], Room::Garden),
-                };
+            if i < flight::COUNT {
+                let (diorama, room, _, _) = self.rooms()[asset];
                 let rect = self.canvas.get_bounding_client_rect();
                 let mobile = rect.width() <= 700.;
+                let region = self
+                    .canvas
+                    .owner_document()
+                    .and_then(|doc| doc.get_element_by_id("tour-scene-framing"))
+                    .map(|el| el.get_bounding_client_rect())
+                    .unwrap_or_else(|| rect.clone());
+                let bounds = [
+                    (region.left() - rect.left()) as f32 + 4.,
+                    (region.top() - rect.top()) as f32 + 4.,
+                    (region.right() - rect.left()) as f32 - 4.,
+                    (region.bottom() - rect.top()) as f32 - 4.,
+                ];
                 let model = mul(
                     root,
-                    diorama.framing[usize::from(mobile)].model(
+                    diorama.framing[usize::from(mobile)].model_under_overlay(
                         rect.width() as f32,
                         rect.height() as f32,
                         room_rotation(room, mobile),
+                        bounds,
                     ),
                 );
                 let visibility = 1. - smooth(0.28, 0.85, (camera.progress - i as f32).abs());
                 if visibility > 0. {
-                    self.draw_diorama(model, diorama, frame, room, visibility);
+                    self.draw_diorama(
+                        model,
+                        diorama,
+                        frame,
+                        room,
+                        visibility,
+                        &self.stop_shadows[i],
+                    );
                 }
                 continue;
             }
@@ -784,12 +806,13 @@ impl Renderer {
         ]
     }
     pub fn release_shadows(&self) {
-        self.update_shadows(-10., [160.; 5], false);
+        self.update_shadows(-10., [160.; flight::COUNT], false);
     }
-    pub fn observe_shadow_frame(&self, milliseconds: f64, frames: [f32; 5]) {
-        for (diorama, _, index, _) in self.rooms() {
+    pub fn observe_shadow_frame(&self, milliseconds: f64, frames: [f32; flight::COUNT]) {
+        for (index, asset) in crate::pages::about::MODEL_FOR_STOP.iter().enumerate() {
+            let (diorama, _, _, _) = self.rooms()[*asset];
             if frames[index] < diorama.settled_frame {
-                if let Some(map) = diorama.shadow_map.borrow_mut().as_mut() {
+                if let Some(map) = self.stop_shadows[index].borrow_mut().as_mut() {
                     if map.size() > 0 {
                         map.observe(milliseconds);
                     }
@@ -797,7 +820,7 @@ impl Renderer {
             }
         }
     }
-    fn update_shadows(&self, progress: f32, frames: [f32; 5], mobile: bool) {
+    fn update_shadows(&self, progress: f32, frames: [f32; flight::COUNT], mobile: bool) {
         let gl = &self.gl;
         // Unbind sampled targets before rendering their next shadow pass.
         gl.active_texture(Gl::TEXTURE1);
@@ -807,10 +830,13 @@ impl Renderer {
         let mut active_size = 0;
         let mut active_updates = 0;
         let mut active_name = "none";
-        for (stop, (diorama, room, index, name)) in self.rooms().into_iter().enumerate() {
+        for (stop, asset) in crate::pages::about::MODEL_FOR_STOP.iter().enumerate() {
+            let (diorama, room, _, _) = self.rooms()[*asset];
+            let index = stop;
+            let name = crate::pages::about::IDS[stop];
             let visible = (progress - stop as f32).abs() < 0.85;
             let frame = frames[index];
-            let mut shadow = diorama.shadow_map.borrow_mut();
+            let mut shadow = self.stop_shadows[index].borrow_mut();
             if let Some(map) = shadow.as_mut() {
                 if visible {
                     if let Some(light) = &diorama.light {
@@ -870,6 +896,7 @@ impl Renderer {
         frame: f32,
         room: Room,
         visibility: f32,
+        shadow_map: &RefCell<Option<ShadowMap>>,
     ) {
         if let Some(light) = &diorama.light {
             self.gl.active_texture(Gl::TEXTURE2);
@@ -882,7 +909,7 @@ impl Renderer {
             };
             self.gl
                 .bind_texture(Gl::TEXTURE_2D, Some(&self.textures[normal_texture]));
-            let shadow = diorama.shadow_map.borrow();
+            let shadow = shadow_map.borrow();
             self.gl.active_texture(Gl::TEXTURE1);
             self.gl.bind_texture(
                 Gl::TEXTURE_2D,
@@ -981,13 +1008,18 @@ impl Renderer {
     }
     /// Warm all five scenes, including prints and transparent PC surfaces, before entry.
     pub fn warm_models(&self, aspect: f32, mobile: bool) -> bool {
-        for stop in 0..flight::COUNT {
+        let mut warmed = [false; 5];
+        for (stop, asset) in crate::pages::about::MODEL_FOR_STOP.iter().enumerate() {
+            if warmed[*asset] {
+                continue;
+            }
+            warmed[*asset] = true;
             self.render(
                 &flight::camera(stop as f32, aspect, [0.; 2]),
                 0.,
                 false,
                 mobile,
-                [160.; 5],
+                [160.; flight::COUNT],
             );
         }
         self.gl.finish();

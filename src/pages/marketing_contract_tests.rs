@@ -36,7 +36,7 @@ fn signed_in_home_cta_opens_dashboard() {
 }
 
 #[test]
-fn about_renders_the_five_approved_chapters_and_readable_fallback() {
+fn about_renders_twelve_cards_and_readable_fallback() {
     let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
     for title in [
         "The Ultimate Recipe Manager",
@@ -47,7 +47,7 @@ fn about_renders_the_five_approved_chapters_and_readable_fallback() {
     ] {
         assert!(html.contains(title), "Missing {title}");
     }
-    assert_eq!(html.matches("<article").count(), 5);
+    assert_eq!(html.matches("<article").count(), 12);
     assert!(html.contains("class=\"kitchen-fallback\""));
     assert!(html.contains("loading=\"lazy\""));
     let opening = html.split("id=\"panel-1\"").next().unwrap();
@@ -82,7 +82,7 @@ fn about_renders_the_five_approved_chapters_and_readable_fallback() {
         .next()
         .unwrap();
     assert!(!creator.contains("kitchen-fallback"));
-    let philosophy = html.split("id=\"panel-3\"").nth(1).unwrap();
+    let philosophy = html.split("id=\"panel-7\"").nth(1).unwrap();
     assert!(philosophy.contains("potluck-fallback"));
     assert!(philosophy.contains("communal potluck dining room"));
     for attribute in [
@@ -95,7 +95,7 @@ fn about_renders_the_five_approved_chapters_and_readable_fallback() {
     ] {
         assert!(html.contains(attribute));
     }
-    let garden = html.split("id=\"panel-4\"").nth(1).unwrap();
+    let garden = html.split("id=\"panel-11\"").nth(1).unwrap();
     assert!(garden.contains("garden-fallback"));
     assert!(garden.contains("lawn chairs"));
     assert!(garden.contains("Take the tour again"));
@@ -112,7 +112,7 @@ fn about_provides_motion_and_reading_controls_before_enhancement() {
     assert!(html.contains("id=\"mode-toggle\""));
     assert!(html.contains("id=\"motion-toggle\""));
     assert!(!html.contains("id=\"tour-navigation\""));
-    assert_eq!(html.matches("class=\"next-link\"").count(), 5);
+    assert_eq!(html.matches("class=\"next-link\"").count(), 12);
     for id in ["idea", "why", "creator", "community", "gather"] {
         assert!(html.contains(&format!("href=\"#{id}\"")));
     }
