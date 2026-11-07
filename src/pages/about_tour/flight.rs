@@ -167,6 +167,7 @@ impl RoomFrame {
         self.fit(w, h, rotation, [left, top, right, bottom], w <= 700., true)
     }
     /// Bounds compose the settled room; they never clip the full-viewport canvas.
+    #[cfg(target_arch = "wasm32")]
     pub fn model_under_overlay(&self, w: f32, h: f32, rotation: Mat4, bounds: [f32; 4]) -> Mat4 {
         self.fit(w, h, rotation, bounds, true, false)
     }
