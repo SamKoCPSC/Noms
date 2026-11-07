@@ -77,3 +77,42 @@ html:has(.about-tour.is-flight){scrollbar-gutter:stable}
 /* Share the app backdrop continuously with the space behind the navbar. */
 .about-tour .world{background:var(--bg-base)}
 .about-tour .world-vignette{display:none}
+
+/* Short story cards overlay the same full-viewport camera, never a clipped slot. */
+.about-tour .site-header{display:none}
+.about-tour .world{inset:0}
+.about-tour.is-flight .story{position:fixed;inset:var(--tour-top) auto 0 24px;width:calc((100vw - 72px)*.45);max-width:520px;height:calc(100dvh - var(--tour-top));margin:0;padding:0;pointer-events:none;overflow:visible}
+.about-tour.is-flight .story-panel[id]{position:absolute;inset:50% 0 auto;width:100%;height:auto;max-height:none;margin:0;padding:24px;transform:translateY(-50%);overflow:visible;pointer-events:none;transform-origin:center}
+.about-tour.is-flight .story-panel[data-active=true]{pointer-events:auto}
+.about-tour.is-flight .panel-viewport{height:auto;overflow:visible}
+.about-tour.is-flight .panel-content{transform:none;will-change:auto}
+.about-tour .story-panel:before{display:none}
+.about-tour :is(h1,h2){font-size:30px;line-height:1.1;margin:0 0 14px}
+.about-tour :is(.lead,.detail){font-size:15px;line-height:1.6;margin:0 0 12px}
+.about-tour .panel-meta{margin-bottom:12px}
+.about-tour .panel-number{width:auto;height:auto;border:0;border-radius:0;box-shadow:none;font-size:11px;padding:0;background:none}
+.about-tour .card-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:8px}
+.about-tour .card-actions a{display:inline-flex;align-items:center;min-height:44px;margin:0;padding:0;font-size:13px;text-decoration:none}
+.about-tour .card-actions .next-link{margin-left:auto}
+.about-tour .back-link{color:var(--text-secondary)}
+.about-tour #tour-scene-framing{position:fixed;left:min(calc(24px + (100vw - 72px)*.45 + 24px),568px);right:24px;top:calc(var(--tour-top) + 20px);bottom:20px;pointer-events:none}
+.about-tour.is-flight .waypoint{height:200dvh}
+.about-tour.is-flight .waypoint:last-child{height:100dvh}
+@media(max-width:700px){
+ .about-tour.is-flight .story{inset:calc(var(--tour-top) + 8px) 12px auto;width:calc(100vw - 24px);max-width:none;height:calc((100dvh - var(--tour-top) - 24px)*.5)}
+ .about-tour.is-flight .story-panel[id]{padding:16px 18px;border-radius:24px}
+ .about-tour :is(h1,h2){font-size:25px;margin-bottom:10px}
+ .about-tour :is(.lead,.detail){font-size:13.5px;line-height:1.48;margin-bottom:8px}
+ .about-tour .panel-meta{margin-bottom:8px}
+ .about-tour .eyebrow{font-size:9px;letter-spacing:1px}
+ .about-tour .card-actions{margin-top:6px}
+ .about-tour #tour-scene-framing{left:12px;right:12px;top:calc(var(--tour-top) + (100dvh - var(--tour-top) - 24px)*.5 + 16px);bottom:8px}
+}
+@media(max-width:700px) and (max-height:740px){
+ .about-tour.is-flight .story-panel[id]{padding:12px 16px}
+ .about-tour :is(h1,h2){font-size:22px;margin-bottom:8px}
+ .about-tour :is(.lead,.detail){font-size:12.5px;line-height:1.4;margin-bottom:6px}
+ .about-tour .panel-meta{margin-bottom:6px}
+ .about-tour .card-actions{margin-top:2px}
+}
+@media print{.about-tour .card-actions{display:none!important}.about-tour.is-flight .story{position:static;width:auto;height:auto}.about-tour.is-flight .story-panel[id]{position:relative;inset:auto;width:auto;margin-bottom:25px;transform:none!important}}

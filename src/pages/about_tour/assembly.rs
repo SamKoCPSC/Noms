@@ -11,6 +11,7 @@ impl Playback {
     pub fn advance(&mut self, seconds: f32) {
         self.elapsed = (self.elapsed + seconds.max(0.)).min(DURATION);
     }
+    #[cfg(test)]
     pub fn finish(&mut self) {
         self.elapsed = DURATION;
     }

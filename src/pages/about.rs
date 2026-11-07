@@ -212,34 +212,88 @@ pub(super) const LOADING_PHRASES: [&str; 100] = [
     "Counting the holes in the Swiss cheese…",
     "Saving the last imaginary cookie…",
 ];
-pub(super) const IDS: [&str; 5] = ["idea", "why", "creator", "community", "gather"];
-pub(super) const NAMES: [&str; 5] = [
+pub(super) const IDS: [&str; 12] = [
+    "idea",
+    "why",
+    "creator",
+    "cooking-frustrations",
+    "my-own-solution",
+    "job-search",
+    "same-idea",
+    "community",
+    "accessible",
+    "no-disruptions",
+    "your-privacy",
+    "gather",
+];
+pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4];
+pub(super) const NAMES: [&str; 12] = [
     "The idea",
     "The reason",
     "The creator",
+    "Cooking frustrations",
+    "My own solution",
+    "The job search",
+    "The same idea",
     "The philosophy",
-    "The Noms Philosophy",
+    "Free and accessible",
+    "No disruptions",
+    "Your privacy",
+    "Building a community",
 ];
-const EYEBROWS: [&str; 5] = [
+const EYEBROWS: [&str; 12] = [
     "About Noms",
     "Why was Noms created?",
     "About the creator",
+    "About the creator",
+    "About the creator",
+    "About the creator",
+    "About the creator",
+    "The Noms Philosophy",
+    "The Noms Philosophy",
+    "The Noms Philosophy",
     "The Noms Philosophy",
     "The Noms Philosophy",
 ];
-const TITLES: [&str; 5] = [
+const TITLES: [&str; 12] = [
     "The Ultimate Recipe Manager",
     "A side project that grew in to something larger.",
     "Hi, I'm Sam!",
+    "The inconveniences of a cooking hobby.",
+    "Building my own solution.",
+    "A project to support my job search.",
+    "The same fundamental idea.",
     "Just a simple and easy-to-use app.",
+    "Free and accessible.",
+    "Without the disruptions.",
+    "Respecting your privacy.",
     "Building a community.",
 ];
-const CONTENT: [&[&str];5] = [
+const PARTS: [&str; 12] = [
+    "01", "02", "1 of 5", "2 of 5", "3 of 5", "4 of 5", "5 of 5", "1 of 5", "2 of 5", "3 of 5",
+    "4 of 5", "5 of 5",
+];
+const ORIGINAL_CONTENT: [&[&str];5] = [
 &["Noms is designed to be the ultimate unified solution for managing all your recipes.", "With tools that help cooks save and share their signature recipes, iterate and develop new recipes, and organize and plan meals.", "Featuring an optimized search engine, recipe editor, ingredient-scaling calculator, cooking mode, a grocery organizer, and more."],
 &["Noms started a simple side project made to be presented on a resume.", "Motivated by the desire to solve the ongoing issue of needing to constantly write and rewrite disorganized recipes on Google Docs.", "What started as a side project idea later became an actual solution to a real problem, and has since grown in to a suite of tools for the everyday cook and the larger cooking community."],
 &["I'm a professional software engineer and casual computer science enthusiast from Vancouver, Canada who happens to enjoy cooking in his spare time.", "I enjoy experimenting with food, everything from sandwiches to pastas to breads, cakes, noodles, etc. And also beverages like coffee and tea.", "As a cooking hobbyist, some of the consistent inconveniences I had was organizing recipes that changed over time, keeping track of what changes worked and didn't work, finding out what I could cook with limited ingredients, and scaling recipes when certain ingredients had awkward proportions.", "I initially wondered if there existed an app that could solve these issues, and although some attempts seem to have been made, existing solutions consistently seemed to lack the user experience that I would consider ideal. As such, I set out to build my own solution.", "To be honest, it started out as a somewhat non-serious side project that was simply meant to support my ongoing job search at that time as software engineering job recruiters typically identify passion and interest through non-academic work particularly in inexperienced candidates.", "After securing a job I took a break from working on the project for about a year, but later decided to rewrite the app properly, but with the same fundamental idea.", "Nowadays I continue to support the project as it solves a genuine problem I have, and my hope is to be able to share the app with other people in the community."],
 &["Noms puts the user experience first.", "One of the fundamental problems with modern software these days seems to be the constant disruptive designs that make it difficult to simply enjoy the tool as a solution to a problem.", "Ultimately, every project does need a pathway to sustainability if it hopes to scale beyond one user, but usability should never be sacrificed for short-term profitability.", "As such, Noms aims to keep key features free and accessible without a subscription or inconvenient restrictions that you have to pay to remove.", "It aims to avoid any disruptive or instrusive advertising or sponsorships that get in the way actually using the app.", "And it commits to respecting user privacy by only collecting data that is necessary to specific features, being transparent about what data is collected, never selling or sharing the data for any reason, and not using the data to manipulate users in to making purchases.", "Noms philosophy is that its primary purpose is to be a great product that people can enjoy using."],
 &["Noms is a community oriented space.", "Food and cooking is a key part of how we build relationships and connections and Noms wants to be here for that.", "Come join us at (TBD)."]
+];
+
+const CONTENT: [&[&str]; 12] = [
+    ORIGINAL_CONTENT[0],
+    ORIGINAL_CONTENT[1],
+    &[ORIGINAL_CONTENT[2][0], ORIGINAL_CONTENT[2][1]],
+    &[ORIGINAL_CONTENT[2][2]],
+    &[ORIGINAL_CONTENT[2][3]],
+    &[ORIGINAL_CONTENT[2][4]],
+    &[ORIGINAL_CONTENT[2][5], ORIGINAL_CONTENT[2][6]],
+    &[ORIGINAL_CONTENT[3][0], ORIGINAL_CONTENT[3][1]],
+    &[ORIGINAL_CONTENT[3][2], ORIGINAL_CONTENT[3][3]],
+    &[ORIGINAL_CONTENT[3][4]],
+    &[ORIGINAL_CONTENT[3][5], ORIGINAL_CONTENT[3][6]],
+    ORIGINAL_CONTENT[4],
 ];
 
 #[component]
@@ -309,25 +363,27 @@ pub fn About() -> Element {
        button{id:"mode-toggle",r#type:"button",disabled:true,aria_pressed:"false","Reading view"}
       }
      }
-     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}div{class:"world-vignette"}}
+     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
      div{id:"story",class:"story",
       for i in 0..IDS.len() {
-       article{id:"panel-{i}",class:"story-panel","data-panel":"{i}",aria_labelledby:"title-{i}",
+       article{id:"panel-{i}",class:"story-panel","data-panel":"{i}","data-model":"{MODEL_FOR_STOP[i]}",aria_labelledby:"title-{i}",
         span{id:"{IDS[i]}",class:"reader-anchor",aria_hidden:"true"}
         div{class:"panel-viewport",div{class:"panel-content",
-        div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","0{i+1}"}}
+        div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","{PARTS[i]}"}}
         if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
-        if i==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
-        if i==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
-        if i==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:960,height:960}}}
-        if i==3 {figure{class:"potluck-fallback",img{src:POTLUCK_POSTER,alt:"A communal potluck dining room and TV lounge with three couches, a chess game, and a table of cake, candy, chips and drinks",loading:"lazy",width:960,height:720}}}
-        if i==4 {figure{class:"garden-fallback",img{src:GARDEN_POSTER,alt:"A garden cookout with shared picnic tables, barbecue food, a beer table, lawn chairs, a cedar fence and outdoor games",loading:"lazy",width:960,height:720}}}
+        if MODEL_FOR_STOP[i]==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
+        if MODEL_FOR_STOP[i]==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
+        if MODEL_FOR_STOP[i]==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:960,height:960}}}
+        if MODEL_FOR_STOP[i]==3 {figure{class:"potluck-fallback",img{src:POTLUCK_POSTER,alt:"A communal potluck dining room and TV lounge with three couches, a chess game, and a table of cake, candy, chips and drinks",loading:"lazy",width:960,height:720}}}
+        if MODEL_FOR_STOP[i]==4 {figure{class:"garden-fallback",img{src:GARDEN_POSTER,alt:"A garden cookout with shared picnic tables, barbecue food, a beer table, lawn chairs, a cedar fence and outdoor games",loading:"lazy",width:960,height:720}}}
         for (j, paragraph) in CONTENT[i].iter().enumerate() {p{class:if j==0{"lead"}else{"detail"},"{paragraph}"}}
-        if i==3 {div{class:"values",span{"Key features free"}span{"No intrusive ads"}span{"Your data stays yours"}}}
+
+        div{class:"card-actions",
+        if i>0 {a{class:"back-link",href:format!("#{}",IDS[i-1]),"Back"}}
         a{class:"next-link",href:if i+1<IDS.len(){format!("#{}",IDS[i+1])}else{"#idea".into()},
          if i==0{"Continue the story"}else if i+1==IDS.len(){"Take the tour again"}else{"Continue the story"}
          span{class:"arrow",aria_hidden:"true"}
-        }
+        }}
         }}
        }
       }
@@ -340,5 +396,27 @@ pub fn About() -> Element {
       a{href:"/explore",class:"btn btn-secondary","Explore recipes"}
      }
       }
+    }
+}
+
+#[cfg(test)]
+mod story_tests {
+    use super::*;
+    #[test]
+    fn cards_preserve_all_original_copy_and_unique_destinations() {
+        assert_eq!(
+            CONTENT.iter().flat_map(|p| p.iter()).collect::<Vec<_>>(),
+            ORIGINAL_CONTENT
+                .iter()
+                .flat_map(|p| p.iter())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(IDS.len(), 12);
+        assert_eq!(
+            IDS.iter().collect::<std::collections::HashSet<_>>().len(),
+            12
+        );
+        assert_eq!(MODEL_FOR_STOP, [0, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4]);
+        assert_eq!(CONTENT.len(), IDS.len());
     }
 }

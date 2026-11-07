@@ -70,36 +70,19 @@ cp /tmp/noms-potluck-web/{potluck-*.webp,sams-potluck.webp} assets/about/
 
 ## Runtime
 
-On screens up to 700px wide, the document scroll controls both reading and
-camera travel. Cards stay fixed while their text translates inside a clipped
-viewport; neither the card nor its contents captures native scroll gestures.
-Each chapter first spends enough scroll distance to bring the end of its text
-into view above the fixed model, followed by a brief reading pause and camera
-travel to the next room over 1.5 viewport heights. Longer copy extends the reading distance,
-without changing travel speed. Chapter links target the beginning of that
-chapter's reading interval. The redundant tour toolbar is hidden on mobile;
-the app navbar stays available. The fixed text card sits first, directly below the app navbar, and occupies
-the upper 45% of the tour, leaving roughly 55% for the model. Models sit 8px beneath it, in a stronger upright
-three-quarter view matching the office reference. Mobile titles are smaller,
-with tighter spacing between the section label, heading and copy. Mobile framing
-fits the actual silhouette to the available width and height. The transparent
-canvas uses the app background color, without a separate green backdrop or
-decorative ground plane, so it matches the area behind the navbar.
-The loader's reading shortcut and reduced-motion fallback remain available.
-Reading mode restores normal document content.
-Canvas size changes are observed independently of window resize events, and each
-frame checks the current layout before projecting the scene. This keeps the first
-mobile render correctly proportioned when styles or browser chrome settle late.
-The browser regression is `scripts/tests/test-about-tour-resize-browser.py`; use
-`--base-url http://localhost:8080` or `--html /path/to/Noms-About.html`.
+The story is split into twelve shorter cards, preserving the original paragraphs and repeated category headings. Each card has a unique anchor and its own scene instance, entrance state and shadow cache. The five model assets and their GPU geometry/textures are shared; repeated bedroom and potluck stops do not download or upload duplicate meshes.
 
-`src/pages/about_tour` ports the approved first-person Rust/WebGL prototype into the Dioxus About route. Semantic HTML contains all five complete chapters before enhancement. The camera and floating panels share the same projection, scoped beneath the existing app navbar. All five models, their thirteen print textures and the two kitchen surface atlases load from local Manganis URLs on entry, including direct chapter links. A loading curtain locks document scrolling and makes covered controls inert until all assets are uploaded, all five scenes have rendered with GPU completion, and an additional frame has presented. It opens at the requested chapter. Other routes, initial reading view and reduced motion do not fetch model or print assets. Leaving the loading tour invalidates pending work before another model can start downloading or upload to an obsolete renderer.
+The camera renders across the full viewport. Text is a stationary overlay that fades during travel, rather than a clipped viewport that crops the camera. On mobile, content-sized cards are centered in the upper half of the space below the navbar. A separate framing rectangle fits settled models beneath the card (beside it on desktop) without clipping moving geometry. Cards do not capture scroll gestures. Each stop has a half-viewport reading pause followed by 1.5 viewport heights of camera travel. Back/continue links target the individual stops.
 
-After the loading curtain closes, the kitchen plays a three-second fly-in once per route visit, independently of scrolling. Frames 1–160 stage the floor and unfolding walls, then bring in counters, appliances, island, food, recipe book and laptop with curved travel and a gradual reveal. All parts remain in their final positions afterward. Mobile starts with ambient drift paused but still plays the intro; rendering stops when it finishes unless the camera is moving. Hidden tabs suspend playback. Scrolling or switching to reading view never resets it, and direct links to later chapters skip the unseen intro. Desktop chapter steps are 160svh; mobile steps include the measured reading interval and slower camera travel described above, with no extra opening assembly segment. Native scrolling continues to move the camera between chapters. Ambient pause stops continuous rendering after the intro without disabling scroll input. Pause/read controls, reduced-motion changes, WebGL/context-loss fallbacks and route unmounting stop rendering or dispose resources. Restoring graphics rebuilds the scene and reloads all five scenes if needed. Reading mode uses the lazy still image.
+The original five-stop camera spline, yaw and easing are retained. Longer routes repeat its four legs with rigid transforms joining the endpoints, so each additional card has its own room along the same forward-moving route. Each room plays its three-second entrance once when approached, including direct fragment entry, and remains assembled on later visits. Hidden tabs, reading mode and the loading curtain suspend playback. Mobile ambient drift starts paused; rendering stops after arrivals settle unless the camera moves.
+
+The existing Penguini loading curtain remains. All five assets are fetched and warmed once before it opens at the requested card. The reading shortcut, reduced motion, graphics failure and short-screen fallback expose normal document content. Leaving the route cancels pending loading and releases rendering resources. The transparent canvas matches the app background. Resize observation and per-frame layout checks keep the initial canvas aspect correct before any scrolling.
+
+Run `scripts/tests/test-about-card-overlay-browser.py --url http://localhost:8080/about` against the local app to check full-viewport projection, centered cards, independent repeated-room arrivals, original camera travel, resize and reduced motion. The existing `test-about-tour-resize-browser.py` also covers late canvas layout changes.
 
 The office at the second stop plays its own three-second entrance the first time the camera approaches from either direction, including direct `#why` entry. The floor and walls enter first; windows, furniture, monitors, PC, chair and accessories follow. Scroll triggers the entrance once and does not scrub or reverse it. The office remains assembled on later visits to the stop. Reading view, hidden tabs and the loading curtain suspend playback; ambient pause does not prevent the entrance. A settled, paused tour stops rendering. Its lazy still appears in the second reading-mode chapter.
 
-The potluck room uses the same one-time, three-second entrance at the philosophy stop, including direct `#community` entry. The floor and walls assemble first; dining and lounge furniture, food, chess and buffet accessories follow as the camera approaches. The room stays assembled on return visits, and its lazy still appears in the fourth reading-mode chapter.
+The potluck room uses the same one-time, three-second entrance at the philosophy stop, including direct `#community` entry. The floor and walls assemble first; dining and lounge furniture, food, chess and buffet accessories follow as the camera approaches. The room stays assembled on return visits, and its lazy still appears in the philosophy reading-mode cards.
 
 All entrances remap the authored offsets into the open sides of each room: front/right for the kitchen and potluck room, and front/left for the office. Every moving group has an inward horizontal approach with a restrained upward lift. Shared pivots keep prints and glazing attached to their parent assemblies; final positions and scales are unchanged. Geometry-based tests sample all three exported models throughout the entrance to verify that moving bounds never extend farther into either wall than their final mounted position.
 
@@ -126,7 +109,7 @@ cargo test --locked --no-default-features --features server pages::about
 cargo test --locked --no-default-features --features server pages::marketing_contract_tests
 ```
 
-The GLB contract tests check all five file/mesh budgets, finite geometry, the 18 kitchen, 16 office, 26 potluck, 32 bedroom and 29 garden assemblies, all thirteen printed UV surfaces, transparent PC panels and potluck glazing, preserved mouse controls, curved furniture and dishes, carved chess pieces, the kitchen surface UVs and metallic range, and the color palette. The bounded loader permits at most 64 primitives, five print indices and 400,000 triangles per model. Browser verification should cover all five stops, automatic opening assembly without scrolling, settled geometry during forward/backward scrolling, creator panel scrolling, opening/direct-fragment loading, one-time office, bedroom, potluck and garden approach/direct-entry/reverse-approach arrivals, mobile idle rendering, route exit/re-entry, reduced motion, graphics and image failure, context recovery, and desktop/mobile screenshots. Do not commit browser validation screenshots to the application or PR.
+The GLB contract tests check all five file/mesh budgets, finite geometry, the 18 kitchen, 16 office, 26 potluck, 32 bedroom and 29 garden assemblies, all thirteen printed UV surfaces, transparent PC panels and potluck glazing, preserved mouse controls, curved furniture and dishes, carved chess pieces, the kitchen surface UVs and metallic range, and the color palette. The bounded loader permits at most 64 primitives, five print indices and 400,000 triangles per model. Browser verification should cover all twelve stops, automatic opening assembly without scrolling, settled geometry during forward/backward scrolling, creator card transitions, opening/direct-fragment loading, one-time office, bedroom, potluck and garden approach/direct-entry/reverse-approach arrivals, mobile idle rendering, route exit/re-entry, reduced motion, graphics and image failure, context recovery, and desktop/mobile screenshots. Do not commit browser validation screenshots to the application or PR.
 
 ## Creator bedroom
 

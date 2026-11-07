@@ -59,7 +59,6 @@ struct State {
     callback: Option<Closure<dyn FnMut(f64)>>,
     listeners: Vec<Listener>,
     canvas_observer: Option<CanvasObserver>,
-    mobile_read: [f32; flight::COUNT],
     target: f32,
     progress: f32,
     pointer: [f32; 2],
@@ -81,11 +80,7 @@ struct State {
     models_requested: bool,
     generation: u32,
     models_ready: bool,
-    assembly: super::assembly::Playback,
-    office_arrival: super::assembly::ChapterArrival,
-    bedroom_arrival: super::assembly::ChapterArrival,
-    potluck_arrival: super::assembly::ChapterArrival,
-    garden_arrival: super::assembly::ChapterArrival,
+    arrivals: [super::assembly::ChapterArrival; flight::COUNT],
     gate: Gate,
     loading_timeout: Option<gloo_timers::callback::Timeout>,
     loading_phrases: Option<gloo_timers::callback::Interval>,
@@ -151,7 +146,6 @@ pub fn start() -> Result<(), JsValue> {
         callback: None,
         listeners: vec![],
         canvas_observer: None,
-        mobile_read: [0.; flight::COUNT],
         target: 0.,
         progress: 0.,
         pointer: [0.; 2],
@@ -177,11 +171,7 @@ pub fn start() -> Result<(), JsValue> {
         models_requested: false,
         generation: 0,
         models_ready: false,
-        assembly: super::assembly::Playback::default(),
-        office_arrival: super::assembly::ChapterArrival::new(1),
-        bedroom_arrival: super::assembly::ChapterArrival::new(2),
-        potluck_arrival: super::assembly::ChapterArrival::new(3),
-        garden_arrival: super::assembly::ChapterArrival::new(4),
+        arrivals: std::array::from_fn(super::assembly::ChapterArrival::new),
         gate: Gate::Open,
         loading_timeout: None,
         loading_phrases: None,
@@ -356,6 +346,12 @@ pub fn start() -> Result<(), JsValue> {
     }) as Box<dyn FnMut()>);
     if let Ok(observer) = ResizeObserver::new(callback.as_ref().unchecked_ref()) {
         observer.observe(&state.borrow().canvas);
+        if let Ok(story) = el(&state.borrow().doc, "story") {
+            observer.observe(&story);
+        }
+        for panel in &state.borrow().panels {
+            observer.observe(panel);
+        }
         state.borrow_mut().canvas_observer = Some(CanvasObserver {
             observer,
             _callback: callback,
@@ -696,7 +692,16 @@ impl State {
     }
     fn apply_mode(&mut self) {
         let was_flying = self.flying;
-        self.flying = self.renderer.is_some() && !self.reduced && !self.manual_read;
+        self.flying = self.renderer.is_some()
+            && !self.reduced
+            && !self.manual_read
+            && self
+                .window
+                .inner_height()
+                .ok()
+                .and_then(|h| h.as_f64())
+                .unwrap_or(0.)
+                >= 600.;
         if was_flying && !self.flying && !self.models_ready {
             self.generation += 1;
             self.models_requested = false;
@@ -828,65 +833,20 @@ impl State {
             self.navigate(i, smooth, false);
         }
     }
-    fn mobile_section(&self, i: usize) -> flight::MobileSection {
-        let height = |selector| {
-            self.panels[i]
-                .query_selector(selector)
-                .ok()
-                .flatten()
-                .and_then(|el| el.dyn_into::<HtmlElement>().ok())
-                .map(|el| el.client_height() as f32)
-                .unwrap_or(0.)
-        };
-        flight::MobileSection::new(
-            self.height,
-            height(".panel-content"),
-            height(".panel-viewport"),
-        )
-    }
     fn measure(&mut self) {
         if self.flying {
             let y = self.window.scroll_y().unwrap_or(0.);
-            // Mobile has a single native document scroll. Each chapter reserves
-            // enough distance to reveal all its copy before camera travel begins.
+            // Each short card holds for half a viewport, then travels for 1.5.
+            // One native scroll controls both text and camera; cards never scroll.
+            self.target = 0.;
             for (i, anchor) in self.anchors.iter().enumerate() {
-                if let Some(el) = anchor.dyn_ref::<HtmlElement>() {
-                    if self.width <= 700. {
-                        let section = self.mobile_section(i);
-                        let tail = if i + 1 == flight::COUNT {
-                            self.window
-                                .inner_height()
-                                .ok()
-                                .and_then(|v| v.as_f64())
-                                .unwrap_or(self.height as f64) as f32
-                        } else {
-                            section.travel
-                        };
-                        let _ = el
-                            .style()
-                            .set_property("height", &format!("{}px", section.hold + tail));
-                    } else {
-                        let _ = el.style().remove_property("height");
-                    }
+                let start = anchor.get_bounding_client_rect().top() + y;
+                let local = (y - start) as f32;
+                if local >= 0. {
+                    self.target = (i as f32
+                        + ((local - self.height * 0.5) / (self.height * 1.5)).clamp(0., 1.))
+                    .min((flight::COUNT - 1) as f32);
                 }
-            }
-            if self.width <= 700. {
-                self.target = 0.;
-                for (i, anchor) in self.anchors.iter().enumerate() {
-                    let start = anchor.get_bounding_client_rect().top() + y;
-                    let local = (y - start) as f32;
-                    let section = self.mobile_section(i);
-                    self.mobile_read[i] = local.clamp(0., section.read);
-                    if local >= 0. {
-                        self.target =
-                            (i as f32 + section.progress(local)).min((flight::COUNT - 1) as f32);
-                    }
-                }
-            } else {
-                let a = self.anchors[0].get_bounding_client_rect().top() + y;
-                let step = self.anchors[2].get_bounding_client_rect().top()
-                    - self.anchors[1].get_bounding_client_rect().top();
-                self.target = ((y - a) / step.max(1.)).clamp(0., (flight::COUNT - 1) as f64) as f32;
             }
         } else {
             let mut closest = 0;
@@ -941,13 +901,7 @@ impl State {
             if let Some(renderer) = &self.renderer {
                 renderer.observe_shadow_frame(
                     now - self.last,
-                    [
-                        self.assembly.frame(),
-                        self.office_arrival.frame(),
-                        self.potluck_arrival.frame(),
-                        self.bedroom_arrival.frame(),
-                        self.garden_arrival.frame(),
-                    ],
+                    self.arrivals.each_ref().map(|a| a.frame()),
                 );
             }
         }
@@ -955,9 +909,6 @@ impl State {
         let motion = !self.paused && !self.gate.blocked();
         // Warm-up stays behind the curtain. Only visible frames advance the intro;
         // ambient pause (the mobile default) does not prevent its one-time playback.
-        if !self.gate.blocked() {
-            self.assembly.advance(dt);
-        }
         let blend = 1. - (-dt * 11.).exp();
         self.progress += (self.target - self.progress) * blend;
         if (self.target - self.progress).abs() < 0.0004 {
@@ -976,10 +927,9 @@ impl State {
             self.pointer,
         );
         if !self.gate.blocked() {
-            self.office_arrival.advance(camera.progress, dt);
-            self.potluck_arrival.advance(camera.progress, dt);
-            self.bedroom_arrival.advance(camera.progress, dt);
-            self.garden_arrival.advance(camera.progress, dt);
+            for arrival in &mut self.arrivals {
+                arrival.advance(camera.progress, dt);
+            }
         }
         let active = (camera.progress + 0.5)
             .floor()
@@ -991,41 +941,18 @@ impl State {
             }
         }
         for (i, panel) in self.panels.iter().enumerate() {
-            let model = flight::panel_model(
-                i,
-                self.width,
-                self.height,
-                panel.offset_width() as f32,
-                panel.offset_height() as f32,
-            );
-            let (m, depth) = flight::css_projection(camera.vp, model, self.width, self.height);
             let delta = camera.progress - i as f32;
-            let opacity = if !(2.5..=48.).contains(&depth) {
-                0.
-            } else if delta > 0. {
+            let opacity = if delta > 0. {
                 1. - super::math::smooth(0.12, 0.55, delta)
             } else {
                 1. - super::math::smooth(0.08, 0.65, -delta)
             };
             let style = panel.style();
-            let matrix = m
-                .iter()
-                .map(|v| format!("{:.8}", v / 10.))
-                .collect::<Vec<_>>()
-                .join(",");
-            let transform = if self.width <= 700. {
-                format!("translate3d(12px, {}px, 0)", flight::MOBILE_PANEL_INSET)
-            } else {
-                format!("matrix3d({matrix})")
-            };
-            let _ = style.set_property("transform", &transform);
-            let _ = style.set_property("--reading-offset", &format!("{}px", -self.mobile_read[i]));
             let _ = style.set_property("opacity", &format!("{opacity:.4}"));
             let _ = style.set_property(
                 "visibility",
                 if opacity < 0.015 { "hidden" } else { "visible" },
             );
-            let _ = style.set_property("z-index", &(100 - (depth.max(0.) * 2.) as i32).to_string());
             let interactive = i == active && opacity > 0.8 && !self.gate.blocked();
             let _ = panel.set_attribute("data-active", if interactive { "true" } else { "false" });
             let _ = panel.set_attribute("aria-hidden", if interactive { "false" } else { "true" });
@@ -1051,34 +978,39 @@ impl State {
                 self.time,
                 motion,
                 self.width <= 700.,
-                [
-                    self.assembly.frame(),
-                    self.office_arrival.frame(),
-                    self.potluck_arrival.frame(),
-                    self.bedroom_arrival.frame(),
-                    self.garden_arrival.frame(),
-                ],
+                self.arrivals.each_ref().map(|a| a.frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-assembly-frame",
-                &format!("{:.3}", self.assembly.frame()),
+                &format!("{:.3}", self.arrivals[0].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-office-assembly-frame",
-                &format!("{:.3}", self.office_arrival.frame()),
+                &format!("{:.3}", self.arrivals[1].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-potluck-assembly-frame",
-                &format!("{:.3}", self.potluck_arrival.frame()),
+                &format!("{:.3}", self.arrivals[7].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-bedroom-assembly-frame",
-                &format!("{:.3}", self.bedroom_arrival.frame()),
+                &format!("{:.3}", self.arrivals[2].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-garden-assembly-frame",
-                &format!("{:.3}", self.garden_arrival.frame()),
+                &format!("{:.3}", self.arrivals[11].frame()),
             );
+            let _ = self.canvas.set_attribute(
+                "data-arrival-frames",
+                &self
+                    .arrivals
+                    .each_ref()
+                    .map(|a| format!("{:.3}", a.frame()))
+                    .join(","),
+            );
+            let _ = self
+                .canvas
+                .set_attribute("data-scene-instances", &flight::COUNT.to_string());
             self.frames += 1;
             let _ = self
                 .canvas
@@ -1109,6 +1041,7 @@ impl State {
         self.gate = self.gate.after_frame();
         if self.gate != previous_gate {
             self.sync_gate();
+
             // Releasing the loading scroll lock can change the document's scroll
             // range after the router's initial fragment alignment. Resolve it once
             // against the visible layout before starting a chapter entrance.
@@ -1117,20 +1050,11 @@ impl State {
                 self.goto_hash(false);
                 self.initial_alignment = 3;
             }
-            // Later chapter entries should already have a settled kitchen when
-            // the visitor returns to the opening. Re-entry never resets it.
-            if !self.gate.blocked() && self.target >= 0.5 {
-                self.assembly.finish();
-            }
         }
         self.dirty = false;
         self.initial_alignment > 0
             || motion
-            || (!self.gate.blocked() && !self.assembly.finished())
-            || (!self.gate.blocked() && self.office_arrival.animating())
-            || (!self.gate.blocked() && self.potluck_arrival.animating())
-            || (!self.gate.blocked() && self.bedroom_arrival.animating())
-            || (!self.gate.blocked() && self.garden_arrival.animating())
+            || (!self.gate.blocked() && self.arrivals.iter().any(|a| a.animating()))
             || self.gate != previous_gate
             || self.gate == Gate::Presenting
             || (self.target - self.progress).abs() > 0.0004

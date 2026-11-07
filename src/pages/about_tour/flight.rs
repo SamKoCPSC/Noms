@@ -2,23 +2,57 @@ use super::math::*;
 pub const COUNT: usize = super::super::about::IDS.len();
 pub const FOV: f32 = 0.88;
 // Keep in sync with the mobile card height in about-tour.css.
+#[cfg(test)]
 pub const MOBILE_PANEL_INSET: f32 = 8.;
+#[cfg(test)]
 pub const MOBILE_TEXT_FRACTION: f32 = 0.45;
-const EYES: [[f32; 3]; COUNT] = [
+const EYES: [[f32; 3]; 5] = [
     [0., 3.1, 12.],
     [7., 3.9, -10.],
     [-4., 3.2, -32.],
     [6., 4.4, -54.],
     [-3., 3.7, -76.],
 ];
-const YAWS: [f32; COUNT] = [0., 0.32, -0.28, 0.28, -0.22];
+const YAWS: [f32; 5] = [0., 0.32, -0.28, 0.28, -0.22];
 pub struct Camera {
     pub eye: [f32; 3],
     pub vp: Mat4,
     pub progress: f32,
 }
-pub fn station(i: usize) -> Mat4 {
+fn original_station(i: usize) -> Mat4 {
     mul(translate(EYES[i][0], EYES[i][1], EYES[i][2]), ry(YAWS[i]))
+}
+fn route_origin(cycle: usize) -> (Mat4, Mat4) {
+    let first_inverse = mul(
+        ry(-YAWS[0]),
+        translate(-EYES[0][0], -EYES[0][1], -EYES[0][2]),
+    );
+    let last_inverse = mul(
+        ry(-YAWS[4]),
+        translate(-EYES[4][0], -EYES[4][1], -EYES[4][2]),
+    );
+    let step = mul(original_station(4), first_inverse);
+    let inverse_step = mul(original_station(0), last_inverse);
+    let (mut origin, mut inverse) = (identity(), identity());
+    for _ in 0..cycle {
+        origin = mul(origin, step);
+        inverse = mul(inverse_step, inverse);
+    }
+    (origin, inverse)
+}
+pub fn station(i: usize) -> Mat4 {
+    mul(route_origin(i / 4).0, original_station(i % 4))
+}
+pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
+    let p = p.clamp(0., (COUNT - 1) as f32);
+    let cycle = (p / 4.).floor() as usize;
+    let local = original_camera(p - cycle as f32 * 4., aspect, pointer);
+    let (origin, inverse) = route_origin(cycle);
+    Camera {
+        eye: point(origin, local.eye),
+        vp: mul(local.vp, inverse),
+        progress: cycle as f32 * 4. + local.progress,
+    }
 }
 pub fn point(m: Mat4, p: [f32; 3]) -> [f32; 3] {
     [
@@ -33,9 +67,9 @@ fn catmull(a: f32, b: f32, c: f32, d: f32, t: f32) -> f32 {
         + (2. * a - 5. * b + 4. * c - d) * t * t
         + (-a + 3. * b - 3. * c + d) * t * t * t)
 }
-pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
-    let p = p.clamp(0., (COUNT - 1) as f32);
-    let i = (p.floor() as usize).min(COUNT - 2);
+fn original_camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
+    let p = p.clamp(0., (EYES.len() - 1) as f32);
+    let i = (p.floor() as usize).min(EYES.len() - 2);
     let t = smooth(0.06, 0.94, p - i as f32);
     let mut eye = [0.; 3];
     for (k, v) in eye.iter_mut().enumerate() {
@@ -43,7 +77,7 @@ pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
             EYES[i.saturating_sub(1)][k],
             EYES[i][k],
             EYES[i + 1][k],
-            EYES[(i + 2).min(COUNT - 1)][k],
+            EYES[(i + 2).min(EYES.len() - 1)][k],
             t,
         )
     }
@@ -118,6 +152,7 @@ impl RoomFrame {
         });
         Self { center, outlines }
     }
+    #[cfg(test)]
     pub fn model(&self, w: f32, h: f32, rotation: Mat4) -> Mat4 {
         let (left, top, right, bottom) = if w <= 700. {
             (4., h * MOBILE_TEXT_FRACTION - 2., w - 4., h - 4.)
@@ -129,14 +164,31 @@ impl RoomFrame {
                 h - 24.,
             )
         };
+        self.fit(w, h, rotation, [left, top, right, bottom], w <= 700., true)
+    }
+    /// Bounds compose the settled room; they never clip the full-viewport canvas.
+    #[cfg(target_arch = "wasm32")]
+    pub fn model_under_overlay(&self, w: f32, h: f32, rotation: Mat4, bounds: [f32; 4]) -> Mat4 {
+        self.fit(w, h, rotation, bounds, true, false)
+    }
+    fn fit(
+        &self,
+        w: f32,
+        h: f32,
+        rotation: Mat4,
+        bounds: [f32; 4],
+        maximize: bool,
+        align_top: bool,
+    ) -> Mat4 {
+        let [left, top, right, bottom] = bounds;
         let focal = h * 0.5 / (FOV * 0.5).tan();
         let offset = [(left + right - w) * 0.5, (h - top - bottom) * 0.5];
-        let fill = if w <= 700. { 0.5 } else { 0.48 };
+        let fill = if maximize { 0.5 } else { 0.48 };
         let margin = [(right - left).max(1.) * fill, (bottom - top).max(1.) * fill];
         let distance = 11.7;
         let mut size: f32 = 10.;
         for (k, outline) in self.outlines.iter().enumerate() {
-            if w <= 700. {
+            if maximize {
                 continue;
             }
             for &[p, z] in outline {
@@ -148,7 +200,7 @@ impl RoomFrame {
         }
         // Solve translation intervals for both axes so an asymmetric silhouette
         // can fill the viewport without cropping. Align its top beneath the card.
-        let (x, y) = if w <= 700. {
+        let (x, y) = if maximize {
             let interval = |size: f32, axis: usize, min: f32, max: f32| {
                 let mut lower = f32::NEG_INFINITY;
                 let mut upper = f32::INFINITY;
@@ -178,7 +230,13 @@ impl RoomFrame {
             }
             size = low;
             let (xl, xr) = horizontal(size);
-            ((xl + xr) * 0.5, vertical(size).1)
+            {
+                let (yl, yr) = vertical(size);
+                (
+                    (xl + xr) * 0.5,
+                    if align_top { yr } else { (yl + yr) * 0.5 },
+                )
+            }
         } else {
             (offset[0] * distance / focal, offset[1] * distance / focal)
         };
@@ -195,6 +253,7 @@ impl RoomFrame {
     }
 }
 
+#[cfg(test)]
 pub fn panel_model(i: usize, w: f32, h: f32, pw: f32, ph: f32) -> Mat4 {
     let focal = h * 0.5 / (FOV * 0.5).tan();
     let unit = 10. / focal;
@@ -221,6 +280,7 @@ pub fn panel_model(i: usize, w: f32, h: f32, pw: f32, ph: f32) -> Mat4 {
         ),
     )
 }
+#[cfg(test)]
 pub fn css_projection(vp: Mat4, model: Mat4, w: f32, h: f32) -> (Mat4, f32) {
     let m = mul(vp, model);
     let mut out = [0.; 16];
@@ -234,11 +294,13 @@ pub fn css_projection(vp: Mat4, model: Mat4, w: f32, h: f32) -> (Mat4, f32) {
 }
 
 /// Document-space reading and travel distances for a mobile chapter.
+#[cfg(test)]
 pub struct MobileSection {
     pub read: f32,
     pub hold: f32,
     pub travel: f32,
 }
+#[cfg(test)]
 impl MobileSection {
     pub fn new(viewport: f32, text: f32, visible_text: f32) -> Self {
         let read = (text - visible_text).max(0.);
@@ -256,6 +318,36 @@ impl MobileSection {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn twelve_stops_preserve_original_camera_motion() {
+        assert_eq!(COUNT, 12);
+        for sample in 0..=220 {
+            let p = sample as f32 / 20.;
+            let cycle = (p / 4.).floor() as usize;
+            let actual = camera(p, 0.8, [0.; 2]);
+            let reference = original_camera(p - cycle as f32 * 4., 0.8, [0.; 2]);
+            let (origin, inverse) = route_origin(cycle);
+            for (a, b) in point(inverse, actual.eye).iter().zip(reference.eye) {
+                assert!((a - b).abs() < 0.0001);
+            }
+            for (a, b) in mul(actual.vp, origin).iter().zip(reference.vp) {
+                assert!((a - b).abs() < 0.0001);
+            }
+        }
+        for p in [4., 8.] {
+            for (a, b) in camera(p - 0.0001, 1., [0.; 2])
+                .vp
+                .iter()
+                .zip(camera(p, 1., [0.; 2]).vp)
+            {
+                assert!((a - b).abs() < 0.0001);
+            }
+        }
+        for i in 0..COUNT - 1 {
+            assert_ne!(station(i), station(i + 1));
+        }
+    }
 
     #[test]
     fn all_rooms_fill_their_space_without_overlapping_text_or_controls() {
