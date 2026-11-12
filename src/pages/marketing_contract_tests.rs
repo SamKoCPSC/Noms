@@ -64,7 +64,23 @@ fn about_renders_twelve_cards_and_readable_fallback() {
         .next()
         .unwrap();
     assert!(reason.contains("office-fallback"));
-    assert!(reason.contains("Sam’s office"));
+    assert!(reason.contains("A recipe library"));
+    for (panel, description, attribute) in [
+        (1, "A recipe library", "data-library-url"),
+        (3, "A modern supermarket", "data-supermarket-url"),
+        (4, "Sam’s office", "data-office-url"),
+        (5, "A corporate office", "data-corporate-office-url"),
+    ] {
+        let card = html
+            .split(&format!("id=\"panel-{panel}\""))
+            .nth(1)
+            .unwrap()
+            .split(&format!("id=\"panel-{}\"", panel + 1))
+            .next()
+            .unwrap();
+        assert!(card.contains(description), "Panel {panel}: {description}");
+        assert!(html.contains(attribute), "Missing {attribute}");
+    }
     for attribute in [
         "data-office-url",
         "data-office-left-url",
