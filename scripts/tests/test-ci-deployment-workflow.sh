@@ -28,6 +28,8 @@ require 'cargo clippy --locked --no-default-features --features server -- -D war
     'CI must lint the deployment server feature set'
 require 'bash scripts/tests/test-ci-deployment-workflow.sh' \
     'CI must run its workflow regressions'
+require 'bash scripts/tests/test-security-policy.sh' \
+    'CI must run the audit reachability and security policy regressions'
 
 test_steps="$(job_steps test)"
 for expected in 'apt-get install -y postgresql postgresql-client' \

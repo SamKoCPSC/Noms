@@ -81,4 +81,20 @@ if [[ ! "$installed_version" =~ (^|[[:space:]])$expected_auditor_version$ ]]; th
 fi
 
 cd "$repo_root"
+
+# This exception is valid only while the vulnerable binding is an inactive
+# optional driver. Do not let a later feature/target change turn it into a
+# runtime exception. A failed Cargo query is not evidence of non-reachability.
+if [ -n "${seen_advisories[RUSTSEC-2026-0459]:-}" ]; then
+    dependency_graph="$(cargo tree --locked --all-features --target all --prefix none --format '{p}')"
+    if [ -z "$dependency_graph" ]; then
+        echo "could not verify the SQLite advisory exception: empty dependency graph" >&2
+        exit 1
+    fi
+    if grep -qE '^libsqlite3-sys v[0-9]' <<< "$dependency_graph"; then
+        echo "RustSec exception RUSTSEC-2026-0459 is invalid: SQLite is an active dependency" >&2
+        exit 1
+    fi
+fi
+
 exec cargo audit "${audit_arguments[@]}"

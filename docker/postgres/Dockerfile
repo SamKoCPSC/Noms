@@ -16,8 +16,8 @@ RUN apt-get update \
        > /etc/apt/sources.list.d/timescaledb.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-       postgresql-17-cron=1.6.7-3.pgdg12+1 \
-       postgresql-17-pgvector=0.8.6-1.pgdg12+1 \
+       postgresql-17-cron=1.6.8-1.pgdg12+3 \
+       postgresql-17-pgvector=0.8.7-1.pgdg12+2 \
        timescaledb-2-loader-postgresql-17=2.29.2~debian12-1710 \
        timescaledb-2-postgresql-17=2.29.2~debian12-1710 \
     && curl -fsSL \

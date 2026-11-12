@@ -24,6 +24,56 @@ if grep -q 'Expired test exception' "$test_root/expired.out"; then
     exit 1
 fi
 
+# An inactive-driver exception must stop applying if that driver becomes
+# reachable, and a failed dependency query must not silently allow the audit.
+mock_bin="$test_root/bin"
+mkdir -p "$mock_bin"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$mock_bin/cargo-audit"
+cat > "$mock_bin/cargo" <<'MOCK_CARGO'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1:${2:-}" in
+    audit:--version) echo 'cargo-audit 0.22.2' ;;
+    audit:*) printf '%s\n' "$*" > "$NOMS_TEST_AUDIT_CALLS" ;;
+    tree:*)
+        case "$NOMS_TEST_TREE_MODE" in
+            inactive) printf '%s\n' 'noms v0.1.0' 'sqlx-postgres v0.8.6' ;;
+            active) printf '%s\n' 'noms v0.1.0' 'libsqlite3-sys v0.30.1' ;;
+            failed) exit 42 ;;
+            empty) : ;;
+            *) exit 2 ;;
+        esac
+        ;;
+    *) exit 2 ;;
+esac
+MOCK_CARGO
+chmod +x "$mock_bin/cargo" "$mock_bin/cargo-audit"
+sqlite_allowlist="$test_root/sqlite-allowlist.txt"
+printf '%s\n' 'RUSTSEC-2026-0459|2026-11-30|Test-only inactive driver.' > "$sqlite_allowlist"
+audit_calls="$test_root/audit-calls.txt"
+PATH="$mock_bin:$PATH" NOMS_TEST_TREE_MODE=inactive NOMS_TEST_AUDIT_CALLS="$audit_calls" \
+    NOMS_AUDIT_ALLOWLIST_FILE="$sqlite_allowlist" \
+    "$repo_root/scripts/security-audit.sh" --today 2026-11-12
+grep -q '^audit --ignore RUSTSEC-2026-0459$' "$audit_calls"
+for tree_mode in active failed empty; do
+    rm -f "$audit_calls"
+    if PATH="$mock_bin:$PATH" NOMS_TEST_TREE_MODE="$tree_mode" NOMS_TEST_AUDIT_CALLS="$audit_calls" \
+        NOMS_AUDIT_ALLOWLIST_FILE="$sqlite_allowlist" \
+        "$repo_root/scripts/security-audit.sh" --today 2026-11-12 \
+        >"$test_root/sqlite-$tree_mode.out" 2>&1; then
+        echo "unsafe or unknown SQLite reachability must reject the exception: $tree_mode" >&2
+        exit 1
+    fi
+    if [ -f "$audit_calls" ]; then
+        echo "invalid SQLite exceptions must stop before invoking the auditor" >&2
+        exit 1
+    fi
+done
+# Syntax/expiry-only validation does not need Cargo or an active toolchain.
+PATH="$mock_bin:$PATH" NOMS_TEST_TREE_MODE=failed NOMS_TEST_AUDIT_CALLS="$audit_calls" \
+    NOMS_AUDIT_ALLOWLIST_FILE="$sqlite_allowlist" \
+    "$repo_root/scripts/security-audit.sh" --validate-only --today 2026-11-12
+
 fixture_repo="$test_root/fixture-repo"
 mkdir -p "$fixture_repo"
 git -C "$fixture_repo" init --quiet
