@@ -769,6 +769,28 @@ dialog.shared-modal {
 dialog.shared-modal:not([open]) { display: none; }
 dialog.shared-modal::backdrop { background: transparent; }
 
+/* Draft conflict review uses whole-list choices and the shared dialog lifecycle. */
+.draft-conflict-notice { max-width: 900px; margin: 20px auto; padding: 20px; border: 1px solid var(--border-color); border-left: 4px solid var(--accent); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary); }
+.draft-conflict-notice p { margin: 8px 0 14px; }
+.draft-conflict-notice button { margin: 4px 8px 4px 0; }
+.modal-card.draft-merge-review { max-width: 900px; overflow-y: auto; overscroll-behavior: contain; }
+.draft-merge-review p { overflow-wrap: anywhere; }
+.draft-merge-review > p { margin-top: 12px; }
+.draft-merge-field { min-width: 0; margin: 20px 0; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); }
+.draft-merge-field legend { font-weight: 600; padding: 0 6px; }
+.draft-merge-field > p { margin-bottom: 12px; }
+.draft-merge-versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.draft-merge-version { min-width: 0; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer; }
+.draft-merge-version:has(input:checked) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.draft-merge-version input { margin-right: 8px; accent-color: var(--accent); }
+.draft-merge-value { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow-y: auto; margin-top: 12px; }
+.draft-merge-photos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr)); gap: 8px; margin-top: 12px; }
+.draft-merge-photos figure { min-width: 0; margin: 0; }
+.draft-merge-photos .edited-recipe-image { width: 100%; aspect-ratio: 4 / 3; }
+.draft-merge-photos figcaption { font-size: 12px; overflow-wrap: anywhere; }
+.draft-merge-steps { padding-left: 20px; overflow-wrap: anywhere; }
+.draft-merge-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0 12px; }
+
 .modal-card {
     background: var(--bg-base);
     border-radius: var(--radius-lg);
