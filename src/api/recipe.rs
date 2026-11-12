@@ -9,6 +9,7 @@ use dioxus::prelude::*;
 
 pub(crate) const RECIPE_NAME_TAKEN: &str =
     "You already have a recipe with this name. Choose a different name to publish.";
+pub(crate) const DRAFT_CHANGED: &str = "Newer changes to this draft are already saved. Your entries are still here. Open the saved draft from your dashboard in another tab to compare before continuing.";
 
 #[cfg(feature = "server")]
 use crate::types::{RecipeImage, RecipeStep};
@@ -48,6 +49,7 @@ async fn bounded_database_operation<T>(
 fn recipe_database_error(error: crate::db::DbError) -> ServerFnError {
     match error {
         crate::db::DbError::RecipeNameTaken => ServerFnError::new(RECIPE_NAME_TAKEN),
+        crate::db::DbError::DraftConflict { .. } => ServerFnError::new(DRAFT_CHANGED),
         _ => ServerFnError::new(error.to_string()),
     }
 }
@@ -2426,6 +2428,18 @@ pub async fn export_recipe_html(
 #[cfg(all(test, feature = "server"))]
 mod recipe_name_error_tests {
     use super::*;
+
+    #[test]
+    fn draft_conflicts_have_stable_actionable_feedback() {
+        let error = recipe_database_error(crate::db::DbError::DraftConflict {
+            draft_id: uuid::Uuid::new_v4(),
+            expected: 0,
+            actual: 1,
+        });
+        assert!(
+            matches!(error, ServerFnError::ServerError { message, .. } if message == DRAFT_CHANGED)
+        );
+    }
 
     #[test]
     fn typed_name_conflict_uses_api_wording_instead_of_database_display_text() {

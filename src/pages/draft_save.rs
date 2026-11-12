@@ -1,4 +1,128 @@
-use dioxus::prelude::ServerFnError;
+use dioxus::prelude::*;
+
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct DraftCheckpoint {
+    pub revision: i64,
+    pub editor: crate::types::RecipeEditorState,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub(super) struct DraftSync {
+    pub checkpoint: Signal<Option<DraftCheckpoint>>,
+    pub conflict: Signal<bool>,
+    pub reviewing: Signal<bool>,
+    pub in_flight: Signal<usize>,
+}
+
+pub(super) fn use_draft_sync() -> DraftSync {
+    DraftSync {
+        checkpoint: use_signal(|| None),
+        conflict: use_signal(|| false),
+        reviewing: use_signal(|| false),
+        in_flight: use_signal(|| 0),
+    }
+}
+
+impl DraftSync {
+    pub fn revision(self) -> i64 {
+        self.checkpoint
+            .read()
+            .as_ref()
+            .map_or(0, |base| base.revision)
+    }
+
+    pub fn conflicted(self) -> bool {
+        *self.conflict.read()
+    }
+
+    pub fn reviewing(self) -> bool {
+        *self.reviewing.read()
+    }
+
+    pub fn acknowledge(mut self, saved: &crate::types::RecipeDraftView) {
+        let current = self.checkpoint.peek().as_ref().map(|base| base.revision);
+        if current.is_none_or(|revision| saved.revision >= revision) {
+            self.checkpoint.set(Some(DraftCheckpoint {
+                revision: saved.revision,
+                editor: saved.editor.clone(),
+            }));
+        }
+    }
+}
+
+pub(super) fn draft_revision_conflict(error: &ServerFnError) -> bool {
+    matches!(error, ServerFnError::ServerError { message, .. }
+        if message == crate::api::recipe::DRAFT_CHANGED)
+}
+
+/// Only a successful write from this editor may advance its revision. Reading
+/// the server's latest revision cannot distinguish our save from another tab's.
+pub(super) async fn save_editor_draft(
+    account: Option<uuid::Uuid>,
+    draft_id: String,
+    mut sync: DraftSync,
+    editor: crate::types::RecipeEditorState,
+    may_retry: impl Fn() -> bool,
+) -> Result<crate::types::RecipeDraftView, ServerFnError> {
+    if *sync.conflict.peek() {
+        return Err(ServerFnError::new(crate::api::recipe::DRAFT_CHANGED));
+    }
+    let pending = *sync.in_flight.peek() + 1;
+    sync.in_flight.set(pending);
+    let result = save_with_acknowledged_revision(
+        || {
+            sync.checkpoint
+                .peek()
+                .as_ref()
+                .map_or(0, |base| base.revision)
+        },
+        &may_retry,
+        |expected| {
+            crate::api::recipe::save_recipe_draft(
+                account,
+                draft_id.clone(),
+                expected,
+                editor.clone(),
+            )
+        },
+        |saved| {
+            // Keep the corresponding snapshot even for older generations.
+            sync.acknowledge(saved);
+        },
+    )
+    .await;
+    let pending = *sync.in_flight.peek() - 1;
+    sync.in_flight.set(pending);
+    if may_retry() && result.as_ref().err().is_some_and(draft_revision_conflict) {
+        sync.conflict.set(true);
+    }
+    result
+}
+
+async fn save_with_acknowledged_revision<T, E, F, Fut>(
+    revision: impl Fn() -> i64,
+    may_retry: impl Fn() -> bool,
+    mut save: F,
+    mut acknowledge: impl FnMut(&T),
+) -> Result<T, E>
+where
+    F: FnMut(i64) -> Fut,
+    Fut: std::future::Future<Output = Result<T, E>>,
+{
+    // Read at dispatch, after any debounce or uploads have completed.
+    let expected = revision();
+    let mut result = save(expected).await;
+    let acknowledged = revision();
+    if result.is_err() && may_retry() && acknowledged > expected {
+        // A different request from this editor was confirmed while we waited.
+        // CAS still protects against any intervening change from another tab.
+        result = save(acknowledged).await;
+    }
+    if let Ok(saved) = &result {
+        acknowledge(saved);
+    }
+    result
+}
 
 #[derive(Clone, Copy)]
 pub(super) enum RecipeWriteAction {
@@ -24,6 +148,9 @@ pub(super) fn recipe_write_feedback(
     }
     if recipe_name_conflict(error) {
         return crate::api::recipe::RECIPE_NAME_TAKEN;
+    }
+    if draft_revision_conflict(error) {
+        return crate::api::recipe::DRAFT_CHANGED;
     }
     if matches!(action, RecipeWriteAction::CreateDraft) {
         return UNCONFIRMED_DRAFT_CREATION_MESSAGE;
@@ -127,7 +254,7 @@ mod tests {
         assert!(source.contains("Check Dashboard"));
         assert!(source.contains("new_tab: true"));
         assert!(source.contains(
-            "if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some()"
+            "if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some_and("
         ));
         let deferred_save = source
             .split("TimeoutFuture::new(2_000).await;")
@@ -156,7 +283,7 @@ mod tests {
         assert!(source.contains("publication_attempted = true"));
         assert!(source.contains("publication_unconfirmed.set(true)"));
         assert!(source.contains(
-            "if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some()"
+            "if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some_and("
         ));
     }
 
@@ -191,7 +318,7 @@ mod tests {
             .split("Err(save_error)")
             .next()
             .unwrap();
-        assert!(completion.contains("Ok(saved)"));
+        assert!(completion.contains("Ok(_)"));
         assert!(completion.contains("navigator.push(destination)"));
         assert!(!completion.contains("set_href"));
         let cancel = source
@@ -225,5 +352,181 @@ mod name_conflict_tests {
         assert!(!super::recipe_name_conflict(
             &dioxus::prelude::ServerFnError::new("Database operation timed out")
         ));
+    }
+
+    #[test]
+    fn draft_conflicts_explain_recovery_without_suggesting_a_blind_retry() {
+        let error = dioxus::prelude::ServerFnError::new(crate::api::recipe::DRAFT_CHANGED);
+        for action in [
+            super::RecipeWriteAction::Autosave,
+            super::RecipeWriteAction::SaveDraft,
+            super::RecipeWriteAction::Publish,
+        ] {
+            let message = super::recipe_write_feedback(action, &error);
+            assert_eq!(message, crate::api::recipe::DRAFT_CHANGED);
+            assert!(message.contains("Your entries are still here"));
+            assert!(message.contains("compare"));
+            assert!(!message.contains("try Save draft"));
+            assert!(!message.contains("may have been published"));
+        }
+    }
+}
+
+#[cfg(all(test, feature = "server"))]
+mod revision_tests {
+    use super::save_with_acknowledged_revision;
+    use std::cell::{Cell, RefCell};
+
+    #[tokio::test]
+    async fn confirmed_local_save_can_retry_the_newest_snapshot() {
+        let revision = Cell::new(0);
+        let attempts = RefCell::new(Vec::new());
+        let result = save_with_acknowledged_revision(
+            || revision.get(),
+            || true,
+            |expected| {
+                attempts.borrow_mut().push(expected);
+                std::future::ready(if expected == 0 {
+                    // Our older in-flight save's acknowledgment arrives while
+                    // this request is waiting on its conflict response.
+                    revision.set(1);
+                    Err("conflict")
+                } else {
+                    Ok(expected + 1)
+                })
+            },
+            |saved| revision.set(*saved),
+        )
+        .await;
+        assert_eq!(result, Ok(2));
+        assert_eq!(*attempts.borrow(), vec![0, 1]);
+        assert_eq!(revision.get(), 2);
+    }
+
+    #[tokio::test]
+    async fn superseded_snapshot_does_not_retry_but_success_still_acknowledges() {
+        let revision = Cell::new(0);
+        let attempts = Cell::new(0);
+        let result = save_with_acknowledged_revision(
+            || revision.get(),
+            || false,
+            |_| {
+                attempts.set(attempts.get() + 1);
+                revision.set(1);
+                std::future::ready(Err::<i64, _>("conflict"))
+            },
+            |_| panic!("a failed write must not acknowledge"),
+        )
+        .await;
+        assert_eq!(result, Err("conflict"));
+        assert_eq!(attempts.get(), 1);
+
+        let result = save_with_acknowledged_revision(
+            || revision.get(),
+            || false,
+            |expected| std::future::ready(Ok::<_, &str>(expected + 1)),
+            |saved| revision.set(*saved),
+        )
+        .await;
+        assert_eq!(result, Ok(2));
+        assert_eq!(revision.get(), 2);
+    }
+
+    #[tokio::test]
+    async fn missing_response_without_an_acknowledgment_is_not_retried() {
+        let attempts = Cell::new(0);
+        let result = save_with_acknowledged_revision(
+            || 0,
+            || true,
+            |_| {
+                attempts.set(attempts.get() + 1);
+                std::future::ready(Err::<i64, _>("response lost after commit"))
+            },
+            |_| panic!("an unconfirmed write must not acknowledge"),
+        )
+        .await;
+        assert_eq!(result, Err("response lost after commit"));
+        assert_eq!(attempts.get(), 1);
+    }
+
+    #[tokio::test]
+    async fn another_tabs_changes_survive_stale_saves_and_local_retries() {
+        use crate::{db, test_utils};
+        let (_database, pool) = test_utils::setup_test_db().await;
+        let owner = test_utils::insert_test_user(&pool).await;
+        let payload = |title| db::diff::RecipeDraftPayload {
+            content: test_utils::test_recipe_snapshot(title),
+            initial_visibility: Some("private".to_string()),
+        };
+        let draft = db::create_new_recipe_draft(&pool, owner.id, &payload("Initial"))
+            .await
+            .unwrap();
+        let remote = payload("Saved in another tab");
+        let local = payload("Unsaved local entries");
+        db::update_recipe_draft(&pool, draft.id, owner.id, 0, &remote)
+            .await
+            .unwrap();
+        let revision = Cell::new(0);
+        let attempts = RefCell::new(Vec::new());
+        let result = save_with_acknowledged_revision(
+            || revision.get(),
+            || true,
+            |expected| {
+                attempts.borrow_mut().push(expected);
+                db::update_recipe_draft(&pool, draft.id, owner.id, expected, &local)
+            },
+            |saved| revision.set(saved.revision),
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(db::DbError::DraftConflict {
+                expected: 0,
+                actual: 1,
+                ..
+            })
+        ));
+        assert_eq!(*attempts.borrow(), vec![0]);
+        assert_eq!(revision.get(), 0);
+        let retained = db::get_recipe_draft(&pool, draft.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(retained.decoded_snapshot().unwrap(), remote);
+
+        // Even a safe retry after our own acknowledgment must still reject a
+        // subsequent write from another tab instead of adopting its revision.
+        revision.set(1);
+        let own_save = db::update_recipe_draft(&pool, draft.id, owner.id, 1, &local)
+            .await
+            .unwrap();
+        db::update_recipe_draft(&pool, draft.id, owner.id, own_save.revision, &remote)
+            .await
+            .unwrap();
+        attempts.borrow_mut().clear();
+        let result = save_with_acknowledged_revision(
+            || revision.get(),
+            || true,
+            |expected| {
+                attempts.borrow_mut().push(expected);
+                revision.set(own_save.revision);
+                db::update_recipe_draft(&pool, draft.id, owner.id, expected, &local)
+            },
+            |saved| revision.set(saved.revision),
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(db::DbError::DraftConflict {
+                expected: 2,
+                actual: 3,
+                ..
+            })
+        ));
+        assert_eq!(*attempts.borrow(), vec![1, 2]);
+        let retained = db::get_recipe_draft(&pool, draft.id, owner.id)
+            .await
+            .unwrap();
+        assert_eq!(retained.decoded_snapshot().unwrap(), remote);
+        assert_eq!(local.content.title, "Unsaved local entries");
     }
 }

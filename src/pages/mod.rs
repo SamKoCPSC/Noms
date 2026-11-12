@@ -14,6 +14,8 @@ mod collection_list;
 mod collection_new;
 mod community_home;
 mod dashboard;
+mod draft_merge;
+mod draft_merge_review;
 mod draft_save;
 mod explore;
 mod home;

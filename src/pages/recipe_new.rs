@@ -6,9 +6,7 @@
 use crate::components::base::PageIconKind;
 use dioxus::prelude::*;
 
-use crate::api::recipe::{
-    create_recipe_draft, get_recipe_draft_api, publish_recipe_draft, save_recipe_draft,
-};
+use crate::api::recipe::{create_recipe_draft, publish_recipe_draft};
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
@@ -16,15 +14,17 @@ use crate::components::base::{
     UploadOutcome,
 };
 use crate::components::AuthRequired;
+use crate::pages::draft_merge_review::DraftConflictReview;
 use crate::pages::draft_save::{
-    draft_save_button_state, recipe_write_feedback, RecipeWriteAction,
-    UNCONFIRMED_DRAFT_CREATION_MESSAGE, UNCONFIRMED_PUBLICATION_MESSAGE,
+    draft_save_button_state, recipe_write_feedback, save_editor_draft, use_draft_sync,
+    RecipeWriteAction, UNCONFIRMED_DRAFT_CREATION_MESSAGE, UNCONFIRMED_PUBLICATION_MESSAGE,
 };
 use crate::pages::recipe_editor_form::{
-    apply_step_photo_edit, build_step_tree, can_indent_step, format_step_photo_file_size,
-    reorder_step_photo_within_step, reset_step_photo_input, step_photo_display_name,
-    step_photo_editor_edit, RecipeEditorContents, RecipeEditorInput as Input, RecipeTimingFields,
-    StepForm, StepPhotoEditButton, StepPhotoPreview, StepPhotoUploadFeedback,
+    apply_step_photo_edit, build_step_tree, can_indent_step, flatten_steps,
+    format_step_photo_file_size, reorder_step_photo_within_step, reset_step_photo_input,
+    step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
+    RecipeEditorInput as Input, RecipeTimingFields, StepForm, StepPhotoEditButton,
+    StepPhotoPreview, StepPhotoUploadFeedback,
 };
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient, RecipeStep,
@@ -130,9 +130,9 @@ pub fn RecipeNew() -> Element {
     let mut publication_review_open = use_signal(|| false);
     let mut description = use_signal(String::new);
     let mut commentary = use_signal(String::new);
-    let prep_time = use_signal(String::new);
-    let cook_time = use_signal(String::new);
-    let servings = use_signal(String::new);
+    let mut prep_time = use_signal(String::new);
+    let mut cook_time = use_signal(String::new);
+    let mut servings = use_signal(String::new);
 
     // Dynamic lists — typed directly
     let mut ingredients = use_signal(Vec::<RecipeIngredient>::new);
@@ -152,8 +152,8 @@ pub fn RecipeNew() -> Element {
     let mut error = use_signal(|| Option::<String>::None);
     #[allow(unused_mut)]
     let mut draft_id = use_signal(|| Option::<String>::None);
-    #[allow(unused_mut, unused_variables)]
-    let mut draft_revision = use_signal(|| 0i64);
+    let draft_sync = use_draft_sync();
+    let mut gallery_generation = use_signal(|| 0u64);
     #[allow(unused_mut)]
     let mut last_saved_editor = use_signal(|| Option::<RecipeEditorState>::None);
     let mut autosave_generation = use_signal(|| 0u64);
@@ -233,8 +233,10 @@ pub fn RecipeNew() -> Element {
             return;
         }
         if !meaningful
+            || draft_sync.conflicted()
             || draft_creation_unconfirmed()
             || publication_unconfirmed()
+            || draft_sync.reviewing()
             || is_saving()
             || is_manually_saving()
             || last_saved_editor().as_ref() == Some(&editor)
@@ -247,45 +249,31 @@ pub fn RecipeNew() -> Element {
         autosave_generation.set(generation);
         #[allow(unused_variables)]
         let current_draft_id = draft_id();
-        #[allow(unused_variables)]
-        let expected_revision = draft_revision();
+        // Subscribe to acknowledgments so an older in-flight save can wake
+        // the newest editor generation. The helper reads again at dispatch.
+        let _ = draft_sync.revision();
         #[cfg(target_arch = "wasm32")]
         spawn(async move {
             gloo_timers::future::TimeoutFuture::new(2_000).await;
             if autosave_generation() != generation
+                || draft_sync.conflicted()
                 || draft_creation_unconfirmed()
                 || publication_unconfirmed()
+                || draft_sync.reviewing()
                 || is_saving()
                 || is_manually_saving()
             {
                 return;
             }
             let result = if let Some(current_draft_id) = current_draft_id {
-                let first_save = save_recipe_draft(
+                save_editor_draft(
                     form_account(),
-                    current_draft_id.clone(),
-                    expected_revision,
+                    current_draft_id,
+                    draft_sync,
                     editor.clone(),
+                    || autosave_generation() == generation,
                 )
-                .await;
-                match first_save {
-                    Ok(saved) => Ok(saved),
-                    Err(_) if autosave_generation() == generation => {
-                        match get_recipe_draft_api(form_account(), current_draft_id.clone()).await {
-                            Ok(current) => {
-                                save_recipe_draft(
-                                    form_account(),
-                                    current_draft_id,
-                                    current.revision,
-                                    editor.clone(),
-                                )
-                                .await
-                            }
-                            Err(error) => Err(error),
-                        }
-                    }
-                    Err(error) => Err(error),
-                }
+                .await
             } else if *draft_creation_in_flight.peek() {
                 return;
             } else {
@@ -314,9 +302,12 @@ pub fn RecipeNew() -> Element {
                             }
                         }
                     }
-                    draft_revision.set(saved.revision);
+                    draft_sync.acknowledge(&saved);
                     if autosave_generation() == generation {
                         last_saved_editor.set(Some(editor));
+                        if error.peek().as_deref() == Some(crate::api::recipe::DRAFT_CHANGED) {
+                            error.set(None);
+                        }
                     }
                 }
                 Err(save_error) if autosave_generation() == generation => {
@@ -369,6 +360,7 @@ pub fn RecipeNew() -> Element {
             if !meaningful
                 || draft_creation_unconfirmed()
                 || publication_unconfirmed()
+                || draft_sync.reviewing()
                 || is_saving()
                 || is_manually_saving()
                 || busy()
@@ -381,35 +373,16 @@ pub fn RecipeNew() -> Element {
             is_manually_saving.set(true);
             autosave_generation.set(autosave_generation() + 1);
             let current_draft_id = draft_id();
-            let expected_revision = draft_revision();
             spawn(async move {
                 let save_result = if let Some(current_draft_id) = current_draft_id {
-                    let first_save = save_recipe_draft(
+                    save_editor_draft(
                         form_account(),
-                        current_draft_id.clone(),
-                        expected_revision,
+                        current_draft_id,
+                        draft_sync,
                         editor.clone(),
+                        || true,
                     )
-                    .await;
-                    match first_save {
-                        Ok(saved) => Ok(saved),
-                        Err(_) => {
-                            match get_recipe_draft_api(form_account(), current_draft_id.clone())
-                                .await
-                            {
-                                Ok(current) => {
-                                    save_recipe_draft(
-                                        form_account(),
-                                        current_draft_id,
-                                        current.revision,
-                                        editor.clone(),
-                                    )
-                                    .await
-                                }
-                                Err(error) => Err(error),
-                            }
-                        }
-                    }
+                    .await
                 } else if *draft_creation_in_flight.peek() {
                     Err(ServerFnError::new(
                         "Draft creation is already finishing. Try again in a moment.",
@@ -441,7 +414,7 @@ pub fn RecipeNew() -> Element {
                                 }
                             }
                         }
-                        draft_revision.set(saved.revision);
+                        draft_sync.acknowledge(&saved);
                         last_saved_editor.set(Some(editor));
                     }
                     Err(save_error) => {
@@ -464,6 +437,7 @@ pub fn RecipeNew() -> Element {
     let step_photo_controls_locked = move || {
         draft_creation_unconfirmed()
             || publication_unconfirmed()
+            || draft_sync.reviewing()
             || is_saving()
             || is_manually_saving()
             || busy()
@@ -639,8 +613,10 @@ pub fn RecipeNew() -> Element {
 
     // ── Submit handler ───────────────────────────────────────────────────
     let on_submit = move |_| {
-        if draft_creation_unconfirmed()
+        if draft_sync.conflicted()
+            || draft_creation_unconfirmed()
             || publication_unconfirmed()
+            || draft_sync.reviewing()
             || is_saving()
             || is_manually_saving()
             || busy()
@@ -828,30 +804,14 @@ pub fn RecipeNew() -> Element {
             let mut publication_attempted = false;
             let publish_result = async {
                 let saved = if let Some(current_draft_id) = draft_id() {
-                    let current =
-                        get_recipe_draft_api(form_account(), current_draft_id.clone()).await?;
-                    let first_save = save_recipe_draft(
+                    save_editor_draft(
                         form_account(),
-                        current_draft_id.clone(),
-                        current.revision,
+                        current_draft_id,
+                        draft_sync,
                         editor.clone(),
+                        || true,
                     )
-                    .await;
-                    match first_save {
-                        Ok(saved) => saved,
-                        Err(_) => {
-                            let refreshed =
-                                get_recipe_draft_api(form_account(), current_draft_id.clone())
-                                    .await?;
-                            save_recipe_draft(
-                                form_account(),
-                                current_draft_id,
-                                refreshed.revision,
-                                editor,
-                            )
-                            .await?
-                        }
-                    }
+                    .await?
                 } else {
                     let created = create_recipe_draft(form_account(), editor).await;
                     if created.as_ref().err().is_some_and(|problem| {
@@ -864,7 +824,7 @@ pub fn RecipeNew() -> Element {
                 // Retain the identity before publication. If publication
                 // commits but its response is lost, never create again.
                 draft_id.set(Some(saved.id.to_string()));
-                draft_revision.set(saved.revision);
+                draft_sync.acknowledge(&saved);
                 publication_attempted = true;
                 publish_recipe_draft(form_account(), saved.id.to_string(), None).await
             }
@@ -902,7 +862,12 @@ pub fn RecipeNew() -> Element {
     let on_cancel = move |_| {
         #[cfg(target_arch = "wasm32")]
         {
-            if is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 {
+            if draft_sync.reviewing()
+                || is_saving()
+                || is_manually_saving()
+                || busy()
+                || step_photo_upload_count() > 0
+            {
                 return;
             }
             if let Some(window) = web_sys::window() {
@@ -938,6 +903,57 @@ pub fn RecipeNew() -> Element {
         has_meaningful_draft_content && last_saved_editor().as_ref() != Some(&current_editor),
     );
 
+    let read_merge_editor = move |_| {
+        editor_state(
+            title(),
+            description(),
+            commentary(),
+            prep_time(),
+            cook_time(),
+            servings(),
+            ingredients(),
+            steps(),
+            equipment(),
+            images(),
+            visibility(),
+            tags_input(),
+        )
+    };
+    let on_merged = move |saved: crate::types::RecipeDraftView| {
+        let editor = saved.editor;
+        last_saved_editor.set(Some(editor.clone()));
+        title.set(editor.title);
+        description.set(editor.description.unwrap_or_default());
+        commentary.set(editor.commentary.unwrap_or_default());
+        prep_time.set(
+            editor
+                .prep_time_minutes
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+        );
+        cook_time.set(
+            editor
+                .cook_time_minutes
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+        );
+        servings.set(
+            editor
+                .servings
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+        );
+        ingredients.set(editor.ingredients);
+        steps.set(flatten_steps(&editor.instructions));
+        equipment.set(editor.equipment);
+        images.set(editor.images);
+        tags_input.set(editor.tags.join(", "));
+        visibility.set(editor.visibility);
+        gallery_generation.set(gallery_generation() + 1);
+        autosave_generation.set(autosave_generation() + 1);
+        error.set(None);
+    };
+
     // ── Ingredient helpers ──────────────────────────────────────────────
     let on_add_ingredient = move |_| {
         ingredients.write().push(RecipeIngredient {
@@ -970,6 +986,21 @@ pub fn RecipeNew() -> Element {
 
     rsx! {
         AuthRequired {
+            if draft_sync.conflicted() {
+                if let Some(id) = draft_id() {
+                    DraftConflictReview {
+                        account: form_account(), draft_id: id, sync: draft_sync,
+                        read_local: read_merge_editor,
+                        ready: move |_| !(draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 || step_editor_modal_url().is_some() || publication_review_open()) && pending_image_count() == 0,
+                        blocked: draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0 || step_editor_modal_url().is_some() || publication_review_open(), pending_photos: pending_image_count(),
+                        on_upload_pending: move |_| {
+                        if draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || draft_sync.reviewing() { return; }
+                        upload_now.set(true);
+                        },
+                        on_merged,
+                    }
+                }
+            }
             if publication_review_open() {
                 crate::pages::recipe_editor_form::PublicationReview {
                     title: title(), ingredient_count: ingredients().iter().filter(|item| !item.name.trim().is_empty()).count(),
@@ -1009,9 +1040,10 @@ pub fn RecipeNew() -> Element {
                         margin_top: "var(--space-md)",
                         Button {
                             variant: ButtonVariant::Secondary,
-                            disabled: !draft_save_state.is_actionable()
+                            disabled: draft_sync.conflicted() || !draft_save_state.is_actionable()
                                 || draft_creation_unconfirmed()
                                 || publication_unconfirmed()
+            || draft_sync.reviewing()
                                 || is_saving()
                                 || busy()
                                 || step_photo_upload_count() > 0,
@@ -1021,8 +1053,9 @@ pub fn RecipeNew() -> Element {
                         }
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
+                            disabled: draft_sync.conflicted() || draft_creation_unconfirmed() || publication_unconfirmed() || is_saving() || is_manually_saving() || busy() || step_photo_upload_count() > 0,
                             onclick: move |event| {
+                                if draft_sync.conflicted() || draft_sync.reviewing() { return; }
                                 if crate::components::mobile::is_mobile_layout() { publication_review_open.set(true); }
                                 else { let mut submit = on_submit; submit(event); }
                             },
@@ -1155,6 +1188,7 @@ pub fn RecipeNew() -> Element {
                         flex_direction: "column",
                         gap: "var(--space-sm)",
                         ImageUpload {
+                            key: "gallery-{gallery_generation()}",
                             form_account,
                             images,
                             upload_now,
@@ -1552,7 +1586,7 @@ pub fn RecipeNew() -> Element {
                             color: "var(--error-ink)", font_size: "14px", "{err}"
                         }
                     }
-                    if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some() {
+                    if draft_creation_unconfirmed() || publication_unconfirmed() || error().is_some_and(|message| !draft_sync.conflicted() || message != crate::api::recipe::DRAFT_CHANGED) {
                         div {
                             role: "alert",
                             overflow_wrap: "anywhere",
