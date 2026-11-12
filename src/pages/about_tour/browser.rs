@@ -410,6 +410,9 @@ fn maybe_load_models(state: &StateRef) {
             ),
             ("bedroom", ["data-bedroom-prints-url"].as_slice()),
             ("garden", ["data-garden-pastry-url"].as_slice()),
+            ("corporate-office", [].as_slice()),
+            ("library", [].as_slice()),
+            ("supermarket", [].as_slice()),
         ]
         .into_iter()
         .map(|(name, images)| {
@@ -478,6 +481,9 @@ fn maybe_load_models(state: &StateRef) {
                 models.remove(0),
                 models.remove(0),
                 models.remove(0),
+                models.remove(0),
+                models.remove(0),
+                models.remove(0),
             ))
         }
         .await;
@@ -493,6 +499,9 @@ fn maybe_load_models(state: &StateRef) {
                     (potluck, potluck_images),
                     (bedroom, bedroom_images),
                     (garden, garden_images),
+                    (corporate_office, corporate_office_images),
+                    (library, library_images),
+                    (supermarket, supermarket_images),
                 )) => s.renderer.as_mut().is_some_and(|r| {
                     r.upload_models([
                         (&kitchen, &kitchen_images),
@@ -500,12 +509,24 @@ fn maybe_load_models(state: &StateRef) {
                         (&potluck, &potluck_images),
                         (&bedroom, &bedroom_images),
                         (&garden, &garden_images),
+                        (&corporate_office, &corporate_office_images),
+                        (&library, &library_images),
+                        (&supermarket, &supermarket_images),
                     ])
                     .is_ok()
                 }),
                 Err(_) => false,
             };
-            for name in ["kitchen", "office", "potluck", "bedroom", "garden"] {
+            for name in [
+                "kitchen",
+                "office",
+                "potluck",
+                "bedroom",
+                "garden",
+                "corporate-office",
+                "library",
+                "supermarket",
+            ] {
                 let _ = s.root.set_attribute(
                     &format!("data-{name}-state"),
                     if loaded { "ready" } else { "failed" },
@@ -644,7 +665,16 @@ impl State {
         self.models_requested = false;
         self.renderer = None;
         self.manual_read = true;
-        for name in ["kitchen", "office", "potluck", "bedroom", "garden"] {
+        for name in [
+            "kitchen",
+            "office",
+            "potluck",
+            "bedroom",
+            "garden",
+            "corporate-office",
+            "library",
+            "supermarket",
+        ] {
             let _ = self
                 .root
                 .set_attribute(&format!("data-{name}-state"), "failed");
@@ -986,7 +1016,7 @@ impl State {
             );
             let _ = self.canvas.set_attribute(
                 "data-office-assembly-frame",
-                &format!("{:.3}", self.arrivals[1].frame()),
+                &format!("{:.3}", self.arrivals[4].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-potluck-assembly-frame",
@@ -999,6 +1029,18 @@ impl State {
             let _ = self.canvas.set_attribute(
                 "data-garden-assembly-frame",
                 &format!("{:.3}", self.arrivals[11].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-corporate-office-assembly-frame",
+                &format!("{:.3}", self.arrivals[5].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-library-assembly-frame",
+                &format!("{:.3}", self.arrivals[1].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-supermarket-assembly-frame",
+                &format!("{:.3}", self.arrivals[3].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-arrival-frames",

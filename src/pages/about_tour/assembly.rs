@@ -55,6 +55,9 @@ pub enum Room {
     Potluck,
     Bedroom,
     Garden,
+    CorporateOffice,
+    Library,
+    Supermarket,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
@@ -390,6 +393,18 @@ mod tests {
             (
                 Room::Potluck,
                 include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
+            ),
+            (
+                Room::Library,
+                include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
+            ),
+            (
+                Room::Supermarket,
+                include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
+            ),
+            (
+                Room::CorporateOffice,
+                include_bytes!("../../../assets/about/sams-corporate-office.glb").as_slice(),
             ),
             (
                 Room::Garden,

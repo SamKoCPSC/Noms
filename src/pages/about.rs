@@ -52,6 +52,12 @@ const KITCHEN_POSTER: Asset = asset!(
     "/assets/about/sams-kitchen.webp",
     manganis::AssetOptions::builder()
 );
+const LIBRARY_MODEL: Asset = asset!("/assets/about/sams-library.glb");
+const LIBRARY_POSTER: Asset = asset!("/assets/about/sams-library.webp");
+const SUPERMARKET_MODEL: Asset = asset!("/assets/about/sams-supermarket.glb");
+const SUPERMARKET_POSTER: Asset = asset!("/assets/about/sams-supermarket.webp");
+const CORPORATE_OFFICE_MODEL: Asset = asset!("/assets/about/sams-corporate-office.glb");
+const CORPORATE_OFFICE_POSTER: Asset = asset!("/assets/about/sams-corporate-office.webp");
 const OFFICE_MODEL: Asset = asset!("/assets/about/sams-office.glb");
 const OFFICE_LEFT: Asset = asset!(
     "/assets/about/office-editor-left.webp",
@@ -226,7 +232,7 @@ pub(super) const IDS: [&str; 12] = [
     "your-privacy",
     "gather",
 ];
-pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4];
+pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 6, 2, 7, 1, 5, 2, 3, 3, 3, 3, 4];
 pub(super) const NAMES: [&str; 12] = [
     "The idea",
     "The reason",
@@ -335,7 +341,7 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
-       "data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
+       "data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
        "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
        "data-garden-url":GARDEN_MODEL,"data-garden-pastry-url":GARDEN_PASTRY,
        "data-potluck-url":POTLUCK_MODEL,"data-potluck-window-url":POTLUCK_WINDOW,"data-potluck-tv-url":POTLUCK_TV,"data-potluck-pastry-url":POTLUCK_PASTRY,"data-potluck-salt-url":POTLUCK_SALT,"data-potluck-bbq-url":POTLUCK_BBQ,
@@ -375,6 +381,9 @@ pub fn About() -> Element {
         if MODEL_FOR_STOP[i]==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
         if MODEL_FOR_STOP[i]==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:960,height:960}}}
         if MODEL_FOR_STOP[i]==3 {figure{class:"potluck-fallback",img{src:POTLUCK_POSTER,alt:"A communal potluck dining room and TV lounge with three couches, a chess game, and a table of cake, candy, chips and drinks",loading:"lazy",width:960,height:720}}}
+        if MODEL_FOR_STOP[i]==6 {figure{class:"office-fallback",img{src:LIBRARY_POSTER,alt:"A recipe library with cookbook shelves, a reading table, laptop and cozy reading nook",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==7 {figure{class:"office-fallback",img{src:SUPERMARKET_POSTER,alt:"A modern supermarket with a European deli, Asian pantry, produce and grocery aisles",loading:"lazy",width:1073,height:960}}}
+        if MODEL_FOR_STOP[i]==5 {figure{class:"office-fallback",img{src:CORPORATE_OFFICE_POSTER,alt:"A corporate office with three personalized desks, humorous company posters, a kitchenette and a shared lunch table",loading:"lazy",width:1080,height:960}}}
         if MODEL_FOR_STOP[i]==4 {figure{class:"garden-fallback",img{src:GARDEN_POSTER,alt:"A garden cookout with shared picnic tables, barbecue food, a beer table, lawn chairs, a cedar fence and outdoor games",loading:"lazy",width:960,height:720}}}
         for (j, paragraph) in CONTENT[i].iter().enumerate() {p{class:if j==0{"lead"}else{"detail"},"{paragraph}"}}
 
@@ -416,7 +425,7 @@ mod story_tests {
             IDS.iter().collect::<std::collections::HashSet<_>>().len(),
             12
         );
-        assert_eq!(MODEL_FOR_STOP, [0, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4]);
+        assert_eq!(MODEL_FOR_STOP, [0, 6, 2, 7, 1, 5, 2, 3, 3, 3, 3, 4]);
         assert_eq!(CONTENT.len(), IDS.len());
     }
 }

@@ -33,7 +33,9 @@ async def main(args):
             await page.evaluate('(i)=>scrollTo(0,document.querySelectorAll(".waypoint")[i].getBoundingClientRect().top+scrollY)', i)
             await page.wait_for_timeout(150)
             await page.evaluate('step(45)')
-        for i in [0, 2, 3, 6, 7, 10, 11]:
+        for model in ('corporate-office', 'library', 'supermarket'):
+            assert await page.locator('#about-tour').get_attribute(f'data-{model}-state') == 'ready'
+        for i in args.stops:
             await go(i)
             card = page.locator('.story-panel[data-active=true]')
             assert await card.get_attribute('data-panel') == str(i)
@@ -45,6 +47,17 @@ async def main(args):
             frames = list(map(float, (await canvas.get_attribute('data-arrival-frames')).split(',')))
             assert len(frames) == 12 and frames[i] == 160, frames
             assert int(await canvas.get_attribute('data-shadow-targets')) <= 2
+            if i in (1, 3):
+                model, asset, chapter = {1: ('library', 6, 'why'), 3: ('supermarket', 7, 'cooking-frustrations')}[i]
+                assert await card.get_attribute('data-model') == str(asset)
+                assert await canvas.get_attribute('data-shadow-room') == chapter
+                assert await canvas.get_attribute(f'data-{model}-groups')
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-' + model)))
+            if i == 5:
+                assert await card.get_attribute('data-model') == '5'
+                assert await canvas.get_attribute('data-shadow-room') == 'job-search'
+                assert 'Humorous framed company posters' in await canvas.get_attribute('data-corporate-office-groups')
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-job-search')))
             if i == 2:
                 assert frames[3] == 1, frames
             print('STOP', i, state, flush=True)
@@ -54,7 +67,7 @@ async def main(args):
         await page.evaluate('step(25)')
         eye = list(map(float, (await canvas.get_attribute('data-camera')).split(',')))
         assert all((abs(a - b) < 0.01 for a, b in zip(eye, [4.1875, 3.54375, 2.375]))), eye
-        await page.screenshot(path=str(args.output))
+        await page.screenshot(timeout=60000, path=str(args.output))
         await go(6)
         for w, h in [(360, 640), (1280, 900), (393, 852)]:
             await page.set_viewport_size({'width': w, 'height': h})
@@ -69,6 +82,12 @@ async def main(args):
         await page.wait_for_selector('.about-tour.is-reader')
         assert await page.locator('.about-tour.is-reader').count() == 1
         assert await page.locator('.story-panel[inert]').count() == 0
+        for stop in (1, 3, 5):
+            selector = f'#panel-{stop} .office-fallback img'
+            poster = page.locator(selector)
+            assert await poster.count() == 1
+            await poster.scroll_into_view_if_needed()
+            await page.wait_for_function('(s)=>document.querySelector(s).naturalWidth > 0', arg=selector)
         assert not errors, errors
         await browser.close()
         print('PASS: full viewport, centered overlay, independent arrivals, original camera, resize, reduced motion', flush=True)
@@ -76,4 +95,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='http://localhost:8765')
     parser.add_argument('--output', type=Path, default=Path('/tmp/about-overlay-travel.png'))
+    parser.add_argument('--stops', type=int, nargs='+', default=[0, 1, 2, 3, 4, 5, 6, 7, 10, 11])
     asyncio.run(main(parser.parse_args()))

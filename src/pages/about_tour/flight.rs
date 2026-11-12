@@ -357,6 +357,9 @@ mod tests {
             include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-garden.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-corporate-office.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
         ]
         .into_iter()
         .enumerate()
@@ -375,6 +378,9 @@ mod tests {
                     super::super::assembly::Room::Bedroom,
                     super::super::assembly::Room::Potluck,
                     super::super::assembly::Room::Garden,
+                    super::super::assembly::Room::CorporateOffice,
+                    super::super::assembly::Room::Library,
+                    super::super::assembly::Room::Supermarket,
                 ][i];
                 let rotation = room_rotation(room, w <= 700.);
                 let points: Vec<_> = mesh
@@ -385,14 +391,20 @@ mod tests {
                     .map(|v| [v[0], v[1], v[2]])
                     .collect();
                 let frame = RoomFrame::new(points.iter().map(|p| point(rotation, *p)).collect());
-                let camera = camera(i as f32, w / h, [0.; 2]);
-                assert!(camera
-                    .eye
+                let stop = crate::pages::about::MODEL_FOR_STOP
                     .iter()
-                    .zip(EYES[i])
-                    .all(|(a, b)| (a - b).abs() < 0.0001));
-                assert_eq!(camera.progress, i as f32);
-                let model = mul(station(i), frame.model(w, h, rotation));
+                    .position(|&asset| asset == i)
+                    .unwrap();
+                let camera = camera(stop as f32, w / h, [0.; 2]);
+                if let Some(eye) = EYES.get(stop) {
+                    assert!(camera
+                        .eye
+                        .iter()
+                        .zip(eye)
+                        .all(|(a, b)| (a - b).abs() < 0.0001));
+                }
+                assert_eq!(camera.progress, stop as f32);
+                let model = mul(station(stop), frame.model(w, h, rotation));
                 let (projection, _) = css_projection(camera.vp, model, w, h);
                 let mut extent = [[f32::INFINITY; 2], [f32::NEG_INFINITY; 2]];
                 for &p in &points {
@@ -439,7 +451,7 @@ mod tests {
                 } else {
                     h - 104.
                 };
-                let (panel, _) = css_projection(camera.vp, panel_model(i, w, h, pw, ph), w, h);
+                let (panel, _) = css_projection(camera.vp, panel_model(stop, w, h, pw, ph), w, h);
                 let panel_top = panel[13] / panel[15];
                 assert!(panel_top >= 0. && panel_top + ph <= h - 17.);
                 if w <= 700. {

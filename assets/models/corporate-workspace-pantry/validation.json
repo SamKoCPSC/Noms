@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "assemblies": 15,
+  "objects": 1370,
+  "workstations": 3,
+  "task_chairs": 3,
+  "lunch_chairs": 6,
+  "sandwich_wedges": 8,
+  "desk_to_lunch_table_aisle_m": 1.1826789379119873,
+  "pantry_working_aisle_m": 2.3028008341789246,
+  "glb_bytes": 6243156,
+  "triangles": 264829,
+  "checks": [
+    "finite bounds within platform",
+    "one assembly per object",
+    "sink opening and cabinet clearance",
+    "workstation and pantry circulation",
+    "three five-star chairs with attached lumbar supports",
+    "portable Blender assets",
+    "GLB excludes studio and retains assembly roots"
+  ]
+}
