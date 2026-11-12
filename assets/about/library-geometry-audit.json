@@ -1,0 +1,6992 @@
+[
+  {
+    "name": "Continuous floor",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.020",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.021",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.022",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.023",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.024",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.025",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.026",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.027",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.028",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.029",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.030",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.031",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.032",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.033",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.034",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.035",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.036",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.037",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.038",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.039",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.040",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.041",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.042",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.043",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.044",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.045",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.046",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.047",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.048",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.049",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.050",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.051",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.052",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.053",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.054",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.055",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.056",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.057",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.058",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.059",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.060",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.061",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.062",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.063",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.064",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.065",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.066",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.067",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.068",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.069",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.070",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.071",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.072",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.073",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.074",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.075",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.076",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.077",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.078",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.079",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.080",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.081",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.082",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.083",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.084",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.085",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.086",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.087",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.088",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.089",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.090",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.091",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.092",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.093",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.094",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.095",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.096",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.097",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.098",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.099",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.100",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.101",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.102",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.103",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.104",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.105",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.106",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.107",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.108",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.109",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.110",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.111",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.112",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.113",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.114",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.115",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.116",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.117",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.118",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.119",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.120",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.121",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.122",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.123",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.124",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.125",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.126",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.127",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.128",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.129",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.130",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual timber floorboard.131",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded walnut diorama plinth",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Continuous rear wall",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rear oak skirting",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Deep window sill",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Left oak skirting",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window horizontal frame",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window horizontal frame.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window horizontal frame.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window mullion",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window mullion.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window mullion.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window softly blue glazing",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window wall far",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window wall lower",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window wall near",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Window wall upper",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase lower cabinet door",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase lower cabinet door.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase lower cabinet door.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase lower cabinet door.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase lower cabinet door.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase lower cabinet door.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase vertical divider",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase vertical divider.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase vertical divider.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Bookcase vertical divider.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cabinet brass knob",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Cabinet brass knob.001",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Cabinet brass knob.002",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Cabinet brass knob.003",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Cabinet brass knob.004",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Cabinet brass knob.005",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Library back panel",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library shelf sign",
+    "source_triangles": 7260,
+    "web_triangles": 5662,
+    "preserved": false
+  },
+  {
+    "name": "Library thick shelf",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library thick shelf.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library thick shelf.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library thick shelf.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library thick shelf.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library thick shelf.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library thick shelf.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.020",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.021",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.022",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.023",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.024",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.025",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.026",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.027",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.028",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.029",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.030",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.031",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.032",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.033",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.034",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.035",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.036",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.037",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.038",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.039",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.040",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.041",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.042",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.043",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.044",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.045",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.046",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.047",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.048",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.049",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.050",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.051",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.052",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.053",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.054",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.055",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.056",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.057",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.058",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.059",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.060",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.061",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.062",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.063",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.064",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.065",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.066",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.067",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.068",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.069",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.070",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.071",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.072",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.073",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.074",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.075",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.076",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.077",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.078",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.079",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.080",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.081",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.082",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.083",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.084",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.085",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.086",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.087",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.088",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.089",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.090",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.091",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.092",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.093",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.094",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.095",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.096",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.097",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.098",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.099",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.100",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.101",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.102",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.103",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.104",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.105",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.106",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.107",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.108",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.109",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.110",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.111",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.112",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.113",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.114",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.115",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.116",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.117",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.118",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.119",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.120",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.121",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.122",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.123",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.124",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.125",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.126",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.127",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.128",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.129",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.130",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.131",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.132",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.133",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.134",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.135",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.136",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.137",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.138",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.139",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.140",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.141",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.142",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.143",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.144",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.145",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.146",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.147",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.148",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.149",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.150",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.151",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.152",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.153",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.154",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.155",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.156",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.157",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.158",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.159",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.160",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.161",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.162",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.163",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.164",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.165",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.166",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.167",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.168",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.169",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.170",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.171",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.172",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.173",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.174",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.175",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.176",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.177",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.178",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.179",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.180",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.181",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.182",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.183",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.184",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.185",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.186",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.187",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.188",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.189",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.190",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume clothbound cover.191",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.020",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.021",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.022",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.023",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.024",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.025",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.026",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.027",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.028",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.029",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.030",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.031",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.032",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.033",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.034",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.035",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.036",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.037",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.038",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.039",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.040",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.041",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.042",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.043",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.044",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.045",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.046",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.047",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.048",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.049",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.050",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.051",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.052",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.053",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.054",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.055",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.056",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.057",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.058",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.059",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.060",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.061",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.062",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.063",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.064",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.065",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.066",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.067",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.068",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.069",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.070",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.071",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.072",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.073",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.074",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.075",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.076",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.077",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.078",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.079",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.080",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.081",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.082",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.083",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.084",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.085",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.086",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.087",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.088",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.089",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.090",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.091",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.092",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.093",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.094",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume page block.095",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.020",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.021",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.022",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.023",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.024",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.025",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.026",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.027",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.028",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.029",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.030",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.031",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.032",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.033",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.034",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.035",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.036",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.037",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.038",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.039",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.040",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.041",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.042",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.043",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.044",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.045",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.046",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.047",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.048",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.049",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.050",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.051",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.052",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.053",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.054",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.055",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.056",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.057",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.058",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.059",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.060",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.061",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.062",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.063",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.064",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.065",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.066",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.067",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.068",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.069",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.070",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.071",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.072",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.073",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.074",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.075",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.076",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.077",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.078",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.079",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.080",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.081",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.082",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.083",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.084",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.085",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.086",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.087",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.088",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.089",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.090",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.091",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.092",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.093",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.094",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume rounded spine.095",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.020",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.021",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.022",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.023",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.024",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.025",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.026",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.027",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.028",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.029",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.030",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.031",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.032",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.033",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.034",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.035",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.036",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.037",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.038",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.039",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.040",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.041",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.042",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.043",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.044",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.045",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.046",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.047",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.048",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.049",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.050",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.051",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.052",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.053",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.054",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.055",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.056",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.057",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.058",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.059",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.060",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.061",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.062",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.063",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.064",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.065",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.066",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.067",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.068",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.069",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.070",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.071",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.072",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.073",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.074",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.075",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.076",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.077",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.078",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.079",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.080",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.081",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.082",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.083",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.084",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.085",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.086",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.087",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.088",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.089",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.090",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.091",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.092",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.093",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.094",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.095",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.096",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.097",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.098",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.099",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.100",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.101",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.102",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.103",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.104",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.105",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.106",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.107",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.108",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.109",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.110",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.111",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.112",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.113",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.114",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.115",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.116",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.117",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.118",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.119",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.120",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.121",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.122",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.123",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.124",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.125",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.126",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.127",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.128",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.129",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.130",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.131",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.132",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.133",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.134",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.135",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.136",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.137",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.138",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.139",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.140",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.141",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.142",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.143",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.144",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.145",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.146",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.147",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.148",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.149",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.150",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.151",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.152",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.153",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.154",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.155",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.156",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.157",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.158",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.159",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.160",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.161",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.162",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.163",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.164",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.165",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.166",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.167",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.168",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.169",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.170",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.171",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.172",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.173",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.174",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.175",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.176",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.177",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.178",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.179",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.180",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.181",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.182",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.183",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.184",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.185",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.186",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.187",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.188",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.189",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.190",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume spine gilt rule.191",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title",
+    "source_triangles": 1820,
+    "web_triangles": 1418,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.001",
+    "source_triangles": 1692,
+    "web_triangles": 1318,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.002",
+    "source_triangles": 2100,
+    "web_triangles": 1638,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.003",
+    "source_triangles": 3064,
+    "web_triangles": 2388,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.004",
+    "source_triangles": 1524,
+    "web_triangles": 1188,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.005",
+    "source_triangles": 3000,
+    "web_triangles": 2340,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.006",
+    "source_triangles": 2748,
+    "web_triangles": 2142,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.007",
+    "source_triangles": 2068,
+    "web_triangles": 1612,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.008",
+    "source_triangles": 1820,
+    "web_triangles": 1418,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.009",
+    "source_triangles": 1692,
+    "web_triangles": 1318,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.010",
+    "source_triangles": 2100,
+    "web_triangles": 1638,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.011",
+    "source_triangles": 3064,
+    "web_triangles": 2388,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.012",
+    "source_triangles": 1524,
+    "web_triangles": 1188,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.013",
+    "source_triangles": 3000,
+    "web_triangles": 2340,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.014",
+    "source_triangles": 2748,
+    "web_triangles": 2142,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.015",
+    "source_triangles": 2068,
+    "web_triangles": 1612,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.016",
+    "source_triangles": 1820,
+    "web_triangles": 1418,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.017",
+    "source_triangles": 1692,
+    "web_triangles": 1318,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.018",
+    "source_triangles": 2100,
+    "web_triangles": 1638,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.019",
+    "source_triangles": 3064,
+    "web_triangles": 2388,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.020",
+    "source_triangles": 1524,
+    "web_triangles": 1188,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.021",
+    "source_triangles": 3000,
+    "web_triangles": 2340,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.022",
+    "source_triangles": 2748,
+    "web_triangles": 2142,
+    "preserved": false
+  },
+  {
+    "name": "Recipe collection volume title.023",
+    "source_triangles": 2068,
+    "web_triangles": 1612,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Brass label holder.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Card catalog recessed feet",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Card catalog solid case",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf.001",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf.002",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf.003",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf.004",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf.005",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf.006",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb herb leaf.007",
+    "source_triangles": 224,
+    "web_triangles": 174,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb soil",
+    "source_triangles": 380,
+    "web_triangles": 296,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem.001",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem.002",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem.003",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem.004",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem.005",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem.006",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb stem.007",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Catalog small herb terracotta pot",
+    "source_triangles": 480,
+    "web_triangles": 374,
+    "preserved": false
+  },
+  {
+    "name": "Catalog thick top",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Cream drawer index label.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.001",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.002",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.003",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.004",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.005",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.006",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.007",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.008",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.009",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.010",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.011",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.012",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.013",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.014",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.015",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.016",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.017",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.018",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Drawer cup pull.019",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Index card divider tab",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Index card divider tab.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Index card divider tab.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual index card.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Individual recipe index drawer.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library welcome plaque lettering",
+    "source_triangles": 14640,
+    "web_triangles": 11418,
+    "preserved": false
+  },
+  {
+    "name": "Library welcome plaque painted face",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Library welcome plaque walnut frame",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Open recipe box base",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe box end",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe box end.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe box side",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe box side.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index",
+    "source_triangles": 1812,
+    "web_triangles": 1412,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.001",
+    "source_triangles": 2508,
+    "web_triangles": 1956,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.002",
+    "source_triangles": 2940,
+    "web_triangles": 2292,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.003",
+    "source_triangles": 2080,
+    "web_triangles": 1622,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.004",
+    "source_triangles": 2508,
+    "web_triangles": 1956,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.005",
+    "source_triangles": 3204,
+    "web_triangles": 2498,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.006",
+    "source_triangles": 3636,
+    "web_triangles": 2836,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.007",
+    "source_triangles": 2776,
+    "web_triangles": 2164,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.008",
+    "source_triangles": 2940,
+    "web_triangles": 2292,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.009",
+    "source_triangles": 3636,
+    "web_triangles": 2836,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.010",
+    "source_triangles": 4068,
+    "web_triangles": 3172,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.011",
+    "source_triangles": 3208,
+    "web_triangles": 2502,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.012",
+    "source_triangles": 2080,
+    "web_triangles": 1622,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.013",
+    "source_triangles": 2776,
+    "web_triangles": 2164,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.014",
+    "source_triangles": 3208,
+    "web_triangles": 2502,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.015",
+    "source_triangles": 2348,
+    "web_triangles": 1830,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.016",
+    "source_triangles": 2436,
+    "web_triangles": 1900,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.017",
+    "source_triangles": 3132,
+    "web_triangles": 2442,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.018",
+    "source_triangles": 3564,
+    "web_triangles": 2778,
+    "preserved": false
+  },
+  {
+    "name": "Recipe drawer index.019",
+    "source_triangles": 2704,
+    "web_triangles": 2108,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support.002",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support.003",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support.004",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support.005",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support.006",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair back support.007",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair curved bentwood back",
+    "source_triangles": 320,
+    "web_triangles": 248,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair curved bentwood back.001",
+    "source_triangles": 320,
+    "web_triangles": 248,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair curved bentwood back.002",
+    "source_triangles": 320,
+    "web_triangles": 248,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair curved bentwood back.003",
+    "source_triangles": 320,
+    "web_triangles": 248,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair seat",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair seat.001",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair seat.002",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair seat.003",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.002",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.003",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.004",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.005",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.006",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.007",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.008",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.009",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.010",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.011",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.012",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.013",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.014",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair splayed leg.015",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair upholstered cushion",
+    "source_triangles": 1600,
+    "web_triangles": 1222,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair upholstered cushion.001",
+    "source_triangles": 1600,
+    "web_triangles": 1222,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair upholstered cushion.002",
+    "source_triangles": 1600,
+    "web_triangles": 1222,
+    "preserved": false
+  },
+  {
+    "name": "Reading chair upholstered cushion.003",
+    "source_triangles": 1600,
+    "web_triangles": 1222,
+    "preserved": false
+  },
+  {
+    "name": "Shared recipe reading table front apron",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Shared recipe reading table rounded top",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Shared recipe reading table tapered leg",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Shared recipe reading table tapered leg.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Shared recipe reading table tapered leg.002",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Shared recipe reading table tapered leg.003",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Book cloth cover",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Book cloth cover.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Book spine binding",
+    "source_triangles": 160,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Curved open book page",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.001",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.002",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.003",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.004",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.005",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.006",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.007",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.008",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Curved open book page.009",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe card heading",
+    "source_triangles": 5264,
+    "web_triangles": 4104,
+    "preserved": false
+  },
+  {
+    "name": "Loose recipe index card",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Loose recipe index card.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Loose recipe index card.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.001",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.002",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.003",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.004",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.005",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.006",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.007",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.008",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.009",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.010",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.011",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.012",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.013",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.014",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.015",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.016",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.017",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.018",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.019",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.020",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.021",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.022",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.023",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.024",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Printed recipe lines.025",
+    "source_triangles": 208,
+    "web_triangles": 162,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte attached handle",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte crema",
+    "source_triangles": 764,
+    "web_triangles": 594,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte hollow ceramic cup",
+    "source_triangles": 768,
+    "web_triangles": 598,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte milk stem",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte rosetta foam",
+    "source_triangles": 160,
+    "web_triangles": 124,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte rosetta foam.001",
+    "source_triangles": 160,
+    "web_triangles": 124,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte rosetta foam.002",
+    "source_triangles": 160,
+    "web_triangles": 124,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte rosetta foam.003",
+    "source_triangles": 160,
+    "web_triangles": 124,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte rosetta foam.004",
+    "source_triangles": 160,
+    "web_triangles": 124,
+    "preserved": false
+  },
+  {
+    "name": "Reading table latte saucer",
+    "source_triangles": 896,
+    "web_triangles": 698,
+    "preserved": false
+  },
+  {
+    "name": "Recipe book ribbon",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Wooden pencil",
+    "source_triangles": 188,
+    "web_triangles": 146,
+    "preserved": false
+  },
+  {
+    "name": "Banker lamp opal bulb",
+    "source_triangles": 528,
+    "web_triangles": 410,
+    "preserved": false
+  },
+  {
+    "name": "Banker lamp pull chain",
+    "source_triangles": 80,
+    "web_triangles": 16,
+    "preserved": false
+  },
+  {
+    "name": "Banker lamp weighted base",
+    "source_triangles": 480,
+    "web_triangles": 374,
+    "preserved": false
+  },
+  {
+    "name": "Bankers lamp stem",
+    "source_triangles": 240,
+    "web_triangles": 186,
+    "preserved": false
+  },
+  {
+    "name": "Green banker lamp shade",
+    "source_triangles": 384,
+    "web_triangles": 298,
+    "preserved": false
+  },
+  {
+    "name": "Laptop app brand",
+    "source_triangles": 2364,
+    "web_triangles": 1842,
+    "preserved": false
+  },
+  {
+    "name": "Laptop display housing",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.010",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.011",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.012",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.013",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.014",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.015",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.016",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.017",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.018",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.019",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.020",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.021",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.022",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.023",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.024",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.025",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.026",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.027",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.028",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.029",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.030",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.031",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.032",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.033",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.034",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.035",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.036",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.037",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.038",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.039",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.040",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.041",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.042",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop key.043",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop original recipe app screen",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop recessed keyboard",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop recipe heading",
+    "source_triangles": 10532,
+    "web_triangles": 8214,
+    "preserved": false
+  },
+  {
+    "name": "Laptop rounded keyboard deck",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Laptop spacebar",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Laptop touchpad",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe description line",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe description line.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe description line.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe description line.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe description line.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe description line.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe thumbnail",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe thumbnail.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Recipe thumbnail.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Lounge attached padded back",
+    "source_triangles": 1600,
+    "web_triangles": 1244,
+    "preserved": false
+  },
+  {
+    "name": "Lounge cushion base",
+    "source_triangles": 1600,
+    "web_triangles": 1226,
+    "preserved": false
+  },
+  {
+    "name": "Lounge rounded arm",
+    "source_triangles": 1600,
+    "web_triangles": 1236,
+    "preserved": false
+  },
+  {
+    "name": "Lounge rounded arm.001",
+    "source_triangles": 1600,
+    "web_triangles": 1236,
+    "preserved": false
+  },
+  {
+    "name": "Lounge scatter cushion",
+    "source_triangles": 1600,
+    "web_triangles": 1244,
+    "preserved": false
+  },
+  {
+    "name": "Lounge soft seat",
+    "source_triangles": 1600,
+    "web_triangles": 1232,
+    "preserved": false
+  },
+  {
+    "name": "Lounge wood foot",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Lounge wood foot.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Lounge wood foot.002",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Lounge wood foot.003",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Ottoman leg",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Ottoman leg.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Ottoman leg.002",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Ottoman leg.003",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Reading nook woven rug",
+    "source_triangles": 572,
+    "web_triangles": 446,
+    "preserved": false
+  },
+  {
+    "name": "Reading ottoman cushion",
+    "source_triangles": 1600,
+    "web_triangles": 1197,
+    "preserved": false
+  },
+  {
+    "name": "Reading side table top",
+    "source_triangles": 1020,
+    "web_triangles": 794,
+    "preserved": false
+  },
+  {
+    "name": "Rug stitched border",
+    "source_triangles": 576,
+    "web_triangles": 448,
+    "preserved": false
+  },
+  {
+    "name": "Side table book cover",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Side table book cover.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Side table book pages",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Side table book spine",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Side table book spine stripe",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Side table book spine stripe.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Side table foot",
+    "source_triangles": 636,
+    "web_triangles": 496,
+    "preserved": false
+  },
+  {
+    "name": "Side table pedestal",
+    "source_triangles": 508,
+    "web_triangles": 396,
+    "preserved": false
+  },
+  {
+    "name": "Ladder rolling top wheel",
+    "source_triangles": 380,
+    "web_triangles": 296,
+    "preserved": false
+  },
+  {
+    "name": "Ladder rolling top wheel.001",
+    "source_triangles": 380,
+    "web_triangles": 296,
+    "preserved": false
+  },
+  {
+    "name": "Library ladder rail",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Library ladder side",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Library ladder side.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Rail wall bracket",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Rail wall bracket.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Rounded ladder rung.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Book trolley push grip",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Book trolley shelf",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Book trolley shelf.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook clothbound cover.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook page block",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook page block.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook page block.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook page block.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook page block.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook rounded spine",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook rounded spine.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook rounded spine.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook rounded spine.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook rounded spine.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.003",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.004",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.005",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.006",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.007",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.008",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Returned cookbook spine gilt rule.009",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Trolley lower stacked book",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Trolley lower stacked book.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Trolley lower stacked book.002",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Trolley rear book stop",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Trolley rear book stop.001",
+    "source_triangles": 300,
+    "web_triangles": 232,
+    "preserved": false
+  },
+  {
+    "name": "Trolley small caster",
+    "source_triangles": 380,
+    "web_triangles": 296,
+    "preserved": false
+  },
+  {
+    "name": "Trolley small caster.001",
+    "source_triangles": 380,
+    "web_triangles": 296,
+    "preserved": false
+  },
+  {
+    "name": "Trolley small caster.002",
+    "source_triangles": 380,
+    "web_triangles": 296,
+    "preserved": false
+  },
+  {
+    "name": "Trolley small caster.003",
+    "source_triangles": 380,
+    "web_triangles": 296,
+    "preserved": false
+  },
+  {
+    "name": "Trolley upright",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Trolley upright.001",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Trolley upright.002",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  },
+  {
+    "name": "Trolley upright.003",
+    "source_triangles": 316,
+    "web_triangles": 246,
+    "preserved": false
+  }
+]

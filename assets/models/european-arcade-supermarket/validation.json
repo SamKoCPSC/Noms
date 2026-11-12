@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "assemblies": 17,
+  "objects": 3782,
+  "arches": 3,
+  "aisles": 3,
+  "checkouts": 2,
+  "shopping_carts": 2,
+  "aisle_clearance_m": [
+    1.4600000977516174,
+    1.4600000977516174
+  ],
+  "deli_staff_clearance_m": 0.9550001621246338,
+  "glb_bytes": 15490668,
+  "triangles": 710365,
+  "external_textures": 0,
+  "checks": [
+    "finite geometry inside platform footprint",
+    "one assembly per object",
+    "grocery aisle and deli staff clearances",
+    "native assets are portable",
+    "standard GLB excludes studio and retains seventeen assembly roots"
+  ]
+}

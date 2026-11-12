@@ -455,6 +455,74 @@ mod tests {
     }
 
     #[test]
+    fn delivered_library_and_supermarket_fit_renderer_contract() {
+        for (bytes, groups, required) in [
+            (
+                include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
+                11,
+                "04 Tall cookbook shelving",
+            ),
+            (
+                include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
+                17,
+                "04 Stocked Asian pantry shelving",
+            ),
+        ] {
+            let model = decode(bytes).unwrap();
+            assert!(bytes.len() < 20_000_000);
+            assert!(model.vertices.len() / 36 <= MAX_TRIANGLES);
+            assert!(model.vertices.iter().all(|v| v.is_finite()));
+            let names = model
+                .parts
+                .iter()
+                .map(|p| p.name.as_str())
+                .collect::<std::collections::HashSet<_>>();
+            assert_eq!(names.len(), groups);
+            assert!(names.contains(required));
+            for suffix in ["/ floor", "/ back wall", "/ side wall"] {
+                assert!(names.iter().any(|n| n.ends_with(suffix)));
+            }
+            assert!(model
+                .parts
+                .iter()
+                .all(|p| p.texture == 0 && p.end > p.start));
+            if groups == 17 {
+                assert!(model.parts.iter().any(|p| p.opacity < 0.5));
+            }
+        }
+    }
+
+    #[test]
+    fn delivered_corporate_office_preserves_geometry_and_animation_groups() {
+        let bytes = include_bytes!("../../../assets/about/sams-corporate-office.glb");
+        let model = decode(bytes).unwrap();
+        assert!(bytes.len() < 8_000_000);
+        assert_eq!(model.vertices.len() / 36, 264_829);
+        assert!(model.vertices.iter().all(|v| v.is_finite()));
+        let names = model
+            .parts
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(names.len(), 15);
+        for name in [
+            "01 Rounded foundation and carpet floor / floor",
+            "02 Rear kitchenette wall / back wall",
+            "03 Window wall / side wall",
+            "04 Humorous framed company posters",
+            "05 Three corporate workstations",
+            "06 Mesh task chairs",
+        ] {
+            assert!(names.contains(name), "Missing {name}");
+        }
+        assert!(model
+            .parts
+            .iter()
+            .all(|p| p.texture == 0 && p.end > p.start));
+        assert!(model.parts.iter().any(|p| p.opacity < 0.5));
+    }
+
+    #[test]
     fn delivered_office_preserves_assemblies_prints_and_transparent_pc() {
         let bytes = include_bytes!("../../../assets/about/sams-office.glb");
         let model = decode(bytes).unwrap();

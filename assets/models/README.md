@@ -1,11 +1,12 @@
 # Model collections
 
-Editable 3D scene collections for future Noms designs. Each collection includes
-Blender masters, standard GLB exports, rendered previews, an offline gallery and
-rebuild sources.
+Editable 3D scene collections for future Noms designs. Collections include Blender masters, standard GLB exports, rendered previews and
+rebuild sources. Multi-scene collections also include an offline gallery.
 
 | Collection | Scenes | Preview |
 | --- | --- | --- |
+| [Shared Corporate Workspace & Pantry](corporate-workspace-pantry/README.md) | Concept-05 corporate office, three workstations, shared kitchenette and lunch table | [Preview](corporate-workspace-pantry/previews/corporate-workspace-pantry.png) |
+| [Modern European Arcade Supermarket](european-arcade-supermarket/README.md) | Larger concept-03 grocery revision with European deli and Asian pantry | [Preview](european-arcade-supermarket/previews/european-arcade-supermarket.png) |
 | [Five New Places](community-spaces/README.md) | Specialty coffee shop, farmers’ market, artisan bakery, night market, recipe library | [Contact sheet](community-spaces/previews/collection.jpg) · [Offline gallery](community-spaces/gallery.html) |
 | [Camp, Gather, Stock Up](campsite-market-grocery/README.md) | Cozy campsite, night market courtyard, neighborhood grocery store | [Contact sheet](campsite-market-grocery/previews/collection.jpg) · [Offline gallery](campsite-market-grocery/gallery.html) |
 
@@ -17,3 +18,10 @@ The production About tour assets and their loader contract are documented in
 [`assets/about/README.md`](../about/README.md). These collections use standard
 glTF review exports; they need an optimization and conversion pass before use
 with the tour's bounded Rust loader.
+
+The corporate workspace also has a production derivative in `assets/about/`,
+used by the About tour’s “A project to support my job search.” card.
+
+The original recipe library and European arcade supermarket also have production
+derivatives. See the [About tour assignment table](../../docs/design/about/model-assignments.md)
+for the current cards and pending revisions.

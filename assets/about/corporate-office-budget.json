@@ -1,0 +1,13 @@
+{
+  "source": "models/corporate-workspace-pantry/models/corporate-workspace-pantry.blend",
+  "source_sha256": "639717d8e787f0e2a37c30a9ef6ab56f6eb8289b98e239241bacaa96946551de",
+  "triangles": 264829,
+  "assemblies": 15,
+  "materials": 18,
+  "glb_bytes": 7050860,
+  "textures": 0,
+  "geometry": "All evaluated master triangles retained; no decimation",
+  "shading": "Linear material colors and authored normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.00013672083677648543,
+  "quantization": "KHR_mesh_quantization"
+}

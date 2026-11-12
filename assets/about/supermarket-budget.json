@@ -1,0 +1,13 @@
+{
+  "source": "models/european-arcade-supermarket/models/european-arcade-supermarket.blend",
+  "source_sha256": "e06b687cccc0f731fa483fd14277d5871be20a52a8295353aff794914d7a98e1",
+  "triangles": 384802,
+  "assemblies": 17,
+  "materials": 20,
+  "glb_bytes": 11288060,
+  "textures": 0,
+  "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
+  "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.00020162419122480698,
+  "quantization": "KHR_mesh_quantization"
+}
