@@ -50,16 +50,22 @@ pub async fn create_collection_json_import(
     .fetch_all(&mut *tx)
     .await
     .map_err(DbError::Query)?;
+    let name_key = |name: &str| {
+        name.split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase()
+    };
+    // Copy naming must avoid both existing rows and the children about to be
+    // inserted. Otherwise an automatic root suffix can introduce a collision.
+    let reserved_names = existing_names
+        .into_iter()
+        .chain(nodes.iter().skip(1).map(|node| name_key(&node.name)))
+        .collect::<std::collections::HashSet<_>>();
     let original_name = &nodes[0].name;
     let mut root_name = original_name.clone();
-    for copy in 1..=crate::security::MAX_COLLECTION_CHILDREN + 1 {
-        if !existing_names.contains(
-            &root_name
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .join(" ")
-                .to_lowercase(),
-        ) {
+    for copy in 1..=reserved_names.len() + 1 {
+        if !reserved_names.contains(&name_key(&root_name)) {
             break;
         }
         let suffix = if copy == 1 {
@@ -75,7 +81,7 @@ pub async fn create_collection_json_import(
     }
     if root_name != *original_name {
         warnings.push(format!(
-            "The existing collection was kept. The imported copy is named ‘{root_name}’."
+            "The imported root collection is named ‘{root_name}’ to avoid a name already in use."
         ));
     }
     let mut recipe_ids = HashMap::new();

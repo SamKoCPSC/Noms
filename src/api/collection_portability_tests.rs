@@ -1,4 +1,5 @@
 use super::*;
+use crate::collection_json::{CollectionImportName, CollectionImportNamePreview};
 use crate::{db, types::CollectionVisibility};
 use serde_json::{json, Value};
 use uuid::Uuid;
@@ -153,9 +154,16 @@ async fn collection_json_roundtrip_preserves_private_copies_order_shared_members
     );
     let importer = user(&pool, "import").await;
     let storage = crate::storage::StorageClient::for_test();
-    let imported = import_for_user(&pool, &storage, importer.id, &original, &[])
-        .await
-        .unwrap();
+    let imported = import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap();
     assert_eq!(imported.owner_id, importer.id);
     assert!(imported.image_reviews.is_empty());
     assert_eq!(counts(&pool, importer.id).await, (4, 2, 2, 0, 5));
@@ -176,15 +184,29 @@ async fn collection_json_roundtrip_preserves_private_copies_order_shared_members
         .await
         .unwrap();
     assert!(new_ids.iter().all(|id| !original_ids.contains(id)));
-    let conflict = import_for_user(&pool, &storage, importer.id, &original, &[])
-        .await
-        .unwrap_err();
-    assert!(conflict.to_string().contains("name you already have"));
+    let conflict = import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap_err();
+    assert!(conflict.to_string().contains("title you already have"));
     assert_eq!(counts(&pool, importer.id).await, (4, 2, 2, 0, 5));
     let renamed = renamed_import(&original, " second copy");
-    let again = import_for_user(&pool, &storage, importer.id, &renamed, &[])
-        .await
-        .unwrap();
+    let again = import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &renamed,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap();
     assert_ne!(again.collection_id, imported.collection_id);
     assert!(again.warnings.iter().any(|w| w.contains("imported")));
     assert_eq!(counts(&pool, importer.id).await, (8, 4, 4, 0, 10));
@@ -225,19 +247,31 @@ async fn collection_json_import_validation_and_database_failures_leave_no_partia
     let before = counts(&pool, importer.id).await;
     let mut damaged: Value = serde_json::from_str(&original).unwrap();
     damaged["snapshot"]["collections"][0]["name"] = json!("Tampered");
-    assert!(
-        import_for_user(&pool, &storage, importer.id, &damaged.to_string(), &[])
-            .await
-            .is_err()
-    );
+    assert!(import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &damaged.to_string(),
+        &[],
+        &Default::default()
+    )
+    .await
+    .is_err());
     assert_eq!(counts(&pool, importer.id).await, before);
     sqlx::query("CREATE FUNCTION reject_portability_child() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.name='Weeknights' THEN RAISE EXCEPTION 'Synthetic late collection insert failure'; END IF; RETURN NEW; END $$")
         .execute(&pool).await.unwrap();
     sqlx::query("CREATE TRIGGER reject_portability_child BEFORE INSERT ON collections FOR EACH ROW EXECUTE FUNCTION reject_portability_child()")
         .execute(&pool).await.unwrap();
-    let error = import_for_user(&pool, &storage, importer.id, &original, &[])
-        .await
-        .unwrap_err();
+    let error = import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap_err();
     assert!(!error.to_string().contains("Synthetic"));
     assert_eq!(counts(&pool, importer.id).await, before);
 }
@@ -276,9 +310,16 @@ async fn collection_json_import_reuses_authorized_recipe_images_and_keeps_missin
         .unwrap();
     let available = vec!["https://external.example/photo.webp".into()];
     let original = renamed_import(&original, " reused");
-    let reused = import_for_user(&pool, &storage, owner, &original, &available)
-        .await
-        .unwrap();
+    let reused = import_for_user(
+        &pool,
+        &storage,
+        owner,
+        &original,
+        &available,
+        &Default::default(),
+    )
+    .await
+    .unwrap();
     assert!(reused.image_reviews.is_empty());
     assert_eq!(normalized(&original), {
         let mut value = normalized(
@@ -295,7 +336,7 @@ async fn collection_json_import_reuses_authorized_recipe_images_and_keeps_missin
         .mount(&mock)
         .await;
     let original = renamed_import(&original, " missing");
-    let missing = import_for_user(&pool, &storage, owner, &original, &[])
+    let missing = import_for_user(&pool, &storage, owner, &original, &[], &Default::default())
         .await
         .unwrap();
     assert_eq!(missing.image_reviews.len(), 1);
@@ -313,9 +354,16 @@ async fn collection_json_import_reuses_authorized_recipe_images_and_keeps_missin
     // A forged source identity does not authorize somebody else's private assets.
     let other = user(&pool, "imagecopy").await;
     mock.reset().await;
-    let denied = import_for_user(&pool, &storage, other.id, &original, &[])
-        .await
-        .unwrap();
+    let denied = import_for_user(
+        &pool,
+        &storage,
+        other.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap();
     assert_eq!(denied.image_reviews[0].image_count, 4);
     assert!(mock.received_requests().await.unwrap().is_empty());
 }
@@ -375,9 +423,16 @@ async fn collection_json_cover_reuse_is_uploader_only_and_follows_storage_availa
     let original = db::export_collection_json(&pool, owner.id, root.id)
         .await
         .unwrap();
-    let reused = import_for_user(&pool, &storage, owner.id, &original, &[])
-        .await
-        .unwrap();
+    let reused = import_for_user(
+        &pool,
+        &storage,
+        owner.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap();
     let copy = db::get_collection_by_id_and_owner(&pool, reused.collection_id, owner.id)
         .await
         .unwrap()
@@ -385,9 +440,16 @@ async fn collection_json_cover_reuse_is_uploader_only_and_follows_storage_availa
     assert_eq!(copy.image, Some(image));
     let other = user(&pool, "covercopy").await;
     mock.reset().await;
-    let skipped = import_for_user(&pool, &storage, other.id, &original, &[])
-        .await
-        .unwrap();
+    let skipped = import_for_user(
+        &pool,
+        &storage,
+        other.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap();
     assert_eq!(skipped.warnings.len(), 1);
     assert!(skipped.image_reviews.is_empty());
     assert!(mock.received_requests().await.unwrap().is_empty());
@@ -416,9 +478,16 @@ async fn collection_json_capacity_checks_do_not_block_text_imports_or_lose_image
     .await
     .unwrap();
     let storage = crate::storage::StorageClient::for_test();
-    assert!(import_for_user(&pool, &storage, importer.id, &json, &[])
-        .await
-        .is_ok());
+    assert!(import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &json,
+        &[],
+        &Default::default()
+    )
+    .await
+    .is_ok());
     let before = counts(&pool, importer.id).await;
     let (recipe, image_owner) = super::super::recipe_archive::tests::source(&pool, &storage).await;
     let image_root = db::insert_collection(
@@ -438,19 +507,26 @@ async fn collection_json_capacity_checks_do_not_block_text_imports_or_lose_image
     let image_json = db::export_collection_json(&pool, image_owner, image_root.id)
         .await
         .unwrap();
-    assert!(
-        import_for_user(&pool, &storage, importer.id, &image_json, &[])
-            .await
-            .is_err()
-    );
+    assert!(import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &image_json,
+        &[],
+        &Default::default()
+    )
+    .await
+    .is_err());
     assert_eq!(counts(&pool, importer.id).await, before);
     let full = user(&pool, "full").await;
     sqlx::query("INSERT INTO collections (owner_id,name) SELECT $1,'Existing '||series FROM generate_series(1,$2) series")
         .bind(full.id).bind(crate::security::MAX_COLLECTION_CHILDREN as i32).execute(&pool).await.unwrap();
     let before = counts(&pool, full.id).await;
-    assert!(import_for_user(&pool, &storage, full.id, &json, &[])
-        .await
-        .is_err());
+    assert!(
+        import_for_user(&pool, &storage, full.id, &json, &[], &Default::default())
+            .await
+            .is_err()
+    );
     assert_eq!(counts(&pool, full.id).await, before);
 }
 
@@ -552,9 +628,269 @@ async fn collection_name_collision_rolls_back_new_recipes_and_the_imported_tree(
     .await
     .unwrap();
     let before = counts(&pool, importer.id).await;
-    let error = import_for_user(&pool, &storage, importer.id, &original, &[])
-        .await
-        .unwrap_err();
+    let error = import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap_err();
     assert!(error.to_string().contains("A collection in this import"));
     assert_eq!(counts(&pool, importer.id).await, before);
+}
+
+fn names_for_copy(json: &str) -> CollectionImportNames {
+    let parsed = crate::collection_json::parse(json).unwrap();
+    CollectionImportNames {
+        collections: parsed
+            .snapshot
+            .collections
+            .iter()
+            .enumerate()
+            .map(|(index, node)| CollectionImportName {
+                portable_id: node.portable_id.clone(),
+                name: if index == 0 {
+                    node.name.clone()
+                } else {
+                    format!("{} copy", node.name)
+                },
+            })
+            .collect(),
+        recipes: parsed
+            .recipes
+            .iter()
+            .map(|(file, editor)| CollectionImportName {
+                portable_id: file.portable_id.clone(),
+                name: format!("{} copy", editor.title),
+            })
+            .collect(),
+    }
+}
+
+#[tokio::test]
+async fn collection_import_conflicts_can_be_renamed_without_rewriting_the_archive() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let (owner, root, _) = tree(&pool).await;
+    let original = db::export_collection_json(&pool, owner.id, root)
+        .await
+        .unwrap();
+    let importer = user(&pool, "rename-import").await;
+    let storage = crate::storage::StorageClient::for_test();
+    import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap();
+    let before = counts(&pool, importer.id).await;
+    let error = import_for_user(
+        &pool,
+        &storage,
+        importer.id,
+        &original,
+        &[],
+        &Default::default(),
+    )
+    .await
+    .unwrap_err();
+    assert!(error.to_string().contains("preview"));
+    assert!(!error.to_string().contains("in the import file"));
+    assert_eq!(counts(&pool, importer.id).await, before);
+
+    let choices = names_for_copy(&original);
+    let copied = import_for_user(&pool, &storage, importer.id, &original, &[], &choices)
+        .await
+        .unwrap();
+    assert_eq!(copied.owner_id, importer.id);
+    assert_eq!(counts(&pool, importer.id).await, (8, 4, 4, 0, 10));
+    let copy = db::export_collection_json(&pool, importer.id, copied.collection_id)
+        .await
+        .unwrap();
+    let mut expected = normalized(&original);
+    expected["collections"][0]["name"] = json!("Family recipes (imported)");
+    for node in expected["collections"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .skip(1)
+    {
+        node["name"] = json!(format!("{} copy", node["name"].as_str().unwrap()));
+    }
+    for recipe in expected["recipes"].as_array_mut().unwrap() {
+        recipe["title"] = json!(format!("{} copy", recipe["title"].as_str().unwrap()));
+    }
+    assert_eq!(normalized(&copy), expected);
+    assert_eq!(
+        normalized(
+            &db::export_collection_json(&pool, owner.id, root)
+                .await
+                .unwrap()
+        ),
+        normalized(&original)
+    );
+    assert!(crate::collection_json::parse(&original).is_ok());
+}
+
+#[tokio::test]
+async fn automatic_import_root_naming_avoids_renamed_children() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let (owner, root, _) = tree(&pool).await;
+    let original = db::export_collection_json(&pool, owner.id, root)
+        .await
+        .unwrap();
+    let importer = user(&pool, "root-copy").await;
+    db::insert_collection(
+        &pool,
+        importer.id,
+        None,
+        "My family recipes",
+        None,
+        CollectionVisibility::Private,
+        None,
+    )
+    .await
+    .unwrap();
+    let mut choices = names_for_copy(&original);
+    choices.collections[0].name = "My family recipes".into();
+    choices.collections[1].name = "My family recipes (imported)".into();
+    let result = import_for_user(
+        &pool,
+        &crate::storage::StorageClient::for_test(),
+        importer.id,
+        &original,
+        &[],
+        &choices,
+    )
+    .await
+    .unwrap();
+    let imported = db::get_collection_by_id_and_owner(&pool, result.collection_id, importer.id)
+        .await
+        .unwrap()
+        .expect("imported root exists");
+    assert_eq!(imported.name, "My family recipes (imported 2)");
+    assert!(result
+        .warnings
+        .iter()
+        .any(|warning| warning.contains("My family recipes (imported 2)")));
+}
+
+#[tokio::test]
+async fn import_name_choices_do_not_bypass_outer_or_nested_checksums() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let (owner, root, _) = tree(&pool).await;
+    let original = db::export_collection_json(&pool, owner.id, root)
+        .await
+        .unwrap();
+    let importer = user(&pool, "integrity-with-names").await;
+    let storage = crate::storage::StorageClient::for_test();
+    let choices = names_for_copy(&original);
+    let before = counts(&pool, importer.id).await;
+    for nested in [false, true] {
+        let mut value: Value = serde_json::from_str(&original).unwrap();
+        if nested {
+            value["snapshot"]["recipes"][0]["snapshot"]["title"] = json!("Tampered title");
+            value["snapshot_digest"] =
+                json!(crate::recipe_json::digest(&value["snapshot"]).unwrap());
+        } else {
+            value["snapshot"]["collections"][0]["name"] = json!("Tampered name");
+        }
+        let error = import_for_user(
+            &pool,
+            &storage,
+            importer.id,
+            &value.to_string(),
+            &[],
+            &choices,
+        )
+        .await
+        .unwrap_err();
+        assert!(error.to_string().contains("checksum"));
+        assert_eq!(counts(&pool, importer.id).await, before);
+    }
+    let mut invalid = choices;
+    invalid.recipes[0].portable_id = format!("urn:noms:recipe:{}", Uuid::new_v4());
+    assert!(
+        import_for_user(&pool, &storage, importer.id, &original, &[], &invalid)
+            .await
+            .is_err()
+    );
+    assert_eq!(counts(&pool, importer.id).await, before);
+}
+
+#[tokio::test]
+async fn import_name_conflicts_after_preview_remain_atomic_and_recoverable() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let (owner, root, _) = tree(&pool).await;
+    let original = db::export_collection_json(&pool, owner.id, root)
+        .await
+        .unwrap();
+    let importer = user(&pool, "name-race").await;
+    let storage = crate::storage::StorageClient::for_test();
+    let mut choices = names_for_copy(&original);
+    // Different archive entries can still collide after editing, including
+    // database-equivalent whitespace and case. Reject the entire import.
+    choices.recipes[0].name = " Same \t title ".into();
+    choices.recipes[1].name = "same title".into();
+    assert!(
+        import_for_user(&pool, &storage, importer.id, &original, &[], &choices)
+            .await
+            .is_err()
+    );
+    assert_eq!(counts(&pool, importer.id).await, (0, 0, 0, 0, 0));
+    choices = names_for_copy(&original);
+    let mut check = vec![CollectionImportNamePreview {
+        portable_id: choices.recipes[0].portable_id.clone(),
+        name: choices.recipes[0].name.clone(),
+        already_exists: false,
+    }];
+    mark_existing_names(&pool, importer.id, &mut check, false)
+        .await
+        .unwrap();
+    assert!(!check[0].already_exists);
+    crate::test_utils::create_test_published_recipe(&pool, importer.id, &choices.recipes[0].name)
+        .await;
+    let before = counts(&pool, importer.id).await;
+    let error = import_for_user(&pool, &storage, importer.id, &original, &[], &choices)
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("preview"));
+    assert_eq!(counts(&pool, importer.id).await, before);
+    choices.recipes[0].name.push_str(" newer copy");
+    import_for_user(&pool, &storage, importer.id, &original, &[], &choices)
+        .await
+        .unwrap();
+    assert_eq!(counts(&pool, importer.id).await, (4, 3, 3, 0, 5));
+}
+
+#[tokio::test]
+async fn import_preview_name_checks_are_normalized_and_owner_scoped() {
+    let (_database, pool) = crate::test_utils::setup_test_db().await;
+    let (owner, _, _) = tree(&pool).await;
+    let outsider = user(&pool, "preview-owner").await;
+    for collections in [false, true] {
+        let mut entries = vec![CollectionImportNamePreview {
+            portable_id: "archive-entry".into(),
+            name: if collections {
+                "  FAMILY\trecipes  ".into()
+            } else {
+                "  BEAN\tsoup & bread 🥣 ".into()
+            },
+            already_exists: false,
+        }];
+        mark_existing_names(&pool, owner.id, &mut entries, collections)
+            .await
+            .unwrap();
+        assert!(entries[0].already_exists);
+        mark_existing_names(&pool, outsider.id, &mut entries, collections)
+            .await
+            .unwrap();
+        assert!(!entries[0].already_exists);
+    }
 }

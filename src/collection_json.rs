@@ -11,10 +11,60 @@ pub const MAX_IMAGES: usize = 128;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CollectionImportPreview {
+    pub owner_id: uuid::Uuid,
     pub name: String,
     pub collection_count: usize,
     pub recipe_count: usize,
     pub external_image_urls: Vec<String>,
+    pub collections: Vec<CollectionImportNamePreview>,
+    pub recipes: Vec<CollectionImportNamePreview>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CollectionImportNamePreview {
+    pub portable_id: String,
+    pub name: String,
+    pub already_exists: bool,
+}
+
+/// Import choices are separate from the checksummed source archive.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CollectionImportNames {
+    pub collections: Vec<CollectionImportName>,
+    pub recipes: Vec<CollectionImportName>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CollectionImportName {
+    pub portable_id: String,
+    pub name: String,
+}
+
+impl CollectionImportNames {
+    pub fn from_preview(preview: &CollectionImportPreview) -> Self {
+        let names = |items: &[CollectionImportNamePreview]| {
+            items
+                .iter()
+                .map(|item| CollectionImportName {
+                    portable_id: item.portable_id.clone(),
+                    name: item.name.clone(),
+                })
+                .collect()
+        };
+        Self {
+            collections: names(&preview.collections),
+            recipes: names(&preview.recipes),
+        }
+    }
+
+    pub fn has_blank_names(&self) -> bool {
+        self.collections
+            .iter()
+            .chain(&self.recipes)
+            .any(|item| item.name.trim().is_empty())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -91,6 +141,78 @@ mod server {
     pub struct ParsedCollection {
         pub snapshot: CollectionSnapshot,
         pub recipes: Vec<(RecipeFile, RecipeEditorState)>,
+    }
+
+    impl ParsedCollection {
+        /// Call only after parse has verified the original archive and nested
+        /// recipe digests. Portable IDs select archive entries, never DB rows.
+        pub fn apply_names(&mut self, names: &CollectionImportNames) -> Result<(), String> {
+            fn checked(
+                choices: &[CollectionImportName],
+                allowed: HashSet<&str>,
+                limit: usize,
+                max_chars: usize,
+            ) -> Result<HashMap<String, String>, String> {
+                if choices.len() > limit {
+                    return Err("Too many import name choices.".into());
+                }
+                let mut result = HashMap::new();
+                for choice in choices {
+                    if choice.portable_id.len() > 64
+                        || !allowed.contains(choice.portable_id.as_str())
+                    {
+                        return Err(
+                            "A name choice does not belong to this import. Check the file again."
+                                .into(),
+                        );
+                    }
+                    if choice.name.len() > max_chars * 4
+                        || choice.name.chars().count() > max_chars
+                        || choice.name.trim().is_empty()
+                    {
+                        return Err(format!("Import names must be nonempty and no longer than {max_chars} characters."));
+                    }
+                    let name = choice.name.trim();
+                    if result
+                        .insert(choice.portable_id.clone(), name.to_string())
+                        .is_some()
+                    {
+                        return Err("A name choice is repeated. Check the file again.".into());
+                    }
+                }
+                Ok(result)
+            }
+            let collections = checked(
+                &names.collections,
+                self.snapshot
+                    .collections
+                    .iter()
+                    .map(|item| item.portable_id.as_str())
+                    .collect(),
+                MAX_COLLECTIONS,
+                crate::security::MAX_COLLECTION_NAME_CHARS,
+            )?;
+            let recipes = checked(
+                &names.recipes,
+                self.recipes
+                    .iter()
+                    .map(|(file, _)| file.portable_id.as_str())
+                    .collect(),
+                MAX_RECIPES,
+                crate::security::MAX_RECIPE_TITLE_CHARS,
+            )?;
+            for collection in &mut self.snapshot.collections {
+                if let Some(name) = collections.get(&collection.portable_id) {
+                    collection.name.clone_from(name);
+                }
+            }
+            for (file, editor) in &mut self.recipes {
+                if let Some(name) = recipes.get(&file.portable_id) {
+                    editor.title.clone_from(name);
+                }
+            }
+            Ok(())
+        }
     }
 
     pub fn portable_collection_id(id: Uuid) -> String {
