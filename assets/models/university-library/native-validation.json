@@ -1,0 +1,23 @@
+{
+  "model": "university-library",
+  "reconstruction": true,
+  "revision": 4,
+  "geometry_objects": 2117,
+  "assembly_groups": 13,
+  "evaluated_triangles": 1240693,
+  "external_images": [],
+  "finite_transforms": true,
+  "all_geometry_grouped": true,
+  "baked_shadows": false,
+  "stair_rotation_degrees": 360.0,
+  "opaque_blue_panels": 18,
+  "features": {
+    "reading_chairs": 12,
+    "window_chairs": 4,
+    "portraits": 11,
+    "art_glass_ribbons": 11,
+    "stair_treads": 24,
+    "study_laptops": 4,
+    "open_study_books": 5
+  }
+}

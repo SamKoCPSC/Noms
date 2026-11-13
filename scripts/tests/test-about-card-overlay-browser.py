@@ -33,8 +33,9 @@ async def main(args):
             await page.evaluate('(i)=>scrollTo(0,document.querySelectorAll(".waypoint")[i].getBoundingClientRect().top+scrollY)', i)
             await page.wait_for_timeout(150)
             await page.evaluate('step(45)')
-        for model in ('corporate-office', 'library', 'supermarket'):
-            assert await page.locator('#about-tour').get_attribute(f'data-{model}-state') == 'ready'
+        for model in ('corporate-office', 'library', 'supermarket', 'brick-kitchen', 'bakery', 'farmers-market'):
+            state = await page.locator('#about-tour').get_attribute(f'data-{model}-state')
+            assert state == 'ready', f'{model}: {state}; errors: {errors}'
         for i in args.stops:
             await go(i)
             card = page.locator('.story-panel[data-active=true]')
@@ -52,12 +53,36 @@ async def main(args):
                 assert await card.get_attribute('data-model') == str(asset)
                 assert await canvas.get_attribute('data-shadow-room') == chapter
                 assert await canvas.get_attribute(f'data-{model}-groups')
+                if model == 'library':
+                    groups = await canvas.get_attribute('data-library-groups')
+                    for name in ('Full turn spiral staircase', 'Student books and coding laptop', 'Window facing lounge chairs', 'Suspended coloured art glass'):
+                        assert name in groups, groups
                 await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-' + model)))
             if i == 5:
                 assert await card.get_attribute('data-model') == '5'
                 assert await canvas.get_attribute('data-shadow-room') == 'job-search'
                 assert 'Humorous framed company posters' in await canvas.get_attribute('data-corporate-office-groups')
                 await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-job-search')))
+            if i == 6:
+                assert await card.get_attribute('data-model') == '8'
+                assert await canvas.get_attribute('data-shadow-room') == 'same-idea'
+                assert float(await canvas.get_attribute('data-brick-kitchen-assembly-frame')) == 160
+                assert 'Front dining peninsula' in await canvas.get_attribute('data-brick-kitchen-groups')
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-brick-kitchen')))
+            if i == 7:
+                assert await card.get_attribute('data-model') == '9'
+                assert float(await canvas.get_attribute('data-bakery-assembly-frame')) == 160
+                groups = await canvas.get_attribute('data-bakery-groups')
+                assert 'Reversible dough sheeter' in groups and 'Refrigerated pastry counter' in groups
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-bakery')))
+            if i == 8:
+                assert await card.get_attribute('data-model') == '10'
+                assert await canvas.get_attribute('data-shadow-room') == 'accessible'
+                assert float(await canvas.get_attribute('data-farmers-market-assembly-frame')) == 160
+                groups = await canvas.get_attribute('data-farmers-market-groups')
+                for name in ('Farmhouse dairy cart', 'Village bakery cart', 'Farm pantry and eggs cart', 'Ready to eat market bites cart'):
+                    assert name in groups, groups
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-farmers-market')))
             if i == 2:
                 assert frames[3] == 1, frames
             print('STOP', i, state, flush=True)
@@ -68,22 +93,25 @@ async def main(args):
         eye = list(map(float, (await canvas.get_attribute('data-camera')).split(',')))
         assert all((abs(a - b) < 0.01 for a, b in zip(eye, [4.1875, 3.54375, 2.375]))), eye
         await page.screenshot(timeout=60000, path=str(args.output))
-        await go(6)
+        await go(8)
         for w, h in [(360, 640), (1280, 900), (393, 852)]:
             await page.set_viewport_size({'width': w, 'height': h})
             await page.wait_for_timeout(500)
             await page.evaluate('step(25)')
-            await go(6)
+            await go(8)
             assert abs(float(await canvas.evaluate('c=>c.width/c.height-c.getBoundingClientRect().width/c.getBoundingClientRect().height'))) < 0.003
-            assert await page.locator('.story-panel[data-active=true]').get_attribute('data-panel') == '6'
+            assert await page.locator('.story-panel[data-active=true]').get_attribute('data-panel') == '8'
+            if w == 1280:
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-farmers-market-desktop')))
             print('RESIZE', w, h, flush=True)
         await page.emulate_media(reduced_motion='reduce')
         await page.evaluate('step(2)')
         await page.wait_for_selector('.about-tour.is-reader')
         assert await page.locator('.about-tour.is-reader').count() == 1
         assert await page.locator('.story-panel[inert]').count() == 0
-        for stop in (1, 3, 5):
-            selector = f'#panel-{stop} .office-fallback img'
+        for stop in (1, 3, 5, 6, 7, 8):
+            fallback = 'garden' if stop == 8 else 'kitchen' if stop in (6, 7) else 'office'
+            selector = f'#panel-{stop} .{fallback}-fallback img'
             poster = page.locator(selector)
             assert await poster.count() == 1
             await poster.scroll_into_view_if_needed()
@@ -95,5 +123,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='http://localhost:8765')
     parser.add_argument('--output', type=Path, default=Path('/tmp/about-overlay-travel.png'))
-    parser.add_argument('--stops', type=int, nargs='+', default=[0, 1, 2, 3, 4, 5, 6, 7, 10, 11])
+    parser.add_argument('--stops', type=int, nargs='+', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11])
     asyncio.run(main(parser.parse_args()))

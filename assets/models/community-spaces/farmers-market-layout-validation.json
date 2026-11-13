@@ -1,0 +1,80 @@
+{
+  "validation": "PASS",
+  "checks": [
+    "Four enlarged trading carts, two per edge",
+    "Eight independent assembly roots",
+    "Stalls stay on the platform",
+    "Stalls confined to back and left edges, outside picnic area",
+    "No hall or clock tower geometry",
+    "Four non-overlapping picnic tables with distinct contents",
+    "Only rear tree remains; welcome sign removed",
+    "Four structurally distinct cart designs",
+    "No flower merchandise or decorative flower pots",
+    "Stall bounding boxes do not overlap",
+    "Picnic tables have at least 0.75m between full footprints and 0.80m from stalls",
+    "Platform footprint reduced by more than 12 percent",
+    "Finite native transforms"
+  ],
+  "stalls": [
+    {
+      "name": "02 Farmhouse dairy cart",
+      "bounds": [
+        [
+          -4.059999942779541,
+          3.922499895095825,
+          0.05924453213810921
+        ],
+        [
+          0.9850001335144043,
+          5.9079999923706055,
+          3.127999782562256
+        ]
+      ]
+    },
+    {
+      "name": "03 Village bakery cart",
+      "bounds": [
+        [
+          1.0349998474121094,
+          3.919999837875366,
+          0.05924453213810921
+        ],
+        [
+          6.164999961853027,
+          5.915872573852539,
+          3.2850000858306885
+        ]
+      ]
+    },
+    {
+      "name": "04 Farm pantry and eggs cart",
+      "bounds": [
+        [
+          -6.3480000495910645,
+          -0.9280000329017639,
+          0.05924453213810921
+        ],
+        [
+          -4.359000205993652,
+          4.135000228881836,
+          3.3635575771331787
+        ]
+      ]
+    },
+    {
+      "name": "05 Ready to eat market bites cart",
+      "bounds": [
+        [
+          -6.27121639251709,
+          -6.059999942779541,
+          0.05924453213810921
+        ],
+        [
+          -4.354848384857178,
+          -1.0149998664855957,
+          2.9700000286102295
+        ]
+      ]
+    }
+  ]
+}

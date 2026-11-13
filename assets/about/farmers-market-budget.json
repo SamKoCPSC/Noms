@@ -1,0 +1,13 @@
+{
+  "source": "models/community-spaces/models/farmers-market.blend",
+  "source_sha256": "a22d8f4fcbecafdb0956de2c506c5dbc66808281c017bccf8e0bc1424a064e84",
+  "triangles": 355105,
+  "assemblies": 8,
+  "materials": 11,
+  "glb_bytes": 12116192,
+  "textures": 0,
+  "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
+  "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.0001983416001347607,
+  "quantization": "KHR_mesh_quantization"
+}

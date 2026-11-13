@@ -5,6 +5,9 @@ rebuild sources. Multi-scene collections also include an offline gallery.
 
 | Collection | Scenes | Preview |
 | --- | --- | --- |
+| [University Reading Room](university-library/README.md) | Revision 4: UBC-inspired hall with populated study tables, blue window panels and a full-turn spiral stair; integrated in the origin-story card | [Preview](university-library/previews/university-library.png) |
+| [Modern Baking Lab](modern-baking-lab/README.md) | Revision 3: bakery storefront, dough sheeter, refrigeration and right-shifted workbench | [Preview](modern-baking-lab/previews/modern-baking-lab.png) |
+| [Brick-loft U-shaped Kitchen](brick-loft-kitchen/README.md) | Revision 5: open-front dining peninsula, coffee appliances, shared food and corrected faucet | [Preview](brick-loft-kitchen/previews/brick-loft-kitchen.png) |
 | [Shared Corporate Workspace & Pantry](corporate-workspace-pantry/README.md) | Concept-05 corporate office, three workstations, shared kitchenette and lunch table | [Preview](corporate-workspace-pantry/previews/corporate-workspace-pantry.png) |
 | [Modern European Arcade Supermarket](european-arcade-supermarket/README.md) | Larger concept-03 grocery revision with European deli and Asian pantry | [Preview](european-arcade-supermarket/previews/european-arcade-supermarket.png) |
 | [Five New Places](community-spaces/README.md) | Specialty coffee shop, farmers’ market, artisan bakery, night market, recipe library | [Contact sheet](community-spaces/previews/collection.jpg) · [Offline gallery](community-spaces/gallery.html) |
@@ -22,6 +25,7 @@ with the tour's bounded Rust loader.
 The corporate workspace also has a production derivative in `assets/about/`,
 used by the About tour’s “A project to support my job search.” card.
 
-The original recipe library and European arcade supermarket also have production
+The UBC-inspired university library, European arcade supermarket, brick-loft kitchen,
+Modern Baking Lab and revision 9 corner farmers’ market also have production
 derivatives. See the [About tour assignment table](../../docs/design/about/model-assignments.md)
 for the current cards and pending revisions.

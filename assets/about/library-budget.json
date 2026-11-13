@@ -1,13 +1,13 @@
 {
-  "source": "models/community-spaces/models/recipe-library.blend",
-  "source_sha256": "24564fd5b47800ba7271c1cbb1736e97e66c0e17d1b1670860cbc5b4221c10b5",
-  "triangles": 385665,
-  "assemblies": 11,
-  "materials": 14,
-  "glb_bytes": 15395684,
+  "source": "models/university-library/models/university-library.blend",
+  "source_sha256": "eb5ed51a7c14041b142a4b4444f8cff98a992f0768ee5530fb5bf5d1d278fd73",
+  "triangles": 374308,
+  "assemblies": 13,
+  "materials": 17,
+  "glb_bytes": 11472856,
   "textures": 0,
   "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
   "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
-  "position_quantum": 0.00011841001341087719,
+  "position_quantum": 0.00016253972622880204,
   "quantization": "KHR_mesh_quantization"
 }

@@ -144,6 +144,18 @@ mod tests {
                 include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
             ),
             (
+                Room::FarmersMarket,
+                include_bytes!("../../../assets/about/sams-farmers-market.glb").as_slice(),
+            ),
+            (
+                Room::Bakery,
+                include_bytes!("../../../assets/about/sams-bakery.glb").as_slice(),
+            ),
+            (
+                Room::BrickKitchen,
+                include_bytes!("../../../assets/about/sams-brick-kitchen.glb").as_slice(),
+            ),
+            (
                 Room::CorporateOffice,
                 include_bytes!("../../../assets/about/sams-corporate-office.glb").as_slice(),
             ),

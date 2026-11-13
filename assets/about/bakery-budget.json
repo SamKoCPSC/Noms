@@ -1,0 +1,13 @@
+{
+  "source": "models/modern-baking-lab/models/modern-baking-lab.blend",
+  "source_sha256": "85c5265636123679305f7cc69b031b2b1fed75be08954cb045514aa080dee949",
+  "triangles": 377793,
+  "assemblies": 24,
+  "materials": 31,
+  "glb_bytes": 9739840,
+  "textures": 0,
+  "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
+  "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.00014548433029816263,
+  "quantization": "KHR_mesh_quantization"
+}

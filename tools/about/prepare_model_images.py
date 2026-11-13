@@ -9,7 +9,7 @@ from PIL import Image
 
 source, output = map(Path, sys.argv[1:3])
 model = sys.argv[3]
-assert model in ("corporate-office", "library", "supermarket")
+assert model in ("corporate-office", "library", "supermarket", "brick-kitchen", "bakery", "farmers-market")
 output.mkdir(parents=True, exist_ok=True)
 with Image.open(source) as image:
     image = image.convert("RGB")
