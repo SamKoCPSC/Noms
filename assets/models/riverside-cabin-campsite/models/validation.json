@@ -1,0 +1,17 @@
+{
+  "revision": 4,
+  "reconstructed": true,
+  "native_meshes": 550,
+  "cabin_storeys": 2,
+  "river": true,
+  "trees": 5,
+  "folded_tree_faces": 72,
+  "wooden_porch_lounge": true,
+  "no_tent_or_fence": true,
+  "glb_bytes": 5403892,
+  "glb_meshes": 585,
+  "triangles": 156043,
+  "sha256": "1cbfba0465c36f0c2d5da24a6aaac19595f7045053f952a92f9408c4dd19e577",
+  "structure_valid": true,
+  "fresh_blender_glb_import": "passed"
+}

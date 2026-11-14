@@ -1,0 +1,17 @@
+{
+  "revision": 4,
+  "reconstructed": true,
+  "native_meshes": 942,
+  "plated_dinners": 4,
+  "beef_slices": 18,
+  "potato_chunks": 36,
+  "fanned_bread_slices": 4,
+  "butter_on_shared_board": true,
+  "food_meshes_with_vertex_colors": 56,
+  "glb_bytes": 10731512,
+  "glb_meshes": 962,
+  "triangles": 362540,
+  "sha256": "3e6a2f9bcb6320dc9ebb1778b43c771824d4f455d61f957f7f38f53daf4c16a5",
+  "structure_valid": true,
+  "fresh_blender_glb_import": "passed"
+}
