@@ -7,7 +7,7 @@ bpy.ops.wm.open_mainfile(filepath=str(root/'models'/f'{name}.blend'))
 s=bpy.context.scene;s.render.threads=6;s.cycles.samples=48;s.cycles.use_denoising=False
 views=[(name,None,None,None,1440,1260)]
 if 'kitchen' in name:
- views += [('prime-rib-detail',(2.1,-3.0,3.6),(-.15,.10,1.23),2.45,1400,1050),('plated-dinner-detail',(.5,-3.2,3.4),(.1,-2.16,.93),2.0,1400,1050)]
+ views += [('prime-rib-detail',(2.1,-3.0,3.6),(-.15,.10,1.23),2.45,1400,1050),('plated-dinner-detail',(.5,-3.2,3.4),(.1,-2.16,.93),2.0,1400,1050),('cooktop-sauce-detail',(2,.2,3.9),(-.35,3.06,1.28),1.9,1400,1050)]
 else:
  views += [('campsite-details',(7,-10,7),(-.7,-.4,1.4),8.0,1400,1050)]
 if '--hero' in sys.argv:views=views[:1]

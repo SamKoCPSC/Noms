@@ -6,7 +6,7 @@ report=json.loads((root/'models/validation.json').read_text())
 assert report['fresh_blender_glb_import']=='passed'
 assert hashlib.sha256((root/'models'/f'{name}.glb').read_bytes()).hexdigest()==report['sha256']
 required=[f'models/{name}.blend',f'models/{name}.glb',f'previews/{name}.png','source/build_scene.py','source/validate_model.py','README.md']
-required+=['previews/prime-rib-detail.png','previews/plated-dinner-detail.png']if 'kitchen'in name else ['previews/campsite-details.png']
+required+=['previews/prime-rib-detail.png','previews/plated-dinner-detail.png','previews/cooktop-sauce-detail.png']if 'kitchen'in name else ['previews/campsite-details.png']
 for p in required:assert (root/p).is_file(),p
 out=root/'downloads';out.mkdir(exist_ok=True);dest=out/f'{name}-v{report["revision"]}.zip'
 files=sorted(p for p in root.rglob('*')if p.is_file()and 'downloads'not in p.relative_to(root).parts and '__pycache__'not in p.parts and not p.name.endswith('.blend1'))

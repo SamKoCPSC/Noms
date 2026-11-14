@@ -5,10 +5,10 @@ from mathutils import Vector
 root=Path(__file__).resolve().parents[1];name=root.name
 native=root/'models'/f'{name}.blend';glb=root/'models'/f'{name}.glb'
 bpy.ops.wm.open_mainfile(filepath=str(native))
-assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==7
+assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==8
 obs=list(bpy.context.scene.objects)
 count=lambda s:sum(s in o.name for o in obs)
-report={'revision':7,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
+report={'revision':8,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
 if 'kitchen' in name:
  assert count('dark stoneware plate')==4
  assert count('rosy beef grain')==5
@@ -71,7 +71,26 @@ if 'kitchen' in name:
   low,high=bounds(o)
   assert all(tl[k]<low[k]<high[k]<th[k]for k in [0,1]) and abs(low[2]-th[2])<.005
   assert high[0]<bl[0] or low[0]>bh[0]
- report.update(plated_dinners=4,beef_slices=5,board_slices=1,slices_per_plate=1,flat_roast_base=True,matching_oval_slices=True,carving_board_size=[1.0,.65],potato_chunks=54,tray_potatoes=30,soup_bowls=4,oval_roast=True,roast_cut_face_direction='+X',roast_scale=.42,fanned_bread_slices=4,butter_on_shared_board=True)
+ assert count('Island steak sauce ivory serving bowl')==1 and count('Stove steak sauce open steel pot')==1
+ assert count('Open soup pot')==1 and count('Visible soup surface')==1
+ plate_sauce=next(o for o in obs if 'peppercorn cream sauce' in o.name).data.materials[0]
+ for label in ['Island steak sauce','Stove steak sauce']:
+  surface=bpy.data.objects[label+' peppercorn sauce surface']
+  assert surface.data.materials[0]==plate_sauce
+  assert count(label+' cracked pepper')==42
+ bowl_low,bowl_high=bounds(bpy.data.objects['Island steak sauce ivory serving bowl'])
+ island_low,island_high=bounds(bpy.data.objects['Steel island top'])
+ assert all(island_low[k]<bowl_low[k]<bowl_high[k]<island_high[k]for k in [0,1])
+ assert abs(bowl_low[2]-island_high[2])<.005
+ for label in ['Cabernet bottle green bottle','Bordeaux bottle green bottle']:
+  bottle_low,bottle_high=bounds(bpy.data.objects[label]);assert bowl_high[0]<bottle_low[0]
+ assert bowl_low[1]>.15 and bowl_low[0]>board_high[0]
+ pot_low,pot_high=bounds(bpy.data.objects['Stove steak sauce open steel pot'])
+ hob_low,hob_high=bounds(bpy.data.objects['Induction hob'])
+ assert all(hob_low[k]<pot_low[k]<pot_high[k]<hob_high[k]for k in [0,1])
+ assert abs(pot_low[2]-hob_high[2])<.02
+ soup_low,soup_high=bounds(bpy.data.objects['Open soup pot']);assert pot_high[0]<soup_low[0]
+ report.update(steak_sauce_bowls=1,steak_sauce_pots=1,matching_sauce_material=True,plated_dinners=4,beef_slices=5,board_slices=1,slices_per_plate=1,flat_roast_base=True,matching_oval_slices=True,carving_board_size=[1.0,.65],potato_chunks=54,tray_potatoes=30,soup_bowls=4,oval_roast=True,roast_cut_face_direction='+X',roast_scale=.42,fanned_bread_slices=4,butter_on_shared_board=True)
 
 else:
  assert bpy.context.scene['storeys']==2 and not bpy.context.scene['has_tent'] and not bpy.context.scene['has_fence']

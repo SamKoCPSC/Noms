@@ -1,7 +1,10 @@
 {
-  "revision": 7,
+  "revision": 8,
   "reconstructed": true,
-  "native_meshes": 1038,
+  "native_meshes": 1128,
+  "steak_sauce_bowls": 1,
+  "steak_sauce_pots": 1,
+  "matching_sauce_material": true,
   "plated_dinners": 4,
   "beef_slices": 5,
   "board_slices": 1,
@@ -21,10 +24,10 @@
   "fanned_bread_slices": 4,
   "butter_on_shared_board": true,
   "food_meshes_with_vertex_colors": 61,
-  "glb_bytes": 10953872,
-  "glb_meshes": 1058,
-  "triangles": 349366,
-  "sha256": "880f2189caebfb63e873cc18f08b863f481dc9034a8c8d3f095f6eddee65d892",
+  "glb_bytes": 11348736,
+  "glb_meshes": 1150,
+  "triangles": 362574,
+  "sha256": "58d3376987d786ce041ac397cf5baf1d7273db93614824714da79dbaca8ce9e8",
   "structure_valid": true,
   "fresh_blender_glb_import": "passed"
 }

@@ -148,3 +148,23 @@ def soup_bowl(n,x,y,z):
   box(n+' vegetable garnish',(x+r*cos(a),y+r*sin(a),z+.071),(.011,.009,.004),'orange' if i%3 else 'leaf',.002)
  for i in range(4):
   a=i*2.4+.4;uv(n+' soup bean',(x+.042*cos(a),y+.042*sin(a),z+.071),(.009,.005,.003),'dough',10,6)
+
+
+def pepper_sauce_pool(n,x,y,z,r):
+ """The same creamy peppercorn sauce and dark flecks used on the beef."""
+ cyl(n+' peppercorn sauce surface',(x,y,z),r,.006,'pepperSauce',64)
+ for i in range(42):
+  a=i*2.4;rr=r*.91*math.sqrt((i+.5)/42)
+  uv(n+' cracked pepper',(x+rr*cos(a),y+rr*sin(a),z+.004),(.0025,.0018,.0012),'beefCrust',8,6)
+
+def serving_sauce_bowl(n,x,y,z):
+ lathe(n+' ivory serving bowl',(x,y,z),[(0,0),(.12,0),(.14,.018),(.205,.082),(.235,.14),(.235,.15),(.227,.15),(.198,.083),(.13,.025),(0,.025)],'ceramic',64)
+ torus(n+' rolled rim',(x,y,z+.148),.231,.004,'ivory',steps=64)
+ pepper_sauce_pool(n,x,y,z+.119,.216)
+
+def steak_sauce_pot(n,x,y,z):
+ lathe(n+' open steel pot',(x,y,z),[(0,0),(.175,0),(.19,.025),(.19,.22),(.178,.22),(.178,.025),(0,.025)],'steelMatte',64)
+ torus(n+' steel rim',(x,y,z+.218),.184,.006,'steel',steps=64)
+ pepper_sauce_pool(n,x,y,z+.176,.175)
+ for side in [-1,1]:
+  curve(n+' black side handle',[(x+side*.185,y-.06,z+.17),(x+side*.27,y-.06,z+.18),(x+side*.28,y+.06,z+.18),(x+side*.185,y+.06,z+.17)],.012,'black')

@@ -2,7 +2,7 @@
 
 Intended About-tour section: **Without the disruptions.**
 
-Revision 7 builds on the reconstruction from the approved design discussion. Earlier uncommitted workspace artifacts were lost; this is not a byte-identical recovery. The sources, native master, GLB, screenshots and download bundle are now versioned together in the repository.
+Revision 8 builds on the reconstruction from the approved design discussion. Earlier uncommitted workspace artifacts were lost; this is not a byte-identical recovery. The sources, native master, GLB, screenshots and download bundle are now versioned together in the repository.
 
 Matte ivory and graphite L-shaped kitchen, steel island, four-seat oak dining table, prime rib with a dark crust and pink cut face, golden roast potatoes, four beef/peas/potato dinners with peppercorn sauce, fanned brioche and butter directly on the shared board, wine and four individual soup bowls.
 
@@ -12,9 +12,11 @@ Revision 6 adds a gently flattened base to the island roast, removes the second 
 
 Revision 7 gives all five slices the same oval shape with a flat edge and identical serving dimensions. The roast is another 30% smaller, and the carving board is reduced to 1.0 × 0.65 m with a shorter knife repositioned to fit.
 
+Revision 8 adds a large ivory bowl of peppercorn steak sauce to the left of the island wine bottles and a separate open sauce pot on the stove. Both use the same sauce material and pepper flecks as the plated beef; the soup pot remains alongside the sauce pot.
+
 ## Files
 
-- [Download complete version 7 bundle](downloads/monochrome-social-kitchen-v7.zip) (use GitHub’s **Download raw file** button).
+- [Download complete version 8 bundle](downloads/monochrome-social-kitchen-v8.zip) (use GitHub’s **Download raw file** button).
 - [Editable Blender 4.3 master](models/monochrome-social-kitchen.blend).
 - [Standard GLB export](models/monochrome-social-kitchen.glb).
 - [Assembly roots and bounds](models/monochrome-social-kitchen-assemblies.json).
@@ -45,3 +47,5 @@ These are static review assets, not production About-tour derivatives. Named ass
 ![Roast detail](previews/prime-rib-detail.png)
 
 ![Dinner table detail](previews/plated-dinner-detail.png)
+
+![Sauce pot and soup on the stove](previews/cooktop-sauce-detail.png)

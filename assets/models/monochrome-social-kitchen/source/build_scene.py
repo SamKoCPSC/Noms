@@ -48,7 +48,7 @@ for z in [1.22,1.95]:
  box('Built-in oven frame',(1.84,2.56,z),(.72,.06,.62),'steelMatte',.012);box('Oven dark glass',(1.84,2.52,z-.03),(.60,.018,.42),'black',.018)
  rod('Oven handle',(1.59,2.48,z+.22),(2.09,2.48,z+.22),.018,'steel')
  for x in [1.60,2.08]:cyl('Oven dial',(x,2.51,z+.26),.024,.019,'black',24).rotation_euler.x=pi/2
-collection('08 Cooktop and soup',offset=(0,-.45,.2))
+collection('08 Cooktop soup and steak sauce',offset=(0,-.45,.2))
 box('Induction hob',(-.35,3.02,1.092),(1.49,.65,.025),'black',.015)
 for x in [-.76,.08]:
  for y in [2.87,3.17]:torus('Induction ring',(x,y,1.11),.14,.007,'steelDark',steps=40)
@@ -57,6 +57,7 @@ cyl('Visible soup surface',(.08,3.10,1.36),.201,.008,'soup',48)
 for i in range(17):
  a=i*2.4;r=.16*math.sqrt((i+.5)/17);box('Soup vegetable',(.08+r*cos(a),3.10+r*sin(a),1.369),(.025,.025,.012),'orange' if i%2 else 'leaf',.004)
 for x in [-.20,.36]:curve('Pot side handle',[(x,3.04,1.31),(x+(-.05 if x<0 else .05),3.04,1.32),(x+(-.05 if x<0 else .05),3.17,1.32),(x,3.17,1.31)],.014,'black')
+steak_sauce_pot('Stove steak sauce',-.76,3.10,1.12)
 collection('09 Counter appliances and fittings',offset=(0,-.5,.2))
 box('Espresso machine',(-2.80,3.12,1.40),(.55,.47,.62),'graphite',.022);box('Espresso steel fascia',(-2.8,2.871,1.57),(.49,.025,.20),'steelMatte',.012)
 box('Espresso drip tray',(-2.8,2.80,1.12),(.54,.28,.045),'steelMatte',.01)
@@ -85,6 +86,7 @@ for x in [.285,1.035]:box('Roasting tray handle',(x,-.12,1.218),(.09,.19,.018),'
 potatoes('Island tray',.66,-.12,1.19,.048,30,cols=6)
 rounded_slab('Island brioche board',(-.72,-.40,1.17),.76,.24,.035,.03,'oak3');brioche('Island sliced brioche',-.72,-.40,1.19,6,.92)
 winebottle('Cabernet bottle',1.20,.57,1.15,'CABERNET');winebottle('Bordeaux bottle',.97,.60,1.15,'BORDEAUX')
+serving_sauce_bowl('Island steak sauce',.47,.52,1.15)
 collection('12 Oak dining table',offset=(0,-.8,.1));table('Dining table',0,-2.15,.84,2.62,1.12,'oak3')
 collection('13 Four upholstered oak dining chairs',offset=(0,-.7,.1))
 for x in [-.72,.72]:chair('Front dining chair',(x,-3.02,0),pi,'cream');chair('Rear dining chair',(x,-1.28,0),0,'cream')
@@ -105,5 +107,6 @@ box('Butter block on bread board',(.075,-2.31,.954),(.13,.085,.045),'butter',.00
 for i in range(3):box('Butter cut lines',(.035+i*.04,-2.31,.977),(.002,.078,.002),'honey',0)
 rod('Butter knife on board',(-.17,-2.31,.943),(-.02,-2.31,.943),.007,'steel',12)
 bpy.context.scene['plated_dinners']=4;bpy.context.scene['wine_glasses']=4;bpy.context.scene['soup_bowls']=4;bpy.context.scene['tray_potatoes']=30
+bpy.context.scene['steak_sauce_bowls']=1;bpy.context.scene['steak_sauce_pots']=1
 bpy.context.scene['menu']='Prime rib, peppercorn sauce, golden roast potatoes, garden peas, brioche and board butter, red wine, soup'
 finish('monochrome-social-kitchen','L-shaped Social Kitchen — reconstructed',scale=11.5,target=(0,0,1.15))
