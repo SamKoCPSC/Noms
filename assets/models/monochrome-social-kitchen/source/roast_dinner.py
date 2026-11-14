@@ -13,8 +13,8 @@ def foodmesh(n,v,f,colors,mat):
  o=mesh(n,v,f,mat);at=o.data.color_attributes.new(name='FoodColor',type='FLOAT_COLOR',domain='CORNER')
  for lp in o.data.loops:at.data[lp.index].color=colors[lp.vertex_index]
  return smooth(o)
-def section(t,oval=False):
- if oval:return .35*cos(t),.247+.23*sin(t)
+def section(t,oval=False,flat_bottom=False):
+ if oval:return .35*cos(t),max(.045 if flat_bottom else .017,.247+.23*sin(t))
  rr=1+.085*sin(3*t+.4)+.045*cos(5*t-1.1)
  return .35*cos(t)*rr,max(.016,.247+.247*sin(t)*rr)
 def cutcolor(px,pz,r,t,seed):
@@ -24,12 +24,12 @@ def cutcolor(px,pz,r,t,seed):
  if r>.90:return blendcol('#98665A','#BD8577',fib*.5+.2)
  if pz>.32 and abs(pz-(.365-.19*(px+.04)**2))<.006+.002*sin(px*62):return blendcol('#DAAB9E','#EAC1AE',.5+q*.3)
  return blendcol('#983F49','#D58583',.44+q*.34+(fib-.5)*.23)
-def cutface(n,mapper,seed=0,oval=False):
+def cutface(n,mapper,seed=0,oval=False,flat_bottom=False):
  N,L=96,24;v=[mapper(0,.247)];cs=[cutcolor(0,.247,0,0,seed)]
  for j in range(1,L+1):
   r=j/L
   for i in range(N):
-   t=2*pi*i/N;xx,zz=section(t,oval);xx*=r;zz=.247+(zz-.247)*r;v.append(mapper(xx,zz));cs.append(cutcolor(xx,zz,r,t,seed))
+   t=2*pi*i/N;xx,zz=section(t,oval,flat_bottom);xx*=r;zz=.247+(zz-.247)*r;v.append(mapper(xx,zz));cs.append(cutcolor(xx,zz,r,t,seed))
  f=[(0,1+i,1+(i+1)%N)for i in range(N)]
  for j in range(L-1):
   a=1+j*N;b=a+N
@@ -40,10 +40,10 @@ def roast(n,x,y,z):
  for j in range(L+1):
   d=j/L;yy=y+d*.52;bulge=1+.035*sin(d*pi)-.065*d**5
   for i in range(N):
-   t=2*pi*i/N;xx,zz=section(t,True);q=noise.noise(Vector((xx*53,yy*49,zz*51)));xx=xx*bulge+.007*q*cos(t);zz=max(.008,zz+.008*q)
+   t=2*pi*i/N;xx,zz=section(t,True,flat_bottom=True);q=noise.noise(Vector((xx*53,yy*49,zz*51)));xx=xx*bulge+.007*q*cos(t);zz=max(.045,zz+.008*q)
    v.append((x+xx,yy,z+zz));m=noise.noise(Vector((xx*32,yy*33,zz*35)));cs.append(blendcol('#100C08','#492916',.38+m*.64) if m<.38 else blendcol('#512C16','#78431D',(m-.38)*2))
  f=[(j*N+i,(j+1)*N+i,(j+1)*N+(i+1)%N,j*N+(i+1)%N)for j in range(L)for i in range(N)]
- f.append(tuple(reversed(range(L*N,(L+1)*N))));foodmesh(n+' uneven pepper crust',v,f,cs,'ribSurface');cutface(n+' pink carved face',lambda xx,zz:(x+xx,y-.001,z+zz),1,oval=True)
+ f.append(tuple(reversed(range(L*N,(L+1)*N))));foodmesh(n+' uneven pepper crust',v,f,cs,'ribSurface');cutface(n+' pink carved face',lambda xx,zz:(x+xx,y-.001,z+zz),1,oval=True,flat_bottom=True)
  for i in range(36):
   a=.35+random.random()*2.45;xx,zz=section(a,True);yy=y+.04+random.random()*.43
   uv(n+' herb crust',(x+xx,yy,z+zz+.003),(.005,.01,.002),'rosemary' if i%4==0 else 'beefCrust',8,6)
@@ -91,22 +91,22 @@ def potatoes(n,x,y,z,s=.05,count=6,cols=None):
   o=local_group(n+' irregular roasted piece',(xx,yy,z),i*2.4,lambda:potato_piece(n,s*(.85+.24*sin(i*1.7+.3)**2),i));o.rotation_euler.x=.42*sin(i*2.1+.4);o.rotation_euler.y=.33*cos(i*1.4)
   bpy.context.view_layer.update();low=min((c.matrix_world@v.co).z for c in o.children_recursive if c.type=='MESH'for v in c.data.vertices);o.location.z+=z-low
 
-def sauce(n,x,y,z):
+def sauce(n,x,y,z,scale=1):
  v=[];f=[];S,W=28,14
  for i in range(S+1):
   t=i/S;h=(.034+.006*sin(t*13))*sin(pi*t)**.4
   for j in range(W+1):
-   u=2*j/W-1;v.append((x+.15*t+u*h*.52,y-.11*t+u*h,z+.009*(1-u*u)+.003*sin(t*10)))
+   u=2*j/W-1;v.append((x+scale*(.15*t+u*h*.52),y+scale*(-.11*t+u*h),z+.009*(1-u*u)+.003*sin(t*10)))
  for i in range(S):
   for j in range(W):a=i*(W+1)+j;f.append((a,a+1,a+W+2,a+W+1))
  smooth(mesh(n+' peppercorn cream sauce',v,f,'pepperSauce'))
  for i in range(22):
   t=(i+.5)/22;u=.65*sin(i*2.4);h=(.034+.006*sin(t*13))*sin(pi*t)**.4
-  uv(n+' cracked pepper',(x+.15*t+u*h*.52,y-.11*t+u*h,z+.009*(1-u*u)+.003*sin(t*10)+.0015),(.0018,.0014,.001),'beefCrust',8,6)
+  uv(n+' cracked pepper',(x+scale*(.15*t+u*h*.52),y+scale*(-.11*t+u*h),z+.009*(1-u*u)+.003*sin(t*10)+.0015),(.0018,.0014,.001),'beefCrust',8,6)
 def plated_dinner(n,x,y,z):
  plate(n+' dark stoneware plate',x,y,z,.235,'dinnerStone');torus(n+' warm rim',(x,y,z+.027),.231,.0025,'dinnerRim')
- for i in range(4):ribslice(n+' carved beef',x+.005+i*.043,y+.104-i*.032,z+.038+i*.006,1,.25).scale=(.60,1.02,.85)
- sauce(n,x-.005,y+.12,z+.077)
+ ribslice(n+' carved beef',x+.07,y+.055,z+.038,1,.25).scale=(1.0,1.22,.85)
+ sauce(n,x+.025,y+.10,z+.059,scale=.65)
  for i in range(43):
   a=i*2.4;r=.073*math.sqrt((i+.5)/43);uv(n+' green pea',(x-.125+r*cos(a),y+.006+r*sin(a)*1.12,z+.047+(i%3)*.003),(.0105,.0105,.010),'gardenPea',12,8)
  potatoes(n,x+.016,y-.128,z+.034,.035,6)

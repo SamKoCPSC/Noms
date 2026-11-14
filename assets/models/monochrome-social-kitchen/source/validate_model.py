@@ -5,13 +5,18 @@ from mathutils import Vector
 root=Path(__file__).resolve().parents[1];name=root.name
 native=root/'models'/f'{name}.blend';glb=root/'models'/f'{name}.glb'
 bpy.ops.wm.open_mainfile(filepath=str(native))
-assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==5
+assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==6
 obs=list(bpy.context.scene.objects)
 count=lambda s:sum(s in o.name for o in obs)
-report={'revision':5,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
+report={'revision':6,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
 if 'kitchen' in name:
  assert count('dark stoneware plate')==4
- assert count('rosy beef grain')==18
+ assert count('rosy beef grain')==5
+ assert count('Carved roast first slice rosy beef grain')==1 and count('Carved roast second slice')==0
+ for plate in [o for o in obs if 'dark stoneware plate' in o.name]:
+  center=sum((plate.matrix_world@Vector(v) for v in plate.bound_box),Vector())/8
+  slices=[o for o in obs if 'carved beef rosy beef grain' in o.name and (o.matrix_world.translation-center).length<.25]
+  assert len(slices)==1
  assert count('crisp potato chunk')==54
  assert count('green pea')==172
  assert count('peppercorn cream sauce')==4
@@ -32,7 +37,12 @@ if 'kitchen' in name:
  face=bpy.data.objects['Whole prime rib roast pink carved face']
  normal=(face.matrix_world.to_3x3().inverted().transposed()@face.data.polygons[0].normal).normalized()
  assert normal.x>.999 and abs(normal.y)<.001
- for v in list(face.data.vertices)[-96:]:assert abs((v.co.x/.35)**2+((v.co.z-.247)/.23)**2-1)<.0001
+ for v in list(face.data.vertices)[-96:]:
+  assert v.co.z>=.045-1e-6
+  assert abs(v.co.z-.045)<1e-6 or abs((v.co.x/.35)**2+((v.co.z-.247)/.23)**2-1)<.0001
+ crust=bpy.data.objects['Whole prime rib roast uneven pepper crust']
+ base=[v for v in crust.data.vertices if abs(v.co.z-.045)<1e-6]
+ assert len(base)>150 and max(v.co.x for v in base)-min(v.co.x for v in base)>.25
  roast_pts=[o.matrix_world@v.co for o in roast.children_recursive if o.type=='MESH'for v in o.data.vertices]
  assert max(v.z for v in roast_pts)-min(v.z for v in roast_pts)<.30
  assert abs(min(v.z for v in roast_pts)-1.194)<.001
@@ -44,7 +54,7 @@ if 'kitchen' in name:
   low,high=bounds(o)
   assert all(tl[k]<low[k]<high[k]<th[k]for k in [0,1]) and abs(low[2]-th[2])<.005
   assert high[0]<bl[0] or low[0]>bh[0]
- report.update(plated_dinners=4,beef_slices=18,potato_chunks=54,tray_potatoes=30,soup_bowls=4,oval_roast=True,roast_cut_face_direction='+X',roast_scale=.60,fanned_bread_slices=4,butter_on_shared_board=True)
+ report.update(plated_dinners=4,beef_slices=5,board_slices=1,slices_per_plate=1,flat_roast_base=True,potato_chunks=54,tray_potatoes=30,soup_bowls=4,oval_roast=True,roast_cut_face_direction='+X',roast_scale=.60,fanned_bread_slices=4,butter_on_shared_board=True)
 
 else:
  assert bpy.context.scene['storeys']==2 and not bpy.context.scene['has_tent'] and not bpy.context.scene['has_fence']
@@ -60,7 +70,7 @@ for node in d['nodes']:
 for view in d['bufferViews']:assert view.get('byteOffset',0)+view['byteLength']<=d['buffers'][view.get('buffer',0)]['byteLength']
 if 'kitchen' in name:
  food=[m for m in d['meshes']if any(t in m.get('name','')for t in ['pink carved face','rosy beef grain','crisp potato chunk','uneven pepper crust'])]
- assert len(food)==74 and all('COLOR_0'in p['attributes']for m in food for p in m['primitives'])
+ assert len(food)==61 and all('COLOR_0'in p['attributes']for m in food for p in m['primitives'])
  report['food_meshes_with_vertex_colors']=len(food)
 report.update(glb_bytes=len(b),glb_meshes=len(d['meshes']),triangles=sum(d['accessors'][p['indices']]['count']//3 for m in d['meshes']for p in m['primitives']),sha256=hashlib.sha256(b).hexdigest(),structure_valid=True)
 bpy.ops.wm.read_factory_settings(use_empty=True);bpy.ops.import_scene.gltf(filepath=str(glb))

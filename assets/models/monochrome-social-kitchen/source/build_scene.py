@@ -76,7 +76,7 @@ whole_roast=local_group('Carved whole roast',(-.65,.36,1.195),pi/2,lambda:roast(
 bpy.context.view_layer.update()
 roast_bottom=min((o.matrix_world@v.co).z for o in whole_roast.children_recursive if o.type=='MESH'for v in o.data.vertices)
 whole_roast.location.z+=1.194-roast_bottom
-ribslice('Carved roast first slice',-.45,.35,1.195,1.80,pi/2-.10,oval=True);ribslice('Carved roast second slice',-.27,.33,1.214,1.80,pi/2+.14,oval=True)
+ribslice('Carved roast first slice',-.45,.35,1.195,1.80,pi/2-.10,oval=True)
 rod('Carving knife handle',(.025,.44,1.21),(.025,.64,1.21),.018,'black');box('Carving knife blade',(.025,.255,1.21),(.035,.37,.008),'steel',.002)
 rounded_slab('Roasting tray base',(.66,-.12,1.175),.69,.53,.025,.055,'steelMatte')
 for y in [-.375,.135]:box('Roasting tray raised rim',(.66,y,1.205),(.64,.018,.06),'steelMatte',.009)
