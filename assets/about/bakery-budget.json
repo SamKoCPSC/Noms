@@ -1,13 +1,17 @@
 {
   "source": "models/modern-baking-lab/models/modern-baking-lab.blend",
   "source_sha256": "85c5265636123679305f7cc69b031b2b1fed75be08954cb045514aa080dee949",
-  "triangles": 377793,
-  "assemblies": 24,
-  "materials": 31,
-  "glb_bytes": 9739840,
+  "triangles": 380449,
+  "assemblies": 25,
+  "materials": 32,
+  "glb_bytes": 9793708,
   "textures": 0,
   "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
   "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
   "position_quantum": 0.00014548433029816263,
-  "quantization": "KHR_mesh_quantization"
+  "quantization": "KHR_mesh_quantization",
+  "penguin_plushes": 1,
+  "plush_triangles": 2656,
+  "plush_source": "assets/models/about-penguin-plushes",
+  "base_glb_sha256": "31a316dea207874f21a8c7ecbebf57e6b6141fda76a39c3ac0c00b6cdd69a8c2"
 }

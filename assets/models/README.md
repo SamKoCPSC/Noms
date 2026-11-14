@@ -5,6 +5,7 @@ rebuild sources. Multi-scene collections also include an offline gallery.
 
 | Collection | Scenes | Preview |
 | --- | --- | --- |
+| [About-tour penguin plushes](about-penguin-plushes/README.md) | Fifteen editable plush companions across all twelve active tour models | [All scenes](about-penguin-plushes/previews/collection.jpg) · [Close-ups](about-penguin-plushes/previews/plush-details.jpg) |
 | [L-shaped Social Kitchen](monochrome-social-kitchen/README.md) | Revision 8: matching oval beef servings, individual soups, island steak-sauce bowl and stovetop sauce pot; integrated in Without the disruptions | [Preview](monochrome-social-kitchen/previews/monochrome-social-kitchen.png) |
 | [Riverside Cabin Campsite](riverside-cabin-campsite/README.md) | Reconstructed revision 4: two-storey cabin, river, folded pines and camping food; integrated in Respecting your privacy | [Preview](riverside-cabin-campsite/previews/riverside-cabin-campsite.png) |
 | [University Reading Room](university-library/README.md) | Revision 4: UBC-inspired hall with populated study tables, blue window panels and a full-turn spiral stair; integrated in the origin-story card | [Preview](university-library/previews/university-library.png) |

@@ -71,3 +71,7 @@ The coffee-shop asset remains available for another future card.
 
 Both remaining philosophy cards now use their approved models. The potluck room
 remains in the asset archive but is no longer downloaded by the tour.
+
+## Shared penguin companions
+
+All twelve active models now include one or two new penguin plushes, with two in each outdoor scene. The bedroom retains its existing collection. See the [placement manifest and editable library](../../../assets/models/about-penguin-plushes/README.md) for the fifteen additions, their furniture supports, and reproducible production exports. This accessory pass does not change the section-to-model assignments above.

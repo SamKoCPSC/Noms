@@ -296,11 +296,73 @@ pub fn decode(bytes: &[u8]) -> Result<DioramaMesh, String> {
 mod tests {
     use super::*;
     #[test]
+    fn every_active_scene_has_small_solid_animated_penguin_plushes() {
+        let manifest: Value = serde_json::from_str(include_str!(
+            "../../../assets/models/about-penguin-plushes/placements.json"
+        ))
+        .unwrap();
+        let assets = [
+            include_bytes!("../../../assets/about/sams-kitchen-detailed.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-office.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-corporate-office.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-brick-kitchen.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-bakery.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-farmers-market.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-social-kitchen.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-riverside-campsite.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-garden.glb").as_slice(),
+        ];
+        let mut total = 0;
+        for (bytes, row) in assets
+            .into_iter()
+            .zip(manifest["models"].as_array().unwrap())
+        {
+            let model = decode(bytes).unwrap();
+            let plushes: Vec<_> = model
+                .parts
+                .iter()
+                .filter(|p| p.name.starts_with("Penguin plush "))
+                .collect();
+            let placements = row["plushes"].as_array().unwrap();
+            assert_eq!(plushes.len(), placements.len(), "{}", row["model"]);
+            assert!((1..=2).contains(&plushes.len()));
+            assert!(model.vertices.len() / 36 <= MAX_TRIANGLES);
+            assert!(model.parts.len() <= 64);
+            for (part, placement) in plushes.iter().zip(placements) {
+                assert_eq!(part.texture, 0);
+                assert_eq!(part.opacity, 1.);
+                assert_eq!(part.count / 3, 2656);
+                assert!(part.start >= 100. && part.end <= 160.);
+                assert!(model
+                    .parts
+                    .iter()
+                    .any(|p| p.name == placement["support"].as_str().unwrap()));
+                let heights: Vec<_> = model.vertices
+                    [part.first * 12..(part.first + part.count) * 12]
+                    .chunks_exact(12)
+                    .map(|v| v[1])
+                    .collect();
+                let bottom = heights.iter().copied().fold(f32::INFINITY, f32::min);
+                let top = heights.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+                assert!((bottom - placement["position"][1].as_f64().unwrap() as f32).abs() < 0.001);
+                assert!(
+                    (top - bottom - placement["height"].as_f64().unwrap() as f32).abs() < 0.001
+                );
+            }
+            total += plushes.len();
+        }
+        assert_eq!(total, 15);
+    }
+
+    #[test]
     fn delivered_garden_keeps_approved_revision_six_assemblies() {
         let model = decode(include_bytes!("../../../assets/about/sams-garden.glb")).unwrap();
         let names: std::collections::HashSet<_> =
             model.parts.iter().map(|p| p.name.as_str()).collect();
-        assert_eq!(names.len(), 29);
+        assert_eq!(names.len(), 31);
         for prefix in ["04 ", "22 ", "28 ", "29 "] {
             assert!(
                 names.iter().any(|n| n.starts_with(prefix)),
@@ -321,7 +383,7 @@ mod tests {
         let model = decode(include_bytes!("../../../assets/about/sams-bedroom.glb")).unwrap();
         let names: std::collections::HashSet<_> =
             model.parts.iter().map(|p| p.name.as_str()).collect();
-        assert_eq!(names.len(), 32);
+        assert_eq!(names.len(), 33);
         for prefix in ["04 ", "14B ", "17 ", "23 ", "30 ", "31 ", "32 ", "33 "] {
             assert!(
                 names.iter().any(|n| n.starts_with(prefix)),
@@ -390,7 +452,10 @@ mod tests {
         // A baked final-scene lightmap would bring back shadows from absent props.
         for material in doc["materials"].as_array().unwrap() {
             let meta = &material["extras"]["assembly"];
-            assert_eq!(meta["surfaceMaterials"].as_bool(), Some(true));
+            assert_eq!(
+                meta["surfaceMaterials"].as_bool(),
+                Some(!meta["name"].as_str().unwrap().starts_with("Penguin plush"))
+            );
             assert_eq!(meta["masterLighting"].as_bool(), Some(false));
         }
         assert!(bytes.len() < 9_000_000);
@@ -402,16 +467,20 @@ mod tests {
             .iter()
             .map(|p| p.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 18);
+        assert_eq!(names.len(), 19);
         assert!(names.contains("ASM_17_Recipe_book") && names.contains("ASM_18_Laptop"));
-        assert_eq!(m.parts.len(), 20);
+        assert_eq!(m.parts.len(), 21);
         let mut cursor = 0;
         for p in &m.parts {
             assert_eq!(p.first, cursor);
             cursor += p.count;
-            assert!(p.start >= 1. && p.end <= 144. && p.end > p.start);
+            assert!(p.start >= 1. && p.end <= 148. && p.end > p.start);
             assert!(p.pivot.iter().chain(p.offset.iter()).all(|x| x.is_finite()));
-            assert!((1..=3).contains(&p.texture));
+            assert!(if p.name.starts_with("Penguin plush") {
+                p.texture == 0
+            } else {
+                (1..=3).contains(&p.texture)
+            });
             if p.texture > 0 {
                 let uv = m.vertices[p.first * 12..(p.first + p.count) * 12]
                     .chunks_exact(12)
@@ -459,12 +528,12 @@ mod tests {
         for (bytes, groups, required) in [
             (
                 include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
-                13,
+                14,
                 "06 Full turn spiral staircase",
             ),
             (
                 include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
-                17,
+                18,
                 "04 Stocked Asian pantry shelving",
             ),
         ] {
@@ -486,7 +555,7 @@ mod tests {
                 .parts
                 .iter()
                 .all(|p| p.texture == 0 && p.end > p.start));
-            if groups == 17 {
+            if groups == 18 {
                 assert!(model.parts.iter().any(|p| p.opacity < 0.5));
             }
         }
@@ -548,14 +617,14 @@ mod tests {
     fn delivered_social_kitchen_preserves_food_colors_and_all_geometry() {
         let bytes = include_bytes!("../../../assets/about/sams-social-kitchen.glb");
         let model = decode(bytes).unwrap();
-        assert_eq!(model.vertices.len() / 36, 362_574);
+        assert_eq!(model.vertices.len() / 36, 365_230);
         assert!(bytes.len() < 10_000_000);
         let names = model
             .parts
             .iter()
             .map(|p| p.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 16);
+        assert_eq!(names.len(), 17);
         for name in [
             "01 Foundation and tiled floor / floor",
             "02 Ivory rear wall / back wall",
@@ -597,14 +666,14 @@ mod tests {
     fn delivered_riverside_campsite_keeps_cabin_river_and_food() {
         let bytes = include_bytes!("../../../assets/about/sams-riverside-campsite.glb");
         let model = decode(bytes).unwrap();
-        assert_eq!(model.vertices.len() / 36, 156_043);
+        assert_eq!(model.vertices.len() / 36, 161_355);
         assert!(bytes.len() < 5_000_000);
         let names = model
             .parts
             .iter()
             .map(|p| p.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 11);
+        assert_eq!(names.len(), 13);
         for name in [
             "01 Square woodland plinth / floor",
             "02 Winding river and bank stones / floor",
@@ -638,7 +707,7 @@ mod tests {
             .iter()
             .map(|p| p.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 8);
+        assert_eq!(names.len(), 10);
         for required in [
             "02 Farmhouse dairy cart",
             "03 Village bakery cart",
@@ -685,7 +754,7 @@ mod tests {
             .iter()
             .map(|p| p.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 24);
+        assert_eq!(names.len(), 25);
         for required in [
             "09 Central oak baking island",
             "18 Reversible dough sheeter",
@@ -711,14 +780,14 @@ mod tests {
         let bytes = include_bytes!("../../../assets/about/sams-brick-kitchen.glb");
         let model = decode(bytes).unwrap();
         assert!(bytes.len() < 12_000_000);
-        assert_eq!(model.vertices.len() / 36, 332_244);
+        assert_eq!(model.vertices.len() / 36, 334_900);
         assert!(model.vertices.iter().all(|v| v.is_finite()));
         let names = model
             .parts
             .iter()
             .map(|p| p.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 17);
+        assert_eq!(names.len(), 18);
         for required in [
             "08 Front dining peninsula",
             "15 Espresso machine and grinder",
@@ -744,14 +813,14 @@ mod tests {
         let bytes = include_bytes!("../../../assets/about/sams-corporate-office.glb");
         let model = decode(bytes).unwrap();
         assert!(bytes.len() < 8_000_000);
-        assert_eq!(model.vertices.len() / 36, 264_829);
+        assert_eq!(model.vertices.len() / 36, 267_485);
         assert!(model.vertices.iter().all(|v| v.is_finite()));
         let names = model
             .parts
             .iter()
             .map(|p| p.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 15);
+        assert_eq!(names.len(), 16);
         for name in [
             "01 Rounded foundation and carpet floor / floor",
             "02 Rear kitchenette wall / back wall",
@@ -781,7 +850,7 @@ mod tests {
             .iter()
             .map(|part| part.name.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(names.len(), 16);
+        assert_eq!(names.len(), 17);
         for name in [
             "10 Triple code monitors",
             "11 Desktop peripherals and audio",
@@ -791,7 +860,7 @@ mod tests {
         ] {
             assert!(names.contains(name), "Missing {name}");
         }
-        assert_eq!(model.parts.len(), 24);
+        assert_eq!(model.parts.len(), 25);
         assert!(model
             .parts
             .iter()

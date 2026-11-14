@@ -1,13 +1,17 @@
 {
   "source": "models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend",
   "source_sha256": "f5581f0d3f8d3204fa76b69456f1bf5fa0487d319378e07588935cf27bcf3ffd",
-  "triangles": 156043,
-  "assemblies": 11,
-  "materials": 14,
-  "glb_bytes": 4414276,
+  "triangles": 161355,
+  "assemblies": 13,
+  "materials": 16,
+  "glb_bytes": 4521760,
   "textures": 0,
   "geometry": "All evaluated master triangles retained; no decimation",
   "shading": "Linear material and authored vertex colors and evaluated normals; runtime matte lighting and dynamic shadows",
   "position_quantum": 0.00014310055196699073,
-  "quantization": "KHR_mesh_quantization"
+  "quantization": "KHR_mesh_quantization",
+  "penguin_plushes": 2,
+  "plush_triangles": 5312,
+  "plush_source": "assets/models/about-penguin-plushes",
+  "base_glb_sha256": "468d43fb5e54a4d98a12e3a41e9b52f13335ddba4ea29131ac1cbab1896d064b"
 }

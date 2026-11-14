@@ -1,14 +1,18 @@
 {
   "source_revision": 6,
   "source_sha256": "6766c06921799b251c859767d62f56731ef689891f2ee5085de7c21db6aef26f",
-  "triangles": 394185,
-  "draw_calls": 32,
+  "triangles": 399497,
+  "draw_calls": 34,
   "textures": 1,
-  "assembly_groups": 29,
+  "assembly_groups": 31,
   "contact_shading": "vertex ambient occlusion, glazing excluded",
-  "glb_bytes": 12892928,
+  "glb_bytes": 13000408,
   "native_master_unchanged": true,
   "position_quantum": 0.0002518366101114266,
   "quantization": "KHR_mesh_quantization",
-  "materials": 32
+  "materials": 34,
+  "penguin_plushes": 2,
+  "plush_triangles": 5312,
+  "plush_source": "assets/models/about-penguin-plushes",
+  "base_glb_sha256": "d0584b5ef8b5d715dfc934c125d31bd97f553adab7afac223c7bc8a263d29e77"
 }
