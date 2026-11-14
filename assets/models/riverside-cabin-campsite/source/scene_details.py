@@ -165,7 +165,7 @@ def area(n,loc,energy,size,col,target=(0,0,0)):
  d=bpy.data.lights.new(n,'AREA');d.energy=energy;d.shape='DISK';d.size=size;d.color=col;o=bpy.data.objects.new(n,d);COL.objects.link(o);o.parent=ROOT;o.location=loc;o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler();return o
 
 def finish(key,title,scale=10.2,target=(0,0,1.1),night=False):
- out=R.parent;scene=bpy.context.scene;scene.unit_settings.system='METRIC';scene['model_name']=title;scene['revision']=1;scene['style']='Noms matte miniature diorama';scene['animation_status']='Static review model; separate assembly roots for future animation'
+ out=R.parent;scene=bpy.context.scene;scene.unit_settings.system='METRIC';scene['model_name']=title;scene['revision']=4;scene['reconstructed']=True;scene['style']='Noms matte miniature diorama';scene['animation_status']='Static review model; separate assembly roots for future animation'
  bpy.context.view_layer.update();manifest=[]
  for root in GROUPS:
   obs=[o for o in root.children_recursive if o.type in ['MESH','CURVE','FONT']];pts=[o.matrix_world@Vector(v)for o in obs for v in o.bound_box]
@@ -176,16 +176,19 @@ def finish(key,title,scale=10.2,target=(0,0,1.1),night=False):
  collection('99 Studio lighting and cameras',assembly=False)
  M['studio']=material('Studio backdrop','#E6E1D6' if not night else '#45545C',.9)
  box('Studio ground',(0,0,-.32),(200,200,.1),'studio',0)
- scene.render.engine='CYCLES';scene.cycles.device='CPU';scene.cycles.samples=64;scene.cycles.use_denoising=False;scene.cycles.max_bounces=7;scene.cycles.transmission_bounces=6;scene.cycles.transparent_max_bounces=8
- scene.render.threads_mode='FIXED';scene.render.threads=2;scene.world.use_nodes=True;scene.world.node_tree.nodes['Background'].inputs[0].default_value=(.76,.82,.88,1);scene.world.node_tree.nodes['Background'].inputs[1].default_value=.30 if not night else .13
+ scene.render.engine='CYCLES';scene.cycles.device='CPU';scene.cycles.samples=56;scene.cycles.use_denoising=False;scene.cycles.max_bounces=7;scene.cycles.transmission_bounces=6;scene.cycles.transparent_max_bounces=8
+ scene.render.threads_mode='FIXED';scene.render.threads=6;scene.world.use_nodes=True;scene.world.node_tree.nodes['Background'].inputs[0].default_value=(.76,.82,.88,1);scene.world.node_tree.nodes['Background'].inputs[1].default_value=.30 if not night else .13
  area('Broad warm key',(-5,-7,10),1400 if not night else 650,6,(1,.91,.82))
  area('Soft cool fill',(7,-2,7),1000 if not night else 700,5,(.88,.94,1))
  area('Roofless overhead softbox',(0,5,10),1200 if not night else 450,5,(1,.94,.84))
  d=bpy.data.cameras.new('Camera Hero');o=bpy.data.objects.new('Camera Hero',d);COL.objects.link(o);o.location=(10,-14,10);o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler();d.type='ORTHO';d.ortho_scale=scale;scene.camera=o
- scene.render.resolution_x=1600;scene.render.resolution_y=1400;scene.render.resolution_percentage=100;scene.render.image_settings.file_format='PNG';scene.render.film_transparent=False;scene.view_settings.view_transform='AgX';scene.view_settings.look='AgX - Medium High Contrast';scene.view_settings.exposure=.15
+ scene.render.resolution_x=1440;scene.render.resolution_y=1260;scene.render.resolution_percentage=100;scene.render.image_settings.file_format='PNG';scene.render.film_transparent=False;scene.view_settings.view_transform='AgX';scene.view_settings.look='AgX - Medium High Contrast';scene.view_settings.exposure=.15
  for o in list(bpy.data.objects):
   if not o.users_collection:bpy.data.objects.remove(o,do_unlink=True)
- bpy.context.preferences.filepaths.save_version=0;bpy.ops.file.pack_all()
+ bpy.context.preferences.filepaths.save_version=0
+ for src in R.glob('*.py'):
+  block=bpy.data.texts.get(src.name) or bpy.data.texts.new(src.name);block.clear();block.write(src.read_text())
+ bpy.ops.file.pack_all()
  notes=bpy.data.texts.new('README');notes.write(title+'\nOriginal Noms review model. Native editable curves, text, bevels and materials.\nAssembly roots are static and carry suggested incoming offsets. No baked placement shadows on walls or ground.\nNative Cycles lights produce dynamic shadows. GLB includes PBR materials and geometry; lighting is supplied by the host viewer.\nOriginal models using shared Noms modeling primitives.\n')
  for screen in bpy.data.screens:
   for a in screen.areas:
@@ -209,5 +212,6 @@ def finish(key,title,scale=10.2,target=(0,0,1.1),night=False):
  bpy.ops.export_scene.gltf(filepath=str(out/'models'/f'{key}.glb'),export_format='GLB',use_selection=True,export_apply=False,export_cameras=False,export_lights=False,export_animations=False,export_extras=True,export_yup=True)
  for o in copies+exportroots:bpy.data.objects.remove(o,do_unlink=True)
  print('GLB_SAVED',key,flush=True)
+ if '--skip-render' in sys.argv:return
  if '--proof' in sys.argv:scene.render.resolution_percentage=65;scene.cycles.samples=24
  scene.render.filepath=str(out/'previews'/f'{key}.png');bpy.ops.render.render(write_still=True);print('RENDER_COMPLETE',key,flush=True)
