@@ -132,6 +132,14 @@ mod tests {
                 include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
             ),
             (
+                Room::SocialKitchen,
+                include_bytes!("../../../assets/about/sams-social-kitchen.glb").as_slice(),
+            ),
+            (
+                Room::RiversideCampsite,
+                include_bytes!("../../../assets/about/sams-riverside-campsite.glb").as_slice(),
+            ),
+            (
                 Room::Bedroom,
                 include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
             ),

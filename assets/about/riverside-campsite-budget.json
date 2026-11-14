@@ -1,0 +1,13 @@
+{
+  "source": "models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend",
+  "source_sha256": "f5581f0d3f8d3204fa76b69456f1bf5fa0487d319378e07588935cf27bcf3ffd",
+  "triangles": 156043,
+  "assemblies": 11,
+  "materials": 14,
+  "glb_bytes": 4414276,
+  "textures": 0,
+  "geometry": "All evaluated master triangles retained; no decimation",
+  "shading": "Linear material and authored vertex colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.00014310055196699073,
+  "quantization": "KHR_mesh_quantization"
+}

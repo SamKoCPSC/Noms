@@ -95,7 +95,9 @@ fn original_camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
 pub fn room_rotation(room: super::assembly::Room, mobile: bool) -> Mat4 {
     let pitch = if matches!(
         room,
-        super::assembly::Room::Garden | super::assembly::Room::FarmersMarket
+        super::assembly::Room::Garden
+            | super::assembly::Room::FarmersMarket
+            | super::assembly::Room::RiversideCampsite
     ) {
         0.72
     } else {
@@ -363,7 +365,7 @@ mod tests {
             include_bytes!("../../../assets/about/sams-kitchen-detailed.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-office.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
-            include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-social-kitchen.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-garden.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-corporate-office.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
@@ -371,6 +373,7 @@ mod tests {
             include_bytes!("../../../assets/about/sams-brick-kitchen.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-bakery.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-farmers-market.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-riverside-campsite.glb").as_slice(),
         ]
         .into_iter()
         .enumerate()
@@ -387,7 +390,7 @@ mod tests {
                     super::super::assembly::Room::Kitchen,
                     super::super::assembly::Room::Office,
                     super::super::assembly::Room::Bedroom,
-                    super::super::assembly::Room::Potluck,
+                    super::super::assembly::Room::SocialKitchen,
                     super::super::assembly::Room::Garden,
                     super::super::assembly::Room::CorporateOffice,
                     super::super::assembly::Room::Library,
@@ -395,6 +398,7 @@ mod tests {
                     super::super::assembly::Room::BrickKitchen,
                     super::super::assembly::Room::Bakery,
                     super::super::assembly::Room::FarmersMarket,
+                    super::super::assembly::Room::RiversideCampsite,
                 ][i];
                 let rotation = room_rotation(room, w <= 700.);
                 let points: Vec<_> = mesh

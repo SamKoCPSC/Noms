@@ -88,31 +88,10 @@ const OFFICE_POSTER: Asset = asset!(
 const BEDROOM_MODEL: Asset = asset!("/assets/about/sams-bedroom.glb");
 const BEDROOM_PRINTS: Asset = asset!("/assets/about/bedroom-posters.webp");
 const BEDROOM_POSTER: Asset = asset!("/assets/about/sams-bedroom.webp");
-const POTLUCK_MODEL: Asset = asset!("/assets/about/sams-potluck.glb");
-const POTLUCK_WINDOW: Asset = asset!(
-    "/assets/about/potluck-window.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_TV: Asset = asset!(
-    "/assets/about/potluck-tv.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_PASTRY: Asset = asset!(
-    "/assets/about/potluck-pastry.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_SALT: Asset = asset!(
-    "/assets/about/potluck-chips-salt.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_BBQ: Asset = asset!(
-    "/assets/about/potluck-chips-bbq.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_POSTER: Asset = asset!(
-    "/assets/about/sams-potluck.webp",
-    manganis::AssetOptions::builder()
-);
+const SOCIAL_KITCHEN_MODEL: Asset = asset!("/assets/about/sams-social-kitchen.glb");
+const SOCIAL_KITCHEN_POSTER: Asset = asset!("/assets/about/sams-social-kitchen.webp");
+const RIVERSIDE_CAMPSITE_MODEL: Asset = asset!("/assets/about/sams-riverside-campsite.glb");
+const RIVERSIDE_CAMPSITE_POSTER: Asset = asset!("/assets/about/sams-riverside-campsite.webp");
 const GARDEN_MODEL: Asset = asset!("/assets/about/sams-garden.glb");
 const GARDEN_PASTRY: Asset = asset!(
     "/assets/about/garden-pastry.webp",
@@ -238,7 +217,7 @@ pub(super) const IDS: [&str; 12] = [
     "your-privacy",
     "gather",
 ];
-pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 3, 4];
+pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 11, 4];
 pub(super) const NAMES: [&str; 12] = [
     "The idea",
     "The reason",
@@ -350,7 +329,7 @@ pub fn About() -> Element {
        "data-farmers-market-url":FARMERS_MARKET_MODEL,"data-bakery-url":BAKERY_MODEL,"data-brick-kitchen-url":BRICK_KITCHEN_MODEL,"data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
        "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
        "data-garden-url":GARDEN_MODEL,"data-garden-pastry-url":GARDEN_PASTRY,
-       "data-potluck-url":POTLUCK_MODEL,"data-potluck-window-url":POTLUCK_WINDOW,"data-potluck-tv-url":POTLUCK_TV,"data-potluck-pastry-url":POTLUCK_PASTRY,"data-potluck-salt-url":POTLUCK_SALT,"data-potluck-bbq-url":POTLUCK_BBQ,
+       "data-social-kitchen-url":SOCIAL_KITCHEN_MODEL,"data-riverside-campsite-url":RIVERSIDE_CAMPSITE_MODEL,
         onmounted: move |_| {
           #[cfg(target_arch="wasm32")]
           if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
@@ -386,7 +365,8 @@ pub fn About() -> Element {
         if MODEL_FOR_STOP[i]==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
         if MODEL_FOR_STOP[i]==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
         if MODEL_FOR_STOP[i]==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:960,height:960}}}
-        if MODEL_FOR_STOP[i]==3 {figure{class:"potluck-fallback",img{src:POTLUCK_POSTER,alt:"A communal potluck dining room and TV lounge with three couches, a chess game, and a table of cake, candy, chips and drinks",loading:"lazy",width:960,height:720}}}
+        if MODEL_FOR_STOP[i]==3 {figure{class:"kitchen-fallback",img{src:SOCIAL_KITCHEN_POSTER,alt:"A contemporary L-shaped kitchen with a prime rib dinner for four, soup, brioche, wine and peppercorn sauce",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==11 {figure{class:"garden-fallback",img{src:RIVERSIDE_CAMPSITE_POSTER,alt:"A secluded riverside campsite with a two-storey cedar cabin, folded evergreen trees, a wooden porch chair, picnic food and a campfire",loading:"lazy",width:1080,height:945}}}
         if MODEL_FOR_STOP[i]==10 {figure{class:"garden-fallback",img{src:FARMERS_MARKET_POSTER,alt:"A corner farmers’ market with four enlarged bakery, dairy, pantry and prepared-food carts, two on each side, and four shared picnic tables",loading:"lazy",width:1080,height:945}}}
         if MODEL_FOR_STOP[i]==9 {figure{class:"kitchen-fallback",img{src:BAKERY_POSTER,alt:"A modern artisan bakery with bread and pastry displays, a dough sheeter, refrigerators and a baking workbench shifted to the right",loading:"lazy",width:1080,height:945}}}
         if MODEL_FOR_STOP[i]==8 {figure{class:"kitchen-fallback",img{src:BRICK_KITCHEN_POSTER,alt:"A U-shaped brick-loft kitchen with an oak dining peninsula, shared food, coffee appliances and a sink beneath the window",loading:"lazy",width:1080,height:945}}}
@@ -434,7 +414,7 @@ mod story_tests {
             IDS.iter().collect::<std::collections::HashSet<_>>().len(),
             12
         );
-        assert_eq!(MODEL_FOR_STOP, [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 3, 4]);
+        assert_eq!(MODEL_FOR_STOP, [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 11, 4]);
         assert_eq!(CONTENT.len(), IDS.len());
     }
 }

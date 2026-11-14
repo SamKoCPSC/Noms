@@ -1,0 +1,13 @@
+{
+  "source": "models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend",
+  "source_sha256": "a3a52438bc2662b14b55b21e7d9f2495b38983791776a55a04300e39e82e4196",
+  "triangles": 362574,
+  "assemblies": 16,
+  "materials": 19,
+  "glb_bytes": 9673204,
+  "textures": 0,
+  "geometry": "All evaluated master triangles retained; no decimation",
+  "shading": "Linear material and authored vertex colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.00011596856495967908,
+  "quantization": "KHR_mesh_quantization"
+}

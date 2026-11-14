@@ -79,7 +79,7 @@ cp /tmp/noms-corporate-office-web/* assets/about/
 
 ## Potluck room
 
-The philosophy stop uses the approved **revision 6** communal dining and living room from the [potluck model review](https://chatgpt.com/space/page_e5800ea484448191ab66357e10cd9472). The native Blender master remains separate and unchanged; `potluck-budget.json` records its SHA-256.
+The archived potluck model uses the approved **revision 6** communal dining and living room from the [potluck model review](https://chatgpt.com/space/page_e5800ea484448191ab66357e10cd9472). The native Blender master remains separate and unchanged; `potluck-budget.json` records its SHA-256.
 
 - `sams-potluck.glb`: 240,968 triangles, 26 assemblies, 34 draw calls and 8,587,256 bytes. Quantized position steps are approximately 0.13 mm in source units.
 - `potluck-window.webp`, `potluck-tv.webp`, `potluck-pastry.webp`, `potluck-chips-salt.webp`, and `potluck-chips-bbq.webp`: the approved window, television, croissant and snack packaging artwork.
@@ -140,13 +140,13 @@ cp /tmp/noms-supermarket-web/* assets/about/
 
 ## Runtime
 
-The story is split into twelve shorter cards, preserving the original paragraphs and repeated category headings. Each card has a unique anchor and its own scene instance, entrance state and shadow cache. The eleven model assets and their GPU geometry/textures are shared; repeated bedroom and potluck stops do not download or upload duplicate meshes.
+The story is split into twelve shorter cards, preserving the original paragraphs and repeated category headings. Each card has a unique anchor and its own scene instance, entrance state and shadow cache. Each of the twelve cards now has its own model asset. The archived potluck model is no longer requested.
 
 The camera renders across the full viewport. Text is a stationary overlay that fades during travel, rather than a clipped viewport that crops the camera. On mobile, content-sized cards are centered in the upper half of the space below the navbar. A separate framing rectangle fits settled models beneath the card (beside it on desktop) without clipping moving geometry. Cards do not capture scroll gestures. Each stop has a half-viewport reading pause followed by 1.5 viewport heights of camera travel. Back/continue links target the individual stops.
 
 The original five-stop camera spline, yaw and easing are retained. Longer routes repeat its four legs with rigid transforms joining the endpoints, so each additional card has its own room along the same forward-moving route. Each room plays its three-second entrance once when approached, including direct fragment entry, and remains assembled on later visits. Hidden tabs, reading mode and the loading curtain suspend playback. Mobile ambient drift starts paused; rendering stops after arrivals settle unless the camera moves.
 
-The existing Penguini loading curtain remains. All eleven assets are fetched and warmed once before it opens at the requested card. The reading shortcut, reduced motion, graphics failure and short-screen fallback expose normal document content. Leaving the route cancels pending loading and releases rendering resources. The transparent canvas matches the app background. Resize observation and per-frame layout checks keep the initial canvas aspect correct before any scrolling.
+The existing Penguini loading curtain remains. All twelve assets are fetched and warmed once before it opens at the requested card. The reading shortcut, reduced motion, graphics failure and short-screen fallback expose normal document content. Leaving the route cancels pending loading and releases rendering resources. The transparent canvas matches the app background. Resize observation and per-frame layout checks keep the initial canvas aspect correct before any scrolling.
 
 Run `scripts/tests/test-about-card-overlay-browser.py --url http://localhost:8080/about` against the local app to check full-viewport projection, centered cards, independent repeated-room arrivals, original camera travel, resize and reduced motion. The existing `test-about-tour-resize-browser.py` also covers late canvas layout changes.
 
@@ -154,9 +154,9 @@ The personal office at the fifth stop plays its own three-second entrance the fi
 
 The potluck room uses the same one-time, three-second entrance at the philosophy stop, including direct `#community` entry. The floor and walls assemble first; dining and lounge furniture, food, chess and buffet accessories follow as the camera approaches. The room stays assembled on return visits, and its lazy still appears in the philosophy reading-mode cards.
 
-All entrances remap the authored offsets into the open sides of each room: front/right for the kitchen, potluck, bedroom, supermarket, corporate office, bakery and farmers’ market, and front/left for the personal office, university library and brick-loft kitchen. Every moving group has an inward horizontal approach with a restrained upward lift. Shared pivots keep prints and glazing attached to their parent assemblies; final positions and scales are unchanged. Geometry-based tests sample all eleven exported models throughout the entrance to verify that moving bounds never extend farther into either wall than their final mounted position.
+All entrances remap the authored offsets into the open sides of each room: front/right for the kitchen, potluck, bedroom, supermarket, corporate office, bakery and farmers’ market, and front/left for the personal office, university library and brick-loft kitchen. Every moving group has an inward horizontal approach with a restrained upward lift. Shared pivots keep prints and glazing attached to their parent assemblies; final positions and scales are unchanged. Geometry-based tests sample all twelve active models throughout the entrance to verify that moving bounds never extend farther into either wall than their final mounted position.
 
-All eleven dioramas use a shared matte finish, room-local key/fill/rim lights and dynamic shadows. Roughness is remapped into 0.72–1.0 and specular highlights are attenuated to 24–38%, retaining slightly more sheen where metallic data is available. Warm colors receive restrained saturation through the shared AgX display treatment. The lighting directions remain attached to each room as the camera moves; assembly normals rotate with their objects. There is no material or lighting swap at the end of an entrance.
+All twelve dioramas use a shared matte finish, room-local key/fill/rim lights and dynamic shadows. Roughness is remapped into 0.72–1.0 and specular highlights are attenuated to 24–38%, retaining slightly more sheen where metallic data is available. Warm colors receive restrained saturation through the shared AgX display treatment. The lighting directions remain attached to each room as the camera moves; assembly normals rotate with their objects. There is no material or lighting swap at the end of an entrance.
 
 The kitchen additionally uses the master's unlit albedo, normal and roughness atlases to restore pastry layers, subtle plaster and wood texture, and material variation on enamel, ceramic and metal. Its shader converts object-space normals from Blender Z-up to glTF Y-up. No assembled-room shadows are baked into those atlases. The other four approved GLBs keep their authored vertex colors, normals and existing mild vertex contact shading; this change does not rebuild their geometry or add material atlases. Monitor screens, posters, windows and packaging keep their readable artwork; pastry textures receive the shared matte lighting. Transparent PC glazing and drink glass render last without depth writes and do not cast opaque shadows.
 
@@ -166,7 +166,7 @@ The two 2048² surface atlases add approximately 42.7 MiB of RGBA GPU storage in
 
 Shadow targets start at 1024² on mobile (6 MiB of color/depth storage) or 2048² on desktop (24 MiB), subject to hardware limits. Twelve sustained slow visible entry frames lower the current resolution, to a 512² floor (1.5 MiB). Pauses and isolated hitches are excluded. Each map updates only while its assembly poses change; settled shadows remain cached during camera movement and scrolling. Only visible rooms allocate targets: one at a chapter stop, at most two between neighboring chapters (12 MiB mobile / 48 MiB desktop at initial resolutions). Hidden rooms and reading mode release their targets; returning rebuilds the map once without replaying the entrance. Unsupported shadow shaders or incomplete target allocation fall back to the same matte materials and ordinary studio lighting. Reduced-motion reading mode and context recovery retain the existing behavior. Canvas attributes `data-shadow-room`, `data-shadow-targets`, `data-shadow-size` and `data-shadow-updates`, plus per-room size/update attributes, expose allocation and caching for browser verification.
 
-Shadow tests sample all eleven rooms’ moving bounds against their light frusta and exercise quality limits. Browser checks should compare caster/receiver transforms and reveal values during the entrance, verify cached updates at rest and resource release offscreen, exercise low-quality and allocation-failure paths, and inspect desktop/mobile contact shadows. Performance timings from a software GPU are not representative of real mobile hardware.
+Shadow tests sample all twelve rooms’ moving bounds against their light frusta and exercise quality limits. Browser checks should compare caster/receiver transforms and reveal values during the entrance, verify cached updates at rest and resource release offscreen, exercise low-quality and allocation-failure paths, and inspect desktop/mobile contact shadows. Performance timings from a software GPU are not representative of real mobile hardware.
 
 The curtain offers “Click here if the page takes too long to load” throughout loading. A collection of 100 playful cooking phrases rotates every three seconds while loading, starting at a random phrase on each entry, with a stable screen-reader status. The phrase timer stops when the curtain closes or the route unmounts. Asset or graphics failure, or a 25-second loading deadline, switches to the readable page and releases scrolling. Route exit cancels the deadline; graphics restoration and re-entering 3D warm the renderer again.
 
@@ -309,3 +309,44 @@ python tools/about/prepare_model_images.py \
   /tmp/noms-farmers-market-web farmers-market
 cp /tmp/noms-farmers-market-web/* assets/about/
 ```
+
+
+## Social kitchen and riverside campsite
+
+`#no-disruptions` uses the [revision 8 social kitchen](../models/monochrome-social-kitchen/README.md).
+`#your-privacy` uses the [revision 4 riverside cabin campsite](../models/riverside-cabin-campsite/README.md).
+They replace both remaining potluck instances. The original kitchen at `#idea` is unchanged.
+
+| Derivative | Triangles | Assemblies | Draw calls | Packed GLB bytes |
+| --- | ---: | ---: | ---: | ---: |
+| `sams-social-kitchen.glb` | 362,574 | 16 | 19 | 9,673,204 |
+| `sams-riverside-campsite.glb` | 156,043 | 11 | 14 | 4,414,276 |
+
+All evaluated master geometry is retained. FoodColor corner attributes survive
+batching as linear `COLOR_0`, preserving the beef marbling and browned potatoes.
+No cast shadows are baked. Both models use the shared matte lighting, dynamic
+shadows, three-second arrivals, and automatic full-viewport camera fitting.
+Kitchen floor and walls unfold separately. The campsite land and river are
+classified as ground, and its complete cabin enters intact. Their 1080 × 945
+WebP stills serve reading mode, reduced motion and graphics fallback.
+
+```sh
+blender -b assets/models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend \
+  --python tools/about/export_grouped_model.py -- /tmp/noms-social-kitchen-web social-kitchen
+python tools/about/pack_kitchen.py /tmp/noms-social-kitchen-web social-kitchen
+python tools/about/prepare_model_images.py \
+  assets/models/monochrome-social-kitchen/previews/monochrome-social-kitchen.png \
+  /tmp/noms-social-kitchen-web social-kitchen
+cp /tmp/noms-social-kitchen-web/* assets/about/
+
+blender -b assets/models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend \
+  --python tools/about/export_grouped_model.py -- /tmp/noms-riverside-campsite-web riverside-campsite
+python tools/about/pack_kitchen.py /tmp/noms-riverside-campsite-web riverside-campsite
+python tools/about/prepare_model_images.py \
+  assets/models/riverside-cabin-campsite/previews/riverside-cabin-campsite.png \
+  /tmp/noms-riverside-campsite-web riverside-campsite
+cp /tmp/noms-riverside-campsite-web/* assets/about/
+```
+
+Per-model budget JSON records the master hash, vertex-color treatment and
+quantization; geometry audits verify unchanged per-object triangle counts.

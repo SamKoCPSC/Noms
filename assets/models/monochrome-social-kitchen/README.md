@@ -38,7 +38,7 @@ python source/package_model.py
 
 `--proof` on the build command produces a smaller review render. Validation checks native scene intent, finite transforms, GLB structure and buffer bounds, and a fresh Blender import. The kitchen additionally checks food vertex colors and board/butter placement; the campsite checks its two storeys, wooden lounge, folded trees and absence of tent/fence.
 
-These are static review assets, not production About-tour derivatives. Named assembly roots carry suggested entrance offsets. Lighting and shadows are dynamic in Blender; the web viewer supplies its own lights. Geometry, PBR materials and food vertex colors export to GLB; Blender procedural micro-bump textures do not. App integration and loader optimization are separate work.
+These are the editable masters and static review assets. The About tour uses separate optimized derivatives in `assets/about/`; see [the production model documentation](../../about/README.md). Named assembly roots carry suggested entrance offsets. Lighting and shadows are dynamic in Blender; the web viewer supplies its own lights. Geometry, PBR materials and food vertex colors export to GLB; Blender procedural micro-bump textures do not. The production derivatives preserve all master geometry and use the tour’s lighting, dynamic shadows and entry animations.
 
 ## Actual Blender renders
 

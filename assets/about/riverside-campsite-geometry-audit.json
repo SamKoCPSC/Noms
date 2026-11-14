@@ -1,0 +1,3512 @@
+[
+  {
+    "name": "Broad meadow left bank",
+    "source_triangles": 37,
+    "web_triangles": 37,
+    "preserved": true
+  },
+  {
+    "name": "Earth diorama base",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Narrow far river bank",
+    "source_triangles": 37,
+    "web_triangles": 37,
+    "preserved": true
+  },
+  {
+    "name": "Continuous blue river",
+    "source_triangles": 72,
+    "web_triangles": 72,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.001",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.002",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.003",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.004",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.005",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.006",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.007",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.008",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.009",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.010",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.011",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.012",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.013",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.014",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.015",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.016",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.017",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.018",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.019",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.020",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.021",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.022",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.023",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.024",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.025",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.026",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.027",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.028",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.029",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.030",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.031",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.032",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.033",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.034",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.035",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.036",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.037",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.038",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.039",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.040",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.041",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.042",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.043",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.044",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.045",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.046",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.047",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.048",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.049",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.050",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.051",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.052",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.053",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.054",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.055",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.056",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.057",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.058",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.059",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.060",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.061",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.062",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.063",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.064",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.065",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.066",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.067",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.068",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.069",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.070",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Exposed earthen river bank.071",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.005",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.006",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.007",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.008",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.009",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.010",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.011",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.012",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.013",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.014",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.015",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.016",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Quiet river ripple.017",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.001",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.002",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.003",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.004",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.005",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.006",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.007",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.008",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.009",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.010",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.011",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.012",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.013",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.014",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.015",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.016",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.017",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.018",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "River bank stone.019",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Cabin chimney",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cabin enclosed body",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cabin front corner trim",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cabin front corner trim.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cabin stone footing",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Chimney cap",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cream gable fascia",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Cream gable fascia.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front cedar clapboard.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Front triangular cedar gable",
+    "source_triangles": 1,
+    "web_triangles": 1,
+    "preserved": true
+  },
+  {
+    "name": "Green standing seam roof",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Green standing seam roof.001",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right cedar clapboard.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.002",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.003",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.004",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.005",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.006",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.007",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.008",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.009",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.010",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.011",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.012",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.013",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.014",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.015",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.016",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.017",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.018",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roof standing seam.019",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Second floor rim joist",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Door blue glazing",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Door glazing muntin",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Door glazing muntin.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Door glazing muntin.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Door handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window blue panel",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window crossbar",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window crossbar.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window crossbar.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window sill",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window vertical trim",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window vertical trim.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Ground floor window vertical trim.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window blue panel",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window blue panel.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window mullion",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window mullion.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window mullion.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window mullion.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window mullion.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window mullion.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window transom",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window transom.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window transom.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side window transom.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window blue panel",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window crossbar",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window crossbar.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window crossbar.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window sill",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window vertical trim",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window vertical trim.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper left window vertical trim.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window blue panel",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window crossbar",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window crossbar.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window crossbar.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window sill",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window vertical trim",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window vertical trim.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Upper right window vertical trim.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Walnut cabin door",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch broad stair",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch broad stair.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch individual cedar plank.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch support pier",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch support pier.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Door lantern carrying bail",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Door lantern clear globe",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Door lantern guard",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Door lantern guard.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Door lantern metal foot",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Door lantern top shade",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Door lantern warm mantle",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Lounge arm upright",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Lounge arm upright.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Lounge broad wood arm",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge broad wood arm.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge front leg",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Lounge front leg.001",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Lounge rear leg",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Lounge rear leg.001",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Lounge seat bearer",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Lounge seat bearer.001",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden back slat",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden back slat.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden back slat.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden back slat.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden back slat.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Lounge wooden seat slat.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch coffee attached mug handle",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Porch coffee coffee surface",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Porch coffee dark rolled lip",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Porch coffee hollow mug",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Porch side table front apron",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Porch side table rounded top",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Porch side table tapered leg",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Porch side table tapered leg.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Porch side table tapered leg.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Porch side table tapered leg.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.005",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.006",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.007",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.008",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.009",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.010",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.011",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.012",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.013",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.014",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine folded tier face.015",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear corner pine tapered trunk",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.005",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.006",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.007",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.008",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.009",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.010",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.011",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.012",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.013",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.014",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine folded tier face.015",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear left pine tapered trunk",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.005",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.006",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.007",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.008",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.009",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.010",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.011",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.012",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.013",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.014",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine folded tier face.015",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Rear right pine tapered trunk",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.005",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.006",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.007",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.008",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.009",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.010",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine folded tier face.011",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "River bank pine tapered trunk",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.005",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.006",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.007",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.008",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.009",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.010",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine folded tier face.011",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Young riverside pine tapered trunk",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Bench leg",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Bench leg.001",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Bench leg.002",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Bench leg.003",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic bench",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic bench.001",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic table front apron",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic table rounded top",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic table tapered leg",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic table tapered leg.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic table tapered leg.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Camp picnic table tapered leg.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.001",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.002",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.003",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.004",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.005",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.006",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.007",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.008",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.009",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.010",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.011",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Baked bean.012",
+    "source_triangles": 100,
+    "web_triangles": 100,
+    "preserved": true
+  },
+  {
+    "name": "Camp beans surface",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Camp soup pot",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Camp stove burner",
+    "source_triangles": 512,
+    "web_triangles": 512,
+    "preserved": true
+  },
+  {
+    "name": "Camp stove burner.001",
+    "source_triangles": 512,
+    "web_triangles": 512,
+    "preserved": true
+  },
+  {
+    "name": "Camping cooler",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Camping kettle",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Cooler latch",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cooler latch.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cooler lid",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.001",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.002",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.003",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.004",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.005",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.006",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.007",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.008",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.009",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.010",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn kernel row.011",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Corn sharing plate",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Grilled corn cob",
+    "source_triangles": 252,
+    "web_triangles": 252,
+    "preserved": true
+  },
+  {
+    "name": "Grilled corn cob.001",
+    "source_triangles": 252,
+    "web_triangles": 252,
+    "preserved": true
+  },
+  {
+    "name": "Grilled sausage",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Grilled sausage.001",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Grilled sausage.002",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Hot dog sharing board",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Kettle bail",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Kettle spout",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Mustard zigzag",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Mustard zigzag.001",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Mustard zigzag.002",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug attached mug handle",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug attached mug handle.001",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug attached mug handle.002",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug coffee surface",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug coffee surface.001",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug coffee surface.002",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug dark rolled lip",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug dark rolled lip.001",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug dark rolled lip.002",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug hollow mug",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug hollow mug.001",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Picnic enamel mug hollow mug.002",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Portable camp stove",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Split hot dog bun",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Split hot dog bun.001",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Split hot dog bun.002",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Split hot dog bun.003",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Split hot dog bun.004",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Split hot dog bun.005",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Chocolate square",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Chocolate square.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Chocolate square.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.001",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.002",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.003",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.004",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.005",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.006",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.007",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.008",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.009",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.010",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.011",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Fire ring stone.012",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Firepit dark earth",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair attached arm",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair attached arm.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair back crossbar",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair back crossbar.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair back upright",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair back upright.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair canvas back",
+    "source_triangles": 148,
+    "web_triangles": 148,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair crossed front tube",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair crossed front tube.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair crossed rear tube",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair crossed rear tube.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair pivot pin",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair pivot pin.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Fireside canvas chair slung canvas seat",
+    "source_triangles": 148,
+    "web_triangles": 148,
+    "preserved": true
+  },
+  {
+    "name": "Firewood log",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Firewood log.001",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Firewood log.002",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Graham cracker base",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Graham cracker base.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Graham cracker base.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Graham cracker top",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Graham cracker top.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Graham cracker top.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Marshmallow roasting stick",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roasting marshmallow",
+    "source_triangles": 252,
+    "web_triangles": 252,
+    "preserved": true
+  },
+  {
+    "name": "Roasting marshmallow.001",
+    "source_triangles": 252,
+    "web_triangles": 252,
+    "preserved": true
+  },
+  {
+    "name": "Sculpted campfire flame",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Sculpted campfire flame.001",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Sculpted campfire flame.002",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Smores board",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Smores marshmallow",
+    "source_triangles": 1600,
+    "web_triangles": 1600,
+    "preserved": true
+  },
+  {
+    "name": "Smores marshmallow.001",
+    "source_triangles": 1600,
+    "web_triangles": 1600,
+    "preserved": true
+  },
+  {
+    "name": "Smores marshmallow.002",
+    "source_triangles": 1600,
+    "web_triangles": 1600,
+    "preserved": true
+  },
+  {
+    "name": "Cabin path stepping stone",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Cabin path stepping stone.001",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Cabin path stepping stone.002",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Cabin path stepping stone.003",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Cabin path stepping stone.004",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.001",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.002",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.003",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.004",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.005",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.006",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.007",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.008",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.009",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.010",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.011",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.012",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.013",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.014",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.015",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.016",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.017",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.018",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.019",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.020",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.021",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.022",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.023",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.024",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.025",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.026",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.027",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.028",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.029",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.030",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.031",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.032",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.033",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.034",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.035",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.036",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.037",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.038",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.039",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.040",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.041",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.042",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.043",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.044",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.045",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.046",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.047",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.048",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.049",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.050",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.051",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.052",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.053",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.054",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.055",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.056",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.057",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.058",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Meadow grass tuft.059",
+    "source_triangles": 284,
+    "web_triangles": 284,
+    "preserved": true
+  },
+  {
+    "name": "Path lantern carrying bail",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Path lantern clear globe",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Path lantern guard",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Path lantern guard.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Path lantern metal foot",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Path lantern top shade",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Path lantern warm mantle",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Picnic lantern carrying bail",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Picnic lantern clear globe",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Picnic lantern guard",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Picnic lantern guard.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Picnic lantern metal foot",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Picnic lantern top shade",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Picnic lantern warm mantle",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Stored split firewood",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Stored split firewood.001",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Stored split firewood.002",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Stored split firewood.003",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Stored split firewood.004",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Stored split firewood.005",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  }
+]
