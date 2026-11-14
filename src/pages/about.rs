@@ -54,6 +54,12 @@ const KITCHEN_POSTER: Asset = asset!(
 );
 const LIBRARY_MODEL: Asset = asset!("/assets/about/sams-library.glb");
 const LIBRARY_POSTER: Asset = asset!("/assets/about/sams-library.webp");
+const FARMERS_MARKET_MODEL: Asset = asset!("/assets/about/sams-farmers-market.glb");
+const FARMERS_MARKET_POSTER: Asset = asset!("/assets/about/sams-farmers-market.webp");
+const BAKERY_MODEL: Asset = asset!("/assets/about/sams-bakery.glb");
+const BAKERY_POSTER: Asset = asset!("/assets/about/sams-bakery.webp");
+const BRICK_KITCHEN_MODEL: Asset = asset!("/assets/about/sams-brick-kitchen.glb");
+const BRICK_KITCHEN_POSTER: Asset = asset!("/assets/about/sams-brick-kitchen.webp");
 const SUPERMARKET_MODEL: Asset = asset!("/assets/about/sams-supermarket.glb");
 const SUPERMARKET_POSTER: Asset = asset!("/assets/about/sams-supermarket.webp");
 const CORPORATE_OFFICE_MODEL: Asset = asset!("/assets/about/sams-corporate-office.glb");
@@ -232,7 +238,7 @@ pub(super) const IDS: [&str; 12] = [
     "your-privacy",
     "gather",
 ];
-pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 6, 2, 7, 1, 5, 2, 3, 3, 3, 3, 4];
+pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 3, 4];
 pub(super) const NAMES: [&str; 12] = [
     "The idea",
     "The reason",
@@ -341,7 +347,7 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
-       "data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
+       "data-farmers-market-url":FARMERS_MARKET_MODEL,"data-bakery-url":BAKERY_MODEL,"data-brick-kitchen-url":BRICK_KITCHEN_MODEL,"data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
        "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
        "data-garden-url":GARDEN_MODEL,"data-garden-pastry-url":GARDEN_PASTRY,
        "data-potluck-url":POTLUCK_MODEL,"data-potluck-window-url":POTLUCK_WINDOW,"data-potluck-tv-url":POTLUCK_TV,"data-potluck-pastry-url":POTLUCK_PASTRY,"data-potluck-salt-url":POTLUCK_SALT,"data-potluck-bbq-url":POTLUCK_BBQ,
@@ -381,7 +387,10 @@ pub fn About() -> Element {
         if MODEL_FOR_STOP[i]==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
         if MODEL_FOR_STOP[i]==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:960,height:960}}}
         if MODEL_FOR_STOP[i]==3 {figure{class:"potluck-fallback",img{src:POTLUCK_POSTER,alt:"A communal potluck dining room and TV lounge with three couches, a chess game, and a table of cake, candy, chips and drinks",loading:"lazy",width:960,height:720}}}
-        if MODEL_FOR_STOP[i]==6 {figure{class:"office-fallback",img{src:LIBRARY_POSTER,alt:"A recipe library with cookbook shelves, a reading table, laptop and cozy reading nook",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==10 {figure{class:"garden-fallback",img{src:FARMERS_MARKET_POSTER,alt:"A corner farmers’ market with four enlarged bakery, dairy, pantry and prepared-food carts, two on each side, and four shared picnic tables",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==9 {figure{class:"kitchen-fallback",img{src:BAKERY_POSTER,alt:"A modern artisan bakery with bread and pastry displays, a dough sheeter, refrigerators and a baking workbench shifted to the right",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==8 {figure{class:"kitchen-fallback",img{src:BRICK_KITCHEN_POSTER,alt:"A U-shaped brick-loft kitchen with an oak dining peninsula, shared food, coffee appliances and a sink beneath the window",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==6 {figure{class:"office-fallback",img{src:LIBRARY_POSTER,alt:"A UBC-inspired university library with tall blue windows, a spiral staircase, portrait gallery, study laptops, open computer science textbooks and window-side lounge chairs",loading:"lazy",width:1080,height:945}}}
         if MODEL_FOR_STOP[i]==7 {figure{class:"office-fallback",img{src:SUPERMARKET_POSTER,alt:"A modern supermarket with a European deli, Asian pantry, produce and grocery aisles",loading:"lazy",width:1073,height:960}}}
         if MODEL_FOR_STOP[i]==5 {figure{class:"office-fallback",img{src:CORPORATE_OFFICE_POSTER,alt:"A corporate office with three personalized desks, humorous company posters, a kitchenette and a shared lunch table",loading:"lazy",width:1080,height:960}}}
         if MODEL_FOR_STOP[i]==4 {figure{class:"garden-fallback",img{src:GARDEN_POSTER,alt:"A garden cookout with shared picnic tables, barbecue food, a beer table, lawn chairs, a cedar fence and outdoor games",loading:"lazy",width:960,height:720}}}
@@ -425,7 +434,7 @@ mod story_tests {
             IDS.iter().collect::<std::collections::HashSet<_>>().len(),
             12
         );
-        assert_eq!(MODEL_FOR_STOP, [0, 6, 2, 7, 1, 5, 2, 3, 3, 3, 3, 4]);
+        assert_eq!(MODEL_FOR_STOP, [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 3, 4]);
         assert_eq!(CONTENT.len(), IDS.len());
     }
 }

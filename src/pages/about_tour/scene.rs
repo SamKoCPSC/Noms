@@ -198,6 +198,9 @@ pub struct Renderer {
     corporate_office: Diorama,
     library: Diorama,
     supermarket: Diorama,
+    brick_kitchen: Diorama,
+    bakery: Diorama,
+    farmers_market: Diorama,
     a_pos: u32,
     a_normal: u32,
     a_uv: u32,
@@ -313,6 +316,9 @@ impl Renderer {
             corporate_office: Diorama::default(),
             library: Diorama::default(),
             supermarket: Diorama::default(),
+            brick_kitchen: Diorama::default(),
+            bakery: Diorama::default(),
+            farmers_market: Diorama::default(),
             a_pos,
             a_normal,
             a_uv,
@@ -378,9 +384,9 @@ impl Renderer {
     }
     pub fn upload_models(
         &mut self,
-        models: [(&super::gltf::DioramaMesh, &[HtmlImageElement]); 8],
+        models: [(&super::gltf::DioramaMesh, &[HtmlImageElement]); 11],
     ) -> Result<(), JsValue> {
-        let [(kitchen, kitchen_images), (office, office_images), (potluck, potluck_images), (bedroom, bedroom_images), (garden, garden_images), (corporate_office, corporate_office_images), (library, library_images), (supermarket, supermarket_images)] =
+        let [(kitchen, kitchen_images), (office, office_images), (potluck, potluck_images), (bedroom, bedroom_images), (garden, garden_images), (corporate_office, corporate_office_images), (library, library_images), (supermarket, supermarket_images), (brick_kitchen, brick_kitchen_images), (bakery, bakery_images), (farmers_market, farmers_market_images)] =
             models;
         self.kitchen = self.upload_diorama(kitchen, kitchen_images, Room::Kitchen)?;
         self.office = self.upload_diorama(office, office_images, Room::Office)?;
@@ -395,6 +401,11 @@ impl Renderer {
         self.library = self.upload_diorama(library, library_images, Room::Library)?;
         self.supermarket =
             self.upload_diorama(supermarket, supermarket_images, Room::Supermarket)?;
+        self.brick_kitchen =
+            self.upload_diorama(brick_kitchen, brick_kitchen_images, Room::BrickKitchen)?;
+        self.bakery = self.upload_diorama(bakery, bakery_images, Room::Bakery)?;
+        self.farmers_market =
+            self.upload_diorama(farmers_market, farmers_market_images, Room::FarmersMarket)?;
         for (name, data) in [
             ("kitchen", kitchen),
             ("office", office),
@@ -404,6 +415,9 @@ impl Renderer {
             ("corporate-office", corporate_office),
             ("library", library),
             ("supermarket", supermarket),
+            ("brick-kitchen", brick_kitchen),
+            ("bakery", bakery),
+            ("farmers-market", farmers_market),
         ] {
             let _ = self.canvas.set_attribute(
                 &format!("data-{name}-groups"),
@@ -638,7 +652,7 @@ impl Renderer {
         gl.uniform3fv_with_f32_array(Some(&self.uniforms.eye), &camera.eye);
         for (i, &frame) in frames.iter().enumerate() {
             let asset = crate::pages::about::MODEL_FOR_STOP[i];
-            let artwork = [0, 1, 3, 4, 4, 1, 1, 1][asset];
+            let artwork = self.rooms()[asset].2;
             let root = flight::station(i);
             if i < flight::COUNT {
                 let (diorama, room, _, _) = self.rooms()[asset];
@@ -813,7 +827,7 @@ impl Renderer {
         }
     }
     // Chapter order differs from the authored frame array (potluck precedes bedroom).
-    fn rooms(&self) -> [(&Diorama, Room, usize, &'static str); 8] {
+    fn rooms(&self) -> [(&Diorama, Room, usize, &'static str); 11] {
         [
             (&self.kitchen, Room::Kitchen, 0, "kitchen"),
             (&self.office, Room::Office, 1, "office"),
@@ -828,6 +842,14 @@ impl Renderer {
             ),
             (&self.library, Room::Library, 1, "library"),
             (&self.supermarket, Room::Supermarket, 1, "supermarket"),
+            (&self.brick_kitchen, Room::BrickKitchen, 1, "brick-kitchen"),
+            (&self.bakery, Room::Bakery, 1, "bakery"),
+            (
+                &self.farmers_market,
+                Room::FarmersMarket,
+                4,
+                "farmers-market",
+            ),
         ]
     }
     pub fn release_shadows(&self) {
@@ -1033,7 +1055,7 @@ impl Renderer {
     }
     /// Warm all model assets, including prints and transparent PC surfaces, before entry.
     pub fn warm_models(&self, aspect: f32, mobile: bool) -> bool {
-        let mut warmed = [false; 8];
+        let mut warmed = [false; 11];
         for (stop, asset) in crate::pages::about::MODEL_FOR_STOP.iter().enumerate() {
             if warmed[*asset] {
                 continue;
@@ -1070,6 +1092,9 @@ impl Drop for Renderer {
             .chain(&self.corporate_office.draws)
             .chain(&self.library.draws)
             .chain(&self.supermarket.draws)
+            .chain(&self.brick_kitchen.draws)
+            .chain(&self.bakery.draws)
+            .chain(&self.farmers_market.draws)
         {
             self.gl.delete_buffer(Some(&draw.mesh.buffer));
         }

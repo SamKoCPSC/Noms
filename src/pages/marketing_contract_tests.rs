@@ -64,12 +64,15 @@ fn about_renders_twelve_cards_and_readable_fallback() {
         .next()
         .unwrap();
     assert!(reason.contains("office-fallback"));
-    assert!(reason.contains("A recipe library"));
+    assert!(reason.contains("A UBC-inspired university library"));
     for (panel, description, attribute) in [
-        (1, "A recipe library", "data-library-url"),
+        (1, "A UBC-inspired university library", "data-library-url"),
         (3, "A modern supermarket", "data-supermarket-url"),
         (4, "Sam’s office", "data-office-url"),
         (5, "A corporate office", "data-corporate-office-url"),
+        (6, "A U-shaped brick-loft kitchen", "data-brick-kitchen-url"),
+        (7, "A modern artisan bakery", "data-bakery-url"),
+        (8, "A corner farmers’ market", "data-farmers-market-url"),
     ] {
         let card = html
             .split(&format!("id=\"panel-{panel}\""))

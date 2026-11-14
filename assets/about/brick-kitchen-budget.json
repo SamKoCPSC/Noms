@@ -1,0 +1,13 @@
+{
+  "source": "models/brick-loft-kitchen/models/brick-loft-kitchen.blend",
+  "source_sha256": "0142dd90be54d5243e83be083c9112b9479a19e6b2373fedae62542e9381ef87",
+  "triangles": 332244,
+  "assemblies": 17,
+  "materials": 20,
+  "glb_bytes": 11160764,
+  "textures": 0,
+  "geometry": "All evaluated master triangles retained; no decimation",
+  "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 9.460593284909037e-05,
+  "quantization": "KHR_mesh_quantization"
+}

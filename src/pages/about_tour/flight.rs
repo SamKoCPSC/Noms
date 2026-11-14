@@ -93,14 +93,22 @@ fn original_camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
 }
 /// An upright three-quarter view matching the approved office reference.
 pub fn room_rotation(room: super::assembly::Room, mobile: bool) -> Mat4 {
-    let pitch = if room == super::assembly::Room::Garden {
+    let pitch = if matches!(
+        room,
+        super::assembly::Room::Garden | super::assembly::Room::FarmersMarket
+    ) {
         0.72
     } else {
         0.58
     };
     // The lower mobile slot adds apparent elevation through perspective.
     let pitch = if mobile { pitch - 0.30 } else { pitch };
-    let yaw = if room == super::assembly::Room::Office {
+    let yaw = if matches!(
+        room,
+        super::assembly::Room::Office
+            | super::assembly::Room::BrickKitchen
+            | super::assembly::Room::Library
+    ) {
         0.62
     } else {
         -0.62
@@ -360,6 +368,9 @@ mod tests {
             include_bytes!("../../../assets/about/sams-corporate-office.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-brick-kitchen.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-bakery.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-farmers-market.glb").as_slice(),
         ]
         .into_iter()
         .enumerate()
@@ -381,6 +392,9 @@ mod tests {
                     super::super::assembly::Room::CorporateOffice,
                     super::super::assembly::Room::Library,
                     super::super::assembly::Room::Supermarket,
+                    super::super::assembly::Room::BrickKitchen,
+                    super::super::assembly::Room::Bakery,
+                    super::super::assembly::Room::FarmersMarket,
                 ][i];
                 let rotation = room_rotation(room, w <= 700.);
                 let points: Vec<_> = mesh

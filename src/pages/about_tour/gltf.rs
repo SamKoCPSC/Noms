@@ -459,8 +459,8 @@ mod tests {
         for (bytes, groups, required) in [
             (
                 include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
-                11,
-                "04 Tall cookbook shelving",
+                13,
+                "06 Full turn spiral staircase",
             ),
             (
                 include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
@@ -490,6 +490,171 @@ mod tests {
                 assert!(model.parts.iter().any(|p| p.opacity < 0.5));
             }
         }
+    }
+
+    #[test]
+    fn university_library_preserves_study_props_and_opaque_windows() {
+        let model = decode(include_bytes!("../../../assets/about/sams-library.glb")).unwrap();
+        for name in [
+            "04 Open second floor and landing",
+            "05 Academic portrait gallery",
+            "07 Long communal reading table 1",
+            "08 Long communal reading table 2",
+            "10 Student books and coding laptop",
+            "11 Window facing lounge chairs and tables",
+            "12 Suspended coloured art glass",
+        ] {
+            assert!(model.parts.iter().any(|p| p.name == name), "Missing {name}");
+        }
+        assert!(model
+            .parts
+            .iter()
+            .filter(|p| p.name.starts_with("03 "))
+            .all(|p| p.opacity == 1.));
+        assert!(model
+            .parts
+            .iter()
+            .any(|p| p.name.starts_with("12 ") && p.opacity < 1.));
+        let audit: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../assets/about/library-geometry-audit.json"
+        ))
+        .unwrap();
+        let objects = audit.as_array().unwrap();
+        let count = |prefix: &str| {
+            objects
+                .iter()
+                .filter(|o| o["name"].as_str().unwrap().starts_with(prefix))
+                .count()
+        };
+        assert_eq!(count("Laptop beveled base"), 4);
+        assert_eq!(count("Curved stair tread"), 24);
+        assert_eq!(count("Blue simulated window panel"), 18);
+        assert_eq!(
+            objects
+                .iter()
+                .filter(|o| {
+                    let name = o["name"].as_str().unwrap();
+                    name.starts_with("Open study textbook") && name.contains("center binding")
+                })
+                .count(),
+            5
+        );
+        assert!(objects
+            .iter()
+            .all(|o| o["web_triangles"].as_u64().unwrap() > 0));
+    }
+
+    #[test]
+    fn delivered_farmers_market_preserves_four_cart_corner_and_budget() {
+        let bytes = include_bytes!("../../../assets/about/sams-farmers-market.glb");
+        let model = decode(bytes).unwrap();
+        assert!(bytes.len() < 16_000_000);
+        assert!((300_000..400_000).contains(&(model.vertices.len() / 36)));
+        assert!(model.vertices.iter().all(|v| v.is_finite()));
+        let names = model
+            .parts
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(names.len(), 8);
+        for required in [
+            "02 Farmhouse dairy cart",
+            "03 Village bakery cart",
+            "04 Farm pantry and eggs cart",
+            "05 Ready to eat market bites cart",
+            "07 Picnic tables and attached benches",
+        ] {
+            assert!(names.contains(required), "Missing {required}");
+        }
+        assert_eq!(names.iter().filter(|n| n.ends_with("/ floor")).count(), 1);
+        assert!(!names
+            .iter()
+            .any(|n| n.ends_with("wall") || n.contains("Orchard") || n.contains("Seasonal")));
+        assert!(model
+            .parts
+            .iter()
+            .all(|p| p.texture == 0 && p.end > p.start));
+        // Back carts are aligned along X, side carts along Z after glTF conversion.
+        let carts: Vec<_> = (2..=5)
+            .map(|i| {
+                let part = model
+                    .parts
+                    .iter()
+                    .find(|p| p.name.starts_with(&format!("{i:02} ")))
+                    .unwrap();
+                part.pivot
+            })
+            .collect();
+        assert!((carts[0][2] - carts[1][2]).abs() < 0.2);
+        assert!((carts[2][0] - carts[3][0]).abs() < 0.2);
+        assert!((carts[0][0] - carts[1][0]).abs() > 4.8);
+        assert!((carts[2][2] - carts[3][2]).abs() > 4.8);
+    }
+
+    #[test]
+    fn delivered_bakery_preserves_review_assemblies_and_renderer_budget() {
+        let bytes = include_bytes!("../../../assets/about/sams-bakery.glb");
+        let model = decode(bytes).unwrap();
+        assert!(bytes.len() < 16_000_000);
+        assert!((300_000..400_000).contains(&(model.vertices.len() / 36)));
+        assert!(model.vertices.iter().all(|v| v.is_finite()));
+        let names = model
+            .parts
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(names.len(), 24);
+        for required in [
+            "09 Central oak baking island",
+            "18 Reversible dough sheeter",
+            "19 Stainless ingredient refrigerator",
+            "20 Glass cake and drinks refrigerator",
+            "22 Checkout and takeaway counter",
+            "23 Refrigerated pastry counter",
+        ] {
+            assert!(names.contains(required), "Missing {required}");
+        }
+        for suffix in ["/ floor", "/ back wall", "/ side wall"] {
+            assert!(names.iter().any(|n| n.ends_with(suffix)));
+        }
+        assert!(model
+            .parts
+            .iter()
+            .all(|p| p.texture == 0 && p.end > p.start));
+        assert!(model.parts.iter().any(|p| p.opacity < 0.5));
+    }
+
+    #[test]
+    fn delivered_brick_kitchen_preserves_approved_geometry_and_groups() {
+        let bytes = include_bytes!("../../../assets/about/sams-brick-kitchen.glb");
+        let model = decode(bytes).unwrap();
+        assert!(bytes.len() < 12_000_000);
+        assert_eq!(model.vertices.len() / 36, 332_244);
+        assert!(model.vertices.iter().all(|v| v.is_finite()));
+        let names = model
+            .parts
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(names.len(), 17);
+        for required in [
+            "08 Front dining peninsula",
+            "15 Espresso machine and grinder",
+            "17 Electric kettle by window",
+        ] {
+            assert!(names.contains(required));
+        }
+        for suffix in ["/ floor", "/ back wall", "/ side wall"] {
+            assert!(names.iter().any(|n| n.ends_with(suffix)));
+        }
+        assert!(names
+            .iter()
+            .all(|n| !n.to_lowercase().contains("pendant") && !n.to_lowercase().contains("linen")));
+        assert!(model
+            .parts
+            .iter()
+            .all(|p| p.texture == 0 && p.end > p.start));
+        assert!(model.parts.iter().any(|p| p.opacity < 0.5));
     }
 
     #[test]

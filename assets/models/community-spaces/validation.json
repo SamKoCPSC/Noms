@@ -16,15 +16,15 @@
     },
     {
       "file": "farmers-market.glb",
-      "bytes": 13935708,
+      "bytes": 20418108,
       "assemblies": 8,
-      "nodes": 1091,
-      "primitives": 1083,
-      "vertices": 389232,
-      "triangles": 385293,
-      "materials": 28,
+      "nodes": 1987,
+      "primitives": 1979,
+      "vertices": 677496,
+      "triangles": 780902,
+      "materials": 48,
       "embedded_images": 0,
-      "sha256": "a2bf280744d30ddbb53966b294fb80a66edf057aa574f85744d9509881fcbfbd",
+      "sha256": "a878f61e527c06470fc768cde1d67c06e258b128bcf5e93b34f6552508fd3ffc",
       "validation": "PASS"
     },
     {

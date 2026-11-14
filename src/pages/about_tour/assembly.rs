@@ -58,6 +58,9 @@ pub enum Room {
     CorporateOffice,
     Library,
     Supermarket,
+    BrickKitchen,
+    Bakery,
+    FarmersMarket,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
@@ -152,7 +155,7 @@ pub fn prepare(data: &DioramaMesh, room: Room) -> DioramaMesh {
         {
             let cx = (tri[0] + tri[12] + tri[24]) / 3.;
             let cz = (tri[2] + tri[14] + tri[26]) / 3.;
-            let side_x = if room == Room::Office {
+            let side_x = if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
                 b.max[0]
             } else {
                 b.min[0]
@@ -281,7 +284,11 @@ impl Motion {
         }
         let q = smooth(u);
         let rest = 1. - q;
-        let sign = if room == Room::Office { -1. } else { 1. };
+        let sign = if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
+            -1.
+        } else {
+            1.
+        };
         let mut size = [1.; 3];
         let mut rot = [0.; 3];
         let mut delta = [0.; 3];
@@ -361,7 +368,7 @@ impl Motion {
                     moved = self.bounds.transformed(matrix);
                 }
                 matrix[12] += (lo - moved.min[0]).max(0.) - (moved.max[0] - hi).max(0.);
-            } else if room == Room::Office {
+            } else if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
                 matrix[12] -= (moved.max[0] - self.bounds.max[0]).max(0.);
             } else {
                 matrix[12] += (self.bounds.min[0] - moved.min[0]).max(0.);
@@ -401,6 +408,18 @@ mod tests {
             (
                 Room::Supermarket,
                 include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
+            ),
+            (
+                Room::FarmersMarket,
+                include_bytes!("../../../assets/about/sams-farmers-market.glb").as_slice(),
+            ),
+            (
+                Room::Bakery,
+                include_bytes!("../../../assets/about/sams-bakery.glb").as_slice(),
+            ),
+            (
+                Room::BrickKitchen,
+                include_bytes!("../../../assets/about/sams-brick-kitchen.glb").as_slice(),
             ),
             (
                 Room::CorporateOffice,
@@ -482,7 +501,11 @@ mod tests {
                     floors += 1;
                 }
             }
-            assert!(walls >= 2, "{room:?}");
+            if room == Room::FarmersMarket {
+                assert_eq!(walls, 0, "Market carts must not be classified as walls");
+            } else {
+                assert!(walls >= 2, "{room:?}");
+            }
             assert!(floors > 0);
         }
     }
@@ -521,7 +544,7 @@ mod tests {
                             "{} right {frame}",
                             p.name
                         );
-                    } else if room == Room::Office {
+                    } else if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
                         assert!(b.max[0] <= rest.max[0] + 0.00002, "{} side {frame}", p.name);
                     } else {
                         assert!(b.min[0] >= rest.min[0] - 0.00002, "{} side {frame}", p.name);
