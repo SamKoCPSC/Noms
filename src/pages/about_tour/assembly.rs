@@ -52,6 +52,8 @@ impl ChapterArrival {
 pub enum Room {
     Kitchen,
     Office,
+    // Retained only for archived asset regression coverage.
+    #[cfg(test)]
     Potluck,
     Bedroom,
     Garden,
@@ -61,6 +63,8 @@ pub enum Room {
     BrickKitchen,
     Bakery,
     FarmersMarket,
+    SocialKitchen,
+    RiversideCampsite,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
@@ -402,6 +406,14 @@ mod tests {
                 include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
             ),
             (
+                Room::SocialKitchen,
+                include_bytes!("../../../assets/about/sams-social-kitchen.glb").as_slice(),
+            ),
+            (
+                Room::RiversideCampsite,
+                include_bytes!("../../../assets/about/sams-riverside-campsite.glb").as_slice(),
+            ),
+            (
                 Room::Library,
                 include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
             ),
@@ -501,8 +513,11 @@ mod tests {
                     floors += 1;
                 }
             }
-            if room == Room::FarmersMarket {
-                assert_eq!(walls, 0, "Market carts must not be classified as walls");
+            if matches!(room, Room::FarmersMarket | Room::RiversideCampsite) {
+                assert_eq!(
+                    walls, 0,
+                    "Outdoor assemblies must not be classified as wall panels"
+                );
             } else {
                 assert!(walls >= 2, "{room:?}");
             }

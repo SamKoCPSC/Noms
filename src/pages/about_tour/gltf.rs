@@ -545,6 +545,88 @@ mod tests {
     }
 
     #[test]
+    fn delivered_social_kitchen_preserves_food_colors_and_all_geometry() {
+        let bytes = include_bytes!("../../../assets/about/sams-social-kitchen.glb");
+        let model = decode(bytes).unwrap();
+        assert_eq!(model.vertices.len() / 36, 362_574);
+        assert!(bytes.len() < 10_000_000);
+        let names = model
+            .parts
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(names.len(), 16);
+        for name in [
+            "01 Foundation and tiled floor / floor",
+            "02 Ivory rear wall / back wall",
+            "03 Black framed window wall / side wall",
+            "08 Cooktop soup and steak sauce",
+            "11 Prime rib island spread",
+            "14 Four plated roast dinners",
+            "16 Four bowls of soup",
+        ] {
+            assert!(names.contains(name), "Missing {name}");
+        }
+        // Authored food colors must survive batching/quantization rather than
+        // falling back to the white base of the Blender vertex-color material.
+        let colors = model
+            .parts
+            .iter()
+            .filter(|p| p.name == "14 Four plated roast dinners")
+            .flat_map(|p| model.vertices[p.first * 12..(p.first + p.count) * 12].chunks_exact(12))
+            .map(|v| {
+                (
+                    (v[8] * 255.).round() as u8,
+                    (v[9] * 255.).round() as u8,
+                    (v[10] * 255.).round() as u8,
+                )
+            })
+            .collect::<std::collections::HashSet<_>>();
+        assert!(colors.len() > 100, "Food vertex colors were lost");
+        assert!(colors
+            .iter()
+            .any(|&(r, g, b)| r > 40 && u16::from(r) > u16::from(g) * 2 && b > g));
+        assert!(model.vertices.iter().all(|v| v.is_finite()));
+        assert!(model
+            .parts
+            .iter()
+            .all(|p| p.texture == 0 && p.end > p.start));
+    }
+
+    #[test]
+    fn delivered_riverside_campsite_keeps_cabin_river_and_food() {
+        let bytes = include_bytes!("../../../assets/about/sams-riverside-campsite.glb");
+        let model = decode(bytes).unwrap();
+        assert_eq!(model.vertices.len() / 36, 156_043);
+        assert!(bytes.len() < 5_000_000);
+        let names = model
+            .parts
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(names.len(), 11);
+        for name in [
+            "01 Square woodland plinth / floor",
+            "02 Winding river and bank stones / floor",
+            "03 Two-storey cedar cabin",
+            "06 Wooden porch lounge and side table",
+            "07 Simplified folded evergreen trees",
+            "09 Camp stove kettle and hearty food",
+            "10 Campfire and roasting treats",
+        ] {
+            assert!(names.contains(name), "Missing {name}");
+        }
+        // The river is ground, and the complete cabin enters intact; neither
+        // should be mistaken for an unfolding room wall by numeric group IDs.
+        assert!(!names.iter().any(|n| n.ends_with("wall")));
+        assert!(model.vertices.iter().all(|v| v.is_finite()));
+        assert!(model
+            .parts
+            .iter()
+            .all(|p| p.texture == 0 && p.end > p.start));
+    }
+
+    #[test]
     fn delivered_farmers_market_preserves_four_cart_corner_and_budget() {
         let bytes = include_bytes!("../../../assets/about/sams-farmers-market.glb");
         let model = decode(bytes).unwrap();

@@ -14,11 +14,20 @@ The story order, wording, twelve independent arrivals and camera route are uncha
 | 7 | About the creator | The same fundamental idea. | Brick-loft U-shaped kitchen (revision 5) |
 | 8 | The Noms Philosophy | Just a simple and easy-to-use app. | Modern Baking Lab (revision 3) |
 | 9 | The Noms Philosophy | Free and accessible. | Corner farmers’ market (revision 9) |
-| 10 | The Noms Philosophy | Without the disruptions. | Potluck room |
-| 11 | The Noms Philosophy | Respecting your privacy. | Potluck room |
+| 10 | The Noms Philosophy | Without the disruptions. | Contemporary L-shaped social kitchen (revision 8) |
+| 11 | The Noms Philosophy | Respecting your privacy. | Riverside cabin campsite (revision 4) |
 | 12 | The Noms Philosophy | Building a community. | Garden cookout |
 
 ## Source revisions
+
+- The contemporary kitchen uses revision 8: the smaller oval roast and board,
+  matching single beef servings, soup bowls, and peppercorn sauce beside the
+  wine bottles and on the hob. Its 16 assemblies retain all 362,574 triangles
+  and authored food vertex colors; walls unfold separately from the furniture.
+- The riverside campsite uses revision 4: two-storey cabin, river, folded pine
+  trees, wooden porch lounge, picnic food and campfire. All 156,043 triangles and
+  11 assemblies are retained. Land and river arrive as ground; the cabin enters
+  intact rather than being treated as a wall panel.
 
 - The farmers’ market uses approved revision 9: four enlarged carts, two per
   corner edge, with bakery, dairy, pantry and prepared foods, plus four picnic
@@ -53,18 +62,12 @@ The story order, wording, twelve independent arrivals and camera route are uncha
 
 Web derivatives, budgets and reproduction instructions live in
 [`assets/about/README.md`](../../../assets/about/README.md). The Blender masters
-remain intact. Repeated cards share geometry while retaining independent entry
-animation and shadow state.
+remain intact. Each card retains independent entry animation and shadow state.
 
 ## Tentative future replacements
 
 The brick-loft kitchen replaces the earlier tentative coffee-shop assignment.
 The coffee-shop asset remains available for another future card.
 
-The two remaining philosophy cards still share the potluck room. These are suggestions,
-not approved assignments:
-
-| Card | Suggested next model |
-| --- | --- |
-| Without the disruptions. | Cozy campsite (existing asset) |
-| Respecting your privacy. | New secluded reading nook |
+Both remaining philosophy cards now use their approved models. The potluck room
+remains in the asset archive but is no longer downloaded by the tour.

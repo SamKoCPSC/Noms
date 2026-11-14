@@ -397,17 +397,7 @@ fn maybe_load_models(state: &StateRef) {
                 ]
                 .as_slice(),
             ),
-            (
-                "potluck",
-                [
-                    "data-potluck-window-url",
-                    "data-potluck-tv-url",
-                    "data-potluck-pastry-url",
-                    "data-potluck-salt-url",
-                    "data-potluck-bbq-url",
-                ]
-                .as_slice(),
-            ),
+            ("social-kitchen", [].as_slice()),
             ("bedroom", ["data-bedroom-prints-url"].as_slice()),
             ("garden", ["data-garden-pastry-url"].as_slice()),
             ("corporate-office", [].as_slice()),
@@ -416,6 +406,7 @@ fn maybe_load_models(state: &StateRef) {
             ("brick-kitchen", [].as_slice()),
             ("bakery", [].as_slice()),
             ("farmers-market", [].as_slice()),
+            ("riverside-campsite", [].as_slice()),
         ]
         .into_iter()
         .map(|(name, images)| {
@@ -490,6 +481,7 @@ fn maybe_load_models(state: &StateRef) {
                 models.remove(0),
                 models.remove(0),
                 models.remove(0),
+                models.remove(0),
             ))
         }
         .await;
@@ -502,7 +494,7 @@ fn maybe_load_models(state: &StateRef) {
                 Ok((
                     (kitchen, kitchen_images),
                     (office, office_images),
-                    (potluck, potluck_images),
+                    (social_kitchen, social_kitchen_images),
                     (bedroom, bedroom_images),
                     (garden, garden_images),
                     (corporate_office, corporate_office_images),
@@ -511,11 +503,12 @@ fn maybe_load_models(state: &StateRef) {
                     (brick_kitchen, brick_kitchen_images),
                     (bakery, bakery_images),
                     (farmers_market, farmers_market_images),
+                    (riverside_campsite, riverside_campsite_images),
                 )) => s.renderer.as_mut().is_some_and(|r| {
                     r.upload_models([
                         (&kitchen, &kitchen_images),
                         (&office, &office_images),
-                        (&potluck, &potluck_images),
+                        (&social_kitchen, &social_kitchen_images),
                         (&bedroom, &bedroom_images),
                         (&garden, &garden_images),
                         (&corporate_office, &corporate_office_images),
@@ -524,6 +517,7 @@ fn maybe_load_models(state: &StateRef) {
                         (&brick_kitchen, &brick_kitchen_images),
                         (&bakery, &bakery_images),
                         (&farmers_market, &farmers_market_images),
+                        (&riverside_campsite, &riverside_campsite_images),
                     ])
                     .is_ok()
                 }),
@@ -532,7 +526,7 @@ fn maybe_load_models(state: &StateRef) {
             for name in [
                 "kitchen",
                 "office",
-                "potluck",
+                "social-kitchen",
                 "bedroom",
                 "garden",
                 "corporate-office",
@@ -541,6 +535,7 @@ fn maybe_load_models(state: &StateRef) {
                 "brick-kitchen",
                 "bakery",
                 "farmers-market",
+                "riverside-campsite",
             ] {
                 let _ = s.root.set_attribute(
                     &format!("data-{name}-state"),
@@ -683,7 +678,7 @@ impl State {
         for name in [
             "kitchen",
             "office",
-            "potluck",
+            "social-kitchen",
             "bedroom",
             "garden",
             "corporate-office",
@@ -692,6 +687,7 @@ impl State {
             "brick-kitchen",
             "bakery",
             "farmers-market",
+            "riverside-campsite",
         ] {
             let _ = self
                 .root
@@ -1037,7 +1033,7 @@ impl State {
                 &format!("{:.3}", self.arrivals[4].frame()),
             );
             let _ = self.canvas.set_attribute(
-                "data-potluck-assembly-frame",
+                "data-social-kitchen-assembly-frame",
                 &format!("{:.3}", self.arrivals[9].frame()),
             );
             let _ = self.canvas.set_attribute(
@@ -1071,6 +1067,10 @@ impl State {
             let _ = self.canvas.set_attribute(
                 "data-farmers-market-assembly-frame",
                 &format!("{:.3}", self.arrivals[8].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-riverside-campsite-assembly-frame",
+                &format!("{:.3}", self.arrivals[10].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-arrival-frames",
