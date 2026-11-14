@@ -133,13 +133,13 @@ for i in range(3):
   t=j/7;r=.11*sin(pi*t)*(1.3-.7*t)
   for k in range(N):a=k*2*pi/N;v.append((x+.11*t*t+r*cos(a),y+r*.7*sin(a),.24+t*(.55+i*.08)))
  smooth(mesh('Sculpted campfire flame',v,[(j*N+k,j*N+(k+1)%N,(j+1)*N+(k+1)%N,(j+1)*N+k)for j in range(7)for k in range(N)],'flameCore' if i==1 else 'flame'))
-fold_chair('Fireside canvas chair',(-1.55,-2.4,.06),-pi/2,'sageDark')
+fold_chair('Fireside canvas chair',(-1.55,-2.4,.06),pi/2,'sageDark')
 rod('Marshmallow roasting stick',(-1.23,-2.28,.65),(-.49,-2.42,.64),.009,'oak',8)
 for x in [-.58,-.49]:cyl('Roasting marshmallow',(x,-2.42,.64),.032,.06,'white',16).rotation_euler.y=pi/2
-rounded_slab('Smores board',(.85,-2.49,.23),.52,.35,.04,.04,'oak3')
+rounded_slab('Smores board',(.85,-2.49,.09),.52,.35,.04,.04,'oak3')
 for i in range(3):
  x=.7+i*.15
- box('Graham cracker base',(x,-2.49,.265),(.12,.12,.023),'cookie',.005);box('Chocolate square',(x,-2.49,.283),(.10,.10,.014),'chocolate',.003);pill('Smores marshmallow',(x,-2.49,.31),(.09,.09,.045),'white');box('Graham cracker top',(x,-2.49,.342),(.12,.12,.023),'cookie',.005)
+ box('Graham cracker base',(x,-2.49,.125),(.12,.12,.023),'cookie',.005);box('Chocolate square',(x,-2.49,.143),(.10,.10,.014),'chocolate',.003);pill('Smores marshmallow',(x,-2.49,.17),(.09,.09,.045),'white');box('Graham cracker top',(x,-2.49,.202),(.12,.12,.023),'cookie',.005)
 collection('11 Path lanterns and stacked firewood',offset=(0,-.4,.1))
 for i in range(5):little_rock('Cabin path stepping stone',-2.7+.18*sin(i),-3.17+i*.38,.06,.17)
 for i in range(6):rod('Stored split firewood',(-3.45+i*.14,-1.42,.15),(-3.45+i*.14,-.97,.15),.057,'walnut2',10)

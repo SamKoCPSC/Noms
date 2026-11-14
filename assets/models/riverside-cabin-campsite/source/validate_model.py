@@ -31,6 +31,8 @@ else:
  assert count('folded tier face')==72
  assert count('Lounge wooden back slat')==5 and count('Lounge wooden seat slat')==8
  assert count('Continuous blue river')==1 and count('Grilled sausage')==3
+ assert abs(bpy.data.objects['Fireside canvas chair'].rotation_euler.z-math.pi/2)<.001
+ board=bpy.data.objects['Smores board'];assert abs(min((board.matrix_world@Vector(v)).z for v in board.bound_box)-.07)<.005
  report.update(cabin_storeys=2,river=True,trees=5,folded_tree_faces=72,wooden_porch_lounge=True,no_tent_or_fence=True)
 for o in obs:assert all(math.isfinite(v)for row in o.matrix_world for v in row)
 b=glb.read_bytes();magic,version,total=struct.unpack_from('<4sII',b);assert magic==b'glTF'and version==2 and total==len(b)
