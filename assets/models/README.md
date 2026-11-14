@@ -5,6 +5,8 @@ rebuild sources. Multi-scene collections also include an offline gallery.
 
 | Collection | Scenes | Preview |
 | --- | --- | --- |
+| [L-shaped Social Kitchen](monochrome-social-kitchen/README.md) | Revision 5: smaller oval roast facing right, a fuller potato tray and individual soup bowls; review asset for Without the disruptions | [Preview](monochrome-social-kitchen/previews/monochrome-social-kitchen.png) |
+| [Riverside Cabin Campsite](riverside-cabin-campsite/README.md) | Reconstructed revision 4: two-storey cabin, river, folded pines and camping food; review asset for Respecting your privacy | [Preview](riverside-cabin-campsite/previews/riverside-cabin-campsite.png) |
 | [University Reading Room](university-library/README.md) | Revision 4: UBC-inspired hall with populated study tables, blue window panels and a full-turn spiral stair; integrated in the origin-story card | [Preview](university-library/previews/university-library.png) |
 | [Modern Baking Lab](modern-baking-lab/README.md) | Revision 3: bakery storefront, dough sheeter, refrigeration and right-shifted workbench | [Preview](modern-baking-lab/previews/modern-baking-lab.png) |
 | [Brick-loft U-shaped Kitchen](brick-loft-kitchen/README.md) | Revision 5: open-front dining peninsula, coffee appliances, shared food and corrected faucet | [Preview](brick-loft-kitchen/previews/brick-loft-kitchen.png) |
