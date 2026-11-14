@@ -5,27 +5,47 @@ from mathutils import Vector
 root=Path(__file__).resolve().parents[1];name=root.name
 native=root/'models'/f'{name}.blend';glb=root/'models'/f'{name}.glb'
 bpy.ops.wm.open_mainfile(filepath=str(native))
-assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==4
+assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==5
 obs=list(bpy.context.scene.objects)
 count=lambda s:sum(s in o.name for o in obs)
-report={'revision':4,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
+report={'revision':5,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
 if 'kitchen' in name:
  assert count('dark stoneware plate')==4
  assert count('rosy beef grain')==18
- assert count('crisp potato chunk')==36
+ assert count('crisp potato chunk')==54
  assert count('green pea')==172
  assert count('peppercorn cream sauce')==4
  assert count('Butter dish')==0
  assert count('Dinner red wine bowl')==4
+ assert count('Dining soup ivory bowl')==4 and count('Dining soup golden soup')==4
+ assert count('Island tray crisp potato chunk')==30
  bread=[o for o in obs if 'angled slice' in o.name]
  assert len(bread)==4 and all(abs(o.rotation_euler.y+1.4)<.001 for o in bread)
  bpy.context.view_layer.update()
  def bounds(o):
-  pts=[o.matrix_world@Vector(v)for v in o.bound_box]
+  pts=[o.matrix_world@v.co for v in o.data.vertices]
   return [min(v[k]for v in pts)for k in range(3)],[max(v[k]for v in pts)for k in range(3)]
  bl,bh=bounds(bpy.data.objects['Shared bread board']);lo,hi=bounds(bpy.data.objects['Butter block on bread board'])
  assert all(bl[k]<lo[k]<hi[k]<bh[k]for k in [0,1]) and abs(lo[2]-bh[2])<.005
- report.update(plated_dinners=4,beef_slices=18,potato_chunks=36,fanned_bread_slices=4,butter_on_shared_board=True)
+
+ roast=bpy.data.objects['Carved whole roast'];assert abs(roast.rotation_euler.z-math.pi/2)<.001 and all(abs(v-.60)<.001 for v in roast.scale)
+ face=bpy.data.objects['Whole prime rib roast pink carved face']
+ normal=(face.matrix_world.to_3x3().inverted().transposed()@face.data.polygons[0].normal).normalized()
+ assert normal.x>.999 and abs(normal.y)<.001
+ for v in list(face.data.vertices)[-96:]:assert abs((v.co.x/.35)**2+((v.co.z-.247)/.23)**2-1)<.0001
+ roast_pts=[o.matrix_world@v.co for o in roast.children_recursive if o.type=='MESH'for v in o.data.vertices]
+ assert max(v.z for v in roast_pts)-min(v.z for v in roast_pts)<.30
+ assert abs(min(v.z for v in roast_pts)-1.194)<.001
+ for o in [o for o in obs if 'Island tray crisp potato chunk'in o.name]:
+  low,high=bounds(o);assert .335<low[0]<high[0]<.985 and -.366<low[1]<high[1]<.126
+  assert high[2]-low[2]<.10
+ tl,th=bounds(bpy.data.objects['Dining table rounded top'])
+ for o in [o for o in obs if 'Dining soup ivory bowl'in o.name]:
+  low,high=bounds(o)
+  assert all(tl[k]<low[k]<high[k]<th[k]for k in [0,1]) and abs(low[2]-th[2])<.005
+  assert high[0]<bl[0] or low[0]>bh[0]
+ report.update(plated_dinners=4,beef_slices=18,potato_chunks=54,tray_potatoes=30,soup_bowls=4,oval_roast=True,roast_cut_face_direction='+X',roast_scale=.60,fanned_bread_slices=4,butter_on_shared_board=True)
+
 else:
  assert bpy.context.scene['storeys']==2 and not bpy.context.scene['has_tent'] and not bpy.context.scene['has_fence']
  assert count('folded tier face')==72
@@ -40,7 +60,7 @@ for node in d['nodes']:
 for view in d['bufferViews']:assert view.get('byteOffset',0)+view['byteLength']<=d['buffers'][view.get('buffer',0)]['byteLength']
 if 'kitchen' in name:
  food=[m for m in d['meshes']if any(t in m.get('name','')for t in ['pink carved face','rosy beef grain','crisp potato chunk','uneven pepper crust'])]
- assert len(food)==56 and all('COLOR_0'in p['attributes']for m in food for p in m['primitives'])
+ assert len(food)==74 and all('COLOR_0'in p['attributes']for m in food for p in m['primitives'])
  report['food_meshes_with_vertex_colors']=len(food)
 report.update(glb_bytes=len(b),glb_meshes=len(d['meshes']),triangles=sum(d['accessors'][p['indices']]['count']//3 for m in d['meshes']for p in m['primitives']),sha256=hashlib.sha256(b).hexdigest(),structure_valid=True)
 bpy.ops.wm.read_factory_settings(use_empty=True);bpy.ops.import_scene.gltf(filepath=str(glb))

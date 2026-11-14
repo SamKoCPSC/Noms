@@ -72,14 +72,17 @@ box('Island toe recess',(.1,.15,.14),(2.65,1.07,.16),'black',.015);box('Steel is
 for x in [-.85,.10,1.05]:box('Island drawer front',(x,-.487,.78),(.92,.03,.51),'steelMatte',.01)
 collection('11 Prime rib island spread',offset=(0,-.6,.3))
 rounded_slab('Roast carving board',(-.60,.26,1.17),1.40,.95,.045,.07,'walnut2')
-local_group('Carved whole roast',(-.78,.24,1.195),0,lambda:roast('Whole prime rib roast',0,0,0)).scale=(.88,.88,.88)
-ribslice('Carved roast first slice',-.70,-.005,1.197,2.55,-.10);ribslice('Carved roast second slice',-.39,.035,1.224,2.55,.22)
+whole_roast=local_group('Carved whole roast',(-.65,.36,1.195),pi/2,lambda:roast('Whole prime rib roast',0,0,0));whole_roast.scale=(.60,.60,.60)
+bpy.context.view_layer.update()
+roast_bottom=min((o.matrix_world@v.co).z for o in whole_roast.children_recursive if o.type=='MESH'for v in o.data.vertices)
+whole_roast.location.z+=1.194-roast_bottom
+ribslice('Carved roast first slice',-.45,.35,1.195,1.80,pi/2-.10,oval=True);ribslice('Carved roast second slice',-.27,.33,1.214,1.80,pi/2+.14,oval=True)
 rod('Carving knife handle',(.025,.44,1.21),(.025,.64,1.21),.018,'black');box('Carving knife blade',(.025,.255,1.21),(.035,.37,.008),'steel',.002)
 rounded_slab('Roasting tray base',(.66,-.12,1.175),.69,.53,.025,.055,'steelMatte')
 for y in [-.375,.135]:box('Roasting tray raised rim',(.66,y,1.205),(.64,.018,.06),'steelMatte',.009)
 for x in [.325,.995]:box('Roasting tray end rim',(x,-.12,1.205),(.018,.49,.06),'steelMatte',.009)
 for x in [.285,1.035]:box('Roasting tray handle',(x,-.12,1.218),(.09,.19,.018),'steel',.008)
-potatoes('Island tray',.66,-.12,1.19,.069,12)
+potatoes('Island tray',.66,-.12,1.19,.048,30,cols=6)
 rounded_slab('Island brioche board',(-.72,-.40,1.17),.76,.24,.035,.03,'oak3');brioche('Island sliced brioche',-.72,-.40,1.19,6,.92)
 winebottle('Cabernet bottle',1.20,.57,1.15,'CABERNET');winebottle('Bordeaux bottle',.97,.60,1.15,'BORDEAUX')
 collection('12 Oak dining table',offset=(0,-.8,.1));table('Dining table',0,-2.15,.84,2.62,1.12,'oak3')
@@ -93,11 +96,14 @@ for x in [-.72,.72]:
    rod('Polished dinner cutlery',(x+dx,y-.10,.915),(x+dx,y+.08,.915),.006,'steel',12)
    if dx<0:
     for k in range(3):rod('Fork tine',(x+dx-.010+k*.010,y+.07,.915),(x+dx-.010+k*.010,y+.115,.915),.002,'steel',8)
+collection('16 Four bowls of soup',offset=(0,-.6,.2))
+for x in [-.345,.345]:
+ for y in [-2.43,-1.87]:soup_bowl('Dining soup',x,y,.89)
 collection('15 Shared brioche and butter',offset=(0,-.6,.2))
 rounded_slab('Shared bread board',(0,-2.15,.912),.47,.52,.035,.03,'walnut2');fanned_brioche('Shared brioche slices',.015,-2.045,.930)
 box('Butter block on bread board',(.075,-2.31,.954),(.13,.085,.045),'butter',.008)
 for i in range(3):box('Butter cut lines',(.035+i*.04,-2.31,.977),(.002,.078,.002),'honey',0)
 rod('Butter knife on board',(-.17,-2.31,.943),(-.02,-2.31,.943),.007,'steel',12)
-bpy.context.scene['plated_dinners']=4;bpy.context.scene['wine_glasses']=4
+bpy.context.scene['plated_dinners']=4;bpy.context.scene['wine_glasses']=4;bpy.context.scene['soup_bowls']=4;bpy.context.scene['tray_potatoes']=30
 bpy.context.scene['menu']='Prime rib, peppercorn sauce, golden roast potatoes, garden peas, brioche and board butter, red wine, soup'
 finish('monochrome-social-kitchen','L-shaped Social Kitchen — reconstructed',scale=11.5,target=(0,0,1.15))

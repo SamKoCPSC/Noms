@@ -13,7 +13,8 @@ def foodmesh(n,v,f,colors,mat):
  o=mesh(n,v,f,mat);at=o.data.color_attributes.new(name='FoodColor',type='FLOAT_COLOR',domain='CORNER')
  for lp in o.data.loops:at.data[lp.index].color=colors[lp.vertex_index]
  return smooth(o)
-def section(t):
+def section(t,oval=False):
+ if oval:return .35*cos(t),.247+.23*sin(t)
  rr=1+.085*sin(3*t+.4)+.045*cos(5*t-1.1)
  return .35*cos(t)*rr,max(.016,.247+.247*sin(t)*rr)
 def cutcolor(px,pz,r,t,seed):
@@ -23,12 +24,12 @@ def cutcolor(px,pz,r,t,seed):
  if r>.90:return blendcol('#98665A','#BD8577',fib*.5+.2)
  if pz>.32 and abs(pz-(.365-.19*(px+.04)**2))<.006+.002*sin(px*62):return blendcol('#DAAB9E','#EAC1AE',.5+q*.3)
  return blendcol('#983F49','#D58583',.44+q*.34+(fib-.5)*.23)
-def cutface(n,mapper,seed=0):
+def cutface(n,mapper,seed=0,oval=False):
  N,L=96,24;v=[mapper(0,.247)];cs=[cutcolor(0,.247,0,0,seed)]
  for j in range(1,L+1):
   r=j/L
   for i in range(N):
-   t=2*pi*i/N;xx,zz=section(t);xx*=r;zz=.247+(zz-.247)*r;v.append(mapper(xx,zz));cs.append(cutcolor(xx,zz,r,t,seed))
+   t=2*pi*i/N;xx,zz=section(t,oval);xx*=r;zz=.247+(zz-.247)*r;v.append(mapper(xx,zz));cs.append(cutcolor(xx,zz,r,t,seed))
  f=[(0,1+i,1+(i+1)%N)for i in range(N)]
  for j in range(L-1):
   a=1+j*N;b=a+N
@@ -39,21 +40,21 @@ def roast(n,x,y,z):
  for j in range(L+1):
   d=j/L;yy=y+d*.52;bulge=1+.035*sin(d*pi)-.065*d**5
   for i in range(N):
-   t=2*pi*i/N;xx,zz=section(t);q=noise.noise(Vector((xx*53,yy*49,zz*51)));xx=xx*bulge+.007*q*cos(t);zz=max(.008,zz+.008*q)
+   t=2*pi*i/N;xx,zz=section(t,True);q=noise.noise(Vector((xx*53,yy*49,zz*51)));xx=xx*bulge+.007*q*cos(t);zz=max(.008,zz+.008*q)
    v.append((x+xx,yy,z+zz));m=noise.noise(Vector((xx*32,yy*33,zz*35)));cs.append(blendcol('#100C08','#492916',.38+m*.64) if m<.38 else blendcol('#512C16','#78431D',(m-.38)*2))
  f=[(j*N+i,(j+1)*N+i,(j+1)*N+(i+1)%N,j*N+(i+1)%N)for j in range(L)for i in range(N)]
- f.append(tuple(reversed(range(L*N,(L+1)*N))));foodmesh(n+' uneven pepper crust',v,f,cs,'ribSurface');cutface(n+' pink carved face',lambda xx,zz:(x+xx,y-.001,z+zz),1)
+ f.append(tuple(reversed(range(L*N,(L+1)*N))));foodmesh(n+' uneven pepper crust',v,f,cs,'ribSurface');cutface(n+' pink carved face',lambda xx,zz:(x+xx,y-.001,z+zz),1,oval=True)
  for i in range(36):
-  a=.35+random.random()*2.45;xx,zz=section(a);yy=y+.04+random.random()*.43
+  a=.35+random.random()*2.45;xx,zz=section(a,True);yy=y+.04+random.random()*.43
   uv(n+' herb crust',(x+xx,yy,z+zz+.003),(.005,.01,.002),'rosemary' if i%4==0 else 'beefCrust',8,6)
-def ribslice(n,x,y,z,s=1,a=0):
+def ribslice(n,x,y,z,s=1,a=0,oval=False):
  def fn():
   N=96;v=[];cs=[]
   for dz in [0,.023]:
    for i in range(N):
-    t=2*pi*i/N;xx,zz=section(t);v.append((xx*.29,(zz-.247)*.36,dz+.0015*sin(i*.8)));cs.append(blendcol('#3A2115','#86512C',.43+.25*sin(i*2.6)))
+    t=2*pi*i/N;xx,zz=section(t,oval);v.append((xx*.29,(zz-.247)*.36,dz+.0015*sin(i*.8)));cs.append(blendcol('#3A2115','#86512C',.43+.25*sin(i*2.6)))
   f=[tuple(reversed(range(N)))]+[(i,(i+1)%N,(i+1)%N+N,i+N)for i in range(N)]
-  foodmesh(n+' browned perimeter',v,f,cs,'ribSurface');cutface(n+' rosy beef grain',lambda xx,zz:(xx*.29,(zz-.247)*.36,.024),x*11+y*7)
+  foodmesh(n+' browned perimeter',v,f,cs,'ribSurface');cutface(n+' rosy beef grain',lambda xx,zz:(xx*.29,(zz-.247)*.36,.024),x*11+y*7,oval=oval)
  o=local_group(n,(x,y,z),a,fn);o.scale=(s,s,s);return o
 def potato_piece(n,s,kind):
  N,L=24,10;quarter=kind%3!=1;span=pi if quarter else 2*pi;count=N+1 if quarter else N
@@ -83,8 +84,8 @@ def potato_piece(n,s,kind):
   if all(abs(v[k][2]-tz)<1e-5 for k in p.vertices):p.use_smooth=False
  for k in range(2):
   x=(k-.5)*s*.34;y=(k-.5)*s*.15;rod(n+' rosemary',(x-s*.13,y,tz+.002),(x+s*.17,y+s*.09,tz+.002),.0018,'rosemary',8)
-def potatoes(n,x,y,z,s=.05,count=6):
- cols=4 if count>=9 else 3;rows=math.ceil(count/cols)
+def potatoes(n,x,y,z,s=.05,count=6,cols=None):
+ cols=cols or (4 if count>=9 else 3);rows=math.ceil(count/cols)
  for i in range(count):
   xx=x+(i%cols-(cols-1)/2)*s*2.03+s*.16*sin(i*3.4);yy=y+(i//cols-(rows-1)/2)*s*1.8+s*.14*cos(i*1.7)
   o=local_group(n+' irregular roasted piece',(xx,yy,z),i*2.4,lambda:potato_piece(n,s*(.85+.24*sin(i*1.7+.3)**2),i));o.rotation_euler.x=.42*sin(i*2.1+.4);o.rotation_euler.y=.33*cos(i*1.4)
@@ -130,3 +131,15 @@ def wineglass(n,x,y,z):
  lathe(n+' bowl',(x,y,z+.14),[(.012,0),(.060,.04),(.072,.095),(.065,.16),(.062,.16),(.068,.095),(.056,.04),(.009,.006)],'glass',32)
  cyl(n+' stem',(x,y,z+.075),.007,.15,'glass',16);cyl(n+' foot',(x,y,z+.008),.058,.012,'glass',32)
  lathe(n+' wine',(x,y,z+.14),[(0,.01),(.055,.04),(.066,.09),(0,.09)],'wine',32)
+
+
+def soup_bowl(n,x,y,z):
+ """Individual soup portion with an inset surface and visible vegetables."""
+ lathe(n+' ivory bowl',(x,y,z),[(0,0),(.045,0),(.061,.012),(.095,.056),(.105,.082),(.105,.088),(.099,.088),(.089,.056),(.054,.016),(0,.016)],'ceramic',48)
+ torus(n+' rolled rim',(x,y,z+.086),.102,.003,'ivory',steps=48)
+ cyl(n+' golden soup',(x,y,z+.067),.091,.004,'soup',48)
+ for i in range(10):
+  a=i*2.4;r=.072*math.sqrt((i+.5)/10)
+  box(n+' vegetable garnish',(x+r*cos(a),y+r*sin(a),z+.071),(.011,.009,.004),'orange' if i%3 else 'leaf',.002)
+ for i in range(4):
+  a=i*2.4+.4;uv(n+' soup bean',(x+.042*cos(a),y+.042*sin(a),z+.071),(.009,.005,.003),'dough',10,6)

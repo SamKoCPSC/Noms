@@ -165,7 +165,7 @@ def area(n,loc,energy,size,col,target=(0,0,0)):
  d=bpy.data.lights.new(n,'AREA');d.energy=energy;d.shape='DISK';d.size=size;d.color=col;o=bpy.data.objects.new(n,d);COL.objects.link(o);o.parent=ROOT;o.location=loc;o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler();return o
 
 def finish(key,title,scale=10.2,target=(0,0,1.1),night=False):
- out=R.parent;scene=bpy.context.scene;scene.unit_settings.system='METRIC';scene['model_name']=title;scene['revision']=4;scene['reconstructed']=True;scene['style']='Noms matte miniature diorama';scene['animation_status']='Static review model; separate assembly roots for future animation'
+ out=R.parent;scene=bpy.context.scene;scene.unit_settings.system='METRIC';scene['model_name']=title;scene['revision']=5;scene['reconstructed']=True;scene['style']='Noms matte miniature diorama';scene['animation_status']='Static review model; separate assembly roots for future animation'
  bpy.context.view_layer.update();manifest=[]
  for root in GROUPS:
   obs=[o for o in root.children_recursive if o.type in ['MESH','CURVE','FONT']];pts=[o.matrix_world@Vector(v)for o in obs for v in o.bound_box]
