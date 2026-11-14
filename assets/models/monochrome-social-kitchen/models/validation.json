@@ -1,5 +1,5 @@
 {
-  "revision": 6,
+  "revision": 7,
   "reconstructed": true,
   "native_meshes": 1038,
   "plated_dinners": 4,
@@ -7,19 +7,24 @@
   "board_slices": 1,
   "slices_per_plate": 1,
   "flat_roast_base": true,
+  "matching_oval_slices": true,
+  "carving_board_size": [
+    1.0,
+    0.65
+  ],
   "potato_chunks": 54,
   "tray_potatoes": 30,
   "soup_bowls": 4,
   "oval_roast": true,
   "roast_cut_face_direction": "+X",
-  "roast_scale": 0.6,
+  "roast_scale": 0.42,
   "fanned_bread_slices": 4,
   "butter_on_shared_board": true,
   "food_meshes_with_vertex_colors": 61,
-  "glb_bytes": 10956532,
+  "glb_bytes": 10953872,
   "glb_meshes": 1058,
   "triangles": 349366,
-  "sha256": "72aac6a74c2e7d89319e81d30807577f450109251490be68a8e2b921730fae88",
+  "sha256": "880f2189caebfb63e873cc18f08b863f481dc9034a8c8d3f095f6eddee65d892",
   "structure_valid": true,
   "fresh_blender_glb_import": "passed"
 }

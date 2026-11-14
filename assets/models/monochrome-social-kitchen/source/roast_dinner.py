@@ -47,15 +47,20 @@ def roast(n,x,y,z):
  for i in range(36):
   a=.35+random.random()*2.45;xx,zz=section(a,True);yy=y+.04+random.random()*.43
   uv(n+' herb crust',(x+xx,yy,z+zz+.003),(.005,.01,.002),'rosemary' if i%4==0 else 'beefCrust',8,6)
-def ribslice(n,x,y,z,s=1,a=0,oval=False):
+def ribslice(n,x,y,z,s=1,a=0,oval=False,flat_bottom=False):
  def fn():
   N=96;v=[];cs=[]
   for dz in [0,.023]:
    for i in range(N):
-    t=2*pi*i/N;xx,zz=section(t,oval);v.append((xx*.29,(zz-.247)*.36,dz+.0015*sin(i*.8)));cs.append(blendcol('#3A2115','#86512C',.43+.25*sin(i*2.6)))
+    t=2*pi*i/N;xx,zz=section(t,oval,flat_bottom);v.append((xx*.29,(zz-.247)*.36,dz+.0015*sin(i*.8)));cs.append(blendcol('#3A2115','#86512C',.43+.25*sin(i*2.6)))
   f=[tuple(reversed(range(N)))]+[(i,(i+1)%N,(i+1)%N+N,i+N)for i in range(N)]
-  foodmesh(n+' browned perimeter',v,f,cs,'ribSurface');cutface(n+' rosy beef grain',lambda xx,zz:(xx*.29,(zz-.247)*.36,.024),x*11+y*7,oval=oval)
+  foodmesh(n+' browned perimeter',v,f,cs,'ribSurface');cutface(n+' rosy beef grain',lambda xx,zz:(xx*.29,(zz-.247)*.36,.024),x*11+y*7,oval=oval,flat_bottom=flat_bottom)
  o=local_group(n,(x,y,z),a,fn);o.scale=(s,s,s);return o
+SERVED_RIB_SCALE=(1.10,1.0,.85)
+def serving_slice(n,x,y,z,a):
+ o=ribslice(n,x,y,z,1,a,oval=True,flat_bottom=True)
+ o.scale=SERVED_RIB_SCALE
+ return o
 def potato_piece(n,s,kind):
  N,L=24,10;quarter=kind%3!=1;span=pi if quarter else 2*pi;count=N+1 if quarter else N
  v=[(0,0,0)];cs=[rgb('#8D4B21')]
@@ -105,7 +110,7 @@ def sauce(n,x,y,z,scale=1):
   uv(n+' cracked pepper',(x+scale*(.15*t+u*h*.52),y+scale*(-.11*t+u*h),z+.009*(1-u*u)+.003*sin(t*10)+.0015),(.0018,.0014,.001),'beefCrust',8,6)
 def plated_dinner(n,x,y,z):
  plate(n+' dark stoneware plate',x,y,z,.235,'dinnerStone');torus(n+' warm rim',(x,y,z+.027),.231,.0025,'dinnerRim')
- ribslice(n+' carved beef',x+.07,y+.055,z+.038,1,.25).scale=(1.0,1.22,.85)
+ serving_slice(n+' carved beef',x+.07,y+.055,z+.038,.25)
  sauce(n,x+.025,y+.10,z+.059,scale=.65)
  for i in range(43):
   a=i*2.4;r=.073*math.sqrt((i+.5)/43);uv(n+' green pea',(x-.125+r*cos(a),y+.006+r*sin(a)*1.12,z+.047+(i%3)*.003),(.0105,.0105,.010),'gardenPea',12,8)

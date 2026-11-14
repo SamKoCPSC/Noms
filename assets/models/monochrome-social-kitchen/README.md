@@ -2,7 +2,7 @@
 
 Intended About-tour section: **Without the disruptions.**
 
-Revision 6 builds on the reconstruction from the approved design discussion. Earlier uncommitted workspace artifacts were lost; this is not a byte-identical recovery. The sources, native master, GLB, screenshots and download bundle are now versioned together in the repository.
+Revision 7 builds on the reconstruction from the approved design discussion. Earlier uncommitted workspace artifacts were lost; this is not a byte-identical recovery. The sources, native master, GLB, screenshots and download bundle are now versioned together in the repository.
 
 Matte ivory and graphite L-shaped kitchen, steel island, four-seat oak dining table, prime rib with a dark crust and pink cut face, golden roast potatoes, four beef/peas/potato dinners with peppercorn sauce, fanned brioche and butter directly on the shared board, wine and four individual soup bowls.
 
@@ -10,9 +10,11 @@ Revision 5 reduces the island roast by 32% in each dimension, gives it an oval c
 
 Revision 6 adds a gently flattened base to the island roast, removes the second carving-board slice, and serves one slice of beef per dinner plate with the sauce repositioned on top.
 
+Revision 7 gives all five slices the same oval shape with a flat edge and identical serving dimensions. The roast is another 30% smaller, and the carving board is reduced to 1.0 × 0.65 m with a shorter knife repositioned to fit.
+
 ## Files
 
-- [Download complete version 6 bundle](downloads/monochrome-social-kitchen-v6.zip) (use GitHub’s **Download raw file** button).
+- [Download complete version 7 bundle](downloads/monochrome-social-kitchen-v7.zip) (use GitHub’s **Download raw file** button).
 - [Editable Blender 4.3 master](models/monochrome-social-kitchen.blend).
 - [Standard GLB export](models/monochrome-social-kitchen.glb).
 - [Assembly roots and bounds](models/monochrome-social-kitchen-assemblies.json).

@@ -5,10 +5,10 @@ from mathutils import Vector
 root=Path(__file__).resolve().parents[1];name=root.name
 native=root/'models'/f'{name}.blend';glb=root/'models'/f'{name}.glb'
 bpy.ops.wm.open_mainfile(filepath=str(native))
-assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==6
+assert bpy.context.scene['reconstructed'] and bpy.context.scene['revision']==7
 obs=list(bpy.context.scene.objects)
 count=lambda s:sum(s in o.name for o in obs)
-report={'revision':6,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
+report={'revision':7,'reconstructed':True,'native_meshes':sum(o.type=='MESH'for o in obs)}
 if 'kitchen' in name:
  assert count('dark stoneware plate')==4
  assert count('rosy beef grain')==5
@@ -33,7 +33,7 @@ if 'kitchen' in name:
  bl,bh=bounds(bpy.data.objects['Shared bread board']);lo,hi=bounds(bpy.data.objects['Butter block on bread board'])
  assert all(bl[k]<lo[k]<hi[k]<bh[k]for k in [0,1]) and abs(lo[2]-bh[2])<.005
 
- roast=bpy.data.objects['Carved whole roast'];assert abs(roast.rotation_euler.z-math.pi/2)<.001 and all(abs(v-.60)<.001 for v in roast.scale)
+ roast=bpy.data.objects['Carved whole roast'];assert abs(roast.rotation_euler.z-math.pi/2)<.001 and all(abs(v-.42)<.001 for v in roast.scale)
  face=bpy.data.objects['Whole prime rib roast pink carved face']
  normal=(face.matrix_world.to_3x3().inverted().transposed()@face.data.polygons[0].normal).normalized()
  assert normal.x>.999 and abs(normal.y)<.001
@@ -44,8 +44,25 @@ if 'kitchen' in name:
  base=[v for v in crust.data.vertices if abs(v.co.z-.045)<1e-6]
  assert len(base)>150 and max(v.co.x for v in base)-min(v.co.x for v in base)>.25
  roast_pts=[o.matrix_world@v.co for o in roast.children_recursive if o.type=='MESH'for v in o.data.vertices]
- assert max(v.z for v in roast_pts)-min(v.z for v in roast_pts)<.30
+ assert max(v.z for v in roast_pts)-min(v.z for v in roast_pts)<.20
  assert abs(min(v.z for v in roast_pts)-1.194)<.001
+ board_low,board_high=bounds(bpy.data.objects['Roast carving board'])
+ assert abs(board_high[0]-board_low[0]-1.0)<.001 and abs(board_high[1]-board_low[1]-.65)<.001
+ assert all(board_low[k]<min(v[k]for v in roast_pts)<max(v[k]for v in roast_pts)<board_high[k]for k in [0,1])
+ board_slice=bpy.data.objects['Carved roast first slice rosy beef grain']
+ slice_faces=[o for o in obs if 'rosy beef grain' in o.name]
+ for cut in slice_faces:
+  assert all(abs(a-b)<1e-6 for a,b in zip(cut.parent.scale,(1.10,1.0,.85)))
+  assert len(cut.data.vertices)==len(board_slice.data.vertices)
+  assert all((a.co-b.co).length<1e-6 for a,b in zip(cut.data.vertices,board_slice.data.vertices))
+  edge=list(cut.data.vertices)[-96:]
+  assert sum(abs(v.co.y+.07272)<1e-6 for v in edge)>=13
+  for v in edge:
+   xx=v.co.x/.29;zz=v.co.y/.36+.247
+   assert abs(zz-.045)<1e-6 or abs((xx/.35)**2+((zz-.247)/.23)**2-1)<.0001
+ for part in board_slice.parent.children:
+  low,high=bounds(part)
+  assert all(board_low[k]<low[k]<high[k]<board_high[k]for k in [0,1])
  for o in [o for o in obs if 'Island tray crisp potato chunk'in o.name]:
   low,high=bounds(o);assert .335<low[0]<high[0]<.985 and -.366<low[1]<high[1]<.126
   assert high[2]-low[2]<.10
@@ -54,7 +71,7 @@ if 'kitchen' in name:
   low,high=bounds(o)
   assert all(tl[k]<low[k]<high[k]<th[k]for k in [0,1]) and abs(low[2]-th[2])<.005
   assert high[0]<bl[0] or low[0]>bh[0]
- report.update(plated_dinners=4,beef_slices=5,board_slices=1,slices_per_plate=1,flat_roast_base=True,potato_chunks=54,tray_potatoes=30,soup_bowls=4,oval_roast=True,roast_cut_face_direction='+X',roast_scale=.60,fanned_bread_slices=4,butter_on_shared_board=True)
+ report.update(plated_dinners=4,beef_slices=5,board_slices=1,slices_per_plate=1,flat_roast_base=True,matching_oval_slices=True,carving_board_size=[1.0,.65],potato_chunks=54,tray_potatoes=30,soup_bowls=4,oval_roast=True,roast_cut_face_direction='+X',roast_scale=.42,fanned_bread_slices=4,butter_on_shared_board=True)
 
 else:
  assert bpy.context.scene['storeys']==2 and not bpy.context.scene['has_tent'] and not bpy.context.scene['has_fence']
