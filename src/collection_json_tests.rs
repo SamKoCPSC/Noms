@@ -110,6 +110,87 @@ fn collection_json_checksums_cover_metadata_membership_and_nested_recipe_content
 }
 
 #[test]
+fn import_name_choices_leave_source_digests_and_membership_intact() {
+    let text = export(snapshot()).unwrap();
+    let mut parsed = parse(&text).unwrap();
+    let original = serde_json::to_value(&parsed.snapshot).unwrap();
+    let choices = CollectionImportNames {
+        collections: vec![CollectionImportName {
+            portable_id: parsed.snapshot.collections[1].portable_id.clone(),
+            name: " My soups ".into(),
+        }],
+        recipes: vec![CollectionImportName {
+            portable_id: parsed.recipes[0].0.portable_id.clone(),
+            name: "Soup from my backup".into(),
+        }],
+    };
+    parsed.apply_names(&choices).unwrap();
+    assert_eq!(parsed.snapshot.collections[1].name, "My soups");
+    assert_eq!(parsed.recipes[0].1.title, "Soup from my backup");
+    assert_eq!(
+        serde_json::to_value(&parsed.snapshot.recipes).unwrap(),
+        original["recipes"]
+    );
+    assert_eq!(
+        parsed.snapshot.collections[0].recipes,
+        parsed.snapshot.collections[1].recipes
+    );
+    assert_eq!(
+        serde_json::to_value(parse(&text).unwrap().snapshot).unwrap(),
+        original
+    );
+}
+
+#[test]
+fn import_name_choices_reject_unknown_repeated_blank_and_oversized_choices() {
+    let text = export(snapshot()).unwrap();
+    for case in 0..8 {
+        let mut parsed = parse(&text).unwrap();
+        let before = serde_json::to_value(&parsed.snapshot).unwrap();
+        let mut choices = CollectionImportNames {
+            collections: vec![CollectionImportName {
+                portable_id: parsed.snapshot.collections[0].portable_id.clone(),
+                name: "Valid name".into(),
+            }],
+            recipes: vec![CollectionImportName {
+                portable_id: parsed.recipes[0].0.portable_id.clone(),
+                name: "Valid title".into(),
+            }],
+        };
+        match case {
+            0 => choices.collections[0].portable_id = portable_collection_id(Uuid::new_v4()),
+            1 => choices.recipes[0].portable_id = format!("urn:noms:recipe:{}", Uuid::new_v4()),
+            2 => choices.collections.push(choices.collections[0].clone()),
+            3 => choices.recipes.push(choices.recipes[0].clone()),
+            4 => choices.collections[0].name = " \n\t ".into(),
+            5 => choices.recipes[0].name = "".into(),
+            6 => {
+                choices.collections[0].name =
+                    "x".repeat(crate::security::MAX_COLLECTION_NAME_CHARS + 1)
+            }
+            _ => choices.recipes[0].name = "🥣".repeat(crate::security::MAX_RECIPE_TITLE_CHARS + 1),
+        }
+        assert!(parsed.apply_names(&choices).is_err(), "case {case}");
+        assert_eq!(serde_json::to_value(&parsed.snapshot).unwrap(), before);
+        assert_eq!(parsed.recipes[0].1.title, "Soup & bread 🥣");
+    }
+    let mut parsed = parse(&text).unwrap();
+    let too_many = vec![
+        CollectionImportName {
+            portable_id: parsed.snapshot.collections[0].portable_id.clone(),
+            name: "Name".into()
+        };
+        MAX_COLLECTIONS + 1
+    ];
+    assert!(parsed
+        .apply_names(&CollectionImportNames {
+            collections: too_many,
+            recipes: vec![]
+        })
+        .is_err());
+}
+
+#[test]
 fn collection_json_rejects_disconnected_duplicate_missing_and_unknown_fields() {
     let base = serde_json::to_value(snapshot()).unwrap();
     for kind in 0..14 {
