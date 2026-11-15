@@ -45,6 +45,7 @@ try {
     const embedded=document.getElementById(`asset-${s.id}`);
     let gltf;
     if(embedded){const bytes=Uint8Array.from(atob(embedded.textContent.trim()),c=>c.charCodeAt(0));embedded.remove();gltf=await loader.parseAsync(bytes.buffer,'');}
+    else if(globalThis.__VILLAGE_LAYOUT__)throw Error('This HTML could not access its model files. Use OPEN-VILLAGE-MOBILE.html from the single-file mobile ZIP.');
     else gltf=await loader.loadAsync(s.model);
     const root=gltf.scene;
     root.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.isMeshBasicMaterial||m.transmission>0)m.toneMapped=false;}});

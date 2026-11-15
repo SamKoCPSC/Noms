@@ -61,6 +61,21 @@ Open http://localhost:8766. Build a portable HTML and a local-server ZIP:
 python tools/about/village/package-preview.py /tmp/noms-village-preview /tmp/village-downloads
 ```
 
+For Android file viewers using `content://`, use a single HTML file with all model
+data embedded. A multi-file HTML package can fail because the viewer cannot read
+neighboring files. Generate the smaller single-file variant with:
+
+```sh
+node tools/about/village/build-mobile-preview.mjs /tmp/noms-village-preview /tmp/village-mobile
+```
+
+This writes `OPEN-VILLAGE-MOBILE.html` and a conversion receipt. It uses WebP
+quality 95 textures at their original dimensions and verifies every copied
+geometry buffer range against the source. It does not change production assets
+or Blender masters. Zip the HTML for distribution. All twelve scenes remain
+resident, so this packaging fix does not establish phone memory/performance
+budgets. Android-specific launching must still be checked on a real device.
+
 Prepare native scene libraries without modifying any master:
 
 ```sh
