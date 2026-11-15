@@ -2,9 +2,14 @@
   "private": true,
   "scripts": {
     "tailwind:build": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css",
-    "tailwind:watch": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css --watch"
+    "tailwind:watch": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css --watch",
+    "about:three:build": "node tools/about/three/build.mjs"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.0.0"
+    "@tailwindcss/cli": "^4.0.0",
+    "esbuild": "0.25.12"
+  },
+  "dependencies": {
+    "three": "0.181.2"
   }
 }

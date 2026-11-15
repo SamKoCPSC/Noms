@@ -41,6 +41,11 @@ impl ChapterArrival {
             self.playback.advance(seconds);
         }
     }
+    /// Static baked scenes are complete before the loading curtain opens.
+    pub fn settle(&mut self) {
+        self.started = true;
+        self.playback.elapsed = DURATION;
+    }
     pub fn animating(&self) -> bool {
         self.started && !self.playback.finished()
     }
@@ -484,6 +489,19 @@ mod tests {
                 assert_eq!(a.frame(), 160.);
                 assert!(!a.animating());
             }
+        }
+    }
+    #[test]
+    fn baked_scene_stays_assembled_before_entry_and_on_revisit() {
+        let mut arrival = ChapterArrival::new(1);
+        arrival.settle();
+        assert_eq!(arrival.frame(), 160.);
+        assert!(!arrival.animating());
+
+        for progress in [0., 0.8, 1., 2., 1.] {
+            arrival.advance(progress, 0.1);
+            assert_eq!(arrival.frame(), 160.);
+            assert!(!arrival.animating());
         }
     }
     #[test]

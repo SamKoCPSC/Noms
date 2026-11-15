@@ -32,6 +32,16 @@ const _: &[u8] = include_bytes!("../../assets/brand/penguini/player.js");
 const _: &[u8] = include_bytes!("../../assets/brand/penguini/thinking-rig.js");
 const _: &[u8] = include_bytes!("../../assets/brand/penguini/dance-rig.js");
 const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen-detailed.glb");
+const THREE_KITCHEN: Asset = asset!("/assets/about/kitchen-baked.glb");
+const THREE_LIGHTING: Asset = asset!("/assets/about/kitchen-lighting.json");
+const THREE_BRIDGE: Asset = asset!(
+    "/assets/about-three-kitchen.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const _: &[u8] = include_bytes!("../../assets/about-three-kitchen.js");
+const _: &[u8] = include_bytes!("../../assets/about/kitchen-baked.glb");
+const _: &[u8] = include_bytes!("../../assets/about/kitchen-lighting.json");
+
 const KITCHEN_LAPTOP: Asset = asset!(
     "/assets/about/kitchen-laptop.webp",
     manganis::AssetOptions::builder()
@@ -326,6 +336,7 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
+       "data-three-kitchen-url":THREE_KITCHEN,"data-three-lighting-url":THREE_LIGHTING,"data-three-bridge-url":THREE_BRIDGE,
        "data-farmers-market-url":FARMERS_MARKET_MODEL,"data-bakery-url":BAKERY_MODEL,"data-brick-kitchen-url":BRICK_KITCHEN_MODEL,"data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
        "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
        "data-garden-url":GARDEN_MODEL,"data-garden-pastry-url":GARDEN_PASTRY,
@@ -354,7 +365,7 @@ pub fn About() -> Element {
        button{id:"mode-toggle",r#type:"button",disabled:true,aria_pressed:"false","Reading view"}
       }
      }
-     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
+     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}canvas{id:"story-kitchen-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
      div{id:"story",class:"story",
       for i in 0..IDS.len() {
        article{id:"panel-{i}",class:"story-panel","data-panel":"{i}","data-model":"{MODEL_FOR_STOP[i]}",aria_labelledby:"title-{i}",

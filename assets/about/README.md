@@ -1,6 +1,6 @@
 # About tour models
 
-Web derivative of Sam's approved **revision 13** Blender kitchen. The editable master and source renders remain on the [model review page](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c); this directory contains the production derivative, not the native master.
+Web derivative of Sam's approved **revision 13** Blender kitchen. The original editable master is preserved in [terracotta-recipe-kitchen](../models/terracotta-recipe-kitchen/README.md); the [model review page](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c) retains its source renders. This directory contains the production derivative.
 
 - `sams-kitchen-detailed.glb`: 187,949 triangles, 18 assembly groups and 20 draw calls (two additional print surfaces). Standard `KHR_mesh_quantization` packs geometry, material colors and atlas/print UVs; a custom `_METALLIC` scalar preserves the original material's metal factor; `kitchen-budget.json` records the delivered byte size. Uniform position quantization is approximately 0.11 mm per step in the source units.
 - `kitchen-laptop.webp` and `kitchen-cookbook.webp`: the actual Noms recipe editor capture and sourdough recipe spread, retained on the approved smaller props.
@@ -9,6 +9,13 @@ Web derivative of Sam's approved **revision 13** Blender kitchen. The editable m
 - `sams-kitchen.webp`: 960px still image used in reading mode, reduced motion and graphics fallbacks.
 - `kitchen-budget.json`: generated budget/provenance record.
 - `kitchen-geometry-audit.json`: per-object source/export triangle counts. Curved props such as the wok, serving plates, cups and stool seats retain their evaluated source geometry.
+
+The first stop now also has a static Three.js prototype: `kitchen-baked.glb`
+embeds the original master's baked lighting and retains live glass/metal;
+`kitchen-lighting.json` records its lighting and source hash. Rust still controls
+the tour camera. The existing derivative above remains the fallback. See the
+[bake instructions](../models/terracotta-recipe-kitchen/README.md) and
+[renderer notes](../../tools/about/three/README.md).
 
 ## Rebuild
 
