@@ -2,11 +2,17 @@
 
 `models.json` maps all twelve active models to preserved inputs. Eight additional
 scenes use their original Blender masters. The first kitchen keeps its reviewed
-bake. The home office, bedroom and garden have only production GLBs in this
-repository: their geometry, vertex colors, UVs, prints and existing Penguini are
+bake. The home office, bedroom and garden currently use production GLBs as bake
+inputs: their geometry, vertex colors, UVs, prints and existing Penguini are
 recovered by `reconstruct_export.py`, with a new softbox lighting rig. These three
 are **not** recovered master shaders or exact reproductions of their original
 Cycles lighting. Their provenance is explicit in each lighting JSON.
+
+The original [office](../../../assets/models/home-office/README.md),
+[bedroom](../../../assets/models/corner-cocoon-bedroom/README.md) and
+[garden](../../../assets/models/garden-cookout/README.md) masters have since been
+restored for storage. The bake catalog and production assets are unchanged;
+switching those inputs requires a separate rebake and visual review.
 
 For native masters, `bake_scene.py` reads the assembled scene without saving over
 it, appends the current Penguini placements, preserves shader coordinate systems,

@@ -14,10 +14,13 @@ Geometry is Meshopt-compressed without removing triangles; display atlases keep
 Three renderer. The shared loading curtain awaits the starting stop, including
 direct fragment entry, and neighboring scenes load on demand.
 
-Nine scenes have archived native masters. The home office, bedroom and garden
-use their preserved exported geometry and prints with reconstructed softbox
-lighting; their original Blender shaders/lighting are not available here. Source
-hashes and that distinction are recorded in each lighting JSON.
+All twelve active scenes now have archived native masters, including the restored
+[home office](../models/home-office/README.md),
+[bedroom](../models/corner-cocoon-bedroom/README.md) and
+[garden](../models/garden-cookout/README.md). Their current baked derivatives still
+use exported geometry and prints with reconstructed softbox lighting; they have
+not yet been rebaked from these restored masters. Source hashes and that
+distinction remain recorded in each lighting JSON.
 
 See [renderer and browser checks](../../tools/about/three/README.md) and
 [bake/rebuild instructions](../../tools/about/baked/README.md).
