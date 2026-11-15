@@ -633,12 +633,20 @@ impl State {
             }
         }
     }
+    fn loader_contains_focus(&self) -> bool {
+        self.doc
+            .get_element_by_id("tour-loader")
+            .is_some_and(|loader| {
+                self.doc
+                    .active_element()
+                    .is_some_and(|focused| loader.contains(Some(&focused)))
+            })
+    }
     fn sync_gate(&mut self) {
+        self.sync_gate_with_focus(self.loader_contains_focus());
+    }
+    fn sync_gate_with_focus(&mut self, focus_in_loader: bool) {
         let blocked = self.gate.blocked();
-        let focus_loading_control = self
-            .doc
-            .active_element()
-            .is_some_and(|e| e.id() == "tour-loader-read");
         let _ = self.root.set_attribute(
             "data-entry-state",
             if blocked { "loading" } else { "ready" },
@@ -663,7 +671,7 @@ impl State {
         if !blocked {
             self.loading_timeout = None;
             self.loading_phrases = None;
-            if focus_loading_control {
+            if focus_in_loader {
                 self.focus_chapter(self.active.min(flight::COUNT - 1));
             }
         }
@@ -735,6 +743,9 @@ impl State {
         let _ = self.motion_button.remove_attribute("disabled");
     }
     fn apply_mode(&mut self) {
+        // Changing mode can hide the loader and blur its focused control before
+        // sync_gate runs. Capture ownership while the control is still visible.
+        let focus_in_loader = self.loader_contains_focus();
         let was_flying = self.flying;
         self.flying = self.renderer.is_some()
             && !self.reduced
@@ -811,7 +822,7 @@ impl State {
             }
             self.gate = Gate::Open;
         }
-        self.sync_gate();
+        self.sync_gate_with_focus(focus_in_loader);
         self.resize();
         self.buttons();
         self.dirty = true;

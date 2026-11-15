@@ -20,6 +20,12 @@ async def main(args):
         page.on('pageerror', lambda e: errors.append(str(e)))
         await page.goto(args.url)
         await page.wait_for_selector('.about-tour.is-flight')
+        # Keep focus on the real mascot control while the paused frame clock
+        # lets the models load. Opening the story must transfer that focus.
+        pause = page.locator('[data-penguini-pause]')
+        await pause.wait_for(state='visible', timeout=15000)
+        await pause.focus()
+        assert await pause.evaluate('button => document.activeElement === button')
         for _ in range(400):
             await page.evaluate('step(1)')
             await page.wait_for_timeout(30)
@@ -27,6 +33,8 @@ async def main(args):
                 break
         else:
             raise AssertionError('Loading did not finish')
+        active = await page.locator('#story-canvas').get_attribute('data-active-chapter')
+        assert await page.evaluate('document.activeElement.id') == f'title-{active}'
         print('READY', flush=True)
         canvas = page.locator('#story-canvas')
         assert await canvas.get_attribute('data-scene-instances') == '12'
@@ -133,8 +141,31 @@ async def main(args):
             await poster.scroll_into_view_if_needed()
             await page.wait_for_function('(s)=>document.querySelector(s).naturalWidth > 0', arg=selector, polling=50)
         assert not errors, errors
+        # Re-enter loading, then force the runtime's context-loss fallback.
+        # Mode changes hide the loader before the gate updates its ARIA state.
+        await page.emulate_media(reduced_motion='no-preference')
+        await page.wait_for_selector('.about-tour.is-flight')
+        await pause.wait_for(state='visible', timeout=15000)
+        await pause.focus()
+        active = await canvas.get_attribute('data-active-chapter')
+        await canvas.evaluate("canvas => canvas.dispatchEvent(new Event('webglcontextlost', {cancelable:true}))")
+        await page.wait_for_selector('.about-tour.is-reader')
+        assert await page.evaluate('document.activeElement.id') == f'title-{active}'
+
+        # An unrelated focused control must retain ownership on later updates.
+        await page.evaluate("""() => {
+            const button = document.createElement('button');
+            button.id = 'outside-tour-focus';
+            button.textContent = 'Outside the tour';
+            document.body.append(button);
+            button.focus();
+        }""")
+        await page.emulate_media(reduced_motion='reduce')
+        await page.wait_for_function("document.getElementById('mode-toggle').textContent === 'Reduced motion'", polling=25)
+        assert await page.evaluate('document.activeElement.id') == 'outside-tour-focus'
+        assert not errors, errors
         await browser.close()
-        print('PASS: full viewport, centered overlay, independent arrivals, original camera, resize, reduced motion', flush=True)
+        print('PASS: full viewport, centered overlay, independent arrivals, original camera, resize, reduced motion, loader focus recovery', flush=True)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='http://localhost:8765')
