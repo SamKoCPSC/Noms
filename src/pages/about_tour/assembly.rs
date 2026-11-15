@@ -41,6 +41,11 @@ impl ChapterArrival {
             self.playback.advance(seconds);
         }
     }
+    /// Static baked scenes are complete before the loading curtain opens.
+    pub fn settle(&mut self) {
+        self.started = true;
+        self.playback.elapsed = DURATION;
+    }
     pub fn animating(&self) -> bool {
         self.started && !self.playback.finished()
     }

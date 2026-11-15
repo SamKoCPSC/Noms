@@ -10,6 +10,13 @@ Web derivative of Sam's approved **revision 13** Blender kitchen. The original e
 - `kitchen-budget.json`: generated budget/provenance record.
 - `kitchen-geometry-audit.json`: per-object source/export triangle counts. Curved props such as the wok, serving plates, cups and stool seats retain their evaluated source geometry.
 
+The first stop now also has a static Three.js prototype: `kitchen-baked.glb`
+embeds the original master's baked lighting and retains live glass/metal;
+`kitchen-lighting.json` records its lighting and source hash. Rust still controls
+the tour camera. The existing derivative above remains the fallback. See the
+[bake instructions](../models/terracotta-recipe-kitchen/README.md) and
+[renderer notes](../../tools/about/three/README.md).
+
 ## Rebuild
 
 Requires Blender 4.3.2, Python 3, NumPy and Pillow. Keep `assembly-manifest.json` beside the revision 13 native master and the approved review PNGs in the same source directory. The approved master is read without modifying or saving it. Export to a temporary directory before copying completed outputs here so the app watcher cannot read a partial asset.

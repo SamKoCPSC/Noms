@@ -22,3 +22,6 @@ pub(crate) use browser::capture_entry_fragment;
 mod shadow_map;
 #[cfg(any(target_arch = "wasm32", test))]
 mod shadows;
+
+#[cfg(target_arch = "wasm32")]
+mod three_kitchen;

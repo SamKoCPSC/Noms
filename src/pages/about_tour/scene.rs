@@ -217,6 +217,7 @@ pub struct Renderer {
     platform: Mesh,
     textures: Vec<WebGlTexture>,
     kitchen: Diorama,
+    pub three_kitchen: Option<super::three_kitchen::ThreeKitchen>,
     office: Diorama,
     social_kitchen: Diorama,
     bedroom: Diorama,
@@ -342,6 +343,7 @@ impl Renderer {
             platform,
             textures,
             kitchen: Diorama::default(),
+            three_kitchen: None,
             office: Diorama::default(),
             social_kitchen: Diorama::default(),
             bedroom: Diorama::default(),
@@ -679,6 +681,9 @@ impl Renderer {
         frames: [f32; flight::COUNT],
     ) {
         let gl = &self.gl;
+        if let Some(kitchen) = &self.three_kitchen {
+            kitchen.hide();
+        }
         self.update_shadows(camera.progress, frames, mobile);
         gl.use_program(Some(&self.program));
         gl.viewport(
@@ -721,6 +726,19 @@ impl Renderer {
                     ),
                 );
                 let visibility = 1. - smooth(0.28, 0.85, (camera.progress - i as f32).abs());
+                if i == 0 {
+                    if let Some(kitchen) = &self.three_kitchen {
+                        if kitchen.draw(
+                            model,
+                            camera,
+                            self.canvas.width(),
+                            self.canvas.height(),
+                            visibility,
+                        ) {
+                            continue;
+                        }
+                    }
+                }
                 if visibility > 0. {
                     self.draw_diorama(
                         model,
@@ -933,7 +951,8 @@ impl Renderer {
             let (diorama, room, _, _) = self.rooms()[*asset];
             let index = stop;
             let name = crate::pages::about::IDS[stop];
-            let visible = (progress - stop as f32).abs() < 0.85;
+            let visible = (progress - stop as f32).abs() < 0.85
+                && !(stop == 0 && self.three_kitchen.is_some());
             let frame = frames[index];
             let mut shadow = self.stop_shadows[index].borrow_mut();
             if let Some(map) = shadow.as_mut() {

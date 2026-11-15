@@ -324,6 +324,21 @@ pub fn start() -> Result<(), JsValue> {
         s.apply_mode();
         s.navigate(i, false, false);
     });
+    listen(
+        &state,
+        el(&doc, "story-kitchen-canvas")?.into(),
+        "webglcontextlost",
+        |s, event| {
+            event.prevent_default();
+            // A baked environment render target cannot survive context loss.
+            // Keep navigation available through the existing kitchen renderer.
+            if let Some(renderer) = &mut s.renderer {
+                renderer.three_kitchen = None;
+            }
+            let _ = s.root.set_attribute("data-three-kitchen-state", "fallback");
+            s.dirty = true;
+        },
+    );
     {
         let mut s = state.borrow_mut();
         s.apply_mode();
@@ -485,6 +500,35 @@ fn maybe_load_models(state: &StateRef) {
             ))
         }
         .await;
+        // Await the first kitchen before releasing the shared loading curtain.
+        // The legacy renderer remains the fallback if WebGL2 or the bake fails.
+        let three_context = weak.upgrade().and_then(|state| {
+            let s = state.borrow();
+            let legacy = s
+                .window
+                .location()
+                .search()
+                .unwrap_or_default()
+                .split('&')
+                .any(|v| v.trim_start_matches('?') == "kitchen=legacy");
+            (result.is_ok() && s.generation == generation && !legacy)
+                .then(|| (s.doc.clone(), s.root.clone()))
+        });
+        let three = if let Some((doc, root)) = three_context {
+            match super::three_kitchen::ThreeKitchen::load(&doc, &root).await {
+                Ok(view) => {
+                    let _ = root.set_attribute("data-three-kitchen-state", "ready");
+                    Some(view)
+                }
+                Err(error) => {
+                    tracing::warn!(?error, "Three kitchen uses legacy fallback");
+                    let _ = root.set_attribute("data-three-kitchen-state", "fallback");
+                    None
+                }
+            }
+        } else {
+            None
+        };
         if let Some(state) = weak.upgrade() {
             let mut s = state.borrow_mut();
             if s.generation != generation {
@@ -543,6 +587,12 @@ fn maybe_load_models(state: &StateRef) {
                 );
             }
             if loaded {
+                if three.is_some() {
+                    s.arrivals[0].settle();
+                }
+                if let Some(renderer) = &mut s.renderer {
+                    renderer.three_kitchen = three;
+                }
                 s.models_ready = true;
                 if s.flying {
                     s.gate = Gate::Warming;

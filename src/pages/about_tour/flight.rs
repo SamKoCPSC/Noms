@@ -16,6 +16,7 @@ const EYES: [[f32; 3]; 5] = [
 const YAWS: [f32; 5] = [0., 0.32, -0.28, 0.28, -0.22];
 pub struct Camera {
     pub eye: [f32; 3],
+    pub view: Mat4,
     pub vp: Mat4,
     pub progress: f32,
 }
@@ -50,6 +51,7 @@ pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
     let (origin, inverse) = route_origin(cycle);
     Camera {
         eye: point(origin, local.eye),
+        view: mul(local.view, inverse),
         vp: mul(local.vp, inverse),
         progress: cycle as f32 * 4. + local.progress,
     }
@@ -85,9 +87,11 @@ fn original_camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
     eye[0] += pointer[0] * 0.055;
     eye[1] -= pointer[1] * 0.035;
     let target = [eye[0] - yaw.sin() * 10., eye[1], eye[2] - yaw.cos() * 10.];
+    let view = look_at(eye, target);
     Camera {
         eye,
-        vp: mul(perspective(FOV, aspect), look_at(eye, target)),
+        view,
+        vp: mul(perspective(FOV, aspect), view),
         progress: i as f32 + t,
     }
 }
@@ -328,6 +332,17 @@ impl MobileSection {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn browser_view_preserves_projection_along_the_whole_route() {
+        for progress in [0., 0.4, 1., 3.6, 4.2, 8.7, 11.] {
+            let camera = camera(progress, 0.46, [0.2, -0.3]);
+            let projected = mul(perspective(FOV, 0.46), camera.view);
+            for (actual, expected) in camera.vp.iter().zip(projected) {
+                assert!((actual - expected).abs() < 0.0001);
+            }
+        }
+    }
 
     #[test]
     fn twelve_stops_preserve_original_camera_motion() {
