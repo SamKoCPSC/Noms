@@ -1,4 +1,4 @@
-# Noms village — single-file mobile preview
+# Noms village — outdoor walking preview (revision 2)
 
 [Download noms-village-mobile.zip](https://github.com/SamKoCPSC/Noms/raw/refs/heads/preview/terraced-village-download/noms-village-mobile.zip)
 
@@ -8,7 +8,9 @@
 
 If you use **Code → Download ZIP**, extract the repository archive, then extract the `noms-village-mobile.zip` inside it.
 
-This replaces the earlier multi-file download, which could show “Failed to fetch” when Android opened its HTML through a `content://` file viewer without access to neighboring model scripts.
+Revision 2 expands the spacing between locations by 25%, adds continuous ground and pathside trees and benches, and follows paths at walking height with forward-looking turns. The preview starts at the kitchen; use **Walk tour** to start, or **Overview** to inspect the layout.
+
+This single-file format replaces the earlier multi-file download, which could show “Failed to fetch” when Android opened its HTML through a `content://` file viewer without access to neighboring model scripts.
 
 Geometry bytes and texture dimensions are unchanged. The download uses WebP quality 95 compression for preview textures; original production assets and Blender masters remain unchanged. Conversion receipts are included in this branch.
 
@@ -17,3 +19,5 @@ The scene remains a large twelve-model layout study. Loading all models together
 Source and Blender world: [PR #89](https://github.com/SamKoCPSC/Noms/pull/89).
 
 Validation: the single-file HTML loads all twelve models in portrait browser testing with additional HTTP/HTTPS requests blocked. Direct Android `content://` launching is not available in the test environment and still needs checking on the device.
+
+Revision 2 checks: all twelve stops, 2,211 path samples clear of model footprints at constant terrain clearance, next-button movement, and single-file loading with external requests blocked. The native Blender camera follows the same route.
