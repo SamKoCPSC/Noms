@@ -1,0 +1,12 @@
+{
+  "stage": "layout blockout",
+  "all_twelve_stops_visited": true,
+  "playback_advances": true,
+  "portrait_aspect_checked": true,
+  "browser_errors": [],
+  "embedded_html_external_resource_requests": 0,
+  "file_url_verification": "Blocked by managed browser policy; embedded HTML verified over localhost instead",
+  "source_masters_unchanged": 12,
+  "byte_identical_production_glbs": 12,
+  "lighting_rebaked": false
+}

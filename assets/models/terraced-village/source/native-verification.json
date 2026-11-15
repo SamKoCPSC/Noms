@@ -1,0 +1,12 @@
+{
+  "native_world_reopened": true,
+  "model_instances": 12,
+  "native_objects": 24226,
+  "camera_stops": 12,
+  "external_libraries": 0,
+  "unpacked_file_images": [],
+  "original_master_hashes_verified": 12,
+  "world_sha256": "0cff2dfd658aa97b094100024e2aaa5e30f3a5c7dcec57091a0a5ce5f5fb14d2",
+  "world_bytes": 44400186,
+  "lighting_rebaked": false
+}

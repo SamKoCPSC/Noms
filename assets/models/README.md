@@ -5,6 +5,7 @@ rebuild sources. Multi-scene collections also include an offline gallery.
 
 | Collection | Scenes | Preview |
 | --- | --- | --- |
+| [Terraced village layout study](terraced-village/README.md) | All twelve existing scenes in one native world, with a separate playable route prototype | [Overview](terraced-village/previews/overview.png) |
 | [About-tour baked lighting](about-baked-tour/README.md) | Static Three.js derivatives for all twelve active tour scenes, with source references and reproducible lighting bakes | [Provenance and review](about-baked-tour/README.md) |
 | [Terracotta Recipe Kitchen](terracotta-recipe-kitchen/README.md) | Original revision 13 master for the first About-tour scene, with packed textures and original lighting | [Original review](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c) |
 | [Home Office](home-office/README.md) | Original revision 10 master, with packed artwork and original lighting | [Original review](https://chatgpt.com/space/page_65be16eb77f08191a6d3faeb22138385) |

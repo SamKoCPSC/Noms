@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "stage": "layout and camera blockout; lighting not rebaked",
+  "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
+  "stops": [
+    {
+      "id": "kitchen",
+      "title": "Kitchen",
+      "position": [
+        -30,
+        0,
+        24
+      ],
+      "yaw": -0.20944,
+      "width": 14,
+      "master": "assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-manager.blend",
+      "model": "assets/about/kitchen-baked.glb",
+      "lighting": "assets/about/kitchen-lighting.json"
+    },
+    {
+      "id": "library",
+      "title": "Library",
+      "position": [
+        -34,
+        3,
+        0
+      ],
+      "yaw": 0.20944,
+      "width": 15,
+      "master": "assets/models/university-library/models/university-library.blend",
+      "model": "assets/about/library-baked.glb",
+      "lighting": "assets/about/library-lighting.json"
+    },
+    {
+      "id": "bedroom",
+      "title": "Bedroom",
+      "position": [
+        -21,
+        5,
+        -24
+      ],
+      "yaw": -0.436332,
+      "width": 15,
+      "master": "assets/models/corner-cocoon-bedroom/models/sams-corner-cocoon.blend",
+      "model": "assets/about/bedroom-baked.glb",
+      "lighting": "assets/about/bedroom-lighting.json"
+    },
+    {
+      "id": "supermarket",
+      "title": "Supermarket",
+      "position": [
+        5,
+        3,
+        -27
+      ],
+      "yaw": 0.383972,
+      "width": 17,
+      "master": "assets/models/european-arcade-supermarket/models/european-arcade-supermarket.blend",
+      "model": "assets/about/supermarket-baked.glb",
+      "lighting": "assets/about/supermarket-lighting.json"
+    },
+    {
+      "id": "office",
+      "title": "Home office",
+      "position": [
+        30,
+        5,
+        -15
+      ],
+      "yaw": -0.349066,
+      "width": 14,
+      "master": "assets/models/home-office/models/sams-project-room.blend",
+      "model": "assets/about/office-baked.glb",
+      "lighting": "assets/about/office-lighting.json"
+    },
+    {
+      "id": "corporate-office",
+      "title": "Corporate office",
+      "position": [
+        34,
+        7,
+        11
+      ],
+      "yaw": -0.733038,
+      "width": 17,
+      "master": "assets/models/corporate-workspace-pantry/models/corporate-workspace-pantry.blend",
+      "model": "assets/about/corporate-office-baked.glb",
+      "lighting": "assets/about/corporate-office-lighting.json"
+    },
+    {
+      "id": "brick-kitchen",
+      "title": "Brick kitchen",
+      "position": [
+        12,
+        6,
+        28
+      ],
+      "yaw": 0.261799,
+      "width": 14,
+      "master": "assets/models/brick-loft-kitchen/models/brick-loft-kitchen.blend",
+      "model": "assets/about/brick-kitchen-baked.glb",
+      "lighting": "assets/about/brick-kitchen-lighting.json"
+    },
+    {
+      "id": "bakery",
+      "title": "Baking lab",
+      "position": [
+        -12,
+        8,
+        5
+      ],
+      "yaw": 0.610865,
+      "width": 15,
+      "master": "assets/models/modern-baking-lab/models/modern-baking-lab.blend",
+      "model": "assets/about/bakery-baked.glb",
+      "lighting": "assets/about/bakery-lighting.json"
+    },
+    {
+      "id": "farmers-market",
+      "title": "Farmers\u2019 market",
+      "position": [
+        11,
+        8,
+        2
+      ],
+      "yaw": -0.314159,
+      "width": 17,
+      "master": "assets/models/community-spaces/models/farmers-market.blend",
+      "model": "assets/about/farmers-market-baked.glb",
+      "lighting": "assets/about/farmers-market-lighting.json"
+    },
+    {
+      "id": "social-kitchen",
+      "title": "Social kitchen",
+      "position": [
+        1,
+        11,
+        -50
+      ],
+      "yaw": 0.314159,
+      "width": 15,
+      "master": "assets/models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend",
+      "model": "assets/about/social-kitchen-baked.glb",
+      "lighting": "assets/about/social-kitchen-lighting.json"
+    },
+    {
+      "id": "riverside-campsite",
+      "title": "Riverside cabin",
+      "position": [
+        -26,
+        13,
+        -49
+      ],
+      "yaw": -0.436332,
+      "width": 17,
+      "master": "assets/models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend",
+      "model": "assets/about/riverside-campsite-baked.glb",
+      "lighting": "assets/about/riverside-campsite-lighting.json"
+    },
+    {
+      "id": "garden",
+      "title": "Garden cookout",
+      "position": [
+        -9,
+        16,
+        -75
+      ],
+      "yaw": 0.087266,
+      "width": 21,
+      "master": "assets/models/garden-cookout/models/garden-v6.blend",
+      "model": "assets/about/garden-baked.glb",
+      "lighting": "assets/about/garden-lighting.json"
+    }
+  ],
+  "river": [
+    [
+      44,
+      0,
+      42
+    ],
+    [
+      47,
+      0,
+      20
+    ],
+    [
+      46,
+      0,
+      -5
+    ],
+    [
+      40,
+      0,
+      -35
+    ],
+    [
+      24,
+      0,
+      -57
+    ],
+    [
+      8,
+      0,
+      -77
+    ]
+  ],
+  "ground_outline": [
+    [
+      -48,
+      43
+    ],
+    [
+      44,
+      43
+    ],
+    [
+      54,
+      17
+    ],
+    [
+      50,
+      -25
+    ],
+    [
+      19,
+      -91
+    ],
+    [
+      -30,
+      -91
+    ],
+    [
+      -48,
+      -50
+    ],
+    [
+      -53,
+      12
+    ]
+  ]
+}
