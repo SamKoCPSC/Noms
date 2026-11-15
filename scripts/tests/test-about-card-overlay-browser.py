@@ -18,6 +18,7 @@ async def main(args):
         page.set_default_timeout(120000)
         errors = []
         page.on('pageerror', lambda e: errors.append(str(e)))
+        page.on('console', lambda m: print('BROWSER:', m.text, flush=True) if m.type == 'error' else None)
         await page.goto(args.url)
         await page.wait_for_selector('.about-tour.is-flight')
         for _ in range(400):
@@ -38,6 +39,10 @@ async def main(args):
         for model in ('corporate-office', 'library', 'supermarket', 'brick-kitchen', 'bakery', 'farmers-market', 'social-kitchen', 'riverside-campsite'):
             state = await page.locator('#about-tour').get_attribute(f'data-{model}-state')
             assert state == 'ready', f'{model}: {state}; errors: {errors}'
+        for model in ('kitchen', 'library', 'bedroom', 'supermarket', 'office', 'corporate-office', 'brick-kitchen', 'bakery', 'farmers-market', 'social-kitchen', 'riverside-campsite', 'garden'):
+            groups = await canvas.get_attribute(f'data-{model}-groups')
+            expected = 2 if model in ('farmers-market', 'riverside-campsite', 'garden') else 1
+            assert groups.count('Penguin plush ') == expected, (model, groups)
         for i in args.stops:
             await go(i)
             card = page.locator('.story-panel[data-active=true]')

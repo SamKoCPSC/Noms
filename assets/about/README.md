@@ -350,3 +350,24 @@ cp /tmp/noms-riverside-campsite-web/* assets/about/
 
 Per-model budget JSON records the master hash, vertex-color treatment and
 quantization; geometry audits verify unchanged per-object triangle counts.
+
+## Penguin plush accessory pass
+
+The twelve active scene GLBs now include fifteen small matte penguin plushes.
+The exports and triangle counts described above refer to the base scenes;
+the current `*-budget.json` files include this final accessory pass.
+Each plush uses the approved Chef Penguini source and adds 2,841 triangles and one draw call without an additional texture.
+Every delivered scene remains below 400,000 triangles and 64 draw calls.
+The garden is largest at 399,867 triangles, so further additions require optimization.
+
+The [editable library and placement manifest](../models/about-penguin-plushes/README.md)
+provide the exact placements, Blender-master helper, review images and rebuild
+commands. Run the append-only pass after obtaining the recorded clean baseline,
+not on an already decorated output. It preserves all original geometry and
+materials byte-for-byte. The plushes use the same live lighting, shadows and
+entrance system as the furniture; their arrival is scheduled after their support
+furniture. Static reading-mode posters also include them.
+
+The office companion now sits on the desk mat between the keyboard and monitors,
+clear of the window sill. `tools/about/check_plush_clearance.py` checks actual
+triangle intersections above the feet across all fifteen placements.

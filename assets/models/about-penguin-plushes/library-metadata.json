@@ -1,0 +1,151 @@
+{
+  "source": "assets/brand/penguini/3d/source/base.blend",
+  "source_sha256": "6569345476121564fb0bb34dd038805d7e4869aa719358b91e90049f4fde4fed",
+  "variant": "penguini",
+  "unit_height": 1,
+  "triangles": 2841,
+  "foot_contacts": [
+    [
+      -0.10971666365243508,
+      0.0009557383922862287,
+      0.004311900697731101
+    ],
+    [
+      0.11179559891599632,
+      0.00020373549952260056,
+      -0.005138785270733599
+    ]
+  ],
+  "parts": [
+    {
+      "name": "Apron bow loop.L",
+      "source_triangles": 2000,
+      "triangles": 18
+    },
+    {
+      "name": "Apron bow loop.R",
+      "source_triangles": 2000,
+      "triangles": 18
+    },
+    {
+      "name": "Apron hanging tie.L",
+      "source_triangles": 48,
+      "triangles": 30
+    },
+    {
+      "name": "Apron hanging tie.R",
+      "source_triangles": 48,
+      "triangles": 30
+    },
+    {
+      "name": "Apron knot.L",
+      "source_triangles": 4992,
+      "triangles": 20
+    },
+    {
+      "name": "Apron knot.R",
+      "source_triangles": 4992,
+      "triangles": 20
+    },
+    {
+      "name": "Apron strap.L",
+      "source_triangles": 80,
+      "triangles": 40
+    },
+    {
+      "name": "Apron strap.R",
+      "source_triangles": 80,
+      "triangles": 40
+    },
+    {
+      "name": "Apron \u2022 curved skirt",
+      "source_triangles": 2560,
+      "triangles": 119
+    },
+    {
+      "name": "Apron \u2022 front pocket",
+      "source_triangles": 1656,
+      "triangles": 64
+    },
+    {
+      "name": "Apron \u2022 waist tie",
+      "source_triangles": 256,
+      "triangles": 64
+    },
+    {
+      "name": "Beak \u2022 lower bill",
+      "source_triangles": 4992,
+      "triangles": 40
+    },
+    {
+      "name": "Beak \u2022 soft smile seam",
+      "source_triangles": 1616,
+      "triangles": 18
+    },
+    {
+      "name": "Beak \u2022 upper bill",
+      "source_triangles": 4992,
+      "triangles": 60
+    },
+    {
+      "name": "Belly \u2022 cream plumage",
+      "source_triangles": 2100,
+      "triangles": 119
+    },
+    {
+      "name": "Body \u2022 continuous shoulders and flippers",
+      "source_triangles": 137376,
+      "triangles": 560
+    },
+    {
+      "name": "Chef hat \u2022 sculpted cloud crown",
+      "source_triangles": 116496,
+      "triangles": 360
+    },
+    {
+      "name": "Chef hat \u2022 soft band",
+      "source_triangles": 1536,
+      "triangles": 120
+    },
+    {
+      "name": "Eye highlight.L",
+      "source_triangles": 1216,
+      "triangles": 12
+    },
+    {
+      "name": "Eye highlight.R",
+      "source_triangles": 1216,
+      "triangles": 12
+    },
+    {
+      "name": "Eye.L",
+      "source_triangles": 4992,
+      "triangles": 40
+    },
+    {
+      "name": "Eye.R",
+      "source_triangles": 4992,
+      "triangles": 40
+    },
+    {
+      "name": "Face \u2022 heart-shaped cream mask",
+      "source_triangles": 4512,
+      "triangles": 259
+    },
+    {
+      "name": "Foot.L \u2022 integrated ankle",
+      "source_triangles": 40672,
+      "triangles": 140
+    },
+    {
+      "name": "Foot.R \u2022 integrated ankle",
+      "source_triangles": 40672,
+      "triangles": 140
+    },
+    {
+      "name": "Head \u2022 round charcoal plumage",
+      "source_triangles": 4992,
+      "triangles": 458
+    }
+  ]
+}

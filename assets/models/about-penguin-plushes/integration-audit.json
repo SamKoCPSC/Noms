@@ -1,0 +1,110 @@
+[
+  {
+    "model": "kitchen",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 190790,
+    "added_bytes": 61336,
+    "original_geometry_sha256": "6a61476e256b339c0c59f47e6614cb225f856ec51adea2887e8800a16abc32ce",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "library",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 377149,
+    "added_bytes": 61360,
+    "original_geometry_sha256": "86baf93ff31d4ee9556000a5dce8535b60c62c9fe5236c1b7237145b7fd3fc90",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "bedroom",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 344848,
+    "added_bytes": 61432,
+    "original_geometry_sha256": "418a3f48b03edb56b32496c5d52e2133af906144868174a9b9405202e5413ab9",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "supermarket",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 387643,
+    "added_bytes": 61336,
+    "original_geometry_sha256": "ef82e51cc2dfa3121ebf9b992daca1f4ca5be7b1f282825e303027f903ac662c",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "office",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 243532,
+    "added_bytes": 61384,
+    "original_geometry_sha256": "b5b46f9b590f8f18ac136a44c9b4ab30c49dda0729ba2bd553fd42077a5a4cc9",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "corporate-office",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 267670,
+    "added_bytes": 61416,
+    "original_geometry_sha256": "4a47232339bed3b6f10c64594d94c82ccc13acc285fb586aa28645420b9b5c50",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "brick-kitchen",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 335085,
+    "added_bytes": 61332,
+    "original_geometry_sha256": "c651b38b6d5825a3935fe1bcd0690f9f5d37d6bbe2657cbcb403eecedae02e2d",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "bakery",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 380634,
+    "added_bytes": 61352,
+    "original_geometry_sha256": "52d30472199cf69508b3d9dcc303c388deee0aca2a22822cafd3bb4367d501bb",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "farmers-market",
+    "plushes": 2,
+    "added_triangles": 5682,
+    "total_triangles": 360787,
+    "added_bytes": 122308,
+    "original_geometry_sha256": "97994a1b5560f18b377dea3efd66796c15a49c2d90afcc49ddf4fb34c27b5641",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "social-kitchen",
+    "plushes": 1,
+    "added_triangles": 2841,
+    "total_triangles": 365415,
+    "added_bytes": 61368,
+    "original_geometry_sha256": "ee3e65d9ca1f25b2c0952d87f6856c15b9d39bed0893b6a872a3198fc24d992e",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "riverside-campsite",
+    "plushes": 2,
+    "added_triangles": 5682,
+    "total_triangles": 161725,
+    "added_bytes": 122292,
+    "original_geometry_sha256": "5cc3088f692626a9f7bae63ce22e05eb7c3fc00eb9bde5c6f731dc22ffae5933",
+    "original_buffer_preserved": true
+  },
+  {
+    "model": "garden",
+    "plushes": 2,
+    "added_triangles": 5682,
+    "total_triangles": 399867,
+    "added_bytes": 122288,
+    "original_geometry_sha256": "c991cb0774edbdde8f5a47682887f0187ab90119c8dd66f41f4488a7414b9129",
+    "original_buffer_preserved": true
+  }
+]
