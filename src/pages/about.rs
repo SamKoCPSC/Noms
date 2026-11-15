@@ -32,15 +32,76 @@ const _: &[u8] = include_bytes!("../../assets/brand/penguini/player.js");
 const _: &[u8] = include_bytes!("../../assets/brand/penguini/thinking-rig.js");
 const _: &[u8] = include_bytes!("../../assets/brand/penguini/dance-rig.js");
 const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen-detailed.glb");
-const THREE_KITCHEN: Asset = asset!("/assets/about/kitchen-baked.glb");
-const THREE_LIGHTING: Asset = asset!("/assets/about/kitchen-lighting.json");
 const THREE_BRIDGE: Asset = asset!(
-    "/assets/about-three-kitchen.js",
+    "/assets/about-three-tour.js",
     JsAssetOptions::new().with_minify(false)
 );
-const _: &[u8] = include_bytes!("../../assets/about-three-kitchen.js");
+const _: &[u8] = include_bytes!("../../assets/about-three-tour.js");
+#[cfg(target_arch = "wasm32")]
+pub(super) const BAKED_MODEL_NAMES: [&str; 12] = [
+    "kitchen",
+    "office",
+    "bedroom",
+    "social-kitchen",
+    "garden",
+    "corporate-office",
+    "library",
+    "supermarket",
+    "brick-kitchen",
+    "bakery",
+    "farmers-market",
+    "riverside-campsite",
+];
+const BAKED_KITCHEN: Asset = asset!("/assets/about/kitchen-baked.glb");
+const LIGHTING_KITCHEN: Asset = asset!("/assets/about/kitchen-lighting.json");
+const BAKED_OFFICE: Asset = asset!("/assets/about/office-baked.glb");
+const LIGHTING_OFFICE: Asset = asset!("/assets/about/office-lighting.json");
+const BAKED_BEDROOM: Asset = asset!("/assets/about/bedroom-baked.glb");
+const LIGHTING_BEDROOM: Asset = asset!("/assets/about/bedroom-lighting.json");
+const BAKED_SOCIAL_KITCHEN: Asset = asset!("/assets/about/social-kitchen-baked.glb");
+const LIGHTING_SOCIAL_KITCHEN: Asset = asset!("/assets/about/social-kitchen-lighting.json");
+const BAKED_GARDEN: Asset = asset!("/assets/about/garden-baked.glb");
+const LIGHTING_GARDEN: Asset = asset!("/assets/about/garden-lighting.json");
+const BAKED_CORPORATE_OFFICE: Asset = asset!("/assets/about/corporate-office-baked.glb");
+const LIGHTING_CORPORATE_OFFICE: Asset = asset!("/assets/about/corporate-office-lighting.json");
+const BAKED_LIBRARY: Asset = asset!("/assets/about/library-baked.glb");
+const LIGHTING_LIBRARY: Asset = asset!("/assets/about/library-lighting.json");
+const BAKED_SUPERMARKET: Asset = asset!("/assets/about/supermarket-baked.glb");
+const LIGHTING_SUPERMARKET: Asset = asset!("/assets/about/supermarket-lighting.json");
+const BAKED_BRICK_KITCHEN: Asset = asset!("/assets/about/brick-kitchen-baked.glb");
+const LIGHTING_BRICK_KITCHEN: Asset = asset!("/assets/about/brick-kitchen-lighting.json");
+const BAKED_BAKERY: Asset = asset!("/assets/about/bakery-baked.glb");
+const LIGHTING_BAKERY: Asset = asset!("/assets/about/bakery-lighting.json");
+const BAKED_FARMERS_MARKET: Asset = asset!("/assets/about/farmers-market-baked.glb");
+const LIGHTING_FARMERS_MARKET: Asset = asset!("/assets/about/farmers-market-lighting.json");
+const BAKED_RIVERSIDE_CAMPSITE: Asset = asset!("/assets/about/riverside-campsite-baked.glb");
+const LIGHTING_RIVERSIDE_CAMPSITE: Asset = asset!("/assets/about/riverside-campsite-lighting.json");
+
+// Track regenerated derivatives even when only model assets change.
 const _: &[u8] = include_bytes!("../../assets/about/kitchen-baked.glb");
-const _: &[u8] = include_bytes!("../../assets/about/kitchen-lighting.json");
+const _: &str = include_str!("../../assets/about/kitchen-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/office-baked.glb");
+const _: &str = include_str!("../../assets/about/office-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/bedroom-baked.glb");
+const _: &str = include_str!("../../assets/about/bedroom-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/social-kitchen-baked.glb");
+const _: &str = include_str!("../../assets/about/social-kitchen-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/garden-baked.glb");
+const _: &str = include_str!("../../assets/about/garden-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/corporate-office-baked.glb");
+const _: &str = include_str!("../../assets/about/corporate-office-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/library-baked.glb");
+const _: &str = include_str!("../../assets/about/library-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/supermarket-baked.glb");
+const _: &str = include_str!("../../assets/about/supermarket-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/brick-kitchen-baked.glb");
+const _: &str = include_str!("../../assets/about/brick-kitchen-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/bakery-baked.glb");
+const _: &str = include_str!("../../assets/about/bakery-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/farmers-market-baked.glb");
+const _: &str = include_str!("../../assets/about/farmers-market-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/riverside-campsite-baked.glb");
+const _: &str = include_str!("../../assets/about/riverside-campsite-lighting.json");
 
 const KITCHEN_LAPTOP: Asset = asset!(
     "/assets/about/kitchen-laptop.webp",
@@ -336,7 +397,19 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
-       "data-three-kitchen-url":THREE_KITCHEN,"data-three-lighting-url":THREE_LIGHTING,"data-three-bridge-url":THREE_BRIDGE,
+       "data-three-bridge-url":THREE_BRIDGE,
+       "data-baked-kitchen-url":BAKED_KITCHEN,"data-baked-kitchen-lighting":LIGHTING_KITCHEN,
+       "data-baked-office-url":BAKED_OFFICE,"data-baked-office-lighting":LIGHTING_OFFICE,
+       "data-baked-bedroom-url":BAKED_BEDROOM,"data-baked-bedroom-lighting":LIGHTING_BEDROOM,
+       "data-baked-social-kitchen-url":BAKED_SOCIAL_KITCHEN,"data-baked-social-kitchen-lighting":LIGHTING_SOCIAL_KITCHEN,
+       "data-baked-garden-url":BAKED_GARDEN,"data-baked-garden-lighting":LIGHTING_GARDEN,
+       "data-baked-corporate-office-url":BAKED_CORPORATE_OFFICE,"data-baked-corporate-office-lighting":LIGHTING_CORPORATE_OFFICE,
+       "data-baked-library-url":BAKED_LIBRARY,"data-baked-library-lighting":LIGHTING_LIBRARY,
+       "data-baked-supermarket-url":BAKED_SUPERMARKET,"data-baked-supermarket-lighting":LIGHTING_SUPERMARKET,
+       "data-baked-brick-kitchen-url":BAKED_BRICK_KITCHEN,"data-baked-brick-kitchen-lighting":LIGHTING_BRICK_KITCHEN,
+       "data-baked-bakery-url":BAKED_BAKERY,"data-baked-bakery-lighting":LIGHTING_BAKERY,
+       "data-baked-farmers-market-url":BAKED_FARMERS_MARKET,"data-baked-farmers-market-lighting":LIGHTING_FARMERS_MARKET,
+       "data-baked-riverside-campsite-url":BAKED_RIVERSIDE_CAMPSITE,"data-baked-riverside-campsite-lighting":LIGHTING_RIVERSIDE_CAMPSITE,
        "data-farmers-market-url":FARMERS_MARKET_MODEL,"data-bakery-url":BAKERY_MODEL,"data-brick-kitchen-url":BRICK_KITCHEN_MODEL,"data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
        "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
        "data-garden-url":GARDEN_MODEL,"data-garden-pastry-url":GARDEN_PASTRY,
@@ -365,7 +438,7 @@ pub fn About() -> Element {
        button{id:"mode-toggle",r#type:"button",disabled:true,aria_pressed:"false","Reading view"}
       }
      }
-     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}canvas{id:"story-kitchen-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
+     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}canvas{id:"story-three-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
      div{id:"story",class:"story",
       for i in 0..IDS.len() {
        article{id:"panel-{i}",class:"story-panel","data-panel":"{i}","data-model":"{MODEL_FOR_STOP[i]}",aria_labelledby:"title-{i}",

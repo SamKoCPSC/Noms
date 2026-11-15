@@ -40,6 +40,8 @@ fn authorize(viewer: Option<Extension<AuthUser>>) -> Result<(), (StatusCode, &'s
     })
 }
 
+// Errors are complete Axum responses, ready for the route handlers to return.
+#[allow(clippy::result_large_err)]
 async fn bounded<T>(
     operation: impl std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
 ) -> Result<T, Response> {

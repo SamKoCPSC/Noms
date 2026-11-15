@@ -326,16 +326,24 @@ pub fn start() -> Result<(), JsValue> {
     });
     listen(
         &state,
-        el(&doc, "story-kitchen-canvas")?.into(),
+        el(&doc, "story-three-canvas")?.into(),
         "webglcontextlost",
         |s, event| {
             event.prevent_default();
             // A baked environment render target cannot survive context loss.
-            // Keep navigation available through the existing kitchen renderer.
+            // Keep navigation available through the existing renderer.
             if let Some(renderer) = &mut s.renderer {
-                renderer.three_kitchen = None;
+                renderer.three_tour = None;
             }
-            let _ = s.root.set_attribute("data-three-kitchen-state", "fallback");
+            let _ = s.root.set_attribute("data-three-tour-state", "fallback");
+            s.dirty = true;
+        },
+    );
+    listen(
+        &state,
+        el(&doc, "story-three-canvas")?.into(),
+        "tourassetready",
+        |s, _| {
             s.dirty = true;
         },
     );
@@ -500,7 +508,7 @@ fn maybe_load_models(state: &StateRef) {
             ))
         }
         .await;
-        // Await the first kitchen before releasing the shared loading curtain.
+        // Await the current stop before releasing the shared loading curtain.
         // The legacy renderer remains the fallback if WebGL2 or the bake fails.
         let three_context = weak.upgrade().and_then(|state| {
             let s = state.borrow();
@@ -510,19 +518,29 @@ fn maybe_load_models(state: &StateRef) {
                 .search()
                 .unwrap_or_default()
                 .split('&')
-                .any(|v| v.trim_start_matches('?') == "kitchen=legacy");
-            (result.is_ok() && s.generation == generation && !legacy)
-                .then(|| (s.doc.clone(), s.root.clone()))
+                .any(|v| {
+                    matches!(
+                        v.trim_start_matches('?'),
+                        "kitchen=legacy" | "renderer=legacy"
+                    )
+                });
+            (result.is_ok() && s.generation == generation && !legacy).then(|| {
+                (
+                    s.doc.clone(),
+                    s.root.clone(),
+                    s.active.min(flight::COUNT - 1),
+                )
+            })
         });
-        let three = if let Some((doc, root)) = three_context {
-            match super::three_kitchen::ThreeKitchen::load(&doc, &root).await {
+        let three = if let Some((doc, root, initial)) = three_context {
+            match super::three_tour::ThreeTour::load(&doc, &root, initial).await {
                 Ok(view) => {
-                    let _ = root.set_attribute("data-three-kitchen-state", "ready");
+                    let _ = root.set_attribute("data-three-tour-state", "ready");
                     Some(view)
                 }
                 Err(error) => {
-                    tracing::warn!(?error, "Three kitchen uses legacy fallback");
-                    let _ = root.set_attribute("data-three-kitchen-state", "fallback");
+                    tracing::warn!(?error, "Three tour uses legacy fallback");
+                    let _ = root.set_attribute("data-three-tour-state", "fallback");
                     None
                 }
             }
@@ -587,11 +605,12 @@ fn maybe_load_models(state: &StateRef) {
                 );
             }
             if loaded {
-                if three.is_some() {
-                    s.arrivals[0].settle();
+                // Baked scenes and their fallback geometry are always fully assembled.
+                for arrival in &mut s.arrivals {
+                    arrival.settle();
                 }
                 if let Some(renderer) = &mut s.renderer {
-                    renderer.three_kitchen = three;
+                    renderer.three_tour = three;
                 }
                 s.models_ready = true;
                 if s.flying {
@@ -1012,8 +1031,7 @@ impl State {
         }
         self.last = now;
         let motion = !self.paused && !self.gate.blocked();
-        // Warm-up stays behind the curtain. Only visible frames advance the intro;
-        // ambient pause (the mobile default) does not prevent its one-time playback.
+        // Ambient pause does not prevent scroll-driven camera movement.
         let blend = 1. - (-dt * 11.).exp();
         self.progress += (self.target - self.progress) * blend;
         if (self.target - self.progress).abs() < 0.0004 {

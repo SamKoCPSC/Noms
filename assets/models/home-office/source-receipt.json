@@ -1,0 +1,23 @@
+{
+  "source": "User attachment",
+  "restored_on": "2026-11-15",
+  "original_filename": "sams-project-room-9c0c957399d64f119060cd5a11c2a4ee.blend",
+  "attachment_sha256": "c4d0c73fbe9ce797dabd6b103db8d69ab57a2773f9d35afe84d3c222d25ce080",
+  "attachment_bytes": 5906081,
+  "extraction": "None; byte-for-byte copy",
+  "file": "models/sams-project-room.blend",
+  "sha256": "c4d0c73fbe9ce797dabd6b103db8d69ab57a2773f9d35afe84d3c222d25ce080",
+  "bytes": 5906081,
+  "revision": 10,
+  "review_page": "https://chatgpt.com/space/page_65be16eb77f08191a6d3faeb22138385",
+  "matches_budget": "assets/about/office-budget.json",
+  "master_unchanged": true,
+  "validation": {
+    "blender_version": "4.3.2",
+    "opens_successfully": true,
+    "objects": 2861,
+    "materials": 69,
+    "saved_frame": 160,
+    "auto_execution_disabled": true
+  }
+}

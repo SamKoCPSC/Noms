@@ -1,56 +1,54 @@
-# First-kitchen Three.js prototype
+# About-tour Three.js renderer
 
-Only stop 0 uses this renderer. Rust still owns the tour, camera matrices,
-responsive framing, scrolling, loading curtain and lifecycle. Other stops use
-the existing renderer. The kitchen loads fully assembled; static shadows travel
-with the model instead of preceding animated furniture.
+All twelve stops use the shared `tour.js` renderer. Rust owns navigation, camera
+matrices, responsive framing, scrolling, loading curtain and lifecycle. Scenes
+are fully assembled before display. They have baked shadows and no assembly
+animation, animation mixer, dynamic shadow maps or independent RAF loop.
 
-`kitchen.js` loads the embedded GLB with Three.js, presents the two baked color
-atlases without applying lighting or tone mapping a second time, and retains
-PBR glass and metal with a reflection environment made from the room and source
-softboxes. It has no animation loop, mixer, dynamic shadows or per-frame
-environment capture. Rust calls `draw` only when the tour needs a frame.
+Blender display-baked opaque materials are unlit and bypass Three tone mapping.
+Glass also bypasses the final tone map so transmitted display-baked colors are
+not processed twice. Glass and metal remain view dependent, using one reflection environment per
+resident scene, built from its baked room and recorded source softboxes. Rust
+supplies the real view and projection matrices for correct PBR transmission.
+Layered transmission, such as a drink inside a glass, and refracted display-case
+contents remain approximate in Three's screen-space transmission pass.
 
-The transparent Three canvas fills the same viewport as the existing canvas,
-behind the text overlay. Both use the same Rust model and camera transforms.
-Failed asset loads, unavailable WebGL2, or a lost Three context fall back to the
-existing kitchen. `?kitchen=legacy` explicitly selects it for comparison.
+One transparent canvas fills the viewport behind the text. Up to three baked
+scenes (the current stop and its neighbors) are resident; at most two requests
+are in flight. Traveling away disposes meshes, textures, materials and reflection
+targets. Loading the current stop is part of the existing loading curtain;
+neighbors load on demand. Completion events wake the paused Rust renderer.
 
-## Build
+The existing renderer is retained as a static fallback during a scene download,
+for individual failed assets, unavailable WebGL2, or a lost Three context. Its
+original assets are still loaded for framing and fallback. This bounds additional
+Three resources, but does not eliminate the legacy renderer's memory footprint.
+`?renderer=legacy` selects the comparison path (`?kitchen=legacy` also remains
+accepted). Reduced motion and reading mode retain the existing still-image page.
+
+## Build and checks
 
 ```sh
 npm ci
 npm run about:three:build
-```
-
-Commit the generated `assets/about-three-kitchen.js` with source changes. The
-bundle is self-hosted; no CDN or runtime npm dependency is required. Three.js is
-pinned in the lockfile; its MIT license is in `THREE-LICENSE.txt`.
-
-The Blender master and bake instructions live in
-[`assets/models/terracotta-recipe-kitchen`](../../../assets/models/terracotta-recipe-kitchen/README.md).
-
-## Checks
-
-```sh
-python scripts/tests/test-baked-kitchen.py
+python scripts/tests/test-baked-tour.py
 cargo build --bin noms --target wasm32-unknown-unknown --no-default-features --features web
-python scripts/tests/test-about-three-kitchen-browser.py --url http://127.0.0.1:8765/about
+python scripts/tests/test-about-three-tour-browser.py --url http://127.0.0.1:8765/about
 ```
 
-The browser check needs a running local app or a preview compiled from the
-actual About page and tour modules, Playwright and Chromium. It covers first
-load, resize, travel to another model, reduced motion, context loss and asset
-failure.
-The software-WebGL harness extends only the loader deadline from 25 to 120
-seconds for GPU warm-up. Production retains its 25-second reading fallback;
-this check is functional coverage, not a mobile performance benchmark.
+Commit the generated `assets/about-three-tour.js` with source changes. Three is
+pinned and self-hosted; no CDN is used. See `THREE-LICENSE.txt` and `MESHOPT-LICENSE.txt`. The matching Meshopt decoder
+is bundled locally with the renderer.
 
-## Limits
+The browser check runs the real Rust tour with Playwright/Chromium. It visits all
+stops, revisits evicted scenes, checks bounded residency, initial/resized camera
+proportions, static arrival frames, reduced motion, direct fragment entry,
+context loss and per-scene asset failure. Software WebGL gets a test-only 120s
+loader and asset deadlines; production keeps its 25s reading fallback and 20s
+asset-download timeout. This is functional
+coverage, not a physical-phone memory/frame-rate benchmark.
 
-Opaque colors, texture detail and stationary shadows are baked from Blender.
-Glass and metal remain view dependent; their browser reflections are an
-approximation of the Blender lighting, not a pixel-identical Cycles render.
-Two 2048px atlases trade close-up resolution for download and GPU memory. The
-prototype retains the legacy kitchen asset for fallback and adds a second
-WebGL context. Measure on target phones before extending it to every stop.
+See [bake instructions](../baked/README.md) for source provenance and limitations.
+The home office, bedroom and garden use reconstructed lighting because their
+original Blender masters are not in the repository; all other bakes use their
+archived source shaders and lighting. Glass/reflections remain approximations.

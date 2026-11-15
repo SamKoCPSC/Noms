@@ -24,4 +24,4 @@ mod shadow_map;
 mod shadows;
 
 #[cfg(target_arch = "wasm32")]
-mod three_kitchen;
+mod three_tour;

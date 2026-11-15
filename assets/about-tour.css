@@ -117,5 +117,5 @@ html:has(.about-tour.is-flight){scrollbar-gutter:stable}
 }
 @media print{.about-tour .card-actions{display:none!important}.about-tour.is-flight .story{position:static;width:auto;height:auto}.about-tour.is-flight .story-panel[id]{position:relative;inset:auto;width:auto;margin-bottom:25px;transform:none!important}}
 
-/* First kitchen prototype: full-viewport Three layer shares Rust camera framing. */
-.about-tour #story-kitchen-canvas{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* Full-viewport Three layer shares Rust camera framing across all tour stops. */
+.about-tour #story-three-canvas{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}

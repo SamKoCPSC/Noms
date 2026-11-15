@@ -23,7 +23,7 @@ master when producing new web exports or baked lighting; work in separate files.
 
 Both comparison images use the source camera and the current Penguini companion.
 
-The prototype in `assets/about/kitchen-baked.glb` comes from this master at frame
+The derivative in `assets/about/kitchen-baked.glb` comes from this master at frame
 160. It includes the current Penguini companion, two embedded 2048px lighting
 atlases, and separate glass/metal materials. The original `.blend` is never
 saved over. Its geometry, materials and lighting remain available for revisions.
@@ -35,7 +35,8 @@ blender -b assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-ma
   --threads 4 \
   --python assets/models/terracotta-recipe-kitchen/source/bake_three_kitchen.py \
   -- /tmp/kitchen-three-bake
-cp /tmp/kitchen-three-bake/kitchen-baked.glb assets/about/kitchen-baked.glb
+node tools/about/baked/pack.mjs /tmp/kitchen-three-bake/kitchen-baked.glb \
+  assets/about/kitchen-baked.glb /tmp/kitchen-three-bake/lighting.json
 cp /tmp/kitchen-three-bake/lighting.json assets/about/kitchen-lighting.json
 python scripts/tests/test-baked-kitchen.py
 ```
@@ -57,8 +58,10 @@ The export finalizer marks those textures `KHR_materials_unlit`; the browser
 must not light or tone-map them again. Glass and metal remain view dependent
 and use a static reflection environment. The reference camera and source light
 settings are recorded in `assets/about/kitchen-lighting.json`.
-The current full-geometry prototype has 447,855 triangles and a 38.7 MB GLB;
-it prioritizes visual comparison before a production size/performance pass.
+The full-geometry export has 447,855 triangles. The shared tour now packages it
+with Meshopt and RGB8 display PNGs at approximately 10.7 MB, preserving every
+triangle and the 2048px atlas resolution. Run `tools/about/baked/pack.mjs` after
+a fresh bake; keep the uncompressed output and linear EXRs for future revisions.
 
 See [renderer notes](../../../tools/about/three/README.md) for build instructions,
 fallbacks, browser verification and fidelity limits.
