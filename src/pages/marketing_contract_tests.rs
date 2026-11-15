@@ -65,14 +65,56 @@ fn about_renders_twelve_cards_and_readable_fallback() {
         .unwrap();
     assert!(reason.contains("office-fallback"));
     assert!(reason.contains("A UBC-inspired university library"));
-    for (panel, description, attribute) in [
-        (1, "A UBC-inspired university library", "data-library-url"),
-        (3, "A modern supermarket", "data-supermarket-url"),
-        (4, "Sam’s office", "data-office-url"),
-        (5, "A corporate office", "data-corporate-office-url"),
-        (6, "A U-shaped brick-loft kitchen", "data-brick-kitchen-url"),
-        (7, "A modern artisan bakery", "data-bakery-url"),
-        (8, "A corner farmers’ market", "data-farmers-market-url"),
+    for (panel, description, attribute, fallback) in [
+        (
+            1,
+            "A UBC-inspired university library",
+            "data-library-url",
+            "office-fallback",
+        ),
+        (
+            3,
+            "A modern supermarket",
+            "data-supermarket-url",
+            "office-fallback",
+        ),
+        (4, "Sam’s office", "data-office-url", "office-fallback"),
+        (
+            5,
+            "A corporate office",
+            "data-corporate-office-url",
+            "office-fallback",
+        ),
+        (
+            6,
+            "A U-shaped brick-loft kitchen",
+            "data-brick-kitchen-url",
+            "kitchen-fallback",
+        ),
+        (
+            7,
+            "A modern artisan bakery",
+            "data-bakery-url",
+            "kitchen-fallback",
+        ),
+        (
+            8,
+            "A corner farmers’ market",
+            "data-farmers-market-url",
+            "garden-fallback",
+        ),
+        (
+            9,
+            "A contemporary L-shaped kitchen",
+            "data-social-kitchen-url",
+            "kitchen-fallback",
+        ),
+        (
+            10,
+            "A secluded riverside campsite",
+            "data-riverside-campsite-url",
+            "garden-fallback",
+        ),
     ] {
         let card = html
             .split(&format!("id=\"panel-{panel}\""))
@@ -82,6 +124,11 @@ fn about_renders_twelve_cards_and_readable_fallback() {
             .next()
             .unwrap();
         assert!(card.contains(description), "Panel {panel}: {description}");
+        assert!(card.contains(fallback), "Panel {panel}: {fallback}");
+        assert!(
+            card.contains("loading=\"lazy\""),
+            "Panel {panel}: lazy poster"
+        );
         assert!(html.contains(attribute), "Missing {attribute}");
     }
     for attribute in [
@@ -101,9 +148,7 @@ fn about_renders_twelve_cards_and_readable_fallback() {
         .next()
         .unwrap();
     assert!(!creator.contains("kitchen-fallback"));
-    let philosophy = html.split("id=\"panel-7\"").nth(1).unwrap();
-    assert!(philosophy.contains("potluck-fallback"));
-    assert!(philosophy.contains("communal potluck dining room"));
+    assert!(!html.contains("potluck-fallback"));
     for attribute in [
         "data-potluck-url",
         "data-potluck-window-url",
@@ -112,7 +157,10 @@ fn about_renders_twelve_cards_and_readable_fallback() {
         "data-potluck-salt-url",
         "data-potluck-bbq-url",
     ] {
-        assert!(html.contains(attribute));
+        assert!(
+            !html.contains(attribute),
+            "Retired potluck asset: {attribute}"
+        );
     }
     let garden = html.split("id=\"panel-11\"").nth(1).unwrap();
     assert!(garden.contains("garden-fallback"));
