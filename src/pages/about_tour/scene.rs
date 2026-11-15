@@ -27,7 +27,7 @@ precision mediump float;
 #endif
 uniform vec4 u_color; uniform vec3 u_eye; uniform sampler2D u_texture;
 uniform float u_textured; uniform float u_shadow; uniform float u_reveal; uniform float u_diorama;
-uniform float u_enter; uniform float u_material_mode;
+uniform float u_enter; uniform float u_material_mode; uniform float u_glass_pass;
 uniform sampler2D u_surface_normal; uniform mediump mat3 u_normal;
 uniform vec3 u_fill_light; uniform vec3 u_rim_light; uniform vec3 u_room_up;
 uniform sampler2D u_depth_map; uniform float u_shadow_enabled; uniform float u_shadow_texel;
@@ -98,6 +98,30 @@ vec3 matte_finish(vec3 albedo,vec3 n,float roughness,float metallic,float cavity
  vec3 specular=fresnel*(key_spec*2.8+fill_spec*1.5+rim_spec+0.25*hemi*cavity)*mix(0.24,0.38,metallic);
  return diorama_agx((diffuse+specular)*1.75);
 }
+// Thin dielectric approximation: transmit the existing scene, then reflect the
+// studio lights. Glass has no diffuse paint layer and never receives matte exposure.
+// The exports' legacy opacity describes tint density, not a white overlay.
+vec4 glass_finish(vec3 tint,vec3 n){
+ if(u_glass_pass<1.5){
+  // Multiplicative absorption cannot brighten objects behind the glass. The
+  // destination is display encoded, so convert the linear filter to that space.
+  vec3 filter=pow(clamp(tint,vec3(0.01),vec3(1.0)),vec3(u_color.a/2.2));
+  return vec4(filter,1.0);
+ }
+ vec3 view=normalize(u_eye-v_world);
+ if(dot(n,view)<0.0)n=-n;
+ float cosine=clamp(dot(n,view),0.0,1.0);
+ // Schlick Fresnel for ordinary glass (IOR approximately 1.5).
+ float fresnel=0.04+0.96*pow(1.0-cosine,5.0);
+ vec3 reflected=reflect(-view,n);
+ float sky=0.5+0.5*dot(reflected,u_room_up);
+ vec3 studio=mix(vec3(0.025,0.028,0.032),vec3(0.12,0.14,0.16),sky);
+ float key=pow(max(dot(reflected,u_key_light),0.0),96.0)*shadow_visibility(n);
+ float fill=pow(max(dot(reflected,u_fill_light),0.0),64.0);
+ float rim=pow(max(dot(reflected,u_rim_light),0.0),64.0);
+ studio+=vec3(0.85)*key+vec3(0.32)*fill+vec3(0.22)*rim;
+ return vec4(display_srgb(clamp(studio,0.0,1.0)),fresnel);
+}
 // Ordered coverage preserves opaque depth and glass ordering while surfaces emerge.
 float bayer2(vec2 p){return 2.0*mod(p.x+p.y,2.0)+mod(p.y,2.0);}
 float coverage(vec2 p){p=floor(p);return (16.0*bayer2(mod(p,2.0))+4.0*bayer2(mod(floor(p/2.0),2.0))+bayer2(mod(floor(p/4.0),2.0))+0.5)/64.0;}
@@ -114,6 +138,7 @@ void main(){
    vec3 tex=texture2D(u_texture,v_uv).rgb;
    base=u_color.rgb*v_color.rgb*mix(tex/12.92,pow((tex+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),tex));
   }
+  if(u_glass_pass>0.5){gl_FragColor=glass_finish(base,n);return;}
   if(u_material_mode>0.5){
    float visibility=shadow_visibility(n);
    if(u_material_mode>2.5){
@@ -169,6 +194,7 @@ struct Uniforms {
     diorama: WebGlUniformLocation,
     enter: WebGlUniformLocation,
     material_mode: WebGlUniformLocation,
+    glass_pass: WebGlUniformLocation,
     light_mvp: WebGlUniformLocation,
     shadow_enabled: WebGlUniformLocation,
     shadow_texel: WebGlUniformLocation,
@@ -259,6 +285,7 @@ impl Renderer {
             diorama: uniform("u_diorama")?,
             enter: uniform("u_enter")?,
             material_mode: uniform("u_material_mode")?,
+            glass_pass: uniform("u_glass_pass")?,
             light_mvp: uniform("u_light_mvp")?,
             shadow_enabled: uniform("u_shadow_enabled")?,
             shadow_texel: uniform("u_shadow_texel")?,
@@ -293,7 +320,12 @@ impl Renderer {
         gl.enable(Gl::DEPTH_TEST);
         gl.depth_func(Gl::LEQUAL);
         gl.enable(Gl::BLEND);
-        gl.blend_func(Gl::SRC_ALPHA, Gl::ONE_MINUS_SRC_ALPHA);
+        gl.blend_func_separate(
+            Gl::SRC_ALPHA,
+            Gl::ONE_MINUS_SRC_ALPHA,
+            Gl::ONE,
+            Gl::ONE_MINUS_SRC_ALPHA,
+        );
         gl.clear_color(0., 0., 0., 0.);
         let stop_shadows = (0..flight::COUNT)
             .map(|_| RefCell::new(ShadowMap::new(&gl).ok()))
@@ -1026,7 +1058,7 @@ impl Renderer {
         for draw in &diorama.draws {
             let p = &draw.part;
             let pose = draw.motion.pose(frame, room);
-            if pose.reveal <= 0. {
+            if pose.reveal <= 0. || p.opacity <= 0. {
                 continue;
             }
             let local = pose.matrix;
@@ -1053,6 +1085,13 @@ impl Renderer {
                 },
             );
             self.gl.depth_mask(p.opacity >= 1.);
+            let glass = p.opacity < 1.;
+            if glass {
+                self.gl.uniform1f(Some(&self.uniforms.glass_pass), 1.);
+                // Filter only the scene's RGB; preserve its coverage alpha.
+                self.gl
+                    .blend_func_separate(Gl::ZERO, Gl::SRC_COLOR, Gl::ZERO, Gl::ONE);
+            }
             self.draw(
                 &draw.mesh,
                 mul(model, local),
@@ -1065,6 +1104,19 @@ impl Renderer {
                 false,
                 2.,
             );
+            if glass {
+                self.gl.uniform1f(Some(&self.uniforms.glass_pass), 2.);
+                self.gl.blend_func_separate(
+                    Gl::SRC_ALPHA,
+                    Gl::ONE_MINUS_SRC_ALPHA,
+                    Gl::ONE,
+                    Gl::ONE_MINUS_SRC_ALPHA,
+                );
+                // Reuse the bound mesh and pose. Both passes share entry coverage
+                // and depth testing; neither writes depth or allocates a scene copy.
+                self.gl.draw_arrays(Gl::TRIANGLES, 0, draw.mesh.count);
+                self.gl.uniform1f(Some(&self.uniforms.glass_pass), 0.);
+            }
         }
         self.gl.uniform1f(Some(&self.uniforms.material_mode), 0.);
         self.gl.uniform1f(Some(&self.uniforms.shadow_enabled), 0.);
