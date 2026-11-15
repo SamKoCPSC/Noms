@@ -20,7 +20,7 @@ gltf = json.loads(data[20:20 + size])
 assert not gltf.get('animations'), 'Baked shadows require a static model'
 assert len(gltf['images']) == 2
 assert all('bufferView' in image and 'uri' not in image for image in gltf['images'])
-assert len(gltf['buffers']) == 1 and 'uri' not in gltf['buffers'][0]
+assert all('uri' not in b for b in gltf['buffers'])
 baked = {i: m for i, m in enumerate(gltf['materials']) if m.get('name', '').startswith('Baked master lighting ')}
 assert len(baked) == 2
 for index, material in baked.items():

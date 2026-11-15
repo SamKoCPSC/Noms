@@ -5,6 +5,7 @@ rebuild sources. Multi-scene collections also include an offline gallery.
 
 | Collection | Scenes | Preview |
 | --- | --- | --- |
+| [About-tour baked lighting](about-baked-tour/README.md) | Static Three.js derivatives for all twelve active tour scenes, with source references and reproducible lighting bakes | [Provenance and review](about-baked-tour/README.md) |
 | [Terracotta Recipe Kitchen](terracotta-recipe-kitchen/README.md) | Original revision 13 master for the first About-tour scene, with packed textures and original lighting | [Original review](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c) |
 | [About-tour penguin plushes](about-penguin-plushes/README.md) | Fifteen companions using the approved Chef Penguini model across all twelve active tour models | [All scenes](about-penguin-plushes/previews/collection.jpg) · [Close-ups](about-penguin-plushes/previews/plush-details.jpg) |
 | [L-shaped Social Kitchen](monochrome-social-kitchen/README.md) | Revision 8: matching oval beef servings, individual soups, island steak-sauce bowl and stovetop sauce pot; integrated in Without the disruptions | [Preview](monochrome-social-kitchen/previews/monochrome-social-kitchen.png) |
@@ -22,9 +23,9 @@ communal dining table; Camp, Gather, Stock Up has the later L-shaped lantern
 courtyard with café tables and a separate milk-tea cart.
 
 The production About tour assets and their loader contract are documented in
-[`assets/about/README.md`](../about/README.md). These collections use standard
-glTF review exports; they need an optimization and conversion pass before use
-with the tour's bounded Rust loader.
+[`assets/about/README.md`](../about/README.md). The collections retain standard glTF review exports. The tour now uses separate
+baked Three.js derivatives with Rust camera control; the legacy bounded Rust
+loader remains available as a fallback.
 
 The corporate workspace also has a production derivative in `assets/about/`,
 used by the About tour’s “A project to support my job search.” card.

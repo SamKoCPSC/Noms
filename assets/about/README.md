@@ -1,5 +1,33 @@
 # About tour models
 
+## Current renderer: baked Three.js tour
+
+Every active stop uses the shared Three.js renderer with fully assembled models,
+baked stationary lighting/shadows, and live glass/metal reflections. Rust keeps
+control of the existing camera path and text transitions. There are no object or
+wall entrance animations. The original `sams-*.glb` files remain as static
+fallbacks for downloads, failed scenes or unsupported/lost WebGL2 contexts.
+
+Each model has a self-contained `<name>-baked.glb` and `<name>-lighting.json`.
+Geometry is Meshopt-compressed without removing triangles; display atlases keep
+2048px resolution in RGB8 sRGB. Up to three baked models are resident in one
+Three renderer. The shared loading curtain awaits the starting stop, including
+direct fragment entry, and neighboring scenes load on demand.
+
+Nine scenes have archived native masters. The home office, bedroom and garden
+use their preserved exported geometry and prints with reconstructed softbox
+lighting; their original Blender shaders/lighting are not available here. Source
+hashes and that distinction are recorded in each lighting JSON.
+
+See [renderer and browser checks](../../tools/about/three/README.md) and
+[bake/rebuild instructions](../../tools/about/baked/README.md).
+
+## Preserved legacy derivatives
+
+The following specifications describe the original renderer and its retained
+fallback assets. References below to entrance animations, shared matte shading
+and dynamic shadows describe that earlier pipeline, not the default baked tour.
+
 Web derivative of Sam's approved **revision 13** Blender kitchen. The original editable master is preserved in [terracotta-recipe-kitchen](../models/terracotta-recipe-kitchen/README.md); the [model review page](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c) retains its source renders. This directory contains the production derivative.
 
 - `sams-kitchen-detailed.glb`: 187,949 triangles, 18 assembly groups and 20 draw calls (two additional print surfaces). Standard `KHR_mesh_quantization` packs geometry, material colors and atlas/print UVs; a custom `_METALLIC` scalar preserves the original material's metal factor; `kitchen-budget.json` records the delivered byte size. Uniform position quantization is approximately 0.11 mm per step in the source units.
@@ -10,12 +38,6 @@ Web derivative of Sam's approved **revision 13** Blender kitchen. The original e
 - `kitchen-budget.json`: generated budget/provenance record.
 - `kitchen-geometry-audit.json`: per-object source/export triangle counts. Curved props such as the wok, serving plates, cups and stool seats retain their evaluated source geometry.
 
-The first stop now also has a static Three.js prototype: `kitchen-baked.glb`
-embeds the original master's baked lighting and retains live glass/metal;
-`kitchen-lighting.json` records its lighting and source hash. Rust still controls
-the tour camera. The existing derivative above remains the fallback. See the
-[bake instructions](../models/terracotta-recipe-kitchen/README.md) and
-[renderer notes](../../tools/about/three/README.md).
 
 ## Rebuild
 
@@ -207,7 +229,7 @@ cp /tmp/noms-bedroom-web/{sams-bedroom.glb,bedroom-budget.json,bedroom-geometry-
 cargo test --locked --no-default-features --features server pages::about_tour
 ```
 
-The exporter reads `assembly-manifest.json` beside the master and never saves the source scene. The app uses the bounded Rust GLB decoder, without a JavaScript 3D runtime. The bedroom contains 342,007 triangles in 36 draws; the 400,000-triangle ceiling remains per model, not unbounded.
+The exporter reads `assembly-manifest.json` beside the master and never saves the source scene. The retained fallback uses the bounded Rust GLB decoder; the default Three.js path is described above. The bedroom contains 342,007 triangles in 36 draws; the 400,000-triangle ceiling remains per model, not unbounded.
 
 ## Garden cookout
 
