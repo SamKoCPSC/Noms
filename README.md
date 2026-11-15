@@ -1,13 +1,19 @@
-# Noms village preview download
+# Noms village — single-file mobile preview
 
-Download this branch using **Code → Download ZIP**, extract the entire ZIP, and open **OPEN-VILLAGE.html** in Chrome or Edge. Keep the `assets` folder alongside the HTML. No Python, build, server, or internet connection is needed after downloading.
+[Download noms-village-mobile.zip](https://github.com/SamKoCPSC/Noms/raw/refs/heads/preview/terraced-village-download/noms-village-mobile.zip)
 
-This folder includes all twelve full-resolution models. Desktop is recommended. Use **Play tour**, **Overview**, or the stop selector.
+1. Download the ZIP above (about 71 MiB).
+2. Extract **OPEN-VILLAGE-MOBILE.html**.
+3. Open that HTML in Chrome. All twelve models are inside that file; there is no neighboring assets folder to load.
 
-The preview is a layout blockout: terrain and connecting paths are provisional, and the models retain their existing lighting. This branch only distributes the review preview and does not change the deployed About page.
+If you use **Code → Download ZIP**, extract the repository archive, then extract the `noms-village-mobile.zip` inside it.
 
-Source and Blender world: [PR #89](https://github.com/SamKoCPSC/Noms/pull/89), commit `c945f9fbafc503702f47d6038eb5eba87354eb19`.
+This replaces the earlier multi-file download, which could show “Failed to fetch” when Android opened its HTML through a `content://` file viewer without access to neighboring model scripts.
 
-The archive avoids the chat attachment download service. The large model data is split into local JavaScript files so no single file exceeds GitHub's file-size limit. Each decoded model matches its production source byte-for-byte; see `sources.json`.
+Geometry bytes and texture dimensions are unchanged. The download uses WebP quality 95 compression for preview textures; original production assets and Blender masters remain unchanged. Conversion receipts are included in this branch.
 
-Verification: the browser loaded all twelve models from this package over localhost with no external resource requests. Direct file navigation is blocked by the managed verification browser, so that launch mode could not be verified here.
+The scene remains a large twelve-model layout study. Loading all models together may require substantial phone memory. Terrain and paths are provisional, and shared lighting has not been rebaked.
+
+Source and Blender world: [PR #89](https://github.com/SamKoCPSC/Noms/pull/89).
+
+Validation: the single-file HTML loads all twelve models in portrait browser testing with additional HTTP/HTTPS requests blocked. Direct Android `content://` launching is not available in the test environment and still needs checking on the device.
