@@ -1,49 +1,60 @@
-# Terraced village — layout and camera study
+# Village — outdoor walking study
 
 A separate review prototype using all twelve actual About-tour locations in the
-existing story order. The route curves around residential and work courtyards,
-crosses the central market, and climbs toward the cabin and communal garden.
+existing story order. Revision 2 expands the model spacing by 25% in both horizontal
+axes, keeps their sizes intact, and replaces the elevated display plinths with
+continuous ground, low thresholds, paths, benches, scattered trees and a river.
 It does not replace the application's About page.
 
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
-The original source files are never saved over. No furniture or room geometry
-is redesigned. Blender retains each assembled source as a separate collection,
-including its original shader data and the current Penguini placements.
+The original source files are never saved over. Furniture and room geometry stay
+intact. Blender retains each source as a separate native collection, including
+its shaders and the current Penguini placements.
 
 ## Review files
 
 - [Portable native world](models/terraced-village-blockout.blend)
 - [Source receipts](models/terraced-village-blockout.sources.json)
-- [Browser overview](previews/overview.png)
-- [Example kitchen arrival](previews/kitchen.png)
-- [Central market arrival](previews/market.png)
-- [Recorded camera poses](source/camera-poses.json)
-- [Plot-avoiding path waypoints](source/paths.json)
+- [Overview](previews/overview.png)
+- [Kitchen arrival](previews/kitchen.png)
+- [Walking toward the library](previews/walk-library.png)
+- [Mobile arrival](previews/mobile.png)
+- [Camera stops](source/camera-poses.json)
+- [Walking camera samples](source/walking-camera.json)
+- [Shared environment geometry](source/world-environment.json)
 
-In Blender, `Village overview — static` is the initial camera. Select
-`Village review camera` as the active scene camera to inspect the keyed tour.
-Timeline markers identify all twelve stops. The browser is the primary motion
-review: its eased camera curves and framing respond to the viewport, while the
-Blender track records the stop poses and raised travel midpoints.
+The browser starts at the first arrival, at walking height. **Walk tour** follows
+continuous paths around the model footprints, looks ahead during travel and turns
+toward each location on arrival. Previous/next follow the same route. Distant stop
+jumps and return from overview use a brief fade. **Overview** remains available
+for inspecting the layout. There is no head bob or automatic playback.
+
+The camera stays 3.8 world units above the terrain, scaled to the existing room
+models and their thick floor bases. Travel speed is 2.6 world units per second.
+Portrait layout adjusts the field of view without raising the camera or changing
+its route. Reduced-motion preference makes manual navigation instantaneous.
+
+In Blender, `Village walking camera` is the initial active camera. Its keyed
+positions and look directions come from the same sampled route as the browser,
+with twelve stop markers. `Village overview — static` provides the elevated view.
+The native builder imports the browser's environment geometry so paths, benches,
+trees and ground match; it can reuse the existing master’s source collections.
 
 ## What remains provisional
 
-The browser copies the existing baked GLBs byte-for-byte, retaining their current
-lighting. The native world uses the original Blender sources, including the three
-recently restored masters, under a provisional shared sky and sun. These two
-lighting treatments intentionally have not been reconciled or rebaked yet.
+The normal browser preview copies existing baked GLBs byte-for-byte. The mobile
+single-file preview compresses their textures as documented below. The native
+world retains original shader data under a provisional shared sky and sun. Shared
+lighting has not been rebaked.
 
-Terrain pads, connecting paths, river profile, backdrop and sky are blockout
-geometry. Browser paths have flat bridge decks and supports; the native study
-uses curves for those same path waypoints, ready for terrain detailing. Final
-stairs, ramps, collision-safe walkways and landscaping follow layout approval.
-The route is a flying camera route, not a pedestrian navigation simulation.
+Paths and landscape are still a blockout. This is a guided outdoor camera route,
+not a collision-enabled free-roaming game. Automated checks cover the camera
+corridor against expanded model bounds and the ground height. It does not include
+pedestrian navigation or physical accessibility simulation.
 
-The browser holds all twelve scenes for overview/orbit review and preserves full
-textures and triangle counts. This is a desktop-oriented review, not the final
-streaming or mobile performance implementation. Playback starts only on request;
-reduced-motion preference removes automatic jumps between manually chosen stops.
+All twelve scenes remain resident for overview/orbit review. Final streaming,
+mobile memory budgets and performance optimization are separate work.
 
 ## Rebuild
 
@@ -99,15 +110,13 @@ simplify meshes, resize textures or change materials.
 
 ## Verification
 
-The browser review visited all twelve stops, exercised playback and a mid-flight
-view, and checked portrait resizing without JavaScript errors. The embedded HTML
-also loaded all twelve models without requesting external resources. The managed
-verification browser disallows `file://` navigation, so its self-contained HTML
-was tested over local HTTP; a direct local-file launch was not verified there.
-All twelve archived master hashes remain unchanged.
-The saved native world also reopened successfully with 24,226 source objects,
-twelve camera-stop markers, no external Blender libraries and no unpacked image
-dependencies. See [native verification](source/native-verification.json).
+The browser review visits all twelve stops, checks playback and portrait framing,
+and samples all eleven connecting routes at 201 points each. Camera samples must
+stay above the terrain, clear the expanded model footprints and join continuously.
+Source hashes, geometry conversion receipts and native reopen checks are retained.
+Direct Android `content://` launching is not available in the managed browser;
+the single-file package is tested over localhost with additional network requests
+blocked.
 
 ```sh
 python tools/about/village/check-preview.py http://127.0.0.1:8766 /tmp/village-check

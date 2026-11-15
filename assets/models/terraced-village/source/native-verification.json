@@ -3,10 +3,12 @@
   "model_instances": 12,
   "native_objects": 24226,
   "camera_stops": 12,
+  "active_camera": "Village walking camera",
+  "walking_eye_height": 3.8,
   "external_libraries": 0,
   "unpacked_file_images": [],
   "original_master_hashes_verified": 12,
-  "world_sha256": "0cff2dfd658aa97b094100024e2aaa5e30f3a5c7dcec57091a0a5ce5f5fb14d2",
-  "world_bytes": 44400186,
+  "world_sha256": "499c79688648864a578b30c483489f33599259dfdc7febfed5502e30992210e8",
+  "world_bytes": 46356149,
   "lighting_rebaked": false
 }

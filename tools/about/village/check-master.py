@@ -15,8 +15,12 @@ scene = bpy.context.scene
 instances = [o for o in scene.objects if o.instance_type == 'COLLECTION' and 'stop' in o]
 assert sorted(o['stop'] for o in instances) == list(range(1, 13))
 assert len(scene.timeline_markers) == 12
-assert scene.camera.name == 'Village overview — static'
-assert scene.camera.location.length > 100
+assert scene.camera.name == 'Village walking camera'
+poses = json.loads((root / 'assets/models/terraced-village/source/camera-poses.json').read_text())
+eye = poses[0]['eye']
+assert sum((scene.camera.location[i] - [eye[0], -eye[2], eye[1]][i]) ** 2 for i in range(3)) < 1e-8
+assert scene.camera.animation_data and scene.camera.animation_data.action
+assert abs(scene['walk_eye_height'] - 3.8) < 1e-6
 assert not bpy.data.libraries, 'World still depends on external Blender libraries'
 unpacked = [i.name for i in bpy.data.images if i.source == 'FILE' and i.filepath and not i.packed_file]
 assert not unpacked, f'Unpacked image dependencies: {unpacked}'
@@ -31,6 +35,8 @@ result = {
     'model_instances': len(instances),
     'native_objects': sum(len(o.instance_collection.all_objects) for o in instances),
     'camera_stops': len(scene.timeline_markers),
+    'active_camera': scene.camera.name,
+    'walking_eye_height': scene['walk_eye_height'],
     'external_libraries': len(bpy.data.libraries),
     'unpacked_file_images': unpacked,
     'original_master_hashes_verified': len(receipts),

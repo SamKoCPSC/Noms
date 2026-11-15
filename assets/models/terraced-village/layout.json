@@ -1,15 +1,15 @@
 {
-  "version": 1,
-  "stage": "layout and camera blockout; lighting not rebaked",
+  "version": 2,
+  "stage": "Outdoor walking layout; shared lighting not rebaked",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
       "id": "kitchen",
       "title": "Kitchen",
       "position": [
-        -30,
-        0,
-        24
+        -37.5,
+        -0.07,
+        30.0
       ],
       "yaw": -0.20944,
       "width": 14,
@@ -21,9 +21,9 @@
       "id": "library",
       "title": "Library",
       "position": [
-        -34,
-        3,
-        0
+        -42.5,
+        0.35,
+        0.0
       ],
       "yaw": 0.20944,
       "width": 15,
@@ -35,9 +35,9 @@
       "id": "bedroom",
       "title": "Bedroom",
       "position": [
-        -21,
-        5,
-        -24
+        -26.25,
+        0.77,
+        -30.0
       ],
       "yaw": -0.436332,
       "width": 15,
@@ -49,9 +49,9 @@
       "id": "supermarket",
       "title": "Supermarket",
       "position": [
-        5,
-        3,
-        -27
+        6.25,
+        0.823,
+        -33.75
       ],
       "yaw": 0.383972,
       "width": 17,
@@ -63,9 +63,9 @@
       "id": "office",
       "title": "Home office",
       "position": [
-        30,
-        5,
-        -15
+        37.5,
+        0.613,
+        -18.75
       ],
       "yaw": -0.349066,
       "width": 14,
@@ -77,9 +77,9 @@
       "id": "corporate-office",
       "title": "Corporate office",
       "position": [
-        34,
-        7,
-        11
+        42.5,
+        0.157,
+        13.75
       ],
       "yaw": -0.733038,
       "width": 17,
@@ -91,9 +91,9 @@
       "id": "brick-kitchen",
       "title": "Brick kitchen",
       "position": [
-        12,
-        6,
-        28
+        15.0,
+        -0.14,
+        35.0
       ],
       "yaw": 0.261799,
       "width": 14,
@@ -105,9 +105,9 @@
       "id": "bakery",
       "title": "Baking lab",
       "position": [
-        -12,
-        8,
-        5
+        -15.0,
+        0.262,
+        6.25
       ],
       "yaw": 0.610865,
       "width": 15,
@@ -119,9 +119,9 @@
       "id": "farmers-market",
       "title": "Farmers\u2019 market",
       "position": [
-        11,
-        8,
-        2
+        13.75,
+        0.315,
+        2.5
       ],
       "yaw": -0.314159,
       "width": 17,
@@ -133,9 +133,9 @@
       "id": "social-kitchen",
       "title": "Social kitchen",
       "position": [
-        1,
-        11,
-        -50
+        1.25,
+        1.225,
+        -62.5
       ],
       "yaw": 0.314159,
       "width": 15,
@@ -147,9 +147,9 @@
       "id": "riverside-campsite",
       "title": "Riverside cabin",
       "position": [
-        -26,
-        13,
-        -49
+        -32.5,
+        1.208,
+        -61.25
       ],
       "yaw": -0.436332,
       "width": 17,
@@ -161,9 +161,9 @@
       "id": "garden",
       "title": "Garden cookout",
       "position": [
-        -9,
-        16,
-        -75
+        -11.25,
+        1.663,
+        -93.75
       ],
       "yaw": 0.087266,
       "width": 21,
@@ -174,68 +174,63 @@
   ],
   "river": [
     [
-      44,
+      70,
       0,
-      42
+      80
     ],
     [
-      47,
+      70,
       0,
-      20
+      35
     ],
     [
-      46,
+      68,
       0,
-      -5
+      0
     ],
     [
-      40,
+      60,
       0,
-      -35
+      -40
     ],
     [
-      24,
+      42,
       0,
-      -57
+      -85
     ],
     [
-      8,
+      15,
       0,
-      -77
+      -125
+    ],
+    [
+      -15,
+      0,
+      -155
     ]
   ],
   "ground_outline": [
     [
-      -48,
-      43
+      -110,
+      95
     ],
     [
-      44,
-      43
+      110,
+      95
     ],
     [
-      54,
-      17
+      110,
+      -165
     ],
     [
-      50,
-      -25
-    ],
-    [
-      19,
-      -91
-    ],
-    [
-      -30,
-      -91
-    ],
-    [
-      -48,
-      -50
-    ],
-    [
-      -53,
-      12
+      -110,
+      -165
     ]
-  ]
+  ],
+  "walk": {
+    "eye_height": 3.8,
+    "speed": 2.6,
+    "path_width": 3.2,
+    "spacing_multiplier": 1.25
+  }
 }
