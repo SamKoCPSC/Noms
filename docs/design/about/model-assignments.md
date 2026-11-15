@@ -74,4 +74,4 @@ remains in the asset archive but is no longer downloaded by the tour.
 
 ## Shared penguin companions
 
-All twelve active models now include one or two new penguin plushes, with two in each outdoor scene. The bedroom retains its existing collection. See the [placement manifest and editable library](../../../assets/models/about-penguin-plushes/README.md) for the fifteen additions, their furniture supports, and reproducible production exports. This accessory pass does not change the section-to-model assignments above.
+All twelve active models now include one or two new companions derived from the approved Chef Penguini model, with two in each outdoor scene. The bedroom retains its existing collection. See the [placement manifest and editable library](../../../assets/models/about-penguin-plushes/README.md) for the fifteen additions, their furniture supports, and reproducible production exports. This accessory pass does not change the section-to-model assignments above.

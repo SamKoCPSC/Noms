@@ -1,17 +1,19 @@
 {
   "source": "models/community-spaces/models/farmers-market.blend",
   "source_sha256": "a22d8f4fcbecafdb0956de2c506c5dbc66808281c017bccf8e0bc1424a064e84",
-  "triangles": 360417,
+  "triangles": 360787,
   "assemblies": 10,
   "materials": 13,
-  "glb_bytes": 12223692,
+  "glb_bytes": 12238500,
   "textures": 0,
   "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
   "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
   "position_quantum": 0.0001983416001347607,
   "quantization": "KHR_mesh_quantization",
   "penguin_plushes": 2,
-  "plush_triangles": 5312,
+  "plush_triangles": 5682,
   "plush_source": "assets/models/about-penguin-plushes",
-  "base_glb_sha256": "3312082e495d1029290f33900d404cabb59cc7589a3a190a35cd62b73d92e620"
+  "base_glb_sha256": "3312082e495d1029290f33900d404cabb59cc7589a3a190a35cd62b73d92e620",
+  "character_source": "assets/brand/penguini/3d/source/base.blend",
+  "character_source_sha256": "6569345476121564fb0bb34dd038805d7e4869aa719358b91e90049f4fde4fed"
 }

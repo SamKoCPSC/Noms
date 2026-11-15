@@ -32,11 +32,15 @@ def main():
     parser.add_argument('--base-dir',required=True,type=Path)
     args=parser.parse_args()
     manifest=json.loads((LIBRARY/'placements.json').read_text())
+    library=json.loads((LIBRARY/'library-metadata.json').read_text())
+    assert hashlib.sha256((ROOT/library['source']).read_bytes()).hexdigest()==library['source_sha256']
     total=0
     for row in manifest['models']:
         before,bb=read_glb(args.base_dir/row['file'])
         after,ab=read_glb(ROOT/'assets/about'/row['file'])
         assert hashlib.sha256((args.base_dir/row['file']).read_bytes()).hexdigest()==row['base_sha256']
+        assert after['extras']['penguin_plushes']['character_source_sha256']==library['source_sha256']
+        assert all(p['variant']=='penguini' for p in row['plushes'])
         assert ab[:len(bb)]==bb, 'Existing binary geometry/UV/color data changed'
         for key in ('materials','accessors','bufferViews'):
             assert before[key]==after[key][:len(before[key])], key
@@ -50,14 +54,14 @@ def main():
         assert len(ap)<=64
         gaps=[]
         for p in row['plushes']:
-            x,y,z=p['position'];angle=math.radians(p['yaw_degrees']);scale=p['height']/.98
-            for side in (-1,1):
-                dx=side*.139*scale;dz=.129*scale
+            x,y,z=p['position'];angle=math.radians(p['yaw_degrees']);scale=p['height']
+            for fx,fy,fz in library['foot_contacts']:
+                dx=fx*scale;dz=fz*scale
                 xx=x+math.cos(angle)*dx+math.sin(angle)*dz
                 zz=z-math.sin(angle)*dx+math.cos(angle)*dz
                 hits=support_heights(before,bb,p['support'],xx,zz)
                 assert hits, f"No support under {row['model']} / {p['label']}"
-                gap=y-min(hits,key=lambda h:abs(y-h))
+                gap=y+fy*scale-min(hits,key=lambda h:abs(y+fy*scale-h))
                 assert -.008<gap<.02, f"Foot contact: {row['model']} / {p['label']}: {gap}"
                 gaps.append(round(gap,4))
         total+=len(row['plushes'])

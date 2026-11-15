@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "base_commit": "da47d8b908ab566ddf96cd2b66c8213621a6ef95",
   "coordinate_system": "glTF Y-up; position is the plush base; yaw rotates its +Z face toward +X",
   "models": [
@@ -9,7 +9,7 @@
       "base_sha256": "f33edb5acf11ec65b779be2780401b2507e104808a8f74577b62ab002eb36e93",
       "plushes": [
         {
-          "variant": "blue",
+          "variant": "penguini",
           "position": [
             -2.85,
             2.975,
@@ -28,7 +28,7 @@
       "base_sha256": "94064e38a13914539971d027572f87a9bef21c998a49ae1d98fa6336cf4391f1",
       "plushes": [
         {
-          "variant": "honey",
+          "variant": "penguini",
           "position": [
             3.98,
             0.585,
@@ -47,11 +47,11 @@
       "base_sha256": "42e085de140b73f3e9605cc3eb8f067d3cfb2ee8067d576fd83c450f9aec1a90",
       "plushes": [
         {
-          "variant": "berry",
+          "variant": "penguini",
           "position": [
             1.29,
-            0.565,
-            0.18
+            0.574,
+            0.32
           ],
           "height": 0.5,
           "yaw_degrees": 20,
@@ -66,13 +66,13 @@
       "base_sha256": "e17fbb290f3b485edc20602a045bd514da362c660d1b3aa1b689bc069bdcfe3b",
       "plushes": [
         {
-          "variant": "sage",
+          "variant": "penguini",
           "position": [
-            2.53,
+            2.61,
             1.207,
-            4.77
+            4.5
           ],
-          "height": 0.6,
+          "height": 0.44,
           "yaw_degrees": 20,
           "support": "15 Checkout lane 1",
           "label": "Checkout bagging counter"
@@ -85,16 +85,16 @@
       "base_sha256": "b73117f8afa2ad356a9b36d654c2f0f070b6f3f68e7a78365ab0026373779a3a",
       "plushes": [
         {
-          "variant": "blue",
+          "variant": "penguini",
           "position": [
-            2.72,
-            0.8801,
-            1.3
+            0.0,
+            1.17,
+            -1.78
           ],
-          "height": 0.48,
+          "height": 0.4,
           "yaw_degrees": -15,
-          "support": "07 Window bookcase",
-          "label": "Window bookcase end"
+          "support": "11 Desktop peripherals and audio",
+          "label": "Desk between keyboard and monitors"
         }
       ]
     },
@@ -104,7 +104,7 @@
       "base_sha256": "126152401952540e6828c74ddf1567d3525efeb10dcb1244e614e36528be5011",
       "plushes": [
         {
-          "variant": "berry",
+          "variant": "penguini",
           "position": [
             -3.52,
             0.834,
@@ -123,7 +123,7 @@
       "base_sha256": "dbe09b8e97411937a2f23b716438a3bd9b5762b0d3e8c9d0c030d23498d3f34a",
       "plushes": [
         {
-          "variant": "honey",
+          "variant": "penguini",
           "position": [
             -0.78,
             0.7975,
@@ -142,7 +142,7 @@
       "base_sha256": "31a316dea207874f21a8c7ecbebf57e6b6141fda76a39c3ac0c00b6cdd69a8c2",
       "plushes": [
         {
-          "variant": "sage",
+          "variant": "penguini",
           "position": [
             -0.89,
             1.13,
@@ -161,7 +161,7 @@
       "base_sha256": "3312082e495d1029290f33900d404cabb59cc7589a3a190a35cd62b73d92e620",
       "plushes": [
         {
-          "variant": "honey",
+          "variant": "penguini",
           "position": [
             -2.45,
             0.614,
@@ -173,7 +173,7 @@
           "label": "Front-left picnic bench"
         },
         {
-          "variant": "sage",
+          "variant": "penguini",
           "position": [
             3.22,
             0.614,
@@ -192,7 +192,7 @@
       "base_sha256": "f6e72b62c365357bc8bb071166e2e01da6c62b76f412d79bf513198cfb145a47",
       "plushes": [
         {
-          "variant": "blue",
+          "variant": "penguini",
           "position": [
             -3.14,
             1.08,
@@ -211,10 +211,10 @@
       "base_sha256": "468d43fb5e54a4d98a12e3a41e9b52f13335ddba4ea29131ac1cbab1896d064b",
       "plushes": [
         {
-          "variant": "honey",
+          "variant": "penguini",
           "position": [
             -2.82,
-            0.798,
+            0.786,
             0.25
           ],
           "height": 0.53,
@@ -223,7 +223,7 @@
           "label": "Wooden porch lounge"
         },
         {
-          "variant": "sage",
+          "variant": "penguini",
           "position": [
             1.52,
             0.5275,
@@ -242,7 +242,7 @@
       "base_sha256": "d0584b5ef8b5d715dfc934c125d31bd97f553adab7afac223c7bc8a263d29e77",
       "plushes": [
         {
-          "variant": "blue",
+          "variant": "penguini",
           "position": [
             -3.65,
             0.582,
@@ -254,7 +254,7 @@
           "label": "Front picnic bench"
         },
         {
-          "variant": "berry",
+          "variant": "penguini",
           "position": [
             4.1,
             0.582,
@@ -267,5 +267,6 @@
         }
       ]
     }
-  ]
+  ],
+  "character": "Approved Chef Penguini (static optimized derivative)"
 }

@@ -18,7 +18,7 @@ name=args[0];out=Path(args[1]);out.mkdir(parents=True,exist_ok=True)
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 gallery=name=='library-gallery'
 if gallery:
-    source=HERE/'models/penguin-plush-variants.glb';row=None
+    source=HERE/'models/penguini-plush.glb';row=None
 else:
     row=next(r for r in json.loads((HERE/'placements.json').read_text())['models'] if r['model']==name)
     source=REPO/'assets/about'/row['file']
@@ -84,7 +84,8 @@ rotation=np.array(cam.rotation_euler.to_matrix())
 projected=(points-center)@rotation
 aspect=1080/945
 camdata.ortho_scale=max(np.ptp(projected[:,0]),np.ptp(projected[:,1])*aspect)*1.08
-scene.render.filepath=str(out/f'{name}.png');bpy.ops.render.render(write_still=True)
+if '--closeups-only' not in args:
+    scene.render.filepath=str(out/f'{name}.png');bpy.ops.render.render(write_still=True)
 
 if row and '--overview-only' not in args:
     scene.render.resolution_x=480;scene.render.resolution_y=480

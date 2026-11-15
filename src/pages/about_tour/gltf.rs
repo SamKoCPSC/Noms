@@ -334,7 +334,8 @@ mod tests {
             for (part, placement) in plushes.iter().zip(placements) {
                 assert_eq!(part.texture, 0);
                 assert_eq!(part.opacity, 1.);
-                assert_eq!(part.count / 3, 2656);
+                assert_eq!(part.count / 3, 2841);
+                assert_eq!(placement["variant"], "penguini");
                 assert!(part.start >= 100. && part.end <= 160.);
                 assert!(model
                     .parts
@@ -617,7 +618,7 @@ mod tests {
     fn delivered_social_kitchen_preserves_food_colors_and_all_geometry() {
         let bytes = include_bytes!("../../../assets/about/sams-social-kitchen.glb");
         let model = decode(bytes).unwrap();
-        assert_eq!(model.vertices.len() / 36, 365_230);
+        assert_eq!(model.vertices.len() / 36, 365_415);
         assert!(bytes.len() < 10_000_000);
         let names = model
             .parts
@@ -666,7 +667,7 @@ mod tests {
     fn delivered_riverside_campsite_keeps_cabin_river_and_food() {
         let bytes = include_bytes!("../../../assets/about/sams-riverside-campsite.glb");
         let model = decode(bytes).unwrap();
-        assert_eq!(model.vertices.len() / 36, 161_355);
+        assert_eq!(model.vertices.len() / 36, 161_725);
         assert!(bytes.len() < 5_000_000);
         let names = model
             .parts
@@ -780,7 +781,7 @@ mod tests {
         let bytes = include_bytes!("../../../assets/about/sams-brick-kitchen.glb");
         let model = decode(bytes).unwrap();
         assert!(bytes.len() < 12_000_000);
-        assert_eq!(model.vertices.len() / 36, 334_900);
+        assert_eq!(model.vertices.len() / 36, 335_085);
         assert!(model.vertices.iter().all(|v| v.is_finite()));
         let names = model
             .parts
@@ -813,7 +814,7 @@ mod tests {
         let bytes = include_bytes!("../../../assets/about/sams-corporate-office.glb");
         let model = decode(bytes).unwrap();
         assert!(bytes.len() < 8_000_000);
-        assert_eq!(model.vertices.len() / 36, 267_485);
+        assert_eq!(model.vertices.len() / 36, 267_670);
         assert!(model.vertices.iter().all(|v| v.is_finite()));
         let names = model
             .parts

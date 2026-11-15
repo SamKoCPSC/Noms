@@ -1,18 +1,20 @@
 {
   "source_revision": 13,
   "geometry_profile": "curved props preserved",
-  "triangles": 190605,
+  "triangles": 190790,
   "draw_calls": 21,
   "textures": 4,
   "assembly_groups": 19,
   "contact_shading": "2048px unlit albedo/local cavity and object-normal/roughness atlases; live lighting and cast shadows",
-  "glb_bytes": 8095624,
+  "glb_bytes": 8103108,
   "native_master_unchanged": true,
   "position_quantum": 0.00011440899057956566,
   "quantization": "KHR_mesh_quantization",
   "materials": 21,
   "penguin_plushes": 1,
-  "plush_triangles": 2656,
+  "plush_triangles": 2841,
   "plush_source": "assets/models/about-penguin-plushes",
-  "base_glb_sha256": "f33edb5acf11ec65b779be2780401b2507e104808a8f74577b62ab002eb36e93"
+  "base_glb_sha256": "f33edb5acf11ec65b779be2780401b2507e104808a8f74577b62ab002eb36e93",
+  "character_source": "assets/brand/penguini/3d/source/base.blend",
+  "character_source_sha256": "6569345476121564fb0bb34dd038805d7e4869aa719358b91e90049f4fde4fed"
 }

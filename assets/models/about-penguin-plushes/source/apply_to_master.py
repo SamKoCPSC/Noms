@@ -25,7 +25,7 @@ group['start_frame']=110;group['end_frame']=148;group['incoming_offset']=[.15,-.
 group['noms_plush_overlay']=True
 positions=[]
 for i,p in enumerate(row['plushes']):
-    with bpy.data.libraries.load(str(ROOT/'models/penguin-plush-variants.blend'),link=False) as (src,dst):
+    with bpy.data.libraries.load(str(ROOT/'models/penguini-plush.blend'),link=False) as (src,dst):
         dst.objects=src.objects
     root=next(o for o in dst.objects if o and o.get('variant')==p['variant'])
     keep={root,*root.children_recursive}
@@ -33,7 +33,7 @@ for i,p in enumerate(row['plushes']):
         if o in keep:scene.collection.objects.link(o)
         elif o:bpy.data.objects.remove(o,do_unlink=True)
     x,y,z=p['position'];root.location=(x,-z,y)
-    root.scale=(p['height']/.98,)*3
+    root.scale=(p['height'],)*3
     root.rotation_euler.z=math.radians(p['yaw_degrees'])
     root.parent=group;root.name=f'Penguin plush {i+1:02} - {p["label"]}'
     positions.append(Vector(root.location))

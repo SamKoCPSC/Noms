@@ -1,17 +1,19 @@
 {
   "source": "models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend",
   "source_sha256": "a3a52438bc2662b14b55b21e7d9f2495b38983791776a55a04300e39e82e4196",
-  "triangles": 365230,
+  "triangles": 365415,
   "assemblies": 17,
   "materials": 20,
-  "glb_bytes": 9727092,
+  "glb_bytes": 9734572,
   "textures": 0,
   "geometry": "All evaluated master triangles retained; no decimation",
   "shading": "Linear material and authored vertex colors and evaluated normals; runtime matte lighting and dynamic shadows",
   "position_quantum": 0.00011596856495967908,
   "quantization": "KHR_mesh_quantization",
   "penguin_plushes": 1,
-  "plush_triangles": 2656,
+  "plush_triangles": 2841,
   "plush_source": "assets/models/about-penguin-plushes",
-  "base_glb_sha256": "f6e72b62c365357bc8bb071166e2e01da6c62b76f412d79bf513198cfb145a47"
+  "base_glb_sha256": "f6e72b62c365357bc8bb071166e2e01da6c62b76f412d79bf513198cfb145a47",
+  "character_source": "assets/brand/penguini/3d/source/base.blend",
+  "character_source_sha256": "6569345476121564fb0bb34dd038805d7e4869aa719358b91e90049f4fde4fed"
 }

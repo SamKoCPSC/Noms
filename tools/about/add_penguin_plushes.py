@@ -87,7 +87,8 @@ def main():
     parser.add_argument('--output',type=Path,default=ROOT/'assets/about')
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
     manifest=json.loads((LIBRARY/'placements.json').read_text())
-    library,lb=read_glb(LIBRARY/'models/penguin-plush-variants.glb')
+    library,lb=read_glb(LIBRARY/'models/penguini-plush.glb')
+    character=json.loads((LIBRARY/'library-metadata.json').read_text())
     reports=[]
     for row in manifest['models']:
         source=args.base_dir/row['file'];raw=source.read_bytes()
@@ -101,11 +102,13 @@ def main():
         assert budget['triangles']+added<=400_000
         assert len(doc['meshes'][0]['primitives'])<=64
         doc.setdefault('extras',{})['penguin_plushes']=dict(count=len(row['plushes']),base_sha256=row['base_sha256'],
-            base_binary_bytes=len(base),base_counts=original_counts,placements=row['plushes'])
+            base_binary_bytes=len(base),base_counts=original_counts,placements=row['plushes'],
+            character_source=character['source'],character_source_sha256=character['source_sha256'])
         path=args.output/row['file'];write_glb(path,doc,binary)
         budget.update(triangles=budget['triangles']+added,glb_bytes=path.stat().st_size,
             materials=len(doc['materials']),penguin_plushes=len(row['plushes']),plush_triangles=added,
-            plush_source='assets/models/about-penguin-plushes',base_glb_sha256=row['base_sha256'])
+            plush_source='assets/models/about-penguin-plushes',base_glb_sha256=row['base_sha256'],
+            character_source=character['source'],character_source_sha256=character['source_sha256'])
         for key in ('assemblies','assembly_groups'):
             if key in budget:budget[key]+=len(row['plushes'])
         if 'draw_calls' in budget:budget['draw_calls']+=len(row['plushes'])
