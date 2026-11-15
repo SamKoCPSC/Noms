@@ -492,6 +492,19 @@ mod tests {
         }
     }
     #[test]
+    fn baked_scene_stays_assembled_before_entry_and_on_revisit() {
+        let mut arrival = ChapterArrival::new(1);
+        arrival.settle();
+        assert_eq!(arrival.frame(), 160.);
+        assert!(!arrival.animating());
+
+        for progress in [0., 0.8, 1., 2., 1.] {
+            arrival.advance(progress, 0.1);
+            assert_eq!(arrival.frame(), 160.);
+            assert!(!arrival.animating());
+        }
+    }
+    #[test]
     fn splitting_architecture_preserves_every_triangle_and_final_placement() {
         for (room, original) in models() {
             let m = prepare(&original, room);
