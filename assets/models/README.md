@@ -5,6 +5,7 @@ rebuild sources. Multi-scene collections also include an offline gallery.
 
 | Collection | Scenes | Preview |
 | --- | --- | --- |
+| [Terracotta Recipe Kitchen](terracotta-recipe-kitchen/README.md) | Original revision 13 master for the first About-tour scene, with packed textures and original lighting | [Original review](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c) |
 | [About-tour penguin plushes](about-penguin-plushes/README.md) | Fifteen companions using the approved Chef Penguini model across all twelve active tour models | [All scenes](about-penguin-plushes/previews/collection.jpg) · [Close-ups](about-penguin-plushes/previews/plush-details.jpg) |
 | [L-shaped Social Kitchen](monochrome-social-kitchen/README.md) | Revision 8: matching oval beef servings, individual soups, island steak-sauce bowl and stovetop sauce pot; integrated in Without the disruptions | [Preview](monochrome-social-kitchen/previews/monochrome-social-kitchen.png) |
 | [Riverside Cabin Campsite](riverside-cabin-campsite/README.md) | Reconstructed revision 4: two-storey cabin, river, folded pines and camping food; integrated in Respecting your privacy | [Preview](riverside-cabin-campsite/previews/riverside-cabin-campsite.png) |

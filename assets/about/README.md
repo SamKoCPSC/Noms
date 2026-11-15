@@ -1,6 +1,6 @@
 # About tour models
 
-Web derivative of Sam's approved **revision 13** Blender kitchen. The editable master and source renders remain on the [model review page](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c); this directory contains the production derivative, not the native master.
+Web derivative of Sam's approved **revision 13** Blender kitchen. The original editable master is preserved in [terracotta-recipe-kitchen](../models/terracotta-recipe-kitchen/README.md); the [model review page](https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c) retains its source renders. This directory contains the production derivative.
 
 - `sams-kitchen-detailed.glb`: 187,949 triangles, 18 assembly groups and 20 draw calls (two additional print surfaces). Standard `KHR_mesh_quantization` packs geometry, material colors and atlas/print UVs; a custom `_METALLIC` scalar preserves the original material's metal factor; `kitchen-budget.json` records the delivered byte size. Uniform position quantization is approximately 0.11 mm per step in the source units.
 - `kitchen-laptop.webp` and `kitchen-cookbook.webp`: the actual Noms recipe editor capture and sourdough recipe spread, retained on the approved smaller props.
