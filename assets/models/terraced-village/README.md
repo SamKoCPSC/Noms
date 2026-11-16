@@ -52,6 +52,10 @@ have layered ridges instead of smooth spherical foliage. Planting stays clear of
 paths, entrances and the river. Shared outdoor lighting is rebaked; the rooms and
 camera route stay unchanged.
 
+Revision 10 makes the meadow denser: 28,080 tufts, more evenly spread across the
+open grass, with 60% more blades. Flower patches and ridged foliage are retained,
+and the stone paths and entrances stay clear. Outdoor daylight is rebaked.
+
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
 The original source files are never saved over. Furniture and room geometry stay
@@ -60,8 +64,8 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 9 meadow preview ZIP](https://github.com/SamKoCPSC/Noms/raw/9497e8219fb58b227b6cc35b13691ade7beb2ca8/noms-village-mobile.zip)
-(about 99.5 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
+[Revision 10 denser meadow preview ZIP](https://github.com/SamKoCPSC/Noms/raw/c42f31bb79726f967b1a447856c5dfb9442db31d/noms-village-mobile.zip)
+(about 98.7 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
 [Earlier revision 6 archive](https://github.com/SamKoCPSC/Noms/raw/c418c7ba978a1dba970abc572a320e0cee43c0de/noms-village-mobile.zip).
 

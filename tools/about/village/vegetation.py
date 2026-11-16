@@ -124,12 +124,12 @@ for index,item in enumerate(items):
 
 stem=batch('Meadow stems and leaves',linear('#568635'));white=batch('Ivory daisy petals',linear('#fff6d7'));yellow=batch('Golden flower centers',linear('#e9bf40'));purple=batch('Lavender flower spikes',linear('#a782cc'));gold=batch('Buttercup petals',linear('#e9ce66'))
 
-def spike(m,base,tip,width,color=None):
+def spike(m,base,tip,width,color=None,cap=True):
     base=np.array(base);tip=np.array(tip);angle=rng.random()*math.tau
     vertices=[base+np.array([math.cos(angle+i*math.tau/3)*width,0,math.sin(angle+i*math.tau/3)*width]) for i in range(3)]
     tint=np.array(m['color'] if color is None else color)
     for i in range(3):tri(m,vertices[i],tip,vertices[(i+1)%3],[tint*.76,tint*1.12,tint*.76])
-    tri(m,*vertices,[tint*.76]*3)
+    if cap:tri(m,*vertices,[tint*.76]*3)
 
 def leaf(base,angle,length,width):
     base=np.array(base);direction=np.array([math.cos(angle),.2,math.sin(angle)]);side=np.array([-math.sin(angle),0,math.cos(angle)])
@@ -166,17 +166,21 @@ for attempt in range(14000):
 flower_region=prep(unary_union([Point(x,z).buffer(.95) for x,z,_ in patches]))
 palette=[linear(c) for c in ['#78a83d','#87b848','#6e9e39','#9bc153']]
 grass=[batch('Folded meadow grass',c) for c in palette];clumps=[];blades=0
-for row in range(-202,101):
-    z=row*.68
-    for col in range(-131,132):
-        x=col*.68+rng.uniform(-.24,.24);zz=z+rng.uniform(-.24,.24);p=Point(x,zz)
-        probability=.72 if near.contains(p) else .30 if middle.contains(p) else .12
+# Fill the same meadow bounds with roughly twice as many smaller tufts.
+# Three blades per tuft spread coverage evenly. Omit only the buried base caps;
+# visible blade faces retain their folded shape and baked lighting.
+spacing=.52
+for row in range(math.ceil(-137.36/spacing),math.floor(68/spacing)+1):
+    z=row*spacing
+    for col in range(math.ceil(-89.08/spacing),math.floor(89.08/spacing)+1):
+        x=col*spacing+rng.uniform(-.18,.18);zz=z+rng.uniform(-.18,.18);p=Point(x,zz)
+        probability=.85 if near.contains(p) else .38 if middle.contains(p) else .16
         if rng.random()>probability or safe.contains(p) or flower_region.contains(p):continue
         y=ground(x,zz)-.06;m=grass[rng.randrange(len(grass))]
-        for k in range(rng.randint(3,5)):
+        for k in range(3):
             angle=rng.random()*math.tau;height=rng.uniform(.26,.62);base=[x+rng.uniform(-.08,.08),y,zz+rng.uniform(-.08,.08)]
             tip=[base[0]+math.cos(angle)*height*.23,y+height,base[2]+math.sin(angle)*height*.23]
-            spike(m,base,tip,rng.uniform(.045,.075));blades+=1
+            spike(m,base,tip,rng.uniform(.05,.085),cap=False);blades+=1
         clumps.append((x,zz))
 
 # Conservative plant envelopes fit inside the existing padded exclusions.
@@ -199,9 +203,9 @@ for mesh in meshes.values():
         checked_vertices+=len(v)
 result=dict(baseline_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),remove_indices=remove,meshes=list(meshes.values()))
 data=json.dumps(result,separators=(',',':')).encode();out=DAY/'source/vegetation.json.gz';out.write_bytes(gzip.compress(data,compresslevel=9,mtime=0))
-report=dict(groundcover_vertices_checked_against_paving=checked_vertices,groundcover_path_intrusions=0,finite_vertices_colors_and_unit_normals=True,seed=912743,baseline_sha256=result['baseline_sha256'],sha256=hashlib.sha256(out.read_bytes()).hexdigest(),bytes=out.stat().st_size,foliage_components=len(foliage_proof),foliage_within_original_bounds=True,evergreen_undersides_closed=True,petal_tops_face_sky=True,grass_clumps=len(clumps),grass_blades=blades,flower_patches=len(patches),individual_flowers=flower_count,triangles=sum(len(m['indices'])//3 for m in meshes.values()),meshes=len(meshes),minimum_grass_center_path_clearance=min(network.distance(Point(x,z)) for x,z in clumps),grass_envelope_radius=.28,flower_envelope_radius=1.28,groundcover_max_height=.85,paths_rooms_river_props_excluded=True,stone_path_sha256=hashlib.sha256((DAY/'source/stone-paths.json.gz').read_bytes()).hexdigest(),original_foliage_bounds=foliage_proof)
+report=dict(groundcover_vertices_checked_against_paving=checked_vertices,groundcover_path_intrusions=0,finite_vertices_colors_and_unit_normals=True,seed=912743,baseline_sha256=result['baseline_sha256'],sha256=hashlib.sha256(out.read_bytes()).hexdigest(),bytes=out.stat().st_size,foliage_components=len(foliage_proof),foliage_within_original_bounds=True,evergreen_undersides_closed=True,petal_tops_face_sky=True,grass_spacing=spacing,grass_blades_per_clump=3,buried_grass_caps_omitted=True,grass_clumps=len(clumps),grass_blades=blades,flower_patches=len(patches),individual_flowers=flower_count,triangles=sum(len(m['indices'])//3 for m in meshes.values()),meshes=len(meshes),minimum_grass_center_path_clearance=min(network.distance(Point(x,z)) for x,z in clumps),grass_envelope_radius=.28,flower_envelope_radius=1.28,groundcover_max_height=.85,paths_rooms_river_props_excluded=True,stone_path_sha256=hashlib.sha256((DAY/'source/stone-paths.json.gz').read_bytes()).hexdigest(),original_foliage_bounds=foliage_proof)
 (DAY/'source/vegetation-verification.json').write_text(json.dumps(report,indent=2)+'\n')
-layout['version']=9;layout['stage']='Textured meadow and folded foliage with connected stone paths and shared bright daylight'
+layout['version']=10;layout['stage']='Denser meadow with connected stone paths and shared bright daylight'
 layout['vegetation']=dict(geometry=str(out.relative_to(ROOT)),verification=str((DAY/'source/vegetation-verification.json').relative_to(ROOT)),style='Matte folded grass, daisies, buttercups, lavender and ridged layered foliage')
 (ASSET/'layout.json').write_text(json.dumps(layout,indent=2)+'\n')
 print('VEGETATION_GENERATED',json.dumps({k:v for k,v in report.items() if k!='original_foliage_bounds'}),flush=True)

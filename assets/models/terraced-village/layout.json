@@ -1,6 +1,6 @@
 {
-  "version": 9,
-  "stage": "Textured meadow and folded foliage with connected stone paths and shared bright daylight",
+  "version": 10,
+  "stage": "Denser meadow with connected stone paths and shared bright daylight",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {

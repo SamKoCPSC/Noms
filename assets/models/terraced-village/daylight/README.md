@@ -38,7 +38,7 @@ repository's Node dependencies. Two room workers with two threads each fit the
 four-core bake machine; run the complete-world bakes afterward to bound memory.
 
 ```sh
-python -m pip install numpy shapely==2.2.0
+python -m pip install numpy shapely==2.2.0 zopfli
 python tools/about/village/stone-paths.py
 python tools/about/village/vegetation.py
 node tools/about/village/daylight/anchors.mjs
@@ -51,6 +51,7 @@ node tools/about/village/daylight/check-assets.mjs
 blender -b -t 2 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/check-native.py
 node tools/about/village/build-preview.mjs /tmp/noms-village-daylight
 node tools/about/village/build-mobile-preview.mjs /tmp/noms-village-daylight /tmp/noms-village-daylight-mobile
+python tools/about/village/package-mobile-preview.py /tmp/noms-village-daylight /tmp/noms-village-daylight-mobile /tmp/noms-village-mobile.zip
 ```
 
 Room bakes resume only when settings and packed-asset hashes match. The renderer
@@ -129,3 +130,23 @@ The source layer adds 568,432 triangles before replacing the old vegetation.
 Final exported counts and download sizes are recorded in the asset and package
 receipts. This remains a full-world review prototype, not a phone performance
 benchmark.
+
+## Denser grass (revision 10)
+
+The meadow now has 28,080 tufts and 84,240 blades, up from 13,177 tufts and
+52,683 blades. Closer, jittered spacing and fuller coverage in the open grass
+reduce the bare patches. Each tuft has three slightly broader blades. Their
+buried underside caps are omitted, limiting the increase to 41,988 triangles
+while retaining all visible folded faces. The existing clearance around paths,
+entrances and flower patches is preserved.
+
+Flowers, trees, shrubs and other non-grass source meshes are byte-for-byte
+identical to revision 9. The native world and both outdoor lighting passes are
+rebuilt; room assets and camera poses stay unchanged. The
+[density comparison](source/grass-density-verification.json) records the counts
+and preservation check.
+
+The downloadable ZIP uses Zopfli to optimize standard Deflate compression without
+changing the embedded HTML or model data. Ordinary ZIP readers can extract it;
+no additional browser decoder is required. The packager verifies file checksums
+and extracted bytes before publishing the archive.

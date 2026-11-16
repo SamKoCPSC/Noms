@@ -212,8 +212,8 @@
     },
     {
       "id": "world",
-      "bytes": 39680796,
-      "triangles": 1254162,
+      "bytes": 41432392,
+      "triangles": 1296150,
       "baked_materials": 5,
       "texture_dimensions": [
         [
@@ -233,7 +233,7 @@
           2048
         ]
       ],
-      "sha256": "e305ea6d2e6975d47f215f143a44b373f20ce216c450aaf68a48d9e7ddb5da0f"
+      "sha256": "7273e606611251df64f0bfd96204bcfa9b0f0b54ce55582a94fe05250b552661"
     }
   ]
 }

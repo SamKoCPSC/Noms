@@ -44,8 +44,8 @@
   "portable_images": true,
   "external_libraries": 0,
   "walking_camera_preserved": true,
-  "sha256": "85e01378477b48aa0d03c26744c3e471a76b7b89754a66e66da8abe878dd4370",
-  "bytes": 83573982,
+  "sha256": "7d7be7870cc30dcc16e94582447ae92a2e8386b2f63a848b10b7f11b336bce59",
+  "bytes": 85998783,
   "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
-  "vegetation_geometry_sha256": "4b56761d0dd7ba1acb9d085c7d1d07b4e1b0f171a4fe29cdd5cc226ac69ae9c2"
+  "vegetation_geometry_sha256": "65b568c84d517879c7d8590bb0878b4b5fb4135800047498b08c8f4d32064e16"
 }
