@@ -8,7 +8,7 @@ out=Path(sys.argv[sys.argv.index('--')+1]);out.parent.mkdir(parents=True,exist_o
 hashes=originals()
 bpy.ops.wm.open_mainfile(filepath=str(ASSET/'models/terraced-village-blockout.blend'),load_ui=False,use_scripts=False)
 scene=bpy.context.scene
-if LAYOUT.get('stone_paths'):
+if LAYOUT.get('stone_paths') or LAYOUT.get('vegetation'):
     previous=bpy.data.collections['World terrain — blockout']
     for obj in list(previous.objects):bpy.data.objects.remove(obj,do_unlink=True)
     bpy.data.collections.remove(previous)

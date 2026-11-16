@@ -15,6 +15,23 @@ const landscape = await io.read(resolve(directory, 'landscape-vertex.glb'));
 const triangles = doc => doc.getRoot().listMeshes().flatMap(m => m.listPrimitives())
   .reduce((sum, p) => sum + (p.getIndices()?.getCount() ?? p.getAttribute('POSITION').getCount()) / 3, 0);
 const expected = triangles(ground) + triangles(landscape);
+// These surfaces carry final display-baked lighting. Their unlit browser shaders
+// do not use normals or tangents; retain the detailed geometry and color instead
+// of spending download/memory on unused lighting attributes.
+let omittedLightingAttributes = 0;
+for (const document of [ground, landscape]) {
+  for (const mesh of document.getRoot().listMeshes()) {
+    for (const primitive of mesh.listPrimitives()) {
+      if (!primitive.getMaterial()?.getExtension('KHR_materials_unlit')) continue;
+      for (const semantic of ['NORMAL', 'TANGENT']) {
+        if (primitive.getAttribute(semantic)) {
+          primitive.setAttribute(semantic, null);
+          omittedLightingAttributes++;
+        }
+      }
+    }
+  }
+}
 mergeDocuments(ground, landscape);
 const [scene, ...rest] = ground.getRoot().listScenes();
 for (const other of rest) {
@@ -31,6 +48,7 @@ const report = {
   ground: JSON.parse(await readFile(resolve(directory, 'ground.json'))),
   landscape: JSON.parse(await readFile(resolve(directory, 'vertex-verification.json'))),
   triangles: expected,
+  unused_unlit_lighting_attributes_omitted: omittedLightingAttributes,
   glb_bytes: (await readFile(input)).length,
 };
 await writeFile(metadata, JSON.stringify(report, null, 2) + '\n');

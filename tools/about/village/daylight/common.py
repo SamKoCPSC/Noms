@@ -12,6 +12,9 @@ xyz=lambda p:(p[0],-p[2],p[1])
 def path_revision():
     import hashlib
     return hashlib.sha256((DAY/'source/stone-paths.json.gz').read_bytes()).hexdigest() if LAYOUT.get('stone_paths') else None
+def vegetation_revision():
+    import hashlib
+    return hashlib.sha256((DAY/'source/vegetation.json.gz').read_bytes()).hexdigest() if LAYOUT.get('vegetation') else None
 def anchor(key):
     a=ANCHORS[key];lo,hi=a['min'],a['max'];center=[(lo[i]+hi[i])/2 for i in range(3)]
     return Matrix.Translation(xyz(a['position']))@Matrix.Rotation(a['yaw'],4,'Z')@Matrix.Scale(a['scale'],4)@Matrix.Translation((-center[0],center[2],-lo[1]))
@@ -36,6 +39,12 @@ def camera(scene,key):
 def environment(scene,bounds=None):
     collection=bpy.data.collections.new('Daylight terrain');scene.collection.children.link(collection);materials={}
     items=json.loads((ASSET/'source/world-environment.json').read_text())
+    if LAYOUT.get('vegetation'):
+        import hashlib
+        plants=json.loads(gzip.decompress((DAY/'source/vegetation.json.gz').read_bytes()))
+        assert hashlib.sha256((ASSET/'source/world-environment.json').read_bytes()).hexdigest()==plants['baseline_sha256']
+        removed=set(plants['remove_indices'])
+        items=[item for index,item in enumerate(items) if index not in removed]+plants['meshes']
     if LAYOUT.get('stone_paths'):
         paths=json.loads(gzip.decompress((DAY/'source/stone-paths.json.gz').read_bytes()))
         items=[item for item in items if item['name'] not in paths['remove_names']]+paths['meshes']
@@ -47,10 +56,27 @@ def environment(scene,bounds=None):
         used=sorted({k for f in faces for k in f});remap={old:new for new,old in enumerate(used)}
         mesh=bpy.data.meshes.new(item['name']);mesh.from_pydata([xyz(verts[k]) for k in used],[],[[remap[k] for k in f] for f in faces]);mesh.update()
         mesh.polygons.foreach_set('use_smooth',[True]*len(mesh.polygons));mesh.normals_split_custom_set_from_vertices([xyz(normals[k]) for k in used])
-        key=tuple(item['color'])
+        vertex_tint='colors' in item
+        if vertex_tint:
+            tint=mesh.color_attributes.new(name='VegetationTint',type='FLOAT_COLOR',domain='POINT')
+            tint.data.foreach_set('color',[c for k in used for c in [*item['colors'][k],1]])
+        ground_texture=i==0 and bool(LAYOUT.get('vegetation'))
+        color=tuple(item['color']);key=(color,vertex_tint,ground_texture)
         if key not in materials:
-            mat=bpy.data.materials.new('Daylight matte '+str(len(materials)));mat.use_nodes=True;mat.diffuse_color=(*key,1)
-            p=mat.node_tree.nodes.get('Principled BSDF');p.inputs['Base Color'].default_value=(*key,1);p.inputs['Roughness'].default_value=1;p.inputs['Specular IOR Level'].default_value=.04;materials[key]=mat
+            mat=bpy.data.materials.new('Daylight matte '+str(len(materials)));mat.use_nodes=True;mat.diffuse_color=(*color,1)
+            p=mat.node_tree.nodes.get('Principled BSDF');p.inputs['Base Color'].default_value=(*color,1);p.inputs['Roughness'].default_value=1;p.inputs['Specular IOR Level'].default_value=.04;materials[key]=mat
+            if vertex_tint:
+                node=mat.node_tree.nodes.new('ShaderNodeVertexColor');node.layer_name='VegetationTint'
+                mat.node_tree.links.new(node.outputs['Color'],p.inputs['Base Color'])
+            if ground_texture:
+                nodes=mat.node_tree.nodes;links=mat.node_tree.links
+                pos=nodes.new('ShaderNodeNewGeometry');noise=nodes.new('ShaderNodeTexNoise')
+                noise.inputs['Scale'].default_value=1.3;noise.inputs['Detail'].default_value=2;noise.inputs['Roughness'].default_value=.65
+                links.new(pos.outputs['Position'],noise.inputs['Vector'])
+                ramp=nodes.new('ShaderNodeValToRGB')
+                ramp.color_ramp.elements[0].position=.15;ramp.color_ramp.elements[0].color=(*(v*.87 for v in color),1)
+                ramp.color_ramp.elements[1].position=.85;ramp.color_ramp.elements[1].color=(*(v*1.16 for v in color),1)
+                links.new(noise.outputs['Fac'],ramp.inputs['Fac']);links.new(ramp.outputs['Color'],p.inputs['Base Color'])
         mesh.materials.append(materials[key]);obj=bpy.data.objects.new(item['name'],mesh);collection.objects.link(obj);obj['environment_index']=i
     return collection
 def originals():

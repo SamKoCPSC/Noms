@@ -1,10 +1,10 @@
 {
-  "layout_revision": 8,
-  "webp_quality": 91,
-  "zip_bytes": 104006435,
-  "zip_sha256": "8c008f08ef5601de2e3b12cab97ccba08b4c3f624e52c01b23cb5ccfe56a853d",
-  "html_bytes": 175465745,
-  "html_sha256": "73df28ee59999b043f8f84b228ab0c7b0a5cdb077ba2638df89bde125c0f6067",
+  "layout_revision": 9,
+  "webp_quality": 76,
+  "zip_bytes": 104337795,
+  "zip_sha256": "92e1808e4b6775ca089935ba49881e85a87c4e358833e70704bb081fadec4263",
+  "html_bytes": 180566060,
+  "html_sha256": "18af16aa0b154a3ca8e1cc2ffa38a490371797dc949eeab31212ee7a425f11d7",
   "zip_crc_verified": true,
   "extracted_html_hash_verified": true
 }

@@ -40,6 +40,7 @@ four-core bake machine; run the complete-world bakes afterward to bound memory.
 ```sh
 python -m pip install numpy shapely==2.2.0
 python tools/about/village/stone-paths.py
+python tools/about/village/vegetation.py
 node tools/about/village/daylight/anchors.mjs
 blender -b -t 2 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/build-world.py -- assets/models/terraced-village/daylight/models/terraced-village-daylight.blend
 python tools/about/village/daylight/run.py /tmp/village-daylight --workers 2 --threads 2
@@ -55,7 +56,7 @@ node tools/about/village/build-mobile-preview.mjs /tmp/noms-village-daylight /tm
 Room bakes resume only when settings and packed-asset hashes match. The renderer
 uses the original bounds to preserve the approved camera framing despite joining
 meshes for export. Geometry compression removes no triangles. The single-file
-preview uses WebP quality 91 at the original texture dimensions and verifies
+preview uses WebP quality 76 at the original texture dimensions and verifies
 geometry bytes against its input GLBs. This keeps the ZIP below GitHub’s 100 MiB
 file limit; the repository GLBs retain their lossless PNG textures.
 
@@ -95,3 +96,36 @@ geometry source are retained. `common.environment()` replaces the old paths from
 the baseline environment when rebuilding the current native world. The baseline
 world and its geometry snapshot remain unchanged as source inputs. Landscape and
 ground shadows are rebaked with the existing bright lighting; room GLBs are retained.
+
+## Textured meadow and folded foliage (revision 9)
+
+The outdoor ground now has restrained procedural color variation, 13,177 grass
+clumps with tapered folded blades, and 200 patches of ivory daisies, golden
+buttercups and lavender spikes. The 2,476 flowers have shaped petals, stems and
+basal leaves. Petal tops face upward for the daylight bake; the generator verifies
+their normals and checks every groundcover vertex against the paving. Vertex albedo gradients brighten blade tips without shiny materials.
+These are static meshes with shared baked daylight; no animated grass or extra
+real-time shadow maps are introduced.
+
+Broadleaf crowns and shrubs have lobed silhouettes and layered creases. Evergreen
+tiers have longitudinal folds. The 999 replacement foliage components fit inside
+their original bounding boxes. New groundcover avoids rooms, the stone network,
+river banks, cottage foundations, porches, rocks, steps and planting beds. The
+approved cameras and all twelve room GLBs remain unchanged.
+
+`vegetation.py` writes a deterministic compressed geometry layer and placement
+checks. `common.environment()` applies its baseline-index replacements before
+applying the stone-path layer. It verifies the original environment snapshot hash;
+that baseline is never overwritten. The current native world, ground atlases and
+vertex-lit landscape are rebuilt from both layers. Source vertex colors are baked
+into `WorldLighting` and removed from the export to avoid redundant color channels.
+The packed unlit world omits unused normal/tangent attributes; its native source
+retains the shading normals. Positions, triangles and baked colors are preserved.
+
+- [Vegetation geometry and placement checks](source/vegetation-verification.json)
+- [Meadow detail at walking height](previews/meadow-detail.png)
+
+The source layer adds 568,432 triangles before replacing the old vegetation.
+Final exported counts and download sizes are recorded in the asset and package
+receipts. This remains a full-world review prototype, not a phone performance
+benchmark.

@@ -46,6 +46,12 @@ network. Beveled limestone paving and a continuous grout bed follow the terrain
 and blend smoothly into the entrance forecourts. Ground and landscape shadows
 are rebaked with the same bright settings. All twelve room exports are retained.
 
+Revision 9 adds folded grass blades, shaped wildflowers and subtle ground color
+variation inspired by a stylized meadow. Tree crowns, shrubs and evergreen tiers
+have layered ridges instead of smooth spherical foliage. Planting stays clear of
+paths, entrances and the river. Shared outdoor lighting is rebaked; the rooms and
+camera route stay unchanged.
+
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
 The original source files are never saved over. Furniture and room geometry stay
@@ -54,11 +60,12 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 8 stone-path preview ZIP](https://github.com/SamKoCPSC/Noms/raw/ba1bb483486ddfb3d4adffc2ae170bae4bd82530/noms-village-mobile.zip)
-(about 99.2 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
+[Revision 9 meadow preview ZIP](https://github.com/SamKoCPSC/Noms/raw/9497e8219fb58b227b6cc35b13691ade7beb2ca8/noms-village-mobile.zip)
+(about 99.5 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
 [Earlier revision 6 archive](https://github.com/SamKoCPSC/Noms/raw/c418c7ba978a1dba970abc572a320e0cee43c0de/noms-village-mobile.zip).
 
+- [Meadow and foliage detail](daylight/previews/meadow-detail.png)
 - [Repaired library junction](daylight/previews/stone-junction.png)
 - [All twelve locations](daylight/previews/all-locations.png)
 - [Shared-daylight native world](daylight/models/terraced-village-daylight.blend)
@@ -142,7 +149,7 @@ node tools/about/village/build-mobile-preview.mjs /tmp/noms-village-preview /tmp
 ```
 
 This writes `OPEN-VILLAGE-MOBILE.html` and a conversion receipt. It uses WebP
-quality 91 textures at their original dimensions and verifies every copied
+quality 76 textures at their original dimensions and verifies every copied
 geometry buffer range against the source. It does not change production assets
 or Blender masters. Zip the HTML for distribution. All twelve scenes remain
 resident, so this packaging fix does not establish phone memory/performance

@@ -36,6 +36,17 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
       const paths=JSON.parse(await readFile(layout.stone_paths.verification));
       assert.equal(paths.sha256,hash);
     }
+    if(layout.vegetation){
+      const hash=createHash('sha256').update(await readFile(layout.vegetation.geometry)).digest('hex');
+      assert.equal(receipt.ground.vegetation_geometry_sha256,hash);
+      assert.equal(receipt.landscape.vegetation_geometry_sha256,hash);
+      const plants=JSON.parse(await readFile(layout.vegetation.verification));
+      assert.equal(plants.sha256,hash);
+      assert(plants.foliage_within_original_bounds && plants.paths_rooms_river_props_excluded);
+      assert.equal(plants.groundcover_path_intrusions,0);
+      assert(plants.finite_vertices_colors_and_unit_normals && plants.evergreen_undersides_closed && plants.petal_tops_face_sky);
+      assert(plants.minimum_grass_center_path_clearance>plants.grass_envelope_radius);
+    }
     assert.deepEqual(receipt.ground.lighting, config);
     assert.deepEqual(receipt.landscape.lighting, config);
     assert(receipt.ground.full_world_occluders && receipt.landscape.full_world_occluders);

@@ -38,6 +38,7 @@
     "atlas_size": 2048,
     "full_world_occluders": true,
     "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
+    "vegetation_geometry_sha256": "4b56761d0dd7ba1acb9d085c7d1d07b4e1b0f171a4fe29cdd5cc226ac69ae9c2",
     "triangles": 21504
   },
   "landscape": {
@@ -77,16 +78,18 @@
     },
     "full_world_occluders": true,
     "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
-    "baked_corners": 2210370,
+    "vegetation_geometry_sha256": "4b56761d0dd7ba1acb9d085c7d1d07b4e1b0f171a4fe29cdd5cc226ac69ae9c2",
+    "baked_corners": 3697974,
     "export_chunks": 72,
     "bake_samples": 64,
     "display_transform": "AgX",
     "unlit_vertex_colors": true,
     "texture_uvs_required": false
   },
-  "triangles": 758294,
-  "glb_bytes": 26785212,
-  "uncompressed_bytes": 118753780,
+  "triangles": 1254162,
+  "unused_unlit_lighting_attributes_omitted": 76,
+  "glb_bytes": 39680796,
+  "uncompressed_bytes": 167419064,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -95,5 +98,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "dee8cdf4d4ee557aea91d62b5cb6138b781f504225cb40524d51c8f4a28e308e"
+  "packed_sha256": "e305ea6d2e6975d47f215f143a44b373f20ce216c450aaf68a48d9e7ddb5da0f"
 }

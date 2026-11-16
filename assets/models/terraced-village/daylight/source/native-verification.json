@@ -38,13 +38,14 @@
     ]
   },
   "original_master_hashes_verified": 12,
-  "world_meshes": 832,
+  "world_meshes": 421,
   "matte_world_materials": true,
   "preserved_edge_normals": true,
   "portable_images": true,
   "external_libraries": 0,
   "walking_camera_preserved": true,
-  "sha256": "7cb8b404b253c378f518cb1328f4ea2a11f9bf7068acf5a422372ce22e1d218f",
-  "bytes": 63915926,
-  "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b"
+  "sha256": "85e01378477b48aa0d03c26744c3e471a76b7b89754a66e66da8abe878dd4370",
+  "bytes": 83573982,
+  "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
+  "vegetation_geometry_sha256": "4b56761d0dd7ba1acb9d085c7d1d07b4e1b0f171a4fe29cdd5cc226ac69ae9c2"
 }

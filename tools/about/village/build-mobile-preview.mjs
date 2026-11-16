@@ -10,7 +10,7 @@ const out = process.argv[3] || '/tmp/noms-village-mobile';
 await mkdir(out, { recursive: true });
 const layout = JSON.parse(await readFile(`${folder}/layout.json`, 'utf8'));
 // Full-village bakes use a slightly smaller download encoding; originals stay intact.
-const textureQuality = Number(process.argv[4] ?? (layout.stone_paths ? 91 : layout.shared_lighting ? 93 : 95));
+const textureQuality = Number(process.argv[4] ?? (layout.vegetation ? 76 : layout.stone_paths ? 91 : layout.shared_lighting ? 93 : 95));
 if (!Number.isInteger(textureQuality) || textureQuality < 1 || textureQuality > 100) throw Error('WebP quality must be an integer from 1 to 100');
 const receipts = [];
 let html = (await readFile(`${folder}/index.html`, 'utf8'))

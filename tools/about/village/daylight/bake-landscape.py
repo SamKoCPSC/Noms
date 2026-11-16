@@ -33,6 +33,11 @@ display=bpy.data.images.load(str(out/'landscape-vertex-palette.png'));display.co
 display.pixels.foreach_get(pixels.reshape(-1));colors=pixels[:count].copy();rgb=colors[:,:3]
 colors[:,:3]=np.where(rgb<=.04045,rgb/12.92,((rgb+.055)/1.055)**2.4);colors[:,3]=1
 attribute.data.foreach_set('color',colors.reshape(-1))
+# Only export the final lighting, not the source albedo attribute.
+for source_color in list(obj.data.color_attributes):
+    if source_color.name!='WorldLighting':obj.data.color_attributes.remove(source_color)
+obj.data.color_attributes.active_color=obj.data.color_attributes['WorldLighting']
+obj.data.color_attributes.render_color_index=0
 mat=bpy.data.materials.new('Baked world vertex lighting');mat.use_nodes=True
 node=mat.node_tree.nodes.new('ShaderNodeVertexColor');node.layer_name='WorldLighting'
 shader=mat.node_tree.nodes.get('Principled BSDF');shader.inputs['Roughness'].default_value=1;mat.node_tree.links.new(node.outputs['Color'],shader.inputs['Base Color'])
@@ -62,5 +67,5 @@ assert len(doc['materials'])==1 and all('COLOR_0' in p['attributes'] for mesh in
 doc['materials'][0].setdefault('extensions',{})['KHR_materials_unlit']={};doc.setdefault('extensionsUsed',[]).append('KHR_materials_unlit')
 encoded=json.dumps(doc,separators=(',',':')).encode();encoded+=b' '*(-len(encoded)%4)
 chunks=struct.pack('<I4s',len(encoded),b'JSON')+encoded+data[20+size:];path.write_bytes(struct.pack('<4sII',b'glTF',2,12+len(chunks))+chunks)
-(out/'vertex-verification.json').write_text(json.dumps(dict(lighting=CONFIG,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),baked_corners=count,export_chunks=len(pieces),bake_samples=scene.cycles.samples,display_transform=scene.view_settings.view_transform,unlit_vertex_colors=True,texture_uvs_required=False),indent=2)+'\n')
+(out/'vertex-verification.json').write_text(json.dumps(dict(lighting=CONFIG,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),vegetation_geometry_sha256=vegetation_revision(),baked_corners=count,export_chunks=len(pieces),bake_samples=scene.cycles.samples,display_transform=scene.view_settings.view_transform,unlit_vertex_colors=True,texture_uvs_required=False),indent=2)+'\n')
 print('LANDSCAPE_VERTEX_BAKE_COMPLETE',count,flush=True)

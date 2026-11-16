@@ -1,6 +1,6 @@
 {
-  "version": 8,
-  "stage": "Connected matte stone paths with shared bright daylight",
+  "version": 9,
+  "stage": "Textured meadow and folded foliage with connected stone paths and shared bright daylight",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
@@ -375,5 +375,10 @@
   "stone_paths": {
     "geometry": "assets/models/terraced-village/daylight/source/stone-paths.json.gz",
     "verification": "assets/models/terraced-village/daylight/source/stone-path-verification.json"
+  },
+  "vegetation": {
+    "geometry": "assets/models/terraced-village/daylight/source/vegetation.json.gz",
+    "verification": "assets/models/terraced-village/daylight/source/vegetation-verification.json",
+    "style": "Matte folded grass, daisies, buttercups, lavender and ridged layered foliage"
   }
 }

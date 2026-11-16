@@ -47,6 +47,13 @@ async def main(url,out):
             assert paths['entrances_connected']==12 and paths['walking_routes_covered']==11
             assert paths['one_height_field'] and paths['continuous_grout_bed']
             (out/'stone-path-verification.json').write_text(json.dumps(paths,indent=2)+'\n')
+        if layout.get('vegetation'):
+            plants=json.loads((ROOT/layout['vegetation']['verification']).read_text())
+            assert hashlib.sha256((ROOT/layout['vegetation']['geometry']).read_bytes()).hexdigest()==plants['sha256']
+            assert plants['foliage_within_original_bounds'] and plants['paths_rooms_river_props_excluded']
+            assert plants['minimum_grass_center_path_clearance']>plants['grass_envelope_radius']
+            assert plants['grass_clumps']>5000 and plants['individual_flowers']>1000
+            (out/'vegetation-verification.json').write_text(json.dumps(plants,indent=2)+'\n')
         await screenshot('initial-arrival')
         await page.locator('#next').click()
         await page.wait_for_function('village.getState().progress > 0',timeout=90000,polling=250)
@@ -98,6 +105,12 @@ async def main(url,out):
             await page.evaluate('village.go(1,true)')
             await page.evaluate('village.inspectView([-53,5,22],[-46,.4,14])')
             await screenshot('stone-junction')
+        if layout.get('vegetation'):
+            await page.evaluate('village.go(1,true)')
+            await page.evaluate('village.inspectView([-53,3.2,22],[-52,1,14])')
+            await screenshot('meadow-detail')
+            await page.evaluate('village.inspectView([-78,6.5,30],[-67,3.8,13])')
+            await screenshot('foliage-detail')
         delta=[poses[i+1]['target'][0]-poses[i]['target'][0] for i in range(11)]
         assert any(x>10 for x in delta) and any(x< -10 for x in delta)
         await page.evaluate('village.go(3.5,true)');await screenshot('transition')

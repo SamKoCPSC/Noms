@@ -12,6 +12,11 @@ await MeshoptDecoder.ready; await MeshoptEncoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder, 'meshopt.encoder': MeshoptEncoder });
 const receipts = [];
 if(layout.stone_paths) layout.stone_paths.verificationData=JSON.parse(await readFile(layout.stone_paths.verification));
+if(layout.vegetation){
+  const proof=JSON.parse(await readFile(layout.vegetation.verification));
+  delete proof.original_foliage_bounds;
+  layout.vegetation.verificationData=proof;
+}
 const anchors=layout.shared_lighting?JSON.parse(await readFile('assets/models/terraced-village/daylight/source/anchors.json')):null;
 const poses=layout.shared_lighting?JSON.parse(await readFile('assets/models/terraced-village/source/camera-poses.json')):null;
 for (const stop of layout.stops) {
