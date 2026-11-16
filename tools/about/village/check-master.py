@@ -25,6 +25,13 @@ assert abs(scene['walk_eye_height'] - layout['walk']['eye_height']) < 1e-6
 environment = json.loads((root / 'assets/models/terraced-village/source/world-environment.json').read_text())
 terrain = bpy.data.collections['World terrain — blockout']
 assert len(terrain.objects) == len(environment)
+for obj in terrain.objects:
+    assert obj.data.has_custom_normals, obj.name
+    shader = obj.active_material.node_tree.nodes.get('Principled BSDF')
+    assert shader.inputs['Roughness'].default_value == 1, obj.name
+    assert shader.inputs['Metallic'].default_value == 0, obj.name
+    assert shader.inputs['Coat Weight'].default_value == 0, obj.name
+    assert abs(shader.inputs['Specular IOR Level'].default_value - .04) < 1e-6, obj.name
 assert sum(o.name.startswith('Path-to-entrance connection') for o in terrain.objects) == 12
 assert sum(o.name.startswith('Inset entrance forecourt') for o in terrain.objects) == 12
 assert sum(o.name.startswith('Colored cottage walls') for o in terrain.objects) == len(layout['neighborhood']['houses'])
@@ -49,6 +56,8 @@ result = {
     'named_streets': len(layout['neighborhood']['streets']),
     'street_lettering_preserved': True,
     'shared_environment_meshes': len(terrain.objects),
+    'matte_world_materials_verified': True,
+    'custom_edge_normals_preserved': True,
     'active_camera': scene.camera.name,
     'walking_eye_height': scene['walk_eye_height'],
     'external_libraries': len(bpy.data.libraries),

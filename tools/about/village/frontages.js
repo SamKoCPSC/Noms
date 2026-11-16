@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { softBox, softRibbon } from './world-style.js';
 import { groundHeight } from './walking-world.js';
 
 const palettes = {
@@ -21,7 +21,7 @@ export function addFrontages({ layout, stops, walking, terrain, mat }) {
       && occupied.every((b, i) => i === own || p.x + radius < b.min.x || p.x - radius > b.max.x || p.z + radius < b.min.z || p.z - radius > b.max.z);
   }
   function block(group, name, p, size, color, yaw = 0) {
-    const mesh = new THREE.Mesh(new RoundedBoxGeometry(...size, 1, Math.min(.055, size[1] / 4)), mat(color));
+    const mesh = new THREE.Mesh(softBox(size,.1), mat(color));
     mesh.name = name; mesh.position.copy(p); mesh.rotation.y = yaw; group.add(mesh); solids.push(mesh); return mesh;
   }
   function shrub(group, p, color, seed) {
@@ -89,17 +89,7 @@ export function addFrontages({ layout, stops, walking, terrain, mat }) {
     const points = curve.getPoints(48);
     const intersects = points.some(p => approachObstacles.some((b, j) => j !== i && p.x > b.min.x && p.x < b.max.x && p.z > b.min.z && p.z < b.max.z));
     if (intersects) throw Error(`Entrance approach crosses another location: ${s.id}`);
-    const vertices = [], indices = [];
-    for (let j = 0; j < points.length; j++) {
-      const p = points[j], heading = curve.getTangent(j / (points.length - 1)), side = new THREE.Vector3(-heading.z, 0, heading.x).normalize();
-      for (const sign of [-1, 1]) {
-        const v = p.clone().addScaledVector(side, sign * 1.25);
-        v.y = THREE.MathUtils.lerp(groundHeight(layout, v.x, v.z) + .19, end.y, THREE.MathUtils.smoothstep(j / 48, .65, 1));
-        vertices.push(...v.toArray());
-      }
-      if (j < points.length - 1) { const n = j * 2; indices.push(n, n + 1, n + 2, n + 1, n + 3, n + 2); }
-    }
-    const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); geometry.setIndex(indices); geometry.computeVertexNormals();
+    const geometry = softRibbon(points,2.5,(v,t)=>THREE.MathUtils.lerp(groundHeight(layout,v.x,v.z)+.19,end.y,THREE.MathUtils.smoothstep(t,.65,1)),.06);
     const approach = new THREE.Mesh(geometry, mat(palette.paving)); approach.name = 'Path-to-entrance connection'; group.add(approach);
     // Low beds flank the opening, keeping the interior and camera corridor clear.
     let beds = 0;

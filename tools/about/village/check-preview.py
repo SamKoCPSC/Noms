@@ -60,6 +60,10 @@ async def main(url,out):
         assert not neighborhood['camera_collisions'] and neighborhood['lettering_is_geometry'],neighborhood
         assert neighborhood['road_signs']>=3 and neighborhood['lanterns']>=6 and neighborhood['welcome_board'],neighborhood
         (out/'neighborhood-verification.json').write_text(json.dumps(neighborhood,indent=2)+'\n')
+        style=await page.evaluate('village.style()')
+        assert style['roughness']==1 and style['specularIntensity']<=.08 and style['clearcoat']==0
+        assert style['rounded_shapes']>300,style
+        (out/'style-verification.json').write_text(json.dumps(style,indent=2)+'\n')
         samples=await page.evaluate('village.routeSamples()')
         assert len(samples)==11
         assert all(not p['blocked'] and abs(p['eye'][1]-p['ground']-eye_height)<1e-6 for route in samples for p in route)

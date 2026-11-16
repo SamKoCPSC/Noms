@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "stage": "Noms village with cottages and named streets; shared lighting not rebaked",
+  "version": 6,
+  "stage": "Matte rounded Noms village; shared lighting not rebaked",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {

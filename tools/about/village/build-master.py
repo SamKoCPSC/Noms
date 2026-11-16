@@ -44,15 +44,21 @@ for i,s in enumerate(layout['stops']):
     root.location=xyz(s['position']);root.scale=(scale,)*3;root.rotation_euler.z=s['yaw'];root['stop']=i+1;root['source_sha256']=report['sha256']
 materials={}
 for item in environment:
-    key=tuple(item['color'])
+    key=tuple(item['color'])+(item.get('roughness',1),item.get('specular_intensity',.08))
     if key not in materials:
         material=bpy.data.materials.new('Walking landscape '+str(len(materials)));material.use_nodes=True
-        material.diffuse_color=(*key,1)
-        material.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=(*key,1)
-        material.node_tree.nodes.get('Principled BSDF').inputs['Roughness'].default_value=.95
+        material.diffuse_color=(*key[:3],1)
+        material.node_tree.nodes.get('Principled BSDF').inputs['Base Color'].default_value=(*key[:3],1)
+        material.node_tree.nodes.get('Principled BSDF').inputs['Roughness'].default_value=key[3]
+        material.node_tree.nodes.get('Principled BSDF').inputs['Specular IOR Level'].default_value=key[4]*.5
+        material.node_tree.nodes.get('Principled BSDF').inputs['Metallic'].default_value=0
+        material.node_tree.nodes.get('Principled BSDF').inputs['Coat Weight'].default_value=0
         materials[key]=material
     indices=item['indices'];faces=[tuple(indices[i:i+3]) for i in range(0,len(indices),3)]
     mesh=bpy.data.meshes.new(item['name']);mesh.from_pydata([xyz(v) for v in item['vertices']],[],faces);mesh.update()
+    if 'normals' in item:
+        mesh.polygons.foreach_set('use_smooth',[True]*len(mesh.polygons))
+        mesh.normals_split_custom_set_from_vertices([xyz(n) for n in item['normals']])
     obj=bpy.data.objects.new(item['name'],mesh);mesh.materials.append(materials[key]);terrain.objects.link(obj)
 world=bpy.data.worlds.new('Outdoor daytime sky — provisional');scene.world=world;world.use_nodes=True
 nodes=world.node_tree.nodes;sky=nodes.new('ShaderNodeTexSky');sky.sky_type='NISHITA';sky.sun_elevation=math.radians(40);sky.sun_rotation=math.radians(135)

@@ -8,12 +8,14 @@
   "named_streets": 11,
   "street_lettering_preserved": true,
   "shared_environment_meshes": 1082,
+  "matte_world_materials_verified": true,
+  "custom_edge_normals_preserved": true,
   "active_camera": "Village walking camera",
   "walking_eye_height": 4.6,
   "external_libraries": 0,
   "unpacked_file_images": [],
   "original_master_hashes_verified": 12,
-  "world_sha256": "10c0bcd4362159bab0608093219142d6d4255bb4ecd92262c330bb7842f9b25c",
-  "world_bytes": 52306544,
+  "world_sha256": "8f65fbf895f00220350c0f5162c1405c36604bb2b696b0d25d1e4e5f8719ca21",
+  "world_bytes": 58209911,
   "lighting_rebaked": false
 }

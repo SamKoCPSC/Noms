@@ -28,6 +28,13 @@ Droid Sans lettering, preserved in Blender and embedded in the offline preview;
 the [Apache 2.0 font notice](../../../tools/about/village/DROID-FONT-NOTICE.txt)
 accompanies both preview formats and is stored in the Blender file.
 
+Revision 6 gives generated world surfaces a matte, cartoon finish: full roughness,
+low specular response and no clearcoat or metallic sheen. Cottages, roofs, benches,
+steps, planters, mailboxes and signs have real bevels; thin doors and signs also
+have rounded face corners. Paths have softly rolled shoulders. Geometry stays
+inside its original bounds, preserving the walking route and room placement.
+Exported custom normals preserve the softened edge shading in the native world.
+
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
 The original source files are never saved over. Furniture and room geometry stay
@@ -36,7 +43,7 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 5 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/3cfbe98abc6e8670bec1936dd1fe0b90d22c511d/noms-village-mobile.zip)
+[Revision 6 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/c418c7ba978a1dba970abc572a320e0cee43c0de/noms-village-mobile.zip)
 (about 71 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
 - [Portable native world](models/terraced-village-blockout.blend)
@@ -53,6 +60,7 @@ its shaders and the current Penguini placements.
 - [Entrance checks](source/entrance-verification.json)
 - [Landscape checks](source/landscape-verification.json)
 - [Neighborhood checks](source/neighborhood-verification.json)
+- [World material and bevel checks](source/style-verification.json)
 
 The browser starts at the first arrival, at walking height. **Walk tour** follows
 continuous paths around the model footprints, looks ahead during travel and turns

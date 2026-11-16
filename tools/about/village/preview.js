@@ -7,6 +7,7 @@ import { groundHeight, makeWalkingRoutes } from './walking-world.js';
 import { addFrontages } from './frontages.js';
 import { addLandscape } from './landscape.js';
 import { addNeighborhood } from './neighborhood.js';
+import { worldMaterial, softBox, softRibbon, styleSummary, exportEnvironment } from './world-style.js';
 
 const $ = id => document.getElementById(id);
 const canvas = document.querySelector('canvas');
@@ -27,8 +28,8 @@ const pmrem=new THREE.PMREMGenerator(renderer), room=new RoomEnvironment();
 scene.environment=pmrem.fromScene(room,.04).texture;room.dispose();pmrem.dispose();
 const terrain=new THREE.Group();terrain.name='Village blockout terrain';scene.add(terrain);
 const materials={};
-function mat(color){return materials[color]??=new THREE.MeshStandardMaterial({color,roughness:.95,envMapIntensity:.2,toneMapped:false});}
-function box(name,p,size,color){const m=new THREE.Mesh(new THREE.BoxGeometry(...size),mat(color));m.name=name;m.position.fromArray(p);terrain.add(m);return m;}
+function mat(color){return materials[color]??=worldMaterial(color);}
+function box(name,p,size,color){const m=new THREE.Mesh(softBox(size),mat(color));m.name=name;m.position.fromArray(p);terrain.add(m);return m;}
 function line(points,color,radius=.5){const c=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const m=new THREE.Mesh(new THREE.TubeGeometry(c,Math.max(40,points.length*12),radius,6,false),mat(color));terrain.add(m);return c;}
 function label(text,x,y,z){const c=document.createElement('canvas');c.width=512;c.height=80;const ctx=c.getContext('2d');ctx.fillStyle='#faf6e9';ctx.beginPath();ctx.roundRect(0,0,512,80,24);ctx.fill();ctx.fillStyle='#3f4935';ctx.font='600 29px system-ui';ctx.textAlign='center';ctx.fillText(text,256,51);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(8,1.25,1);scene.add(sprite);return sprite;}
 function tree(x,y,z,size){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.28,size*.4,6),mat('#805132'));trunk.position.set(x,y+size*.2,z);terrain.add(trunk);for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.ConeGeometry(size*(.32-i*.055),size*.55,5),mat(i%2?'#7fa638':'#4e7e30'));m.position.set(x,y+size*(.48+i*.22),z);terrain.add(m);}}
@@ -38,17 +39,12 @@ const groundGeometry=new THREE.PlaneGeometry(440,460,220,230);groundGeometry.rot
 const gp=groundGeometry.attributes.position;
 for(let i=0;i<gp.count;i++)gp.setY(i,groundHeight(layout,gp.getX(i),gp.getZ(i)));
 groundGeometry.computeVertexNormals();terrain.add(new THREE.Mesh(groundGeometry,mat('#56842e')));
-function ribbon(points,width,color,height=.16){
- const vertices=[],indices=[];
- for(let i=0;i<points.length;i++){const p=points[i],before=points[Math.max(0,i-1)],after=points[Math.min(points.length-1,i+1)],n=new THREE.Vector3(-(after.z-before.z),0,after.x-before.x).normalize();
-  for(const side of [-1,1]){const v=p.clone().addScaledVector(n,side*width/2);v.y=groundHeight(layout,v.x,v.z)+height;vertices.push(...v.toArray());}
-  if(i<points.length-1){const a=i*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}
- }
- const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.setIndex(indices);geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,mat(color));terrain.add(mesh);return mesh;
+function ribbon(points,width,color,height=.16,edgeDrop=.08){
+ const geometry=softRibbon(points,width,p=>groundHeight(layout,p.x,p.z)+height,edgeDrop);const mesh=new THREE.Mesh(geometry,mat(color));terrain.add(mesh);return mesh;
 }
 const riverCurve=new THREE.CatmullRomCurve3(layout.river.map(p=>new THREE.Vector3(...p)));
 ribbon(riverCurve.getPoints(260),7,'#c1a773').name='River banks';
-ribbon(riverCurve.getPoints(260).map(p=>p.add(new THREE.Vector3(0,.02,0))),4.8,'#358d9c',.19).name='River surface';
+ribbon(riverCurve.getPoints(260).map(p=>p.add(new THREE.Vector3(0,.02,0))),4.8,'#358d9c',.19,.02).name='River surface';
 for(let i=0;i<12;i++){const hill=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),mat(i%2?'#749266':'#93aa76'));hill.name='Distant hillside';hill.position.set(-180+i*35,-10,-200-(i%3)*18);hill.scale.set(45,27+(i%4)*9,35);terrain.add(hill);}
 const stops=[],labels=[],loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 let loadingFailed=false;
@@ -95,7 +91,7 @@ for(let i=0;i<walking.routes.length;i++){
   if(!clearProp(p))continue;
   if(j%2){tree(p.x,p.y,p.z,4.5+(i%3)*.6);}
   else {const bench=new THREE.Group();bench.name='Pathside wooden bench';bench.scale.setScalar(1.6);bench.position.copy(p);bench.rotation.y=Math.atan2(tangent.x,tangent.z);terrain.add(bench);
-   const part=(position,size,color)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(...size),mat(color));m.position.set(...position);bench.add(m);};
+   const part=(position,size,color)=>{const m=new THREE.Mesh(softBox(size),mat(color));m.position.set(...position);bench.add(m);};
    part([0,.55,0],[2.2,.15,.6],'#917045');part([0,1,-.27],[2.2,.75,.12],'#917045');for(const x of [-.85,.85])part([x,.25,0],[.12,.5,.45],'#555d4b');
   }
  }
@@ -133,7 +129,7 @@ function frame(now){const dt=Math.min((now-last)/1000,.25);last=now;
  else if(playing){if(hold>0)hold-=dt;else{const prev=progress,i=Math.min(10,Math.floor(progress));progress=Math.min(11,progress+dt*layout.walk.speed/walking.routes[i].length);if(Math.floor(progress)>Math.floor(prev)){progress=Math.floor(progress);hold=2.5;}apply(viewAt(progress));updateLabel();if(progress>=11)setPlaying(false);}}
  controls.update();if(dirty){renderer.render(scene,camera);dirty=false;}requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.village={go,overview,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
+window.village={go,overview,style:styleSummary,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
  routeSamples:()=>walking.routes.map((r,i)=>Array.from({length:201},(_,j)=>{const p=viewAt(i+j/200);return {progress:i+j/200,eye:p.eye.toArray(),target:p.target.toArray(),ground:groundHeight(layout,p.eye.x,p.eye.z),blocked:walking.blocked(p.eye.x,p.eye.z)};})),
- environment:()=>{terrain.updateMatrixWorld(true);const result=[];terrain.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;const vertices=Array.from({length:p.count},(_,i)=>new THREE.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld).toArray());result.push({name:o.name||'Landscape detail',vertices,indices:o.geometry.index?Array.from(o.geometry.index.array):Array.from({length:p.count},(_,i)=>i),color:o.material.color.toArray()});});return result;}
+ environment:()=>exportEnvironment(terrain)
 };

@@ -4,6 +4,7 @@ import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import fontData from 'three/examples/fonts/droid/droid_sans_bold.typeface.json';
 import { groundHeight } from './walking-world.js';
+import { softBox, softRoof } from './world-style.js';
 
 // Droid Sans: Copyright 2005–2008 The Android Open Source Project, Apache 2.0.
 // Full notice accompanies the downloadable preview and is embedded in its HTML.
@@ -36,7 +37,7 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
   function mesh(parent, name, geometry, color, p, rotation = [0,0,0]) {
     const o = new THREE.Mesh(geometry, mat(color)); o.name = name;o.position.set(...p);o.rotation.set(...rotation);parent.add(o);solids.push(o);return o;
   }
-  const box = (parent,name,p,size,color,rotation) => mesh(parent,name,new THREE.BoxGeometry(...size),color,p,rotation);
+  const box = (parent,name,p,size,color,rotation) => mesh(parent,name,softBox(size),color,p,rotation);
   function text(parent, words, p, width, size = .43, color = '#fff0ca', back = false) {
     const g = new TextGeometry(words,{font,size,depth:.012,curveSegments:3,bevelEnabled:false});g.computeBoundingBox();
     const b=g.boundingBox,scale=Math.min(1,width/(b.max.x-b.min.x));g.translate(-(b.min.x+b.max.x)/2,-(b.min.y+b.max.y)/2,0);g.scale(scale,scale,1);
@@ -85,10 +86,7 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
     reserve(g);signs.push({street:name,destination:next,position:g.position.toArray(),route:i});
   }
   function roof(parent,w,d,base,rise,color) {
-    const vertices=[-w/2,base,d/2,w/2,base,d/2,0,base+rise,d/2,-w/2,base,-d/2,w/2,base,-d/2,0,base+rise,-d/2];
-    const indices=[0,1,2,5,4,3,0,2,5,0,5,3,2,1,4,2,4,5,0,3,4,0,4,1];
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();
-    mesh(parent,'Pitched cottage roof',g,color,[0,0,0]);
+    mesh(parent,'Pitched cottage roof',softRoof(w,d,rise),color,[0,base,0]);
   }
   function window(parent,x,y,z,side=false) {
     const g=new THREE.Group();g.position.set(x,y,z);if(side)g.rotation.y=Math.PI/2;parent.add(g);
