@@ -1,0 +1,121 @@
+{
+  "model": "office",
+  "lighting": {
+    "sun_direction_y_up": [
+      -60,
+      100,
+      50
+    ],
+    "sun_energy": 2,
+    "sun_color": [
+      1,
+      0.93,
+      0.83
+    ],
+    "sun_angle_degrees": 9,
+    "sky_color": [
+      0.78,
+      0.85,
+      1
+    ],
+    "sky_strength": 0.95,
+    "view_transform": "AgX",
+    "look": "AgX - Medium High Contrast",
+    "exposure": 0.1,
+    "room_atlas_size": 2048,
+    "room_samples": 64,
+    "ground_samples": 32,
+    "landscape_samples": 64,
+    "context_radius": 45,
+    "ground_bounds_xz": [
+      -96,
+      96,
+      -144,
+      80
+    ]
+  },
+  "anchor": {
+    "min": [
+      -3.119999408721924,
+      -0.20967048367264085,
+      -2.790042750246121
+    ],
+    "max": [
+      3.1200008392333984,
+      3.5999918278098324,
+      2.7541061562367215
+    ],
+    "scale": 2.2435896544375007,
+    "position": [
+      37.5,
+      0.613,
+      -18.75
+    ],
+    "yaw": -0.349066,
+    "source": "assets/about/office-baked.glb",
+    "sha256": "d0f7e51d9a76e63d1de631ec3c0d52e63ef1cb3c5b747b33436f976598eb3184",
+    "triangles": 232771
+  },
+  "source_hashes": {
+    "assets/models/terraced-village/models/terraced-village-blockout.blend": "8f65fbf895f00220350c0f5162c1405c36604bb2b696b0d25d1e4e5f8719ca21",
+    "assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-manager.blend": "8a2139153fedbe73592e5b2e90541d855f9c570cf7dead5accb34faeb9640cf4",
+    "assets/models/university-library/models/university-library.blend": "eb5ed51a7c14041b142a4b4444f8cff98a992f0768ee5530fb5bf5d1d278fd73",
+    "assets/models/corner-cocoon-bedroom/models/sams-corner-cocoon.blend": "1f97b7b32ef46d39406c3e9ae228989ae8b85928d2fb4ddf97d3268e7be2d092",
+    "assets/models/european-arcade-supermarket/models/european-arcade-supermarket.blend": "e06b687cccc0f731fa483fd14277d5871be20a52a8295353aff794914d7a98e1",
+    "assets/models/home-office/models/sams-project-room.blend": "c4d0c73fbe9ce797dabd6b103db8d69ab57a2773f9d35afe84d3c222d25ce080",
+    "assets/models/corporate-workspace-pantry/models/corporate-workspace-pantry.blend": "639717d8e787f0e2a37c30a9ef6ab56f6eb8289b98e239241bacaa96946551de",
+    "assets/models/brick-loft-kitchen/models/brick-loft-kitchen.blend": "0142dd90be54d5243e83be083c9112b9479a19e6b2373fedae62542e9381ef87",
+    "assets/models/modern-baking-lab/models/modern-baking-lab.blend": "85c5265636123679305f7cc69b031b2b1fed75be08954cb045514aa080dee949",
+    "assets/models/community-spaces/models/farmers-market.blend": "a22d8f4fcbecafdb0956de2c506c5dbc66808281c017bccf8e0bc1424a064e84",
+    "assets/models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend": "a3a52438bc2662b14b55b21e7d9f2495b38983791776a55a04300e39e82e4196",
+    "assets/models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend": "f5581f0d3f8d3204fa76b69456f1bf5fa0487d319378e07588935cf27bcf3ffd",
+    "assets/models/garden-cookout/models/garden-v6.blend": "6766c06921799b251c859767d62f56731ef689891f2ee5085de7c21db6aef26f"
+  },
+  "context": [
+    "supermarket",
+    "office",
+    "corporate-office",
+    "farmers-market",
+    "social-kitchen"
+  ],
+  "context_radius": 45,
+  "objects": 2831,
+  "outward_winding_repairs": [
+    "office::PC upper radiator fan 1 square h::df1d2bb5",
+    "office::Display keyboard purple on black::a3b0c711",
+    "office::Display keyboard purple on black::0b64c9a8",
+    "office::PC bottom intake fan 3 square ho::3136483a",
+    "office::Display keyboard charcoal oak di::d3148631",
+    "office::PC upper radiator fan 2 square h::39a88fe4",
+    "office::Display keyboard charcoal oak di::aec38c9a",
+    "office::PC rear exhaust fan square housi::4a08f42f",
+    "office::PC bottom intake fan 2 square ho::6a97b0ad",
+    "office::PC side intake fan 3 square hous::edaa0a46",
+    "office::Chair molded headrest frame::c12e65b5",
+    "office::PC side intake fan 1 square hous::9e12dc5d",
+    "office::Chair padded contoured waterfall::e4607ca0",
+    "office::Chair contoured molded back shel::2a83651c",
+    "office::PC side intake fan 2 square hous::ba5c7506",
+    "office::PC bottom intake fan 1 square ho::1307c1b7",
+    "office::Display keyboard ivory sage oak ::8fb17793",
+    "office::Display keyboard ivory sage oak ::bf2c89af"
+  ],
+  "triangles": 920051,
+  "atlases": 2,
+  "atlas_size": 2048,
+  "bake_samples": 64,
+  "animations": false,
+  "penguini": true,
+  "world_coordinates": true,
+  "glb_bytes": 18664264,
+  "uncompressed_bytes": 71428192,
+  "display_texture_format": "PNG RGB8 sRGB, original resolution",
+  "geometry_compression": {
+    "extension": "EXT_meshopt_compression",
+    "position_bits": 16,
+    "normal_bits": 12,
+    "uv_bits": 16,
+    "triangles_removed": 0
+  },
+  "packed_sha256": "8bde7a23e784f25751a7ddff4ec41174ed36b816b81a048fcd63be0d0dc54c3a"
+}
