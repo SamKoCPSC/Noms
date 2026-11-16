@@ -1,0 +1,45 @@
+"""Reopen the complete shared-daylight world and verify source preservation."""
+import bpy, hashlib, json, sys
+from pathlib import Path
+from mathutils import Matrix
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from common import *
+
+path = DAY/'models/terraced-village-daylight.blend'
+bpy.ops.wm.open_mainfile(filepath=str(path), load_ui=False, use_scripts=False)
+scene = bpy.context.scene
+assert json.loads(scene['shared_daylight']) == CONFIG
+lights = [o for o in scene.objects if o.type == 'LIGHT']
+assert len(lights) == 1 and lights[0].data.type == 'SUN'
+assert abs(lights[0].data.energy - CONFIG['sun_energy']) < 1e-6
+background = scene.world.node_tree.nodes.get('Background')
+assert abs(background.inputs['Strength'].default_value - CONFIG['sky_strength']) < 1e-6
+assert abs(scene.view_settings.exposure - CONFIG['exposure']) < 1e-6
+instances = [o for o in scene.objects if o.instance_type == 'COLLECTION' and 'stop' in o]
+assert sorted(o['stop'] for o in instances) == list(range(1, 13))
+receipts = json.loads((ASSET/'models/terraced-village-blockout.sources.json').read_text())
+for source in receipts:
+    assert hashlib.sha256((REPO/source['source']).read_bytes()).hexdigest() == source['sha256']
+    assert len(bpy.data.collections[source['collection']].all_objects) == source['objects']
+for obj in instances:
+    key = LAYOUT['stops'][obj['stop']-1]['id']
+    expected = anchor(key) @ Matrix.Translation(obj.instance_collection.instance_offset)
+    assert max(abs(obj.matrix_world[i][j]-expected[i][j]) for i in range(4) for j in range(4)) < 1e-5
+assert len(scene.timeline_markers) == 12
+assert scene.camera.name == 'Village walking camera' and scene.camera.animation_data
+assert not bpy.data.libraries
+unpacked = [i.name for i in bpy.data.images if i.source == 'FILE' and i.filepath and not i.packed_file]
+assert not unpacked, unpacked
+terrain = bpy.data.collections['World terrain — blockout']
+for obj in terrain.objects:
+    assert obj.data.has_custom_normals
+    shader = obj.active_material.node_tree.nodes.get('Principled BSDF')
+    assert shader.inputs['Roughness'].default_value == 1
+report = dict(native_world_reopened=True, model_instances=len(instances),
+    native_objects=sum(len(o.instance_collection.all_objects) for o in instances),
+    shared_suns=1, lighting=CONFIG, original_master_hashes_verified=len(receipts),
+    world_meshes=len(terrain.objects), matte_world_materials=True, preserved_edge_normals=True,
+    portable_images=True, external_libraries=0, walking_camera_preserved=True,
+    sha256=hashlib.sha256(path.read_bytes()).hexdigest(), bytes=path.stat().st_size)
+(DAY/'source/native-verification.json').write_text(json.dumps(report, indent=2)+'\n')
+print('DAYLIGHT_NATIVE_CHECK_PASS', json.dumps(report), flush=True)
