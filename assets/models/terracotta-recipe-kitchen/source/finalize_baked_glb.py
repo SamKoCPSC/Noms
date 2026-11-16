@@ -5,7 +5,7 @@ import struct
 import sys
 
 
-def finalize(path):
+def finalize(path, expected_count=2):
     path = Path(path)
     data = path.read_bytes()
     magic, version, length = struct.unpack_from('<4sII', data)
@@ -26,7 +26,7 @@ def finalize(path):
         }
         material.setdefault('extensions', {})['KHR_materials_unlit'] = {}
         count += 1
-    assert count == 2, f'Expected two baked atlases, got {count}'
+    assert count == expected_count, f'Expected {expected_count} baked atlases, got {count}'
     used = document.setdefault('extensionsUsed', [])
     if 'KHR_materials_unlit' not in used:
         used.append('KHR_materials_unlit')

@@ -79,6 +79,13 @@ with twelve stop markers. `Village overview — static` provides the elevated vi
 The native builder imports the browser's environment geometry so paths, benches,
 trees, entrances, planting and ground match; it can reuse the existing master’s source collections.
 
+## Shared-lighting experiment
+
+The [kitchen district study](lighting-study/README.md) tests one sun and sky across
+the first kitchen and its surrounding landscape. It has a separate before/after
+preview and native Blender source; the full walking-world preview above still
+uses the previously approved lighting.
+
 ## What remains provisional
 
 The normal browser preview copies existing baked GLBs byte-for-byte. The mobile
