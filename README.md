@@ -1,4 +1,4 @@
-# Noms village — outdoor walking preview (revision 3)
+# Noms village — outdoor walking preview (revision 4)
 
 [Download noms-village-mobile.zip](https://github.com/SamKoCPSC/Noms/raw/refs/heads/preview/terraced-village-download/noms-village-mobile.zip)
 
@@ -25,3 +25,5 @@ Validation: the single-file HTML loads all twelve models in portrait browser tes
 Revision 2 checks: all twelve stops, 2,211 path samples clear of model footprints at constant terrain clearance, next-button movement, and single-file loading with external requests blocked. The native Blender camera follows the same route.
 
 Revision 3 checks also cover all twelve entrance connections, neighboring-plot clearance and camera clearance from the new additions.
+
+Revision 4 enriches landscape colors, adds mixed trees, shrubs, boulders and meadow planting, and raises the walking camera from 3.8 to 4.6 world units. Additional details are batched to reduce draw calls; route and arrival sightlines stay clear.
