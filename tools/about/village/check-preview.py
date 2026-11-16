@@ -30,6 +30,12 @@ async def main(url,out):
         await page.evaluate('village.overview()');await screenshot('overview')
         poses=await page.evaluate('village.poses()')
         assert len(poses)==12
+        frontage=await page.evaluate('village.frontages()')
+        assert len(frontage['entrances'])==12 and not frontage['camera_collisions'],frontage
+        assert all(e['approach_clear_of_neighbors'] for e in frontage['entrances'])
+        for i,entrance in enumerate(frontage['entrances']):
+            assert all(abs(entrance['approach_start'][j]-poses[i]['eye'][j])<1e-6 for j in [0,2])
+        (out/'entrance-verification.json').write_text(json.dumps(frontage,indent=2)+'\n')
         samples=await page.evaluate('village.routeSamples()')
         assert len(samples)==11
         assert all(not p['blocked'] and abs(p['eye'][1]-p['ground']-3.8)<1e-6 for route in samples for p in route)

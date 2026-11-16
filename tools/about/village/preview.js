@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { MeshoptDecoder } from 'meshoptimizer';
 import { groundHeight, makeWalkingRoutes } from './walking-world.js';
+import { addFrontages } from './frontages.js';
 
 const $ = id => document.getElementById(id);
 const canvas = document.querySelector('canvas');
@@ -69,7 +70,7 @@ try {
     const target=new THREE.Vector3(s.position[0],s.position[1]+worldSize.y*.43,s.position[2]);
     const frontage=new THREE.Vector3(...s.position).addScaledVector(direction,s.width*1.2);frontage.y+=.12;
 
-    stops.push({...s,anchor,box:worldBox,size:worldSize,target,direction,frontage});
+    stops.push({...s,anchor,box:worldBox,size:worldSize,footprint:new THREE.Vector3(size.x*scale,0,size.z*scale),target,direction,frontage});
     const opt=document.createElement('option');opt.value=i;opt.textContent=`${i+1}. ${s.title}`;$('stops').append(opt);
     await new Promise(resolve=>setTimeout(resolve,0));
   }
@@ -96,6 +97,8 @@ for(let i=0;i<walking.routes.length;i++){
  }
 }
 for(let i=0;i<46;i++){const x=(i%2?-78:80)+Math.sin(i*13.3)*11,z=65-Math.floor(i/2)*9+Math.cos(i*7.1)*4;if(clearProp(new THREE.Vector3(x,0,z)))tree(x,groundHeight(layout,x,z),z,5+i%4);}
+
+const frontages=addFrontages({layout,stops,walking,terrain,mat});
 
 let playing=false,overviewMode=false,progress=0,hold=0,transition=null,last=performance.now();
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -126,7 +129,7 @@ function frame(now){const dt=Math.min((now-last)/1000,.25);last=now;
  else if(playing){if(hold>0)hold-=dt;else{const prev=progress,i=Math.min(10,Math.floor(progress));progress=Math.min(11,progress+dt*layout.walk.speed/walking.routes[i].length);if(Math.floor(progress)>Math.floor(prev)){progress=Math.floor(progress);hold=2.5;}apply(viewAt(progress));updateLabel();if(progress>=11)setPlaying(false);}}
  controls.update();if(dirty){renderer.render(scene,camera);dirty=false;}requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.village={go,overview,paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
+window.village={go,overview,frontages:()=>frontages.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
  routeSamples:()=>walking.routes.map((r,i)=>Array.from({length:201},(_,j)=>{const p=viewAt(i+j/200);return {progress:i+j/200,eye:p.eye.toArray(),target:p.target.toArray(),ground:groundHeight(layout,p.eye.x,p.eye.z),blocked:walking.blocked(p.eye.x,p.eye.z)};})),
  environment:()=>{terrain.updateMatrixWorld(true);const result=[];terrain.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;const vertices=Array.from({length:p.count},(_,i)=>new THREE.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld).toArray());result.push({name:o.name||'Landscape detail',vertices,indices:o.geometry.index?Array.from(o.geometry.index.array):Array.from({length:p.count},(_,i)=>i),color:o.material.color.toArray()});});return result;}
 };

@@ -1,10 +1,14 @@
 # Village — outdoor walking study
 
 A separate review prototype using all twelve actual About-tour locations in the
-existing story order. Revision 2 expands the model spacing by 25% in both horizontal
-axes, keeps their sizes intact, and replaces the elevated display plinths with
+existing story order. Revision 2 expanded the model spacing by 25% in both horizontal
+axes, kept their sizes intact, and replaced the elevated display plinths with
 continuous ground, low thresholds, paths, benches, scattered trees and a river.
-It does not replace the application's About page.
+Revision 3 connects all twelve walking stops to their locations with forecourts,
+landings, two or three broad steps, and low herb planting. Brick, stone, timber
+and gravel treatments vary by location. The cabin entrance is offset onto the
+grass, clear of its stream. The approved walking route and room models remain
+unchanged. It does not replace the application's About page.
 
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
@@ -14,15 +18,21 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
+[Revision 3 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/672c8c7a987358d1149b74775d55b2ab44c7b3c4/noms-village-mobile.zip)
+(about 71 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
+
 - [Portable native world](models/terraced-village-blockout.blend)
 - [Source receipts](models/terraced-village-blockout.sources.json)
 - [Overview](previews/overview.png)
 - [Kitchen arrival](previews/kitchen.png)
+- [Bakery entrance](previews/bakery.png)
+- [Cabin arrival](previews/cabin.png)
 - [Walking toward the library](previews/walk-library.png)
 - [Mobile arrival](previews/mobile.png)
 - [Camera stops](source/camera-poses.json)
 - [Walking camera samples](source/walking-camera.json)
 - [Shared environment geometry](source/world-environment.json)
+- [Entrance checks](source/entrance-verification.json)
 
 The browser starts at the first arrival, at walking height. **Walk tour** follows
 continuous paths around the model footprints, looks ahead during travel and turns
@@ -39,7 +49,7 @@ In Blender, `Village walking camera` is the initial active camera. Its keyed
 positions and look directions come from the same sampled route as the browser,
 with twelve stop markers. `Village overview — static` provides the elevated view.
 The native builder imports the browser's environment geometry so paths, benches,
-trees and ground match; it can reuse the existing master’s source collections.
+trees, entrances, planting and ground match; it can reuse the existing master’s source collections.
 
 ## What remains provisional
 
@@ -50,7 +60,8 @@ lighting has not been rebaked.
 
 Paths and landscape are still a blockout. This is a guided outdoor camera route,
 not a collision-enabled free-roaming game. Automated checks cover the camera
-corridor against expanded model bounds and the ground height. It does not include
+corridor against expanded model bounds, new entrance geometry and ground height.
+Entrance approaches also clear neighboring plots by their half-width. It does not include
 pedestrian navigation or physical accessibility simulation.
 
 All twelve scenes remain resident for overview/orbit review. Final streaming,
@@ -113,6 +124,9 @@ simplify meshes, resize textures or change materials.
 The browser review visits all twelve stops, checks playback and portrait framing,
 and samples all eleven connecting routes at 201 points each. Camera samples must
 stay above the terrain, clear the expanded model footprints and join continuously.
+Entrance checks verify all twelve connections start at their actual camera stops.
+Floor heights are raycast from the source geometry; `entrance.edgePosition` can
+move an entrance along its open edge to avoid a fixed feature.
 Source hashes, geometry conversion receipts and native reopen checks are retained.
 Direct Android `content://` launching is not available in the managed browser;
 the single-file package is tested over localhost with additional network requests

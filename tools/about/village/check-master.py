@@ -21,6 +21,11 @@ eye = poses[0]['eye']
 assert sum((scene.camera.location[i] - [eye[0], -eye[2], eye[1]][i]) ** 2 for i in range(3)) < 1e-8
 assert scene.camera.animation_data and scene.camera.animation_data.action
 assert abs(scene['walk_eye_height'] - 3.8) < 1e-6
+environment = json.loads((root / 'assets/models/terraced-village/source/world-environment.json').read_text())
+terrain = bpy.data.collections['World terrain — blockout']
+assert len(terrain.objects) == len(environment)
+assert sum(o.name.startswith('Path-to-entrance connection') for o in terrain.objects) == 12
+assert sum(o.name.startswith('Inset entrance forecourt') for o in terrain.objects) == 12
 assert not bpy.data.libraries, 'World still depends on external Blender libraries'
 unpacked = [i.name for i in bpy.data.images if i.source == 'FILE' and i.filepath and not i.packed_file]
 assert not unpacked, f'Unpacked image dependencies: {unpacked}'
@@ -35,6 +40,8 @@ result = {
     'model_instances': len(instances),
     'native_objects': sum(len(o.instance_collection.all_objects) for o in instances),
     'camera_stops': len(scene.timeline_markers),
+    'entrance_connections': 12,
+    'shared_environment_meshes': len(terrain.objects),
     'active_camera': scene.camera.name,
     'walking_eye_height': scene['walk_eye_height'],
     'external_libraries': len(bpy.data.libraries),

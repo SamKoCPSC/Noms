@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "stage": "Outdoor walking layout; shared lighting not rebaked",
+  "version": 3,
+  "stage": "Outdoor walking village with connected entrances; shared lighting not rebaked",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
@@ -15,7 +15,13 @@
       "width": 14,
       "master": "assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-manager.blend",
       "model": "assets/about/kitchen-baked.glb",
-      "lighting": "assets/about/kitchen-lighting.json"
+      "lighting": "assets/about/kitchen-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "library",
@@ -29,7 +35,13 @@
       "width": 15,
       "master": "assets/models/university-library/models/university-library.blend",
       "model": "assets/about/library-baked.glb",
-      "lighting": "assets/about/library-lighting.json"
+      "lighting": "assets/about/library-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "bedroom",
@@ -43,7 +55,13 @@
       "width": 15,
       "master": "assets/models/corner-cocoon-bedroom/models/sams-corner-cocoon.blend",
       "model": "assets/about/bedroom-baked.glb",
-      "lighting": "assets/about/bedroom-lighting.json"
+      "lighting": "assets/about/bedroom-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "supermarket",
@@ -57,7 +75,13 @@
       "width": 17,
       "master": "assets/models/european-arcade-supermarket/models/european-arcade-supermarket.blend",
       "model": "assets/about/supermarket-baked.glb",
-      "lighting": "assets/about/supermarket-lighting.json"
+      "lighting": "assets/about/supermarket-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 6.4,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "office",
@@ -71,7 +95,13 @@
       "width": 14,
       "master": "assets/models/home-office/models/sams-project-room.blend",
       "model": "assets/about/office-baked.glb",
-      "lighting": "assets/about/office-lighting.json"
+      "lighting": "assets/about/office-lighting.json",
+      "entrance": {
+        "surface": "timber",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "corporate-office",
@@ -85,7 +115,13 @@
       "width": 17,
       "master": "assets/models/corporate-workspace-pantry/models/corporate-workspace-pantry.blend",
       "model": "assets/about/corporate-office-baked.glb",
-      "lighting": "assets/about/corporate-office-lighting.json"
+      "lighting": "assets/about/corporate-office-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "brick-kitchen",
@@ -99,7 +135,13 @@
       "width": 14,
       "master": "assets/models/brick-loft-kitchen/models/brick-loft-kitchen.blend",
       "model": "assets/about/brick-kitchen-baked.glb",
-      "lighting": "assets/about/brick-kitchen-lighting.json"
+      "lighting": "assets/about/brick-kitchen-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "bakery",
@@ -113,7 +155,13 @@
       "width": 15,
       "master": "assets/models/modern-baking-lab/models/modern-baking-lab.blend",
       "model": "assets/about/bakery-baked.glb",
-      "lighting": "assets/about/bakery-lighting.json"
+      "lighting": "assets/about/bakery-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 3.6,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "farmers-market",
@@ -127,7 +175,13 @@
       "width": 17,
       "master": "assets/models/community-spaces/models/farmers-market.blend",
       "model": "assets/about/farmers-market-baked.glb",
-      "lighting": "assets/about/farmers-market-lighting.json"
+      "lighting": "assets/about/farmers-market-lighting.json",
+      "entrance": {
+        "surface": "gravel",
+        "width": 6.4,
+        "depth": 3.6,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "social-kitchen",
@@ -141,7 +195,13 @@
       "width": 15,
       "master": "assets/models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend",
       "model": "assets/about/social-kitchen-baked.glb",
-      "lighting": "assets/about/social-kitchen-lighting.json"
+      "lighting": "assets/about/social-kitchen-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      }
     },
     {
       "id": "riverside-campsite",
@@ -155,7 +215,14 @@
       "width": 17,
       "master": "assets/models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend",
       "model": "assets/about/riverside-campsite-baked.glb",
-      "lighting": "assets/about/riverside-campsite-lighting.json"
+      "lighting": "assets/about/riverside-campsite-lighting.json",
+      "entrance": {
+        "surface": "timber",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42,
+        "edgePosition": -0.5
+      }
     },
     {
       "id": "garden",
@@ -169,7 +236,13 @@
       "width": 21,
       "master": "assets/models/garden-cookout/models/garden-v6.blend",
       "model": "assets/about/garden-baked.glb",
-      "lighting": "assets/about/garden-lighting.json"
+      "lighting": "assets/about/garden-lighting.json",
+      "entrance": {
+        "surface": "gravel",
+        "width": 6.4,
+        "depth": 3.6,
+        "floorFallback": 0.42
+      }
     }
   ],
   "river": [

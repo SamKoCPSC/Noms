@@ -86,7 +86,7 @@ overview.location=xyz((85,110,115));overview.rotation_euler=(Vector(xyz((0,0,-25
 scene.camera=cam;scene.frame_set(1)
 scene.render.engine='CYCLES';scene.cycles.samples=16;scene.cycles.use_denoising=False
 scene.render.resolution_x=1600;scene.render.resolution_y=1100;scene.render.resolution_percentage=100
-scene.view_settings.view_transform='AgX';scene['stage']='Expanded outdoor walking world; final shared lighting not baked';scene['originals_unchanged']=True;scene['walk_eye_height']=layout['walk']['eye_height']
+scene.view_settings.view_transform='AgX';scene['stage']=layout['stage'];scene['originals_unchanged']=True;scene['walk_eye_height']=layout['walk']['eye_height']
 bpy.context.preferences.filepaths.save_version=0
 bpy.ops.file.pack_all();bpy.ops.wm.save_as_mainfile(filepath=str(output),compress=True)
 output.with_suffix('.sources.json').write_text(json.dumps(receipts,indent=2)+'\n')
