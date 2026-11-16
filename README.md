@@ -1,4 +1,4 @@
-# Noms village — outdoor walking preview (revision 5)
+# Noms village — outdoor walking preview (revision 6)
 
 [Download noms-village-mobile.zip](https://github.com/SamKoCPSC/Noms/raw/refs/heads/preview/terraced-village-download/noms-village-mobile.zip)
 
@@ -29,3 +29,5 @@ Revision 3 checks also cover all twelve entrance connections, neighboring-plot c
 Revision 4 enriches landscape colors, adds mixed trees, shrubs, boulders and meadow planting, and raises the walking camera from 3.8 to 4.6 world units. Additional details are batched to reduce draw calls; route and arrival sightlines stay clear.
 
 Revision 5 adds eight colorful cottages with porches and mailboxes, eleven Noms-themed street names and destination signs, four pedestrian road signs, eleven lantern posts and a village welcome board. The original locations and raised walking route are preserved. Sign lettering is geometry and is also saved in Blender. The Droid Sans font notice is embedded in the HTML and included in the ZIP.
+
+Revision 6 gives world surfaces a matte cartoon finish, bevels cottages and street furniture, rounds sign and door corners, and softens path shoulders. The native Blender world preserves these edge normals. The room assets and camera route remain unchanged.
