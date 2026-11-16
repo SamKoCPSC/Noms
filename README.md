@@ -31,3 +31,7 @@ Revision 4 enriches landscape colors, adds mixed trees, shrubs, boulders and mea
 Revision 5 adds eight colorful cottages with porches and mailboxes, eleven Noms-themed street names and destination signs, four pedestrian road signs, eleven lantern posts and a village welcome board. The original locations and raised walking route are preserved. Sign lettering is geometry and is also saved in Blender. The Droid Sans font notice is embedded in the HTML and included in the ZIP.
 
 Revision 6 gives world surfaces a matte cartoon finish, bevels cottages and street furniture, rounds sign and door corners, and softens path shoulders. The native Blender world preserves these edge normals. The room assets and camera route remain unchanged.
+
+## Kitchen shared-lighting trial
+
+[Download the kitchen comparison](https://github.com/SamKoCPSC/Noms/raw/refs/heads/preview/terraced-village-download/noms-kitchen-lighting-study.zip). Extract `OPEN-KITCHEN-LIGHTING.html` and use **Current lighting / Shared sunlight** to compare the same camera view. Includes a short walk and path/cottage view. This tests shared sunlight and baked shadows on the kitchen district only. The full village preview above is unchanged.
