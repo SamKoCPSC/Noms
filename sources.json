@@ -1,74 +1,79 @@
 [
   {
     "id": "kitchen",
-    "source": "assets/about/kitchen-baked.glb",
-    "sha256": "eae324d897670673bfcdc24dda2197f6370a430e8f449a7860e91db56d9ee4f9",
+    "source": "assets/models/terraced-village/daylight/models/kitchen.glb",
+    "sha256": "0fe62af5127a0858e93bc13e9e3ea19d03796798aaceaa0d6c374cbb759e3c7d",
     "triangles": 447855
   },
   {
     "id": "library",
-    "source": "assets/about/library-baked.glb",
-    "sha256": "d7962ca0e1c998141a6fc01ca876dc7aa3b04316a35696b5e173f7502b46665e",
+    "source": "assets/models/terraced-village/daylight/models/library.glb",
+    "sha256": "e80f1a1e9c71ecb2ce57b531ff38a0caf67a1233f15a6c9c7a55f567be15fbba",
     "triangles": 1243534
   },
   {
     "id": "bedroom",
-    "source": "assets/about/bedroom-baked.glb",
-    "sha256": "46e1874e0cb1e83c35afb198924bbf99863fe2dd3dc3ebb4fcee749519714439",
-    "triangles": 313206
+    "source": "assets/models/terraced-village/daylight/models/bedroom.glb",
+    "sha256": "83c430a4d33bbe44698e84d6284895e5ad3c02140206ce38c00239217ea58e33",
+    "triangles": 1676197
   },
   {
     "id": "supermarket",
-    "source": "assets/about/supermarket-baked.glb",
-    "sha256": "5c1bf4f46fdb5d6742760e789f6b6672293f6532d58de9ae73b6c3ff3e386fa1",
+    "source": "assets/models/terraced-village/daylight/models/supermarket.glb",
+    "sha256": "066e37055aab0d941da09ef9c98091e9bec027a6085346cce3ce95f0838d8061",
     "triangles": 713206
   },
   {
     "id": "office",
-    "source": "assets/about/office-baked.glb",
-    "sha256": "d0f7e51d9a76e63d1de631ec3c0d52e63ef1cb3c5b747b33436f976598eb3184",
-    "triangles": 232771
+    "source": "assets/models/terraced-village/daylight/models/office.glb",
+    "sha256": "8bde7a23e784f25751a7ddff4ec41174ed36b816b81a048fcd63be0d0dc54c3a",
+    "triangles": 920051
   },
   {
     "id": "corporate-office",
-    "source": "assets/about/corporate-office-baked.glb",
-    "sha256": "a260257dfc2522bd81b4fe766378f479b60bd5c39fdc551524c484e43618153d",
+    "source": "assets/models/terraced-village/daylight/models/corporate-office.glb",
+    "sha256": "3258ff4461c85eadc8ef838e30f83b1f5bf485dde222c4f01c7d66621e835e19",
     "triangles": 267670
   },
   {
     "id": "brick-kitchen",
-    "source": "assets/about/brick-kitchen-baked.glb",
-    "sha256": "80f1a9f3fe3ff245e85c916a5496249e01280b595991f8cfbea0e3f53ad024f6",
+    "source": "assets/models/terraced-village/daylight/models/brick-kitchen.glb",
+    "sha256": "7a34d8078d502f9db0c4138ce9a7684d766dda617d9951293e83dffe9dff57f7",
     "triangles": 335085
   },
   {
     "id": "bakery",
-    "source": "assets/about/bakery-baked.glb",
-    "sha256": "1f19a60122b84bba3577bb41e0bda41e589696fb13ec37694486f6a091ec2ddd",
+    "source": "assets/models/terraced-village/daylight/models/bakery.glb",
+    "sha256": "2cb7bf22db4f9d5d1a53c82011b605d7abbdec161a2c7945446d90f88d433d8b",
     "triangles": 849989
   },
   {
     "id": "farmers-market",
-    "source": "assets/about/farmers-market-baked.glb",
-    "sha256": "0c609f792fb21ef7547eb4493b88fcd855db863a98ada8eee64dca563a363095",
+    "source": "assets/models/terraced-village/daylight/models/farmers-market.glb",
+    "sha256": "a87911d6160e2a629c1fd1965226dfd355086eea68c96449d7e833b102e2ad71",
     "triangles": 786584
   },
   {
     "id": "social-kitchen",
-    "source": "assets/about/social-kitchen-baked.glb",
-    "sha256": "7b2c79b20089769afd73a505d3b1720e07cc073b63539be25398397f2ba22f16",
+    "source": "assets/models/terraced-village/daylight/models/social-kitchen.glb",
+    "sha256": "bc34756cdf55583cd93e6535af443a7e4383eea1f56867e2c7898a71ec8b413f",
     "triangles": 365415
   },
   {
     "id": "riverside-campsite",
-    "source": "assets/about/riverside-campsite-baked.glb",
-    "sha256": "1e0638bcc33761a047f385b82d58ddc058b92a7ed18ebf8e2cb8a52f520cf6ad",
+    "source": "assets/models/terraced-village/daylight/models/riverside-campsite.glb",
+    "sha256": "d258e0ddbafd7cab16b28c5acea236097d41955c529b3d23b992e4c113460881",
     "triangles": 161725
   },
   {
     "id": "garden",
-    "source": "assets/about/garden-baked.glb",
-    "sha256": "0cd952395e5898500a1106486411edc5374d182b77d793e500ee5b1a2fccacfa",
-    "triangles": 383811
+    "source": "assets/models/terraced-village/daylight/models/garden.glb",
+    "sha256": "3327eff740481c52c32627967f8d7eea1e0a7b415c0c6ee64179c0a37889eb36",
+    "triangles": 916065
+  },
+  {
+    "id": "world",
+    "source": "assets/models/terraced-village/daylight/models/world.glb",
+    "sha256": "24bac5927a5a4667fa9a268c3c04c1a745400814b6cc43b24ba1bf5b34debcc3"
   }
 ]
