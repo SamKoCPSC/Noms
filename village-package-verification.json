@@ -1,11 +1,11 @@
 {
-  "layout_revision": 10,
+  "layout_revision": 11,
   "webp_quality": 76,
   "archive_compression": "ZIP Deflate, Zopfli 1 iteration; standard ZIP readers supported",
-  "zip_bytes": 103546040,
-  "zip_sha256": "7a2ff055bf613244adc480d9d8d92be2df372d1bd2f4b2065db43ee7bb36d852",
-  "html_bytes": 182276150,
-  "html_sha256": "60a2b6aceda390d89b75ba3017fd5bc1c4f772dc86a28aaa853851f47da4f7c5",
+  "zip_bytes": 103653656,
+  "zip_sha256": "e9e228b0aa827516ad8f7e8929e8610b13c4fbed5f04c2d7da7762b98fbc27af",
+  "html_bytes": 182486410,
+  "html_sha256": "b5d1ed78327d9e53866d087dfcef59867f48aca186c1dc767195621cd8408eed",
   "zip_crc_verified": true,
   "extracted_html_hash_verified": true
 }

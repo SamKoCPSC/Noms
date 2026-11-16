@@ -217,9 +217,9 @@
   },
   {
     "id": "world",
-    "source_sha256": "7273e606611251df64f0bfd96204bcfa9b0f0b54ce55582a94fe05250b552661",
-    "original_bytes": 41432392,
-    "preview_bytes": 22146836,
+    "source_sha256": "fa1858c0610a80cd51d2460675a603e43bf6b5e94bd76e7ce447e99d5bc02d2b",
+    "original_bytes": 41589180,
+    "preview_bytes": 22303992,
     "texture_dimensions": [
       [
         2048,
