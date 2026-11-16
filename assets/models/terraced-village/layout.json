@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "stage": "Outdoor walking village with connected entrances; shared lighting not rebaked",
+  "version": 4,
+  "stage": "Colorful planted walking village; shared lighting not rebaked",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
@@ -301,7 +301,7 @@
     ]
   ],
   "walk": {
-    "eye_height": 3.8,
+    "eye_height": 4.6,
     "speed": 2.6,
     "path_width": 3.2,
     "spacing_multiplier": 1.25

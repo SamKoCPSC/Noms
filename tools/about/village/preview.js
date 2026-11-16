@@ -5,6 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { MeshoptDecoder } from 'meshoptimizer';
 import { groundHeight, makeWalkingRoutes } from './walking-world.js';
 import { addFrontages } from './frontages.js';
+import { addLandscape } from './landscape.js';
 
 const $ = id => document.getElementById(id);
 const canvas = document.querySelector('canvas');
@@ -13,29 +14,29 @@ try { renderer = new THREE.WebGLRenderer({canvas, antialias:true, logarithmicDep
 catch { $('status').textContent='This preview needs a browser with WebGL.'; throw Error('WebGL unavailable'); }
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.AgXToneMapping;
-const scene=new THREE.Scene(); scene.background=new THREE.Color('#d6e6e9');
-scene.fog=new THREE.Fog('#d6e6e9',100,300);
-const sky=new THREE.Mesh(new THREE.SphereGeometry(480,24,12),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,toneMapped:false,uniforms:{top:{value:new THREE.Color('#a4c9df')},bottom:{value:new THREE.Color('#ede8dc')}},vertexShader:'varying vec3 v; void main(){v=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec3 v;uniform vec3 top;uniform vec3 bottom;void main(){float h=smoothstep(-.05,.65,normalize(v).y);gl_FragColor=vec4(mix(bottom,top,h),1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}'}));scene.add(sky);
+const scene=new THREE.Scene(); scene.background=new THREE.Color('#c6e0ed');
+scene.fog=new THREE.Fog('#c6e0ed',100,300);
+const sky=new THREE.Mesh(new THREE.SphereGeometry(480,24,12),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,toneMapped:false,uniforms:{top:{value:new THREE.Color('#70b6e1')},bottom:{value:new THREE.Color('#e4edcf')}},vertexShader:'varying vec3 v; void main(){v=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec3 v;uniform vec3 top;uniform vec3 bottom;void main(){float h=smoothstep(-.05,.65,normalize(v).y);gl_FragColor=vec4(mix(bottom,top,h),1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}'}));scene.add(sky);
 const camera=new THREE.PerspectiveCamera(60,1,.08,650);
 const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.minDistance=.5;controls.maxDistance=260;controls.maxPolarAngle=Math.PI*.9;
 let dirty=true;controls.addEventListener('change',()=>{dirty=true;});
-scene.add(new THREE.HemisphereLight('#e4f1ff','#b1a084',2.2));
-const sun=new THREE.DirectionalLight('#fff2d9',2.8);sun.position.set(-60,100,50);scene.add(sun);
+scene.add(new THREE.HemisphereLight('#e4f1ff','#869956',.8));
+const sun=new THREE.DirectionalLight('#fff3dc',1.1);sun.position.set(-60,100,50);scene.add(sun);
 const pmrem=new THREE.PMREMGenerator(renderer), room=new RoomEnvironment();
 scene.environment=pmrem.fromScene(room,.04).texture;room.dispose();pmrem.dispose();
 const terrain=new THREE.Group();terrain.name='Village blockout terrain';scene.add(terrain);
 const materials={};
-function mat(color){return materials[color]??=new THREE.MeshStandardMaterial({color,roughness:.95});}
+function mat(color){return materials[color]??=new THREE.MeshStandardMaterial({color,roughness:.95,envMapIntensity:.2,toneMapped:false});}
 function box(name,p,size,color){const m=new THREE.Mesh(new THREE.BoxGeometry(...size),mat(color));m.name=name;m.position.fromArray(p);terrain.add(m);return m;}
 function line(points,color,radius=.5){const c=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const m=new THREE.Mesh(new THREE.TubeGeometry(c,Math.max(40,points.length*12),radius,6,false),mat(color));terrain.add(m);return c;}
 function label(text,x,y,z){const c=document.createElement('canvas');c.width=512;c.height=80;const ctx=c.getContext('2d');ctx.fillStyle='#faf6e9';ctx.beginPath();ctx.roundRect(0,0,512,80,24);ctx.fill();ctx.fillStyle='#3f4935';ctx.font='600 29px system-ui';ctx.textAlign='center';ctx.fillText(text,256,51);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(8,1.25,1);scene.add(sprite);return sprite;}
-function tree(x,y,z,size){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.28,size*.4,6),mat('#79634a'));trunk.position.set(x,y+size*.2,z);terrain.add(trunk);for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.ConeGeometry(size*(.32-i*.055),size*.55,5),mat(i%2?'#8f9f6c':'#80915f'));m.position.set(x,y+size*(.48+i*.22),z);terrain.add(m);}}
+function tree(x,y,z,size){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.28,size*.4,6),mat('#805132'));trunk.position.set(x,y+size*.2,z);terrain.add(trunk);for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.ConeGeometry(size*(.32-i*.055),size*.55,5),mat(i%2?'#7fa638':'#4e7e30'));m.position.set(x,y+size*(.48+i*.22),z);terrain.add(m);}}
 const layout=globalThis.__VILLAGE_LAYOUT__||await fetch('layout.json').then(r=>{if(!r.ok)throw Error('Layout unavailable');return r.json();});
 // Continuous gently sloping ground replaces the raised display plinths.
 const groundGeometry=new THREE.PlaneGeometry(440,460,220,230);groundGeometry.rotateX(-Math.PI/2);groundGeometry.translate(0,0,-30);
 const gp=groundGeometry.attributes.position;
 for(let i=0;i<gp.count;i++)gp.setY(i,groundHeight(layout,gp.getX(i),gp.getZ(i)));
-groundGeometry.computeVertexNormals();terrain.add(new THREE.Mesh(groundGeometry,mat('#829464')));
+groundGeometry.computeVertexNormals();terrain.add(new THREE.Mesh(groundGeometry,mat('#56842e')));
 function ribbon(points,width,color,height=.16){
  const vertices=[],indices=[];
  for(let i=0;i<points.length;i++){const p=points[i],before=points[Math.max(0,i-1)],after=points[Math.min(points.length-1,i+1)],n=new THREE.Vector3(-(after.z-before.z),0,after.x-before.x).normalize();
@@ -45,9 +46,9 @@ function ribbon(points,width,color,height=.16){
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.setIndex(indices);geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,mat(color));terrain.add(mesh);return mesh;
 }
 const riverCurve=new THREE.CatmullRomCurve3(layout.river.map(p=>new THREE.Vector3(...p)));
-ribbon(riverCurve.getPoints(260),7,'#c6ba91').name='River banks';
-ribbon(riverCurve.getPoints(260).map(p=>p.add(new THREE.Vector3(0,.02,0))),4.8,'#6fa5af',.19).name='River surface';
-for(let i=0;i<12;i++){const hill=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),mat(i%2?'#a4b5a3':'#b4c2ad'));hill.name='Distant hillside';hill.position.set(-180+i*35,-10,-200-(i%3)*18);hill.scale.set(45,27+(i%4)*9,35);terrain.add(hill);}
+ribbon(riverCurve.getPoints(260),7,'#c1a773').name='River banks';
+ribbon(riverCurve.getPoints(260).map(p=>p.add(new THREE.Vector3(0,.02,0))),4.8,'#358d9c',.19).name='River surface';
+for(let i=0;i<12;i++){const hill=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),mat(i%2?'#749266':'#93aa76'));hill.name='Distant hillside';hill.position.set(-180+i*35,-10,-200-(i%3)*18);hill.scale.set(45,27+(i%4)*9,35);terrain.add(hill);}
 const stops=[],labels=[],loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 let loadingFailed=false;
 try {
@@ -78,7 +79,7 @@ try {
 if(loadingFailed)throw Error('Incomplete village');
 const walking=makeWalkingRoutes(layout,stops);
 const walkPaths=walking.routes.map(r=>r.points.map(p=>p.toArray()));
-for(const route of walking.routes)ribbon(route.points,layout.walk.path_width,'#c4ad86').name='Ground-level walking path';
+for(const route of walking.routes)ribbon(route.points,layout.walk.path_width,'#bf9a65').name='Ground-level walking path';
 // Give the journey outdoor scale cues at the side of the paths, keeping the
 // camera corridor and the original model footprints clear.
 const routeSamples=walking.routes.flatMap(r=>r.points.filter((_,i)=>i%4===0));
@@ -99,6 +100,7 @@ for(let i=0;i<walking.routes.length;i++){
 for(let i=0;i<46;i++){const x=(i%2?-78:80)+Math.sin(i*13.3)*11,z=65-Math.floor(i/2)*9+Math.cos(i*7.1)*4;if(clearProp(new THREE.Vector3(x,0,z)))tree(x,groundHeight(layout,x,z),z,5+i%4);}
 
 const frontages=addFrontages({layout,stops,walking,terrain,mat});
+const landscape=addLandscape({layout,stops,walking,terrain,mat,riverCurve});
 
 let playing=false,overviewMode=false,progress=0,hold=0,transition=null,last=performance.now();
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -129,7 +131,7 @@ function frame(now){const dt=Math.min((now-last)/1000,.25);last=now;
  else if(playing){if(hold>0)hold-=dt;else{const prev=progress,i=Math.min(10,Math.floor(progress));progress=Math.min(11,progress+dt*layout.walk.speed/walking.routes[i].length);if(Math.floor(progress)>Math.floor(prev)){progress=Math.floor(progress);hold=2.5;}apply(viewAt(progress));updateLabel();if(progress>=11)setPlaying(false);}}
  controls.update();if(dirty){renderer.render(scene,camera);dirty=false;}requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.village={go,overview,frontages:()=>frontages.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
+window.village={go,overview,frontages:()=>frontages.check(),landscape:()=>landscape.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
  routeSamples:()=>walking.routes.map((r,i)=>Array.from({length:201},(_,j)=>{const p=viewAt(i+j/200);return {progress:i+j/200,eye:p.eye.toArray(),target:p.target.toArray(),ground:groundHeight(layout,p.eye.x,p.eye.z),blocked:walking.blocked(p.eye.x,p.eye.z)};})),
  environment:()=>{terrain.updateMatrixWorld(true);const result=[];terrain.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;const vertices=Array.from({length:p.count},(_,i)=>new THREE.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld).toArray());result.push({name:o.name||'Landscape detail',vertices,indices:o.geometry.index?Array.from(o.geometry.index.array):Array.from({length:p.count},(_,i)=>i),color:o.material.color.toArray()});});return result;}
 };

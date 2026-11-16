@@ -10,6 +10,14 @@ and gravel treatments vary by location. The cabin entrance is offset onto the
 grass, clear of its stream. The approved walking route and room models remain
 unchanged. It does not replace the application's About page.
 
+Revision 4 raises the walking camera from 3.8 to 4.6 world units and enriches
+the landscape with 66 additional trees, 95 bushes, 87 rock groups and 131 meadow
+patches. Seeded placement leaves the route, entrances, river and arrival sightlines
+clear. The 1,935 small detail parts are batched into 33 meshes to reduce draw calls.
+Richer greens, blue water and warm paths use the same untone-mapped color treatment
+as the baked models; reduced fill light preserves more color. Original model
+assets remain unchanged.
+
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
 The original source files are never saved over. Furniture and room geometry stay
@@ -18,7 +26,7 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 3 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/672c8c7a987358d1149b74775d55b2ab44c7b3c4/noms-village-mobile.zip)
+[Revision 4 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/7ebdb586eb34abb1802c8b4018cb2f9553f4f0c0/noms-village-mobile.zip)
 (about 71 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
 - [Portable native world](models/terraced-village-blockout.blend)
@@ -33,6 +41,7 @@ its shaders and the current Penguini placements.
 - [Walking camera samples](source/walking-camera.json)
 - [Shared environment geometry](source/world-environment.json)
 - [Entrance checks](source/entrance-verification.json)
+- [Landscape checks](source/landscape-verification.json)
 
 The browser starts at the first arrival, at walking height. **Walk tour** follows
 continuous paths around the model footprints, looks ahead during travel and turns
@@ -40,7 +49,7 @@ toward each location on arrival. Previous/next follow the same route. Distant st
 jumps and return from overview use a brief fade. **Overview** remains available
 for inspecting the layout. There is no head bob or automatic playback.
 
-The camera stays 3.8 world units above the terrain, scaled to the existing room
+The camera stays 4.6 world units above the terrain, scaled to the existing room
 models and their thick floor bases. Travel speed is 2.6 world units per second.
 Portrait layout adjusts the field of view without raising the camera or changing
 its route. Reduced-motion preference makes manual navigation instantaneous.

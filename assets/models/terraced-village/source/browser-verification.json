@@ -3,18 +3,19 @@
   "all_stops_checked": true,
   "walking_route_samples": 2211,
   "camera_clear_of_model_bounds": true,
-  "eye_height_above_terrain": 3.8,
+  "eye_height_above_terrain": 4.6,
   "continuous_segment_endpoints": true,
   "playback_advances": true,
   "responsive_aspect": true,
   "unchanged_master_hashes": true,
   "errors": [],
+  "layout_revision": 4,
   "single_file_external_requests": 0,
-  "mobile_next_navigation_checked": true,
+  "next_navigation_checked": true,
+  "landscape_clearance_checked": true,
   "android_content_url_tested": false,
-  "layout_revision": 3,
   "entrance_connections": 12,
   "entrance_approaches_clear_of_neighbors": true,
   "camera_clear_of_entrance_additions": true,
-  "walking_route_unchanged": true
+  "final_color_preview_checked": true
 }

@@ -1,0 +1,13 @@
+{
+  "seed": 21731,
+  "counts": {
+    "tree": 66,
+    "bush": 95,
+    "boulder": 87,
+    "meadow": 131
+  },
+  "camera_collisions": [],
+  "clear_arrival_views": true,
+  "detail_parts": 1935,
+  "render_meshes": 33
+}

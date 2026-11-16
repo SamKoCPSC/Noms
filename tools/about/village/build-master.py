@@ -57,7 +57,7 @@ for item in environment:
 world=bpy.data.worlds.new('Outdoor daytime sky — provisional');scene.world=world;world.use_nodes=True
 nodes=world.node_tree.nodes;sky=nodes.new('ShaderNodeTexSky');sky.sky_type='NISHITA';sky.sun_elevation=math.radians(40);sky.sun_rotation=math.radians(135)
 world.node_tree.links.new(sky.outputs['Color'],nodes.get('Background').inputs['Color']);nodes.get('Background').inputs['Strength'].default_value=.25
-ld=bpy.data.lights.new('Shared sun — provisional','SUN');ld.energy=2;ld.angle=.15;sun=bpy.data.objects.new(ld.name,ld);scene.collection.objects.link(sun);sun.rotation_euler=(.55,-.4,-.65)
+ld=bpy.data.lights.new('Shared sun — provisional','SUN');ld.energy=1.1;ld.angle=.15;sun=bpy.data.objects.new(ld.name,ld);scene.collection.objects.link(sun);sun.rotation_euler=(.55,-.4,-.65)
 camdata=bpy.data.cameras.new('Village walking camera');cam=bpy.data.objects.new('Village walking camera',camdata);scene.collection.objects.link(cam)
 cam.rotation_mode='QUATERNION';camdata.sensor_fit='VERTICAL';camdata.sensor_height=24
 camdata.lens=24/(2*math.tan(math.radians(60)/2));camdata.clip_end=700

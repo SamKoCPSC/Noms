@@ -20,7 +20,8 @@ poses = json.loads((root / 'assets/models/terraced-village/source/camera-poses.j
 eye = poses[0]['eye']
 assert sum((scene.camera.location[i] - [eye[0], -eye[2], eye[1]][i]) ** 2 for i in range(3)) < 1e-8
 assert scene.camera.animation_data and scene.camera.animation_data.action
-assert abs(scene['walk_eye_height'] - 3.8) < 1e-6
+layout=json.loads((root / 'assets/models/terraced-village/layout.json').read_text())
+assert abs(scene['walk_eye_height'] - layout['walk']['eye_height']) < 1e-6
 environment = json.loads((root / 'assets/models/terraced-village/source/world-environment.json').read_text())
 terrain = bpy.data.collections['World terrain — blockout']
 assert len(terrain.objects) == len(environment)
