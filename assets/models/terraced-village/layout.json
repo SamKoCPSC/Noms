@@ -1,6 +1,6 @@
 {
-  "version": 6,
-  "stage": "Matte rounded Noms village; shared lighting not rebaked",
+  "version": 7,
+  "stage": "Shared bright daylight and baked shadows throughout the village",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
@@ -21,7 +21,8 @@
         "width": 5.2,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/kitchen.glb"
     },
     {
       "id": "library",
@@ -41,7 +42,8 @@
         "width": 5.2,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/library.glb"
     },
     {
       "id": "bedroom",
@@ -61,7 +63,8 @@
         "width": 5.2,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/bedroom.glb"
     },
     {
       "id": "supermarket",
@@ -81,7 +84,8 @@
         "width": 6.4,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/supermarket.glb"
     },
     {
       "id": "office",
@@ -101,7 +105,8 @@
         "width": 5.2,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/office.glb"
     },
     {
       "id": "corporate-office",
@@ -121,7 +126,8 @@
         "width": 5.2,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/corporate-office.glb"
     },
     {
       "id": "brick-kitchen",
@@ -141,7 +147,8 @@
         "width": 5.2,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/brick-kitchen.glb"
     },
     {
       "id": "bakery",
@@ -161,7 +168,8 @@
         "width": 5.2,
         "depth": 3.6,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/bakery.glb"
     },
     {
       "id": "farmers-market",
@@ -181,7 +189,8 @@
         "width": 6.4,
         "depth": 3.6,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/farmers-market.glb"
     },
     {
       "id": "social-kitchen",
@@ -201,7 +210,8 @@
         "width": 5.2,
         "depth": 2.8,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/social-kitchen.glb"
     },
     {
       "id": "riverside-campsite",
@@ -222,7 +232,8 @@
         "depth": 2.8,
         "floorFallback": 0.42,
         "edgePosition": -0.5
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/riverside-campsite.glb"
     },
     {
       "id": "garden",
@@ -242,7 +253,8 @@
         "width": 6.4,
         "depth": 3.6,
         "floorFallback": 0.42
-      }
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/garden.glb"
     }
   ],
   "river": [
@@ -355,5 +367,9 @@
       ]
     ],
     "house_scale": 1.5
+  },
+  "shared_lighting": {
+    "environment": "assets/models/terraced-village/daylight/models/world.glb",
+    "settings": "assets/models/terraced-village/daylight/lighting.json"
   }
 }

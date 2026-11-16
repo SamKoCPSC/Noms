@@ -14,9 +14,9 @@ The walking camera is raised from 3.8 to 4.6 world units. The current layout enr
 the landscape with 66 additional trees, 95 bushes, 81 rock groups and 128 meadow
 patches. Seeded placement leaves the route, entrances, river and arrival sightlines
 clear. The 1,895 small detail parts are batched into 33 meshes to reduce draw calls.
-Richer greens, blue water and warm paths use the same untone-mapped color treatment
-as the baked models; reduced fill light preserves more color. Original model
-assets remain unchanged.
+Richer greens, blue water and warm paths complement the room models. Revision 7
+replaces this earlier live landscape lighting with the shared daylight bake.
+Original model assets remain unchanged.
 
 Revision 5 adds eight colored cottages with pitched roofs, porches, window herb
 boxes and mailboxes, plus eleven street signs, four pedestrian road signs, eleven
@@ -35,6 +35,12 @@ have rounded face corners. Paths have softly rolled shoulders. Geometry stays
 inside its original bounds, preserving the walking route and room placement.
 Exported custom normals preserve the softened edge shading in the native world.
 
+Revision 7 extends the approved kitchen lighting study to the complete village.
+All twelve rooms and the landscape share one warm sun, a brighter sky fill and
+baked shadows. The [daylight assets and rebuild instructions](daylight/README.md)
+preserve the original source models and the approved walking route. Ground uses
+four lighting atlases; narrow rounded landscape surfaces use baked vertex colors.
+
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
 The original source files are never saved over. Furniture and room geometry stay
@@ -43,17 +49,21 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 6 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/c418c7ba978a1dba970abc572a320e0cee43c0de/noms-village-mobile.zip)
-(about 71 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
+[Revision 7 shared-daylight preview ZIP](https://github.com/SamKoCPSC/Noms/raw/f2b80d9ee1254594e97d1f82fd19b86490cb6edc/noms-village-mobile.zip)
+(about 99.8 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
-- [Portable native world](models/terraced-village-blockout.blend)
+[Earlier revision 6 archive](https://github.com/SamKoCPSC/Noms/raw/c418c7ba978a1dba970abc572a320e0cee43c0de/noms-village-mobile.zip).
+
+- [All twelve locations](daylight/previews/all-locations.png)
+- [Shared-daylight native world](daylight/models/terraced-village-daylight.blend)
+- [Original matte layout world](models/terraced-village-blockout.blend)
 - [Source receipts](models/terraced-village-blockout.sources.json)
-- [Overview](previews/overview.png)
-- [Kitchen arrival](previews/kitchen.png)
-- [Bakery entrance](previews/bakery.png)
-- [Cabin arrival](previews/cabin.png)
-- [Walking toward the library](previews/walk-library.png)
-- [Mobile arrival](previews/mobile.png)
+- [Overview](daylight/previews/overview.png)
+- [Kitchen arrival](daylight/previews/kitchen.png)
+- [Bakery entrance](daylight/previews/bakery.png)
+- [Cabin arrival](daylight/previews/cabin.png)
+- [Walking toward the library](daylight/previews/walk-library.png)
+- [Mobile arrival](daylight/previews/mobile.png)
 - [Camera stops](source/camera-poses.json)
 - [Walking camera samples](source/walking-camera.json)
 - [Shared environment geometry](source/world-environment.json)
@@ -81,17 +91,16 @@ trees, entrances, planting and ground match; it can reuse the existing master’
 
 ## Shared-lighting experiment
 
-The [kitchen district study](lighting-study/README.md) tests one sun and sky across
-the first kitchen and its surrounding landscape. It has a separate before/after
-preview and native Blender source; the full walking-world preview above still
-uses the previously approved lighting.
+The [kitchen district study](lighting-study/README.md) retains the original
+before/after experiment. The [full-village daylight pass](daylight/README.md)
+extends it to every location with brighter ambient fill to keep interiors clear.
 
 ## What remains provisional
 
-The normal browser preview copies existing baked GLBs byte-for-byte. The mobile
-single-file preview compresses their textures as documented below. The native
-world retains original shader data under a provisional shared sky and sun. Shared
-lighting has not been rebaked.
+The normal browser preview copies the new shared-daylight GLBs byte-for-byte.
+The mobile single-file preview compresses their textures as documented below.
+Opaque surfaces use static baked lighting; glass and reflective metal remain
+view dependent and use an approximate outdoor reflection environment.
 
 Paths and landscape are still a blockout. This is a guided outdoor camera route,
 not a collision-enabled free-roaming game. Automated checks cover the camera
@@ -127,7 +136,7 @@ node tools/about/village/build-mobile-preview.mjs /tmp/noms-village-preview /tmp
 ```
 
 This writes `OPEN-VILLAGE-MOBILE.html` and a conversion receipt. It uses WebP
-quality 95 textures at their original dimensions and verifies every copied
+quality 93 textures at their original dimensions and verifies every copied
 geometry buffer range against the source. It does not change production assets
 or Blender masters. Zip the HTML for distribution. All twelve scenes remain
 resident, so this packaging fix does not establish phone memory/performance
@@ -150,9 +159,9 @@ blender -b -t 2 --disable-autoexec --python-exit-code 1 --python tools/about/vil
   /tmp/village-native /tmp/terraced-village-blockout.blend
 ```
 
-Blender sources and production GLBs have SHA-256 receipts. Browser preview
-copies are byte-identical to their source GLBs; the packaging step does not
-simplify meshes, resize textures or change materials.
+Blender sources and production GLBs have SHA-256 receipts. Normal browser preview
+copies are byte-identical to their shared-lighting GLBs. Mobile packaging
+compresses textures without resizing them or simplifying geometry.
 
 ## Verification
 

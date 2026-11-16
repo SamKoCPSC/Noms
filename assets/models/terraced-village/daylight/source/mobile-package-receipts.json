@@ -1,0 +1,244 @@
+[
+  {
+    "id": "kitchen",
+    "source_sha256": "0fe62af5127a0858e93bc13e9e3ea19d03796798aaceaa0d6c374cbb759e3c7d",
+    "original_bytes": 12030516,
+    "preview_bytes": 6733028,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 30,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "library",
+    "source_sha256": "e80f1a1e9c71ecb2ce57b531ff38a0caf67a1233f15a6c9c7a55f567be15fbba",
+    "original_bytes": 22879708,
+    "preview_bytes": 15936844,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 33,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "bedroom",
+    "source_sha256": "83c430a4d33bbe44698e84d6284895e5ad3c02140206ce38c00239217ea58e33",
+    "original_bytes": 22542788,
+    "preview_bytes": 18193572,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 45,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "supermarket",
+    "source_sha256": "066e37055aab0d941da09ef9c98091e9bec027a6085346cce3ce95f0838d8061",
+    "original_bytes": 17630644,
+    "preview_bytes": 10752052,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 20,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "office",
+    "source_sha256": "8bde7a23e784f25751a7ddff4ec41174ed36b816b81a048fcd63be0d0dc54c3a",
+    "original_bytes": 18664264,
+    "preview_bytes": 13414804,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 58,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "corporate-office",
+    "source_sha256": "3258ff4461c85eadc8ef838e30f83b1f5bf485dde222c4f01c7d66621e835e19",
+    "original_bytes": 10664024,
+    "preview_bytes": 4514540,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 34,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "brick-kitchen",
+    "source_sha256": "7a34d8078d502f9db0c4138ce9a7684d766dda617d9951293e83dffe9dff57f7",
+    "original_bytes": 11947908,
+    "preview_bytes": 6864460,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 29,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "bakery",
+    "source_sha256": "2cb7bf22db4f9d5d1a53c82011b605d7abbdec161a2c7945446d90f88d433d8b",
+    "original_bytes": 17793808,
+    "preview_bytes": 11252776,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 30,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "farmers-market",
+    "source_sha256": "a87911d6160e2a629c1fd1965226dfd355086eea68c96449d7e833b102e2ad71",
+    "original_bytes": 19908728,
+    "preview_bytes": 12907528,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 16,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "social-kitchen",
+    "source_sha256": "bc34756cdf55583cd93e6535af443a7e4383eea1f56867e2c7898a71ec8b413f",
+    "original_bytes": 10242364,
+    "preview_bytes": 5438868,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 23,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "riverside-campsite",
+    "source_sha256": "d258e0ddbafd7cab16b28c5acea236097d41955c529b3d23b992e4c113460881",
+    "original_bytes": 10775896,
+    "preview_bytes": 3487220,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 23,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "garden",
+    "source_sha256": "3327eff740481c52c32627967f8d7eea1e0a7b415c0c6ee64179c0a37889eb36",
+    "original_bytes": 17262780,
+    "preview_bytes": 11898812,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 41,
+    "texture_format": "WebP quality 93, original resolution"
+  },
+  {
+    "id": "world",
+    "source_sha256": "24bac5927a5a4667fa9a268c3c04c1a745400814b6cc43b24ba1bf5b34debcc3",
+    "original_bytes": 25131232,
+    "preview_bytes": 9502988,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 151,
+    "texture_format": "WebP quality 93, original resolution"
+  }
+]

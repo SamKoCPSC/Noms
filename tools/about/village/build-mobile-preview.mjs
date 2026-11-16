@@ -9,12 +9,16 @@ const folder = process.argv[2] || '/tmp/noms-village-preview';
 const out = process.argv[3] || '/tmp/noms-village-mobile';
 await mkdir(out, { recursive: true });
 const layout = JSON.parse(await readFile(`${folder}/layout.json`, 'utf8'));
+// Full-village bakes use a slightly smaller download encoding; originals stay intact.
+const textureQuality = Number(process.argv[4] ?? (layout.shared_lighting ? 93 : 95));
+if (!Number.isInteger(textureQuality) || textureQuality < 1 || textureQuality > 100) throw Error('WebP quality must be an integer from 1 to 100');
 const receipts = [];
 let html = (await readFile(`${folder}/index.html`, 'utf8'))
   .replace('<script type="module" src="preview.js"></script></html>', '');
 html += '<script type="text/plain" id="droid-font-notice">' + (await readFile('tools/about/village/DROID-FONT-NOTICE.txt','utf8')).replaceAll('</','<\\/') + '</script>\n';
 html += '<script>globalThis.__VILLAGE_LAYOUT__=' + JSON.stringify(layout).replaceAll('</', '<\\/') + ';</script>\n';
-for (const stop of layout.stops) {
+const assets=[...layout.stops,...(layout.shared_lighting?[{id:'world',model:layout.shared_lighting.environment}]:[])];
+for (const stop of assets) {
   const original = await readFile(`${folder}/${stop.model}`);
   const jsonLength = original.readUInt32LE(12);
   const gltf = JSON.parse(original.subarray(20, 20 + jsonLength).toString());
@@ -36,7 +40,7 @@ for (const stop of layout.stops) {
       let bytes = before;
       if (images.has(index)) {
         const meta = await sharp(before).metadata();
-        bytes = await sharp(before).webp({ quality: 95, alphaQuality: 100, effort: 4 }).toBuffer();
+        bytes = await sharp(before).webp({ quality: textureQuality, alphaQuality: 100, effort: 4 }).toBuffer();
         const after = await sharp(bytes).metadata();
         if (meta.width !== after.width || meta.height !== after.height) throw Error('Texture dimensions changed');
         images.get(index).mimeType = 'image/webp';
@@ -84,7 +88,7 @@ for (const stop of layout.stops) {
   const binHeader = Buffer.alloc(8); binHeader.writeUInt32LE(body.length); binHeader.writeUInt32LE(0x004e4942, 4);
   const result = Buffer.concat([header, json, binHeader, body]);
   html += `<script type="application/octet-stream" id="asset-${stop.id}">${result.toString('base64')}</script>\n`;
-  receipts.push({ id: stop.id, source_sha256: createHash('sha256').update(original).digest('hex'), original_bytes: original.length, preview_bytes: result.length, texture_dimensions: dimensions, geometry_views_verified: geometryViews, texture_format: 'WebP quality 95, original resolution' });
+  receipts.push({ id: stop.id, source_sha256: createHash('sha256').update(original).digest('hex'), original_bytes: original.length, preview_bytes: result.length, texture_dimensions: dimensions, geometry_views_verified: geometryViews, texture_format: `WebP quality ${textureQuality}, original resolution` });
   console.log('EMBEDDED', stop.id, original.length, result.length);
 }
 const bundle = await build({ entryPoints: ['tools/about/village/preview.js'], bundle: true, format: 'esm', target: 'es2022', minify: true, write: false, legalComments: 'eof' });

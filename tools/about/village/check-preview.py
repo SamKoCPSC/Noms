@@ -38,6 +38,8 @@ async def main(url,out):
             (out/(name+'.png')).write_bytes(base64.b64decode(result['data']));await cdp.detach()
         initial=await page.evaluate('village.getState()')
         assert initial['progress']==0 and not initial['overviewMode']
+        if layout.get('shared_lighting'):
+            assert initial['shared_daylight'] and not initial['realtime_shadows'],initial
         await screenshot('initial-arrival')
         await page.locator('#next').click()
         await page.wait_for_function('village.getState().progress > 0',timeout=90000,polling=250)
@@ -45,6 +47,12 @@ async def main(url,out):
         await page.evaluate('village.overview()');await screenshot('overview')
         poses=await page.evaluate('village.poses()')
         assert len(poses)==12
+        if layout.get('shared_lighting'):
+            original_poses=json.loads((ROOT/'assets/models/terraced-village/source/camera-poses.json').read_text())
+            for actual,original in zip(poses,original_poses):
+                assert actual['id']==original['id']
+                for key in ['eye','target']:
+                    assert max(abs(a-b) for a,b in zip(actual[key],original[key]))<1e-5,(actual,original)
         frontage=await page.evaluate('village.frontages()')
         assert len(frontage['entrances'])==12 and not frontage['camera_collisions'],frontage
         assert all(e['approach_clear_of_neighbors'] for e in frontage['entrances'])
@@ -91,7 +99,7 @@ async def main(url,out):
         state=await page.evaluate('village.getState()');assert abs(state['aspect']-393/852)<1e-8
         assert not errors,errors
         assert not external,external
-        (out/'verification.json').write_text(json.dumps({'models':12,'all_stops_checked':True,'walking_route_samples':2211,'camera_clear_of_model_bounds':True,'eye_height_above_terrain':eye_height,'continuous_segment_endpoints':True,'playback_advances':True,'responsive_aspect':True,'unchanged_master_hashes':True,'errors':errors,'layout_revision':layout['version'],'single_file_external_requests':len(external) if single_file else None,'next_navigation_checked':True,'landscape_clearance_checked':True,'android_content_url_tested':False},indent=2)+'\n')
+        (out/'verification.json').write_text(json.dumps({'models':12,'all_stops_checked':True,'walking_route_samples':2211,'camera_clear_of_model_bounds':True,'eye_height_above_terrain':eye_height,'continuous_segment_endpoints':True,'playback_advances':True,'responsive_aspect':True,'unchanged_master_hashes':True,'errors':errors,'layout_revision':layout['version'],'single_file_external_requests':len(external) if single_file else None,'next_navigation_checked':True,'landscape_clearance_checked':True,'shared_daylight':initial.get('shared_daylight',False),'realtime_shadows':initial.get('realtime_shadows',False),'android_content_url_tested':False},indent=2)+'\n')
         await browser.close()
     print('VILLAGE_CHECK_PASS')
 

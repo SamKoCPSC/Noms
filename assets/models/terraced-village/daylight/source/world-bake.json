@@ -1,0 +1,97 @@
+{
+  "ground": {
+    "lighting": {
+      "sun_direction_y_up": [
+        -60,
+        100,
+        50
+      ],
+      "sun_energy": 2,
+      "sun_color": [
+        1,
+        0.93,
+        0.83
+      ],
+      "sun_angle_degrees": 9,
+      "sky_color": [
+        0.78,
+        0.85,
+        1
+      ],
+      "sky_strength": 0.95,
+      "view_transform": "AgX",
+      "look": "AgX - Medium High Contrast",
+      "exposure": 0.1,
+      "room_atlas_size": 2048,
+      "room_samples": 64,
+      "ground_samples": 32,
+      "landscape_samples": 64,
+      "context_radius": 45,
+      "ground_bounds_xz": [
+        -96,
+        96,
+        -144,
+        80
+      ]
+    },
+    "tiles": 4,
+    "atlas_size": 2048,
+    "full_world_occluders": true,
+    "triangles": 21504
+  },
+  "landscape": {
+    "lighting": {
+      "sun_direction_y_up": [
+        -60,
+        100,
+        50
+      ],
+      "sun_energy": 2,
+      "sun_color": [
+        1,
+        0.93,
+        0.83
+      ],
+      "sun_angle_degrees": 9,
+      "sky_color": [
+        0.78,
+        0.85,
+        1
+      ],
+      "sky_strength": 0.95,
+      "view_transform": "AgX",
+      "look": "AgX - Medium High Contrast",
+      "exposure": 0.1,
+      "room_atlas_size": 2048,
+      "room_samples": 64,
+      "ground_samples": 32,
+      "landscape_samples": 64,
+      "context_radius": 45,
+      "ground_bounds_xz": [
+        -96,
+        96,
+        -144,
+        80
+      ]
+    },
+    "full_world_occluders": true,
+    "baked_corners": 2032212,
+    "export_chunks": 72,
+    "bake_samples": 64,
+    "display_transform": "AgX",
+    "unlit_vertex_colors": true,
+    "texture_uvs_required": false
+  },
+  "triangles": 698908,
+  "glb_bytes": 25131232,
+  "uncompressed_bytes": 112641424,
+  "display_texture_format": "PNG RGB8 sRGB, original resolution",
+  "geometry_compression": {
+    "extension": "EXT_meshopt_compression",
+    "position_bits": 16,
+    "normal_bits": 12,
+    "uv_bits": 16,
+    "triangles_removed": 0
+  },
+  "packed_sha256": "24bac5927a5a4667fa9a268c3c04c1a745400814b6cc43b24ba1bf5b34debcc3"
+}

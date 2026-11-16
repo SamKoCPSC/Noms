@@ -10,7 +10,9 @@ with destination.open('w') as f:
     f.write(html.replace('<script type="module" src="preview.js"></script></html>',''))
     f.write('<script type="text/plain" id="droid-font-notice">'+(folder/'DROID-FONT-NOTICE.txt').read_text().replace('</',r'<\/')+'</script>\n')
     f.write('<script>globalThis.__VILLAGE_LAYOUT__='+json.dumps(layout).replace('</',r'<\/')+';</script>\n')
-    for s in layout['stops']:
+    assets=[*layout['stops']]
+    if layout.get('shared_lighting'):assets.append({'id':'world','model':layout['shared_lighting']['environment']})
+    for s in assets:
         f.write(f'<script type="application/octet-stream" id="asset-{s["id"]}">')
         f.write(base64.b64encode((folder/s['model']).read_bytes()).decode('ascii'))
         f.write('</script>\n')
@@ -18,7 +20,7 @@ with destination.open('w') as f:
 readme='''Noms village layout review
 
 Open noms-village-layout-preview.html directly in Chrome or Edge. It contains
-all twelve original production models and works without a server or internet.
+all twelve locations and their landscape and works without a server or internet.
 The initial file is large because full model geometry and textures are preserved.
 
 Alternatively, extract noms-village-preview-server.zip and run START.py with
@@ -30,9 +32,12 @@ space starts/stops playback when a form control is not focused.
 
 This is a separate layout review, not the deployed About page. All twelve models
 are resident for the overview, so desktop is recommended for the initial review.
-The terrain, elevated paths, backdrop and sky are placeholders. Existing scene
-lighting is retained; no shared world lighting bake has been performed yet.
+The walking paths, backdrop and village layout remain a separate review prototype.
 '''
+if layout.get('shared_lighting'):
+    readme+='\nAll rooms and the landscape use shared bright daylight and baked shadows.\n'
+else:
+    readme+='\nThe room models retain their previous lighting.\n'
 (output/'READ-ME.txt').write_text(readme)
 (folder/'READ-ME.txt').write_text(readme)
 with zipfile.ZipFile(output/'noms-village-preview-server.zip','w',zipfile.ZIP_DEFLATED,compresslevel=4) as z:

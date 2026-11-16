@@ -22,7 +22,7 @@ const sky=new THREE.Mesh(new THREE.SphereGeometry(480,24,12),new THREE.ShaderMat
 const camera=new THREE.PerspectiveCamera(60,1,.08,650);
 const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.minDistance=.5;controls.maxDistance=260;controls.maxPolarAngle=Math.PI*.9;
 let dirty=true;controls.addEventListener('change',()=>{dirty=true;});
-scene.add(new THREE.HemisphereLight('#e4f1ff','#869956',.8));
+const hemisphere=new THREE.HemisphereLight('#e4f1ff','#869956',.8);scene.add(hemisphere);
 const sun=new THREE.DirectionalLight('#fff3dc',1.1);sun.position.set(-60,100,50);scene.add(sun);
 const pmrem=new THREE.PMREMGenerator(renderer), room=new RoomEnvironment();
 scene.environment=pmrem.fromScene(room,.04).texture;room.dispose();pmrem.dispose();
@@ -34,6 +34,14 @@ function line(points,color,radius=.5){const c=new THREE.CatmullRomCurve3(points.
 function label(text,x,y,z){const c=document.createElement('canvas');c.width=512;c.height=80;const ctx=c.getContext('2d');ctx.fillStyle='#faf6e9';ctx.beginPath();ctx.roundRect(0,0,512,80,24);ctx.fill();ctx.fillStyle='#3f4935';ctx.font='600 29px system-ui';ctx.textAlign='center';ctx.fillText(text,256,51);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(8,1.25,1);scene.add(sprite);return sprite;}
 function tree(x,y,z,size){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.28,size*.4,6),mat('#805132'));trunk.position.set(x,y+size*.2,z);terrain.add(trunk);for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.ConeGeometry(size*(.32-i*.055),size*.55,5),mat(i%2?'#7fa638':'#4e7e30'));m.position.set(x,y+size*(.48+i*.22),z);terrain.add(m);}}
 const layout=globalThis.__VILLAGE_LAYOUT__||await fetch('layout.json').then(r=>{if(!r.ok)throw Error('Layout unavailable');return r.json();});
+if(layout.shared_lighting){
+ const settings=layout.shared_lighting.settings;hemisphere.color.setRGB(...settings.sky_color);hemisphere.intensity=settings.sky_strength;
+ sun.color.setRGB(...settings.sun_color);sun.intensity=settings.sun_energy;sun.position.fromArray(settings.sun_direction_y_up);renderer.toneMappingExposure=2**settings.exposure;
+ const outdoor=new THREE.Scene();outdoor.background=new THREE.Color(...settings.sky_color).multiplyScalar(settings.sky_strength);
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshBasicMaterial({color:'#56842e'}));ground.rotation.x=-Math.PI/2;ground.position.y=-15;outdoor.add(ground);
+ const generator=new THREE.PMREMGenerator(renderer);scene.environment.dispose();scene.environment=generator.fromScene(outdoor,.04).texture;generator.dispose();ground.geometry.dispose();ground.material.dispose();
+ document.querySelector('.badge').textContent='Shared daylight · baked shadows';
+}
 // Continuous gently sloping ground replaces the raised display plinths.
 const groundGeometry=new THREE.PlaneGeometry(440,460,220,230);groundGeometry.rotateX(-Math.PI/2);groundGeometry.translate(0,0,-30);
 const gp=groundGeometry.attributes.position;
@@ -58,10 +66,11 @@ try {
     else gltf=await loader.loadAsync(s.model);
     const root=gltf.scene;
     root.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.isMeshBasicMaterial||m.transmission>0)m.toneMapped=false;}});
-    root.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(root),size=b.getSize(new THREE.Vector3()),center=b.getCenter(new THREE.Vector3());
-    const scale=s.width/Math.max(size.x,size.z);const anchor=new THREE.Group();anchor.name=s.id;anchor.position.fromArray(s.position);anchor.rotation.y=s.yaw;
-    root.position.set(-center.x*scale,-b.min.y*scale,-center.z*scale);root.scale.setScalar(scale);anchor.add(root);scene.add(anchor);anchor.updateMatrixWorld(true);
-    const worldBox=new THREE.Box3().setFromObject(anchor),worldSize=worldBox.getSize(new THREE.Vector3());
+    root.updateMatrixWorld(true);const b=s.shared_model?new THREE.Box3(new THREE.Vector3(...s.reference_bounds.min),new THREE.Vector3(...s.reference_bounds.max)):new THREE.Box3().setFromObject(root),size=b.getSize(new THREE.Vector3()),center=b.getCenter(new THREE.Vector3());
+    const scale=s.width/Math.max(size.x,size.z);const anchor=new THREE.Group();anchor.name=s.id;
+    if(!s.shared_model){anchor.position.fromArray(s.position);anchor.rotation.y=s.yaw;root.position.set(-center.x*scale,-b.min.y*scale,-center.z*scale);root.scale.setScalar(scale);}
+    anchor.add(root);scene.add(anchor);anchor.updateMatrixWorld(true);
+    const worldBox=s.shared_model?new THREE.Box3(new THREE.Vector3(...s.reference_box.min),new THREE.Vector3(...s.reference_box.max)):new THREE.Box3().setFromObject(anchor),worldSize=worldBox.getSize(new THREE.Vector3());
     const cap=box(`${s.id} threshold`,[s.position[0],s.position[1]-.12,s.position[2]],[size.x*scale+1,.18,size.z*scale+1],'#c5b899');cap.rotation.y=s.yaw;
     const direction=new THREE.Vector3(...s.lighting.reference_camera.eye).sub(center);
     direction.y=0;direction.normalize().applyAxisAngle(new THREE.Vector3(0,1,0),s.yaw);
@@ -99,6 +108,17 @@ for(let i=0;i<walking.routes.length;i++){
 for(let i=0;i<46;i++){const x=(i%2?-78:80)+Math.sin(i*13.3)*11,z=65-Math.floor(i/2)*9+Math.cos(i*7.1)*4;if(clearProp(new THREE.Vector3(x,0,z)))tree(x,groundHeight(layout,x,z),z,5+i%4);}
 
 const landscape=addLandscape({layout,stops,walking,terrain,mat,riverCurve,reserved:neighborhood.reservations});
+let sharedEnvironment=null;
+if(layout.shared_lighting){
+ try{
+  $('status').textContent='Loading the shared daylight and shadows…';const embedded=document.getElementById('asset-world');let gltf;
+  if(embedded){const bytes=Uint8Array.from(atob(embedded.textContent.trim()),c=>c.charCodeAt(0));embedded.remove();gltf=await loader.parseAsync(bytes.buffer,'');}
+  else if(globalThis.__VILLAGE_LAYOUT__)throw Error('Embedded village landscape missing.');
+  else gltf=await loader.loadAsync(layout.shared_lighting.environment);
+  sharedEnvironment=gltf.scene;sharedEnvironment.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.isMeshBasicMaterial||m.transmission>0)m.toneMapped=false;}});
+  scene.add(sharedEnvironment);terrain.visible=false;
+ }catch(error){$('status').textContent='The village landscape could not load.';$('error').textContent=error.message;$('retry').hidden=false;$('retry').onclick=()=>location.reload();throw error;}
+}
 
 let playing=false,overviewMode=false,progress=0,hold=0,transition=null,last=performance.now();
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -129,7 +149,7 @@ function frame(now){const dt=Math.min((now-last)/1000,.25);last=now;
  else if(playing){if(hold>0)hold-=dt;else{const prev=progress,i=Math.min(10,Math.floor(progress));progress=Math.min(11,progress+dt*layout.walk.speed/walking.routes[i].length);if(Math.floor(progress)>Math.floor(prev)){progress=Math.floor(progress);hold=2.5;}apply(viewAt(progress));updateLabel();if(progress>=11)setPlaying(false);}}
  controls.update();if(dirty){renderer.render(scene,camera);dirty=false;}requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.village={go,overview,style:styleSummary,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
+window.village={go,overview,style:styleSummary,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,shared_daylight:!!sharedEnvironment,realtime_shadows:renderer.shadowMap.enabled,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
  routeSamples:()=>walking.routes.map((r,i)=>Array.from({length:201},(_,j)=>{const p=viewAt(i+j/200);return {progress:i+j/200,eye:p.eye.toArray(),target:p.target.toArray(),ground:groundHeight(layout,p.eye.x,p.eye.z),blocked:walking.blocked(p.eye.x,p.eye.z)};})),
  environment:()=>exportEnvironment(terrain)
 };

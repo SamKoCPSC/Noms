@@ -11,16 +11,27 @@ const layout = JSON.parse(await readFile('assets/models/terraced-village/layout.
 await MeshoptDecoder.ready; await MeshoptEncoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder, 'meshopt.encoder': MeshoptEncoder });
 const receipts = [];
+const anchors=layout.shared_lighting?JSON.parse(await readFile('assets/models/terraced-village/daylight/source/anchors.json')):null;
+const poses=layout.shared_lighting?JSON.parse(await readFile('assets/models/terraced-village/source/camera-poses.json')):null;
 for (const stop of layout.stops) {
-  const before = await readFile(stop.model);
-  const doc = await io.read(stop.model);
+  const source=stop.shared_model||stop.model;
+  const before = await readFile(source);
+  const doc = await io.read(source);
   const count = () => doc.getRoot().listMeshes().flatMap(m => m.listPrimitives()).reduce((n,p) => n+(p.getIndices()?.getCount()||p.getAttribute('POSITION').getCount())/3,0);
   const triangles = count();
-  await copyFile(stop.model,`${out}/models/${stop.id}.glb`);
-  receipts.push({id:stop.id,source:stop.model,sha256:createHash('sha256').update(before).digest('hex'),triangles});
+  await copyFile(source,`${out}/models/${stop.id}.glb`);
+  receipts.push({id:stop.id,source,sha256:createHash('sha256').update(before).digest('hex'),triangles});
+  if(anchors){stop.reference_bounds=anchors[stop.id];stop.reference_box=poses.find(p=>p.id===stop.id).bounds;}
   stop.lighting = JSON.parse(await readFile(stop.lighting));
   stop.model = `models/${stop.id}.glb`;
   console.log('PREVIEW',stop.id,triangles);
+}
+if(layout.shared_lighting){
+  const source=layout.shared_lighting.environment,bytes=await readFile(source);
+  await copyFile(source,`${out}/models/world.glb`);
+  receipts.push({id:'world',source,sha256:createHash('sha256').update(bytes).digest('hex')});
+  layout.shared_lighting.environment='models/world.glb';
+  layout.shared_lighting.settings=JSON.parse(await readFile(layout.shared_lighting.settings));
 }
 await writeFile(`${out}/layout.json`, JSON.stringify(layout));
 await writeFile(`${out}/sources.json`, JSON.stringify(receipts,null,2));
