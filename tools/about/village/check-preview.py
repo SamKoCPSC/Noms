@@ -40,6 +40,13 @@ async def main(url,out):
         assert initial['progress']==0 and not initial['overviewMode']
         if layout.get('shared_lighting'):
             assert initial['shared_daylight'] and not initial['realtime_shadows'],initial
+        if layout.get('stone_paths'):
+            paths=json.loads((ROOT/layout['stone_paths']['verification']).read_text())
+            assert paths['connected_components']==1 and paths['valid_footprint']
+            assert paths['partition_overlap_area']<1e-7 and paths['uncovered_area']<1e-7
+            assert paths['entrances_connected']==12 and paths['walking_routes_covered']==11
+            assert paths['one_height_field'] and paths['continuous_grout_bed']
+            (out/'stone-path-verification.json').write_text(json.dumps(paths,indent=2)+'\n')
         await screenshot('initial-arrival')
         await page.locator('#next').click()
         await page.wait_for_function('village.getState().progress > 0',timeout=90000,polling=250)
@@ -87,6 +94,10 @@ async def main(url,out):
             state=await page.evaluate('village.getState()');assert state['progress']==i and state['models']==12
             await screenshot(f'stop-{i+1:02d}')
         # The route must actually change direction instead of traversing rows.
+        if layout.get('stone_paths'):
+            await page.evaluate('village.go(1,true)')
+            await page.evaluate('village.inspectView([-53,5,22],[-46,.4,14])')
+            await screenshot('stone-junction')
         delta=[poses[i+1]['target'][0]-poses[i]['target'][0] for i in range(11)]
         assert any(x>10 for x in delta) and any(x< -10 for x in delta)
         await page.evaluate('village.go(3.5,true)');await screenshot('transition')

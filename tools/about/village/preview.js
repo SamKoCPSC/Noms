@@ -151,5 +151,6 @@ function frame(now){const dt=Math.min((now-last)/1000,.25);last=now;
 }requestAnimationFrame(frame);
 window.village={go,overview,style:styleSummary,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,shared_daylight:!!sharedEnvironment,realtime_shadows:renderer.shadowMap.enabled,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
  routeSamples:()=>walking.routes.map((r,i)=>Array.from({length:201},(_,j)=>{const p=viewAt(i+j/200);return {progress:i+j/200,eye:p.eye.toArray(),target:p.target.toArray(),ground:groundHeight(layout,p.eye.x,p.eye.z),blocked:walking.blocked(p.eye.x,p.eye.z)};})),
- environment:()=>exportEnvironment(terrain)
+ environment:()=>exportEnvironment(terrain),
+ inspectView:(eye,target)=>{setPlaying(false);transition=null;overviewMode=false;apply({eye:new THREE.Vector3(...eye),target:new THREE.Vector3(...target)});}
 };

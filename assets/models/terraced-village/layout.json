@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "stage": "Shared bright daylight and baked shadows throughout the village",
+  "version": 8,
+  "stage": "Connected matte stone paths with shared bright daylight",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
@@ -371,5 +371,9 @@
   "shared_lighting": {
     "environment": "assets/models/terraced-village/daylight/models/world.glb",
     "settings": "assets/models/terraced-village/daylight/lighting.json"
+  },
+  "stone_paths": {
+    "geometry": "assets/models/terraced-village/daylight/source/stone-paths.json.gz",
+    "verification": "assets/models/terraced-village/daylight/source/stone-path-verification.json"
   }
 }

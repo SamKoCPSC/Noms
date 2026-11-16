@@ -62,5 +62,5 @@ assert len(doc['materials'])==1 and all('COLOR_0' in p['attributes'] for mesh in
 doc['materials'][0].setdefault('extensions',{})['KHR_materials_unlit']={};doc.setdefault('extensionsUsed',[]).append('KHR_materials_unlit')
 encoded=json.dumps(doc,separators=(',',':')).encode();encoded+=b' '*(-len(encoded)%4)
 chunks=struct.pack('<I4s',len(encoded),b'JSON')+encoded+data[20+size:];path.write_bytes(struct.pack('<4sII',b'glTF',2,12+len(chunks))+chunks)
-(out/'vertex-verification.json').write_text(json.dumps(dict(lighting=CONFIG,full_world_occluders=True,baked_corners=count,export_chunks=len(pieces),bake_samples=scene.cycles.samples,display_transform=scene.view_settings.view_transform,unlit_vertex_colors=True,texture_uvs_required=False),indent=2)+'\n')
+(out/'vertex-verification.json').write_text(json.dumps(dict(lighting=CONFIG,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),baked_corners=count,export_chunks=len(pieces),bake_samples=scene.cycles.samples,display_transform=scene.view_settings.view_transform,unlit_vertex_colors=True,texture_uvs_required=False),indent=2)+'\n')
 print('LANDSCAPE_VERTEX_BAKE_COMPLETE',count,flush=True)

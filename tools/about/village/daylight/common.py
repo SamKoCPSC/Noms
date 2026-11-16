@@ -1,5 +1,5 @@
 """Shared settings for native world, room, terrain and vertex-lighting bakes."""
-import bpy, json, math
+import bpy, json, math, gzip
 from pathlib import Path
 from mathutils import Matrix, Vector
 REPO=Path(__file__).resolve().parents[4]
@@ -9,6 +9,9 @@ CONFIG=json.loads((DAY/'lighting.json').read_text())
 LAYOUT=json.loads((ASSET/'layout.json').read_text())
 ANCHORS=json.loads((DAY/'source/anchors.json').read_text())
 xyz=lambda p:(p[0],-p[2],p[1])
+def path_revision():
+    import hashlib
+    return hashlib.sha256((DAY/'source/stone-paths.json.gz').read_bytes()).hexdigest() if LAYOUT.get('stone_paths') else None
 def anchor(key):
     a=ANCHORS[key];lo,hi=a['min'],a['max'];center=[(lo[i]+hi[i])/2 for i in range(3)]
     return Matrix.Translation(xyz(a['position']))@Matrix.Rotation(a['yaw'],4,'Z')@Matrix.Scale(a['scale'],4)@Matrix.Translation((-center[0],center[2],-lo[1]))
@@ -32,7 +35,11 @@ def camera(scene,key):
     scene.render.resolution_x=1000;scene.render.resolution_y=750;scene.render.resolution_percentage=100
 def environment(scene,bounds=None):
     collection=bpy.data.collections.new('Daylight terrain');scene.collection.children.link(collection);materials={}
-    for i,item in enumerate(json.loads((ASSET/'source/world-environment.json').read_text())):
+    items=json.loads((ASSET/'source/world-environment.json').read_text())
+    if LAYOUT.get('stone_paths'):
+        paths=json.loads(gzip.decompress((DAY/'source/stone-paths.json.gz').read_bytes()))
+        items=[item for item in items if item['name'] not in paths['remove_names']]+paths['meshes']
+    for i,item in enumerate(items):
         verts=item['vertices'];normals=item['normals'];indices=item['indices']
         inside=[True]*len(verts) if bounds is None else [bounds[0]<=v[0]<=bounds[1] and bounds[2]<=v[2]<=bounds[3] for v in verts]
         faces=[indices[j:j+3] for j in range(0,len(indices),3) if all(inside[k] for k in indices[j:j+3])]

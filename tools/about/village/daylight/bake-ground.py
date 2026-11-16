@@ -33,5 +33,5 @@ for obj,i in baked:
 bpy.ops.object.select_all(action='DESELECT')
 for obj,_ in baked:obj.select_set(True)
 path=out/'ground.glb';bpy.ops.export_scene.gltf(filepath=str(path),export_format='GLB',use_selection=True,export_animations=False,export_cameras=False,export_lights=False,export_yup=True);finalize(path,expected_count=4)
-(out/'ground.json').write_text(json.dumps(dict(lighting=CONFIG,tiles=4,atlas_size=2048,full_world_occluders=True,triangles=sum(len(o.data.polygons) for o,_ in baked)),indent=2)+'\n')
+(out/'ground.json').write_text(json.dumps(dict(lighting=CONFIG,tiles=4,atlas_size=2048,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),triangles=sum(len(o.data.polygons) for o,_ in baked)),indent=2)+'\n')
 print('GROUND_BAKE_COMPLETE',flush=True)

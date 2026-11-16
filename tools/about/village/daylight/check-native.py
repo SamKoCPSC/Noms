@@ -31,6 +31,16 @@ assert not bpy.data.libraries
 unpacked = [i.name for i in bpy.data.images if i.source == 'FILE' and i.filepath and not i.packed_file]
 assert not unpacked, unpacked
 terrain = bpy.data.collections['World terrain — blockout']
+if LAYOUT.get('stone_paths'):
+    paths=json.loads(gzip.decompress((DAY/'source/stone-paths.json.gz').read_bytes()))
+    assert not any(o.name in paths['remove_names'] for o in terrain.objects)
+    assert all(any(o.name==m['name'] for o in terrain.objects) for m in paths['meshes'])
+    for item in paths['meshes']:
+        obj=terrain.objects[item['name']]
+        assert len(obj.data.vertices)==len(item['vertices'])
+        assert len(obj.data.polygons)*3==len(item['indices'])
+        assert all(max(abs(a-b) for a,b in zip(vertex.co,xyz(point)))<2e-5
+                   for vertex,point in zip(obj.data.vertices,item['vertices']))
 for obj in terrain.objects:
     assert obj.data.has_custom_normals
     shader = obj.active_material.node_tree.nodes.get('Principled BSDF')
@@ -41,5 +51,6 @@ report = dict(native_world_reopened=True, model_instances=len(instances),
     world_meshes=len(terrain.objects), matte_world_materials=True, preserved_edge_normals=True,
     portable_images=True, external_libraries=0, walking_camera_preserved=True,
     sha256=hashlib.sha256(path.read_bytes()).hexdigest(), bytes=path.stat().st_size)
+report['stone_path_geometry_sha256']=path_revision()
 (DAY/'source/native-verification.json').write_text(json.dumps(report, indent=2)+'\n')
 print('DAYLIGHT_NATIVE_CHECK_PASS', json.dumps(report), flush=True)

@@ -41,6 +41,11 @@ baked shadows. The [daylight assets and rebuild instructions](daylight/README.md
 preserve the original source models and the approved walking route. Ground uses
 four lighting atlases; narrow rounded landscape surfaces use baked vertex colors.
 
+Revision 8 replaces overlapping path strips with one connected matte stone
+network. Beveled limestone paving and a continuous grout bed follow the terrain
+and blend smoothly into the entrance forecourts. Ground and landscape shadows
+are rebaked with the same bright settings. All twelve room exports are retained.
+
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
 The original source files are never saved over. Furniture and room geometry stay
@@ -49,11 +54,12 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 7 shared-daylight preview ZIP](https://github.com/SamKoCPSC/Noms/raw/f2b80d9ee1254594e97d1f82fd19b86490cb6edc/noms-village-mobile.zip)
-(about 99.8 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
+[Revision 8 stone-path preview ZIP](https://github.com/SamKoCPSC/Noms/raw/ba1bb483486ddfb3d4adffc2ae170bae4bd82530/noms-village-mobile.zip)
+(about 99.2 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
 [Earlier revision 6 archive](https://github.com/SamKoCPSC/Noms/raw/c418c7ba978a1dba970abc572a320e0cee43c0de/noms-village-mobile.zip).
 
+- [Repaired library junction](daylight/previews/stone-junction.png)
 - [All twelve locations](daylight/previews/all-locations.png)
 - [Shared-daylight native world](daylight/models/terraced-village-daylight.blend)
 - [Original matte layout world](models/terraced-village-blockout.blend)
@@ -102,7 +108,7 @@ The mobile single-file preview compresses their textures as documented below.
 Opaque surfaces use static baked lighting; glass and reflective metal remain
 view dependent and use an approximate outdoor reflection environment.
 
-Paths and landscape are still a blockout. This is a guided outdoor camera route,
+The village layout remains a prototype. This is a guided outdoor camera route,
 not a collision-enabled free-roaming game. Automated checks cover the camera
 corridor against expanded model bounds, new entrance geometry and ground height.
 Entrance approaches also clear neighboring plots by their half-width. It does not include
@@ -136,7 +142,7 @@ node tools/about/village/build-mobile-preview.mjs /tmp/noms-village-preview /tmp
 ```
 
 This writes `OPEN-VILLAGE-MOBILE.html` and a conversion receipt. It uses WebP
-quality 93 textures at their original dimensions and verifies every copied
+quality 91 textures at their original dimensions and verifies every copied
 geometry buffer range against the source. It does not change production assets
 or Blender masters. Zip the HTML for distribution. All twelve scenes remain
 resident, so this packaging fix does not establish phone memory/performance

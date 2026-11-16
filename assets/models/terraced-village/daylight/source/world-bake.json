@@ -37,6 +37,7 @@
     "tiles": 4,
     "atlas_size": 2048,
     "full_world_occluders": true,
+    "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
     "triangles": 21504
   },
   "landscape": {
@@ -75,16 +76,17 @@
       ]
     },
     "full_world_occluders": true,
-    "baked_corners": 2032212,
+    "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
+    "baked_corners": 2210370,
     "export_chunks": 72,
     "bake_samples": 64,
     "display_transform": "AgX",
     "unlit_vertex_colors": true,
     "texture_uvs_required": false
   },
-  "triangles": 698908,
-  "glb_bytes": 25131232,
-  "uncompressed_bytes": 112641424,
+  "triangles": 758294,
+  "glb_bytes": 26785212,
+  "uncompressed_bytes": 118753780,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -93,5 +95,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "24bac5927a5a4667fa9a268c3c04c1a745400814b6cc43b24ba1bf5b34debcc3"
+  "packed_sha256": "dee8cdf4d4ee557aea91d62b5cb6138b781f504225cb40524d51c8f4a28e308e"
 }

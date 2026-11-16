@@ -8,7 +8,7 @@ contents, placements and walking route are preserved.
 
 The editable [native world](models/terraced-village-daylight.blend) includes all
 original room shaders, packed images, one sun and the walking camera. It contains
-24,226 source objects in twelve collection instances and 1,082 landscape meshes.
+24,226 source objects in twelve collection instances, plus the outdoor landscape.
 The original world and individual masters are retained separately, unchanged.
 
 The browser assets are derivatives of this native scene:
@@ -38,6 +38,8 @@ repository's Node dependencies. Two room workers with two threads each fit the
 four-core bake machine; run the complete-world bakes afterward to bound memory.
 
 ```sh
+python -m pip install numpy shapely==2.2.0
+python tools/about/village/stone-paths.py
 node tools/about/village/daylight/anchors.mjs
 blender -b -t 2 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/build-world.py -- assets/models/terraced-village/daylight/models/terraced-village-daylight.blend
 python tools/about/village/daylight/run.py /tmp/village-daylight --workers 2 --threads 2
@@ -53,7 +55,7 @@ node tools/about/village/build-mobile-preview.mjs /tmp/noms-village-daylight /tm
 Room bakes resume only when settings and packed-asset hashes match. The renderer
 uses the original bounds to preserve the approved camera framing despite joining
 meshes for export. Geometry compression removes no triangles. The single-file
-preview uses WebP quality 93 at the original texture dimensions and verifies
+preview uses WebP quality 91 at the original texture dimensions and verifies
 geometry bytes against its input GLBs. This keeps the ZIP below GitHub’s 100 MiB
 file limit; the repository GLBs retain their lossless PNG textures.
 
@@ -73,3 +75,23 @@ Both preview formats passed all twelve stops, playback, responsive aspect and
 2,211 walking-route samples. Camera stops match the previous layout exactly.
 These checks ran in desktop Chromium with software rendering; direct Android
 file launching and phone performance have not been measured.
+
+## Connected stone paths (revision 8)
+
+The old independently extruded path strips and entrance forecourts are replaced
+by one unioned footprint. Terrain-following, softly beveled limestone pieces use
+small variations of warm gray. A continuous grout bed joins the entire network,
+including all twelve entrance forecourts. The bed extends into the terrain; it
+has no floating open ends. Existing steps and room interiors remain in place.
+
+The builder partitions the complete footprint into non-overlapping stone cells
+before adding joints and bevels. One continuous height function follows the ground
+and blends into the level forecourts, so crossing branches cannot disagree about
+height. It verifies footprint connectivity, partition coverage, overlap area,
+terrain clearance, every walking route and all twelve entrance connections.
+
+[Path geometry checks](source/stone-path-verification.json) and the compressed
+geometry source are retained. `common.environment()` replaces the old paths from
+the baseline environment when rebuilding the current native world. The baseline
+world and its geometry snapshot remain unchanged as source inputs. Landscape and
+ground shadows are rebaked with the existing bright lighting; room GLBs are retained.

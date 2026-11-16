@@ -28,6 +28,14 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
   assert.equal(textures.length, id === 'world' ? 4 : 2);
   for (const tex of textures) assert.deepEqual(tex.getSize(), [2048, 2048], id);
   if (id === 'world') {
+    if(layout.stone_paths){
+      const bytes=await readFile(layout.stone_paths.geometry);
+      const hash=createHash('sha256').update(bytes).digest('hex');
+      assert.equal(receipt.ground.stone_path_geometry_sha256,hash);
+      assert.equal(receipt.landscape.stone_path_geometry_sha256,hash);
+      const paths=JSON.parse(await readFile(layout.stone_paths.verification));
+      assert.equal(paths.sha256,hash);
+    }
     assert.deepEqual(receipt.ground.lighting, config);
     assert.deepEqual(receipt.landscape.lighting, config);
     assert(receipt.ground.full_world_occluders && receipt.landscape.full_world_occluders);
