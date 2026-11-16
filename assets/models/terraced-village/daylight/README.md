@@ -150,3 +150,28 @@ The downloadable ZIP uses Zopfli to optimize standard Deflate compression withou
 changing the embedded HTML or model data. Ordinary ZIP readers can extract it;
 no additional browser decoder is required. The packager verifies file checksums
 and extracted bytes before publishing the archive.
+
+
+## Village names and sign mounts (revision 11)
+
+The direction boards now use the same playful place names as the tour menu.
+Destination lettering reserves space for the arrows on both faces. Street posts
+have a slim oval cross-section contained within the sign backing and terminate
+below the badge edge. Road noticeboard and welcome-board supports sit behind
+their backing boards, with positive clearance.
+
+Signs are stored in `source/signage.json.gz` as a replacement layer over the
+immutable world snapshot. Grass, flowers, paths, houses, room models and camera
+poses are preserved. `signage-verification.json` records names, sign positions,
+mount clearances and the geometry hash. Native and bake receipts verify that
+same hash; browser checks verify both face clearances and user-facing names.
+
+To regenerate this layer after editing `neighborhood.js` or the layout titles,
+build and serve a preview first, then run:
+
+```sh
+python tools/about/village/export-signage.py http://127.0.0.1:8766
+```
+
+Then rebuild the native world and the two outdoor lighting passes, pack the
+world and rebuild the normal/mobile previews using the commands above.

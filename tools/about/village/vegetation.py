@@ -205,7 +205,9 @@ result=dict(baseline_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),remo
 data=json.dumps(result,separators=(',',':')).encode();out=DAY/'source/vegetation.json.gz';out.write_bytes(gzip.compress(data,compresslevel=9,mtime=0))
 report=dict(groundcover_vertices_checked_against_paving=checked_vertices,groundcover_path_intrusions=0,finite_vertices_colors_and_unit_normals=True,seed=912743,baseline_sha256=result['baseline_sha256'],sha256=hashlib.sha256(out.read_bytes()).hexdigest(),bytes=out.stat().st_size,foliage_components=len(foliage_proof),foliage_within_original_bounds=True,evergreen_undersides_closed=True,petal_tops_face_sky=True,grass_spacing=spacing,grass_blades_per_clump=3,buried_grass_caps_omitted=True,grass_clumps=len(clumps),grass_blades=blades,flower_patches=len(patches),individual_flowers=flower_count,triangles=sum(len(m['indices'])//3 for m in meshes.values()),meshes=len(meshes),minimum_grass_center_path_clearance=min(network.distance(Point(x,z)) for x,z in clumps),grass_envelope_radius=.28,flower_envelope_radius=1.28,groundcover_max_height=.85,paths_rooms_river_props_excluded=True,stone_path_sha256=hashlib.sha256((DAY/'source/stone-paths.json.gz').read_bytes()).hexdigest(),original_foliage_bounds=foliage_proof)
 (DAY/'source/vegetation-verification.json').write_text(json.dumps(report,indent=2)+'\n')
-layout['version']=10;layout['stage']='Denser meadow with connected stone paths and shared bright daylight'
+# Rebuilding an existing layer must not downgrade a newer world revision.
+if layout.get('version',0)<=10:
+    layout['version']=10;layout['stage']='Denser meadow with connected stone paths and shared bright daylight'
 layout['vegetation']=dict(geometry=str(out.relative_to(ROOT)),verification=str((DAY/'source/vegetation-verification.json').relative_to(ROOT)),style='Matte folded grass, daisies, buttercups, lavender and ridged layered foliage')
 (ASSET/'layout.json').write_text(json.dumps(layout,indent=2)+'\n')
 print('VEGETATION_GENERATED',json.dumps({k:v for k,v in report.items() if k!='original_foliage_bounds'}),flush=True)

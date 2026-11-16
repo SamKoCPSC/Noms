@@ -9,11 +9,12 @@
   "responsive_aspect": true,
   "unchanged_master_hashes": true,
   "errors": [],
-  "layout_revision": 10,
+  "layout_revision": 11,
   "single_file_external_requests": 0,
   "next_navigation_checked": true,
   "landscape_clearance_checked": true,
   "shared_daylight": true,
   "realtime_shadows": false,
-  "android_content_url_tested": false
+  "android_content_url_tested": false,
+  "sign_names_and_mounts_checked": true
 }

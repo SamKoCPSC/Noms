@@ -50,6 +50,13 @@ if LAYOUT.get('vegetation'):
         assert 'VegetationTint' in obj.data.color_attributes
         assert all(max(abs(a-b) for a,b in zip(vertex.co,xyz(point)))<2e-5 for vertex,point in zip(obj.data.vertices,item['vertices']))
     assert not any(o.name.startswith(('Rounded leafy canopy','Leafy low shrub','Small meadow flower')) for o in terrain.objects)
+if LAYOUT.get('signage'):
+    signs=json.loads(gzip.decompress((DAY/'source/signage.json.gz').read_bytes()))
+    for item in signs['meshes']:
+        matches=[o for o in terrain.objects if (o.name==item['name'] or o.name.startswith(item['name']+'.'))
+                 and len(o.data.vertices)==len(item['vertices'])]
+        assert any(all(max(abs(a-b) for a,b in zip(vertex.co,xyz(point)))<2e-5
+                       for vertex,point in zip(obj.data.vertices,item['vertices'])) for obj in matches),item['name']
 for obj in terrain.objects:
     assert obj.data.has_custom_normals
     shader = obj.active_material.node_tree.nodes.get('Principled BSDF')
@@ -62,5 +69,6 @@ report = dict(native_world_reopened=True, model_instances=len(instances),
     sha256=hashlib.sha256(path.read_bytes()).hexdigest(), bytes=path.stat().st_size)
 report['stone_path_geometry_sha256']=path_revision()
 report['vegetation_geometry_sha256']=vegetation_revision()
+report['signage_geometry_sha256']=signage_revision()
 (DAY/'source/native-verification.json').write_text(json.dumps(report, indent=2)+'\n')
 print('DAYLIGHT_NATIVE_CHECK_PASS', json.dumps(report), flush=True)

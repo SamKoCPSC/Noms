@@ -81,6 +81,14 @@ async def main(url,out):
         assert len(neighborhood['houses'])==8 and len(neighborhood['streets'])==11,neighborhood
         assert not neighborhood['camera_collisions'] and neighborhood['lettering_is_geometry'],neighborhood
         assert neighborhood['road_signs']>=3 and neighborhood['lanterns']>=6 and neighborhood['welcome_board'],neighborhood
+        if layout.get('signage'):
+            signs=json.loads((ROOT/layout['signage']['verification']).read_text())
+            assert hashlib.sha256((ROOT/layout['signage']['geometry']).read_bytes()).hexdigest()==signs['sha256']
+            assert signs['names']=={s['id']:s['title'] for s in layout['stops']}
+            assert [s['destination'] for s in neighborhood['streets']]==[s['title'] for s in layout['stops'][1:]]
+            assert all(v>0 for m in neighborhood['sign_mounts'] for k,v in m.items() if k.endswith('clearance'))
+            assert await page.locator('#stops option').all_text_contents()==[f"{i+1}. {s['title']}" for i,s in enumerate(layout['stops'])]
+            (out/'signage-verification.json').write_text(json.dumps(signs,indent=2)+'\n')
         (out/'neighborhood-verification.json').write_text(json.dumps(neighborhood,indent=2)+'\n')
         style=await page.evaluate('village.style()')
         assert style['roughness']==1 and style['specularIntensity']<=.08 and style['clearcoat']==0
@@ -99,7 +107,16 @@ async def main(url,out):
         for i in range(12):
             await page.evaluate('i=>village.go(i,true)',i);await page.wait_for_timeout(150)
             state=await page.evaluate('village.getState()');assert state['progress']==i and state['models']==12
+            assert await page.locator('#title').inner_text()==f"{i+1} / 12 · {layout['stops'][i]['title']}"
             await screenshot(f'stop-{i+1:02d}')
+        if layout.get('signage'):
+            import math
+            for i in [0,6]:
+                sign=neighborhood['streets'][i];x,y,z=sign['position'];yaw=sign['yaw']
+                for side in [1,-1]:
+                    eye=[x+math.sin(yaw)*side*6.5,y+3.7,z+math.cos(yaw)*side*6.5]
+                    await page.evaluate('(p)=>village.inspectView(p.eye,p.target)',dict(eye=eye,target=[x,y+3.4,z]))
+                    await screenshot(f'sign-{i+1:02d}-'+('front' if side==1 else 'back'))
         # The route must actually change direction instead of traversing rows.
         if layout.get('stone_paths'):
             await page.evaluate('village.go(1,true)')
@@ -116,14 +133,16 @@ async def main(url,out):
         await page.evaluate('village.go(3.5,true)');await screenshot('transition')
         await page.evaluate('village.go(.5,true)');await screenshot('walk-library')
         await page.evaluate('village.go(7.5,true)');await screenshot('walk-market')
-        await page.evaluate('village.go(4,true)');await page.locator('#play').click();await page.wait_for_timeout(3500)
-        assert (await page.evaluate('village.getState()'))['progress']>4
+        await page.evaluate('village.go(4,true)');await page.locator('#play').click()
+        # Software rendering can delay animation frames under concurrent load.
+        # Assert actual movement rather than assuming a fixed wall-clock delay.
+        await page.wait_for_function('village.getState().progress > 4',timeout=90000,polling=250)
         await page.locator('#play').click()
         await page.set_viewport_size({'width':393,'height':852});await page.evaluate('village.go(0,true)');await screenshot('mobile')
         state=await page.evaluate('village.getState()');assert abs(state['aspect']-393/852)<1e-8
         assert not errors,errors
         assert not external,external
-        (out/'verification.json').write_text(json.dumps({'models':12,'all_stops_checked':True,'walking_route_samples':2211,'camera_clear_of_model_bounds':True,'eye_height_above_terrain':eye_height,'continuous_segment_endpoints':True,'playback_advances':True,'responsive_aspect':True,'unchanged_master_hashes':True,'errors':errors,'layout_revision':layout['version'],'single_file_external_requests':len(external) if single_file else None,'next_navigation_checked':True,'landscape_clearance_checked':True,'shared_daylight':initial.get('shared_daylight',False),'realtime_shadows':initial.get('realtime_shadows',False),'android_content_url_tested':False},indent=2)+'\n')
+        (out/'verification.json').write_text(json.dumps({'models':12,'all_stops_checked':True,'walking_route_samples':2211,'camera_clear_of_model_bounds':True,'eye_height_above_terrain':eye_height,'continuous_segment_endpoints':True,'playback_advances':True,'responsive_aspect':True,'unchanged_master_hashes':True,'errors':errors,'layout_revision':layout['version'],'single_file_external_requests':len(external) if single_file else None,'next_navigation_checked':True,'landscape_clearance_checked':True,'shared_daylight':initial.get('shared_daylight',False),'realtime_shadows':initial.get('realtime_shadows',False),'android_content_url_tested':False,'sign_names_and_mounts_checked':bool(layout.get('signage'))},indent=2)+'\n')
         await browser.close()
     print('VILLAGE_CHECK_PASS')
 

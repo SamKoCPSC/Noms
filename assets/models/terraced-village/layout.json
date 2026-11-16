@@ -1,11 +1,11 @@
 {
-  "version": 10,
-  "stage": "Denser meadow with connected stone paths and shared bright daylight",
+  "version": 11,
+  "stage": "Noms village place names and clear sign mounts with shared bright daylight",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
       "id": "kitchen",
-      "title": "Kitchen",
+      "title": "Noms Test Kitchen",
       "position": [
         -37.5,
         -0.07,
@@ -26,7 +26,7 @@
     },
     {
       "id": "library",
-      "title": "Library",
+      "title": "The Noms Nook",
       "position": [
         -42.5,
         0.35,
@@ -47,7 +47,7 @@
     },
     {
       "id": "bedroom",
-      "title": "Bedroom",
+      "title": "Crumb & Cozy",
       "position": [
         -26.25,
         0.77,
@@ -68,7 +68,7 @@
     },
     {
       "id": "supermarket",
-      "title": "Supermarket",
+      "title": "The Noms Pantry",
       "position": [
         6.25,
         0.823,
@@ -89,7 +89,7 @@
     },
     {
       "id": "office",
-      "title": "Home office",
+      "title": "Bites & Bytes",
       "position": [
         37.5,
         0.613,
@@ -110,7 +110,7 @@
     },
     {
       "id": "corporate-office",
-      "title": "Corporate office",
+      "title": "The Lunchroom Lab",
       "position": [
         42.5,
         0.157,
@@ -131,7 +131,7 @@
     },
     {
       "id": "brick-kitchen",
-      "title": "Brick kitchen",
+      "title": "Second Helpings",
       "position": [
         15.0,
         -0.14,
@@ -152,7 +152,7 @@
     },
     {
       "id": "bakery",
-      "title": "Baking lab",
+      "title": "Rise & Noms",
       "position": [
         -15.0,
         0.262,
@@ -173,7 +173,7 @@
     },
     {
       "id": "farmers-market",
-      "title": "Farmers\u2019 market",
+      "title": "Gather & Graze",
       "position": [
         13.75,
         0.315,
@@ -194,7 +194,7 @@
     },
     {
       "id": "social-kitchen",
-      "title": "Social kitchen",
+      "title": "The Slow Simmer",
       "position": [
         1.25,
         1.225,
@@ -215,7 +215,7 @@
     },
     {
       "id": "riverside-campsite",
-      "title": "Riverside cabin",
+      "title": "Campfire Crumbs",
       "position": [
         -32.5,
         1.208,
@@ -237,7 +237,7 @@
     },
     {
       "id": "garden",
-      "title": "Garden cookout",
+      "title": "The Noms Table",
       "position": [
         -11.25,
         1.663,
@@ -380,5 +380,9 @@
     "geometry": "assets/models/terraced-village/daylight/source/vegetation.json.gz",
     "verification": "assets/models/terraced-village/daylight/source/vegetation-verification.json",
     "style": "Matte folded grass, daisies, buttercups, lavender and ridged layered foliage"
+  },
+  "signage": {
+    "geometry": "assets/models/terraced-village/daylight/source/signage.json.gz",
+    "verification": "assets/models/terraced-village/daylight/source/signage-verification.json"
   }
 }

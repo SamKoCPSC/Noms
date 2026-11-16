@@ -64,8 +64,8 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 10 denser meadow preview ZIP](https://github.com/SamKoCPSC/Noms/raw/c42f31bb79726f967b1a447856c5dfb9442db31d/noms-village-mobile.zip)
-(about 98.7 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
+[Revision 11 village names preview ZIP](https://github.com/SamKoCPSC/Noms/raw/b1fab1cb9f3b9648e36b66f435394e2db30baebf/noms-village-mobile.zip)
+(about 98.9 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
 [Earlier revision 6 archive](https://github.com/SamKoCPSC/Noms/raw/c418c7ba978a1dba970abc572a320e0cee43c0de/noms-village-mobile.zip).
 
@@ -198,3 +198,24 @@ python tools/about/village/check-preview.py http://127.0.0.1:8766 /tmp/village-c
 blender -b -t 2 --disable-autoexec --python-exit-code 1 --python tools/about/village/check-master.py -- \
   assets/models/terraced-village/models/terraced-village-blockout.blend /tmp/village-master-check.json
 ```
+
+
+## Village place names
+
+Revision 11 fixes supports protruding through sign faces and gives the signs and
+tour menu matching Noms-themed names. Internal asset IDs remain stable.
+
+| Location | Village name |
+| --- | --- |
+| First kitchen | Noms Test Kitchen |
+| Library | The Noms Nook |
+| Bedroom | Crumb & Cozy |
+| Supermarket | The Noms Pantry |
+| Home office | Bites & Bytes |
+| Corporate office | The Lunchroom Lab |
+| Brick loft kitchen | Second Helpings |
+| Bakery | Rise & Noms |
+| Farmers market | Gather & Graze |
+| Minimalist kitchen | The Slow Simmer |
+| Riverside campsite | Campfire Crumbs |
+| Garden cookout | The Noms Table |

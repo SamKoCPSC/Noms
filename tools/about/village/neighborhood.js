@@ -11,7 +11,7 @@ import { softBox, softRoof } from './world-style.js';
 export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCurve }) {
   const font = new FontLoader().parse(fontData);
   const group = new THREE.Group(); group.name = 'Noms village neighborhood';
-  const occupied = [], reservations = [], solids = [], signs = [], homes = [];
+  const occupied = [], reservations = [], solids = [], signs = [], homes = [], mountChecks = [];
   terrain.updateMatrixWorld(true);
   // Existing individual props are still separate here (landscape is added later).
   terrain.traverse(o => {
@@ -38,16 +38,20 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
     const o = new THREE.Mesh(geometry, mat(color)); o.name = name;o.position.set(...p);o.rotation.set(...rotation);parent.add(o);solids.push(o);return o;
   }
   const box = (parent,name,p,size,color,rotation) => mesh(parent,name,softBox(size),color,p,rotation);
+  function localBounds(object) {
+    object.updateMatrix();
+    return new THREE.Box3().setFromBufferAttribute(object.geometry.attributes.position).applyMatrix4(object.matrix);
+  }
   function text(parent, words, p, width, size = .43, color = '#fff0ca', back = false) {
     const g = new TextGeometry(words,{font,size,depth:.012,curveSegments:3,bevelEnabled:false});g.computeBoundingBox();
     const b=g.boundingBox,scale=Math.min(1,width/(b.max.x-b.min.x));g.translate(-(b.min.x+b.max.x)/2,-(b.min.y+b.max.y)/2,0);g.scale(scale,scale,1);
     mesh(parent,`Lettering: ${words}`,g,color,p,[0,back?Math.PI:0,0]);
   }
-  function plaque(parent, words, y, width, color = '#345d43', size = .43) {
+  function plaque(parent, words, y, width, color = '#345d43', size = .43, textWidth = width-.28) {
     box(parent,`Street plaque: ${words}`,[0,y,0],[width+.12,.95,.18],'#d5bd83');
     box(parent,'Painted sign inset',[0,y,.105],[width,.81,.04],color);
     box(parent,'Painted sign reverse',[0,y,-.105],[width,.81,.04],color);
-    text(parent,words,[0,y,.135],width-.28,size);text(parent,words,[0,y,-.135],width-.28,size,'#fff0ca',true);
+    text(parent,words,[0,y,.135],textWidth,size);text(parent,words,[0,y,-.135],textWidth,size,'#fff0ca',true);
   }
   function reserve(parent) {
     parent.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(parent);reservations.push(b);return b;
@@ -69,11 +73,14 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
     const name=layout.neighborhood.streets[i],spot=roadside(i,1.95);
     if(!spot)throw Error(`No clear street-sign location: ${name}`);
     const g=groundGroup(`Street sign ${i+1}: ${name}`,spot.p,spot.yaw);
-    mesh(g,'Street sign timber post',new THREE.CylinderGeometry(.13,.16,5.05,8),'#65503b',[0,2.525,0]);
+    // Flatten the support inside the solid board core; both painted faces stay clear.
+    const post=mesh(g,'Street sign timber post',new THREE.CylinderGeometry(.13,.16,4.96,8),'#65503b',[0,2.48,0]);post.scale.z=.25;
     plaque(g,name,4.05,3.6,'#345d43',.32);
     const next=stops[i+1].title;
-    plaque(g,next,2.95,3.6,'#7f4934',.24);
-    box(g,'Noms village sign badge',[0,4.83,0],[2.5,.42,.14],'#dfc894');
+    plaque(g,next,2.95,3.6,'#7f4934',.24,2.35);
+    const badge=box(g,'Noms village sign badge',[0,4.83,0],[2.5,.42,.14],'#dfc894');
+    const postBounds=localBounds(post),badgeBounds=localBounds(badge);
+    mountChecks.push({kind:'street',face_clearance:Math.min(badgeBounds.max.z-postBounds.max.z,postBounds.min.z-badgeBounds.min.z),top_clearance:badgeBounds.max.y-postBounds.max.y});
     text(g,'NOMS VILLAGE',[0,4.83,.09],2.3,.22,'#39513a');
     text(g,'NOMS VILLAGE',[0,4.83,-.09],2.3,.22,'#39513a',true);
     // Arrow direction follows the route toward its next stop in sign-local space.
@@ -83,7 +90,7 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
     const ag=new THREE.ExtrudeGeometry(arrow,{depth:.02,bevelEnabled:false});
     mesh(g,'Direction arrow',ag,'#f9e8bf',[direction*1.48,2.95,.14],[0,0,direction===1?0:Math.PI]);
     mesh(g,'Direction arrow reverse',ag.clone(),'#f9e8bf',[direction*1.48,2.95,-.14],[0,Math.PI,direction===1?Math.PI:0]);
-    reserve(g);signs.push({street:name,destination:next,position:g.position.toArray(),route:i});
+    reserve(g);signs.push({street:name,destination:next,position:g.position.toArray(),yaw:spot.yaw,route:i});
   }
   function roof(parent,w,d,base,rise,color) {
     mesh(parent,'Pitched cottage roof',softRoof(w,d,rise),color,[0,base,0]);
@@ -132,8 +139,9 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
   for(const [i,words] of [[0,['SLOW','GOOD FOOD AHEAD']],[3,['SHARE','THE PATH']],[7,['MARKET','CROSSING']],[9,['TAKE TIME','TO GATHER']]]) {
     const spot=roadside(i,2.3,.68);if(!spot)continue;
     const g=groundGroup(`Village road sign ${words.join(' ')}`,spot.p,spot.yaw);
-    mesh(g,'Road sign post',new THREE.CylinderGeometry(.11,.14,3.8,7),'#61523c',[0,1.9,0]);
-    box(g,'Road sign ochre rim',[0,3.25,0],[3.7,1.65,.17],'#c69a42');box(g,'Road sign cream face',[0,3.25,.1],[3.49,1.43,.05],'#e7d5a0');
+    const post=mesh(g,'Road sign post',new THREE.CylinderGeometry(.11,.14,3.8,7),'#61523c',[0,1.9,-.27]);
+    const rim=box(g,'Road sign ochre rim',[0,3.25,0],[3.7,1.65,.17],'#c69a42');box(g,'Road sign cream face',[0,3.25,.1],[3.49,1.43,.05],'#e7d5a0');
+    mountChecks.push({kind:'road',rear_clearance:localBounds(rim).min.z-localBounds(post).max.z});
     text(g,words[0],[0,3.55,.15],3.2,.38,'#3b5540');text(g,words[1],[0,2.96,.15],3.2,.27,'#3b5540');reserve(g);roadSigns++;
   }
   for(let i=0;i<11;i++) {
@@ -147,8 +155,9 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
   const welcome=roadside(0,4,.08);
   if(welcome) {
     const g=groundGroup('Noms village welcome board',welcome.p,welcome.yaw);
-    for(const x of [-3.2,3.2])box(g,'Welcome board posts',[x,2,0],[.22,4,.22],'#71543b');
-    box(g,'Welcome board frame',[0,3.15,0],[7.1,2,.2],'#b5935d');box(g,'Welcome board green face',[0,3.15,.13],[6.85,1.75,.08],'#395b43');
+    const posts=[-3.2,3.2].map(x=>box(g,'Welcome board posts',[x,2,-.24],[.22,4,.22],'#71543b'));
+    const rim=box(g,'Welcome board frame',[0,3.15,0],[7.1,2,.2],'#b5935d');box(g,'Welcome board green face',[0,3.15,.13],[6.85,1.75,.08],'#395b43');
+    mountChecks.push({kind:'welcome',rear_clearance:localBounds(rim).min.z-Math.max(...posts.map(p=>localBounds(p).max.z))});
     text(g,'NOMS VILLAGE',[0,3.55,.19],6.2,.57);text(g,'GOOD FOOD. GOOD COMPANY.',[0,2.75,.19],6.1,.25);reserve(g);
   }
   group.updateMatrixWorld(true);
@@ -169,6 +178,6 @@ export function addNeighborhood({ layout, stops, walking, terrain, mat, riverCur
   }
   return { reservations, check:()=>{
     const collisions=[];for(let i=0;i<walking.routes.length;i++)for(let j=0;j<=200;j++)if(bounds.some(b=>b.containsPoint(walking.viewAt(i+j/200).eye)))collisions.push(i+j/200);
-    return {houses:homes,streets:signs,road_signs:roadSigns,lanterns,welcome_board:!!welcome,camera_collisions:collisions,lettering_is_geometry:true,detail_parts:solids.length,render_meshes:batches.size};
+    return {houses:homes,streets:signs,road_signs:roadSigns,lanterns,welcome_board:!!welcome,camera_collisions:collisions,lettering_is_geometry:true,sign_mounts:mountChecks,detail_parts:solids.length,render_meshes:batches.size};
   }};
 }

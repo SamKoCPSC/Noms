@@ -15,6 +15,9 @@ def path_revision():
 def vegetation_revision():
     import hashlib
     return hashlib.sha256((DAY/'source/vegetation.json.gz').read_bytes()).hexdigest() if LAYOUT.get('vegetation') else None
+def signage_revision():
+    import hashlib
+    return hashlib.sha256((DAY/'source/signage.json.gz').read_bytes()).hexdigest() if LAYOUT.get('signage') else None
 def anchor(key):
     a=ANCHORS[key];lo,hi=a['min'],a['max'];center=[(lo[i]+hi[i])/2 for i in range(3)]
     return Matrix.Translation(xyz(a['position']))@Matrix.Rotation(a['yaw'],4,'Z')@Matrix.Scale(a['scale'],4)@Matrix.Translation((-center[0],center[2],-lo[1]))
@@ -48,6 +51,11 @@ def environment(scene,bounds=None):
     if LAYOUT.get('stone_paths'):
         paths=json.loads(gzip.decompress((DAY/'source/stone-paths.json.gz').read_bytes()))
         items=[item for item in items if item['name'] not in paths['remove_names']]+paths['meshes']
+    if LAYOUT.get('signage'):
+        import hashlib
+        signs=json.loads(gzip.decompress((DAY/'source/signage.json.gz').read_bytes()))
+        assert hashlib.sha256((ASSET/'source/world-environment.json').read_bytes()).hexdigest()==signs['baseline_sha256']
+        items=[item for item in items if item['name'] not in signs['remove_names']]+signs['meshes']
     for i,item in enumerate(items):
         verts=item['vertices'];normals=item['normals'];indices=item['indices']
         inside=[True]*len(verts) if bounds is None else [bounds[0]<=v[0]<=bounds[1] and bounds[2]<=v[2]<=bounds[3] for v in verts]

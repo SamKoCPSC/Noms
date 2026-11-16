@@ -47,6 +47,16 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
       assert(plants.finite_vertices_colors_and_unit_normals && plants.evergreen_undersides_closed && plants.petal_tops_face_sky);
       assert(plants.minimum_grass_center_path_clearance>plants.grass_envelope_radius);
     }
+    if(layout.signage){
+      const hash=createHash('sha256').update(await readFile(layout.signage.geometry)).digest('hex');
+      assert.equal(receipt.ground.signage_geometry_sha256,hash);
+      assert.equal(receipt.landscape.signage_geometry_sha256,hash);
+      const signs=JSON.parse(await readFile(layout.signage.verification));
+      assert.equal(signs.sha256,hash);
+      assert(signs.street_positions_preserved && signs.non_sign_source_meshes_preserved && signs.noticeboard_positions_preserved && signs.direction_arrows_preserved);
+      assert.deepEqual(signs.names,Object.fromEntries(layout.stops.map(s=>[s.id,s.title])));
+      assert(signs.sign_mounts.every(m=>Object.entries(m).filter(([k])=>k.endsWith('clearance')).every(([,v])=>v>0)));
+    }
     assert.deepEqual(receipt.ground.lighting, config);
     assert.deepEqual(receipt.landscape.lighting, config);
     assert(receipt.ground.full_world_occluders && receipt.landscape.full_world_occluders);
