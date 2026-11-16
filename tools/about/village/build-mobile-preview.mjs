@@ -12,6 +12,7 @@ const layout = JSON.parse(await readFile(`${folder}/layout.json`, 'utf8'));
 const receipts = [];
 let html = (await readFile(`${folder}/index.html`, 'utf8'))
   .replace('<script type="module" src="preview.js"></script></html>', '');
+html += '<script type="text/plain" id="droid-font-notice">' + (await readFile('tools/about/village/DROID-FONT-NOTICE.txt','utf8')).replaceAll('</','<\\/') + '</script>\n';
 html += '<script>globalThis.__VILLAGE_LAYOUT__=' + JSON.stringify(layout).replaceAll('</', '<\\/') + ';</script>\n';
 for (const stop of layout.stops) {
   const original = await readFile(`${folder}/${stop.model}`);

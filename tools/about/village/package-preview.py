@@ -8,6 +8,7 @@ html=(folder/'index.html').read_text()
 destination=output/'noms-village-layout-preview.html'
 with destination.open('w') as f:
     f.write(html.replace('<script type="module" src="preview.js"></script></html>',''))
+    f.write('<script type="text/plain" id="droid-font-notice">'+(folder/'DROID-FONT-NOTICE.txt').read_text().replace('</',r'<\/')+'</script>\n')
     f.write('<script>globalThis.__VILLAGE_LAYOUT__='+json.dumps(layout).replace('</',r'<\/')+';</script>\n')
     for s in layout['stops']:
         f.write(f'<script type="application/octet-stream" id="asset-{s["id"]}">')

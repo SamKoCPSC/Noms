@@ -6,6 +6,7 @@ import { MeshoptDecoder } from 'meshoptimizer';
 import { groundHeight, makeWalkingRoutes } from './walking-world.js';
 import { addFrontages } from './frontages.js';
 import { addLandscape } from './landscape.js';
+import { addNeighborhood } from './neighborhood.js';
 
 const $ = id => document.getElementById(id);
 const canvas = document.querySelector('canvas');
@@ -80,10 +81,12 @@ if(loadingFailed)throw Error('Incomplete village');
 const walking=makeWalkingRoutes(layout,stops);
 const walkPaths=walking.routes.map(r=>r.points.map(p=>p.toArray()));
 for(const route of walking.routes)ribbon(route.points,layout.walk.path_width,'#bf9a65').name='Ground-level walking path';
+const frontages=addFrontages({layout,stops,walking,terrain,mat});
+const neighborhood=addNeighborhood({layout,stops,walking,terrain,mat,riverCurve});
 // Give the journey outdoor scale cues at the side of the paths, keeping the
 // camera corridor and the original model footprints clear.
 const routeSamples=walking.routes.flatMap(r=>r.points.filter((_,i)=>i%4===0));
-function clearProp(p){return !walking.blocked(p.x,p.z)&&routeSamples.every(q=>Math.hypot(q.x-p.x,q.z-p.z)>3.1);}
+function clearProp(p){return !walking.blocked(p.x,p.z)&&neighborhood.reservations.every(b=>p.x+3<b.min.x||p.x-3>b.max.x||p.z+3<b.min.z||p.z-3>b.max.z)&&routeSamples.every(q=>Math.hypot(q.x-p.x,q.z-p.z)>3.1);}
 for(let i=0;i<walking.routes.length;i++){
  const route=walking.routes[i];
  for(let j=1;j<5;j++){
@@ -99,8 +102,7 @@ for(let i=0;i<walking.routes.length;i++){
 }
 for(let i=0;i<46;i++){const x=(i%2?-78:80)+Math.sin(i*13.3)*11,z=65-Math.floor(i/2)*9+Math.cos(i*7.1)*4;if(clearProp(new THREE.Vector3(x,0,z)))tree(x,groundHeight(layout,x,z),z,5+i%4);}
 
-const frontages=addFrontages({layout,stops,walking,terrain,mat});
-const landscape=addLandscape({layout,stops,walking,terrain,mat,riverCurve});
+const landscape=addLandscape({layout,stops,walking,terrain,mat,riverCurve,reserved:neighborhood.reservations});
 
 let playing=false,overviewMode=false,progress=0,hold=0,transition=null,last=performance.now();
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -131,7 +133,7 @@ function frame(now){const dt=Math.min((now-last)/1000,.25);last=now;
  else if(playing){if(hold>0)hold-=dt;else{const prev=progress,i=Math.min(10,Math.floor(progress));progress=Math.min(11,progress+dt*layout.walk.speed/walking.routes[i].length);if(Math.floor(progress)>Math.floor(prev)){progress=Math.floor(progress);hold=2.5;}apply(viewAt(progress));updateLabel();if(progress>=11)setPlaying(false);}}
  controls.update();if(dirty){renderer.render(scene,camera);dirty=false;}requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.village={go,overview,frontages:()=>frontages.check(),landscape:()=>landscape.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
+window.village={go,overview,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
  routeSamples:()=>walking.routes.map((r,i)=>Array.from({length:201},(_,j)=>{const p=viewAt(i+j/200);return {progress:i+j/200,eye:p.eye.toArray(),target:p.target.toArray(),ground:groundHeight(layout,p.eye.x,p.eye.z),blocked:walking.blocked(p.eye.x,p.eye.z)};})),
  environment:()=>{terrain.updateMatrixWorld(true);const result=[];terrain.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;const vertices=Array.from({length:p.count},(_,i)=>new THREE.Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld).toArray());result.push({name:o.name||'Landscape detail',vertices,indices:o.geometry.index?Array.from(o.geometry.index.array):Array.from({length:p.count},(_,i)=>i),color:o.material.color.toArray()});});return result;}
 };

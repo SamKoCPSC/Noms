@@ -18,7 +18,7 @@ async def main(url,out):
     async with async_playwright() as p:
         browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader'])
         page=await browser.new_page(viewport={'width':1440,'height':1000});errors=[]
-        page.on('pageerror',lambda error:errors.append(str(error)))
+        page.on('pageerror',lambda error:(errors.append(str(error)),print('PAGE_ERROR',str(error),flush=True)))
         page.on('console',lambda message:errors.append(message.text) if message.type=='error' and '404' not in message.text else None)
         external=[]
         single_file=url.endswith('/OPEN-VILLAGE-MOBILE.html')
@@ -55,6 +55,11 @@ async def main(url,out):
         assert not landscape['camera_collisions'] and landscape['clear_arrival_views'],landscape
         assert all(landscape['counts'].get(k,0)>30 for k in ['tree','bush','boulder','meadow'])
         (out/'landscape-verification.json').write_text(json.dumps(landscape,indent=2)+'\n')
+        neighborhood=await page.evaluate('village.neighborhood()')
+        assert len(neighborhood['houses'])==8 and len(neighborhood['streets'])==11,neighborhood
+        assert not neighborhood['camera_collisions'] and neighborhood['lettering_is_geometry'],neighborhood
+        assert neighborhood['road_signs']>=3 and neighborhood['lanterns']>=6 and neighborhood['welcome_board'],neighborhood
+        (out/'neighborhood-verification.json').write_text(json.dumps(neighborhood,indent=2)+'\n')
         samples=await page.evaluate('village.routeSamples()')
         assert len(samples)==11
         assert all(not p['blocked'] and abs(p['eye'][1]-p['ground']-eye_height)<1e-6 for route in samples for p in route)
@@ -63,7 +68,7 @@ async def main(url,out):
         (out/'camera-poses.json').write_text(json.dumps(poses,indent=2)+'\n')
         (out/'paths.json').write_text(json.dumps(await page.evaluate('village.paths()'))+'\n')
         (out/'walking-camera.json').write_text(json.dumps(samples)+'\n')
-        (out/'world-environment.json').write_text(json.dumps(await page.evaluate('village.environment()'))+'\n')
+        (out/'world-environment.json').write_text(await page.evaluate('JSON.stringify(village.environment())')+'\n')
         print('ROUTE_CHECK_PASS',len(samples)*len(samples[0]),flush=True)
         for i in range(12):
             await page.evaluate('i=>village.go(i,true)',i);await page.wait_for_timeout(150)

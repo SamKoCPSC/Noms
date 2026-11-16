@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "stage": "Colorful planted walking village; shared lighting not rebaked",
+  "version": 5,
+  "stage": "Noms village with cottages and named streets; shared lighting not rebaked",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
@@ -305,5 +305,55 @@
     "speed": 2.6,
     "path_width": 3.2,
     "spacing_multiplier": 1.25
+  },
+  "neighborhood": {
+    "streets": [
+      "Noms Lane",
+      "Recipe Row",
+      "Whisk Way",
+      "Pantry Place",
+      "Simmer Street",
+      "Supper Lane",
+      "Sourdough Rise",
+      "Market Mews",
+      "Gathering Green",
+      "Campfire Crescent",
+      "Potluck Parade"
+    ],
+    "houses": [
+      [
+        -62,
+        33
+      ],
+      [
+        -68,
+        -6
+      ],
+      [
+        -58,
+        -47
+      ],
+      [
+        -40,
+        -111
+      ],
+      [
+        25,
+        -115
+      ],
+      [
+        44,
+        -60
+      ],
+      [
+        57,
+        49
+      ],
+      [
+        -6,
+        64
+      ]
+    ],
+    "house_scale": 1.5
   }
 }

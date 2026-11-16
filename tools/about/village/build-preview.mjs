@@ -26,6 +26,7 @@ await writeFile(`${out}/layout.json`, JSON.stringify(layout));
 await writeFile(`${out}/sources.json`, JSON.stringify(receipts,null,2));
 await copyFile('tools/about/village/index.html',`${out}/index.html`);
 await build({entryPoints:['tools/about/village/preview.js'],bundle:true,format:'esm',target:'es2022',minify:true,outfile:`${out}/preview.js`,legalComments:'eof'});
+await copyFile('tools/about/village/DROID-FONT-NOTICE.txt',`${out}/DROID-FONT-NOTICE.txt`);
 await copyFile('tools/about/three/THREE-LICENSE.txt',`${out}/THREE-LICENSE.txt`);
 await copyFile('tools/about/three/MESHOPT-LICENSE.txt',`${out}/MESHOPT-LICENSE.txt`);
 await writeFile(`${out}/START.py`, 'from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler\nimport os, webbrowser\nfrom pathlib import Path\nos.chdir(Path(__file__).parent)\nwebbrowser.open("http://localhost:8766")\nThreadingHTTPServer(("127.0.0.1",8766),SimpleHTTPRequestHandler).serve_forever()\n');

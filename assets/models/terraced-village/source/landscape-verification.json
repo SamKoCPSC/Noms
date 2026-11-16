@@ -3,11 +3,11 @@
   "counts": {
     "tree": 66,
     "bush": 95,
-    "boulder": 87,
-    "meadow": 131
+    "boulder": 81,
+    "meadow": 128
   },
   "camera_collisions": [],
   "clear_arrival_views": true,
-  "detail_parts": 1935,
+  "detail_parts": 1895,
   "render_meshes": 33
 }

@@ -3,9 +3,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { groundHeight } from './walking-world.js';
 
 /** Seeded, low-poly outdoor detail with open paths, entrances and arrival views. */
-export function addLandscape({ layout, stops, walking, terrain, mat, riverCurve }) {
+export function addLandscape({ layout, stops, walking, terrain, mat, riverCurve, reserved = [] }) {
   const group = new THREE.Group(); group.name = 'Village landscape planting';
-  const existing = [];
+  const existing = [...reserved];
   terrain.updateMatrixWorld(true);
   terrain.traverse(o => {
     if (o.isMesh && (o.name.includes('entrance') || o.name.includes('forecourt') || o.name.includes('planting') || o.parent.name === 'Pathside wooden bench')) {

@@ -10,13 +10,23 @@ and gravel treatments vary by location. The cabin entrance is offset onto the
 grass, clear of its stream. The approved walking route and room models remain
 unchanged. It does not replace the application's About page.
 
-Revision 4 raises the walking camera from 3.8 to 4.6 world units and enriches
-the landscape with 66 additional trees, 95 bushes, 87 rock groups and 131 meadow
+The walking camera is raised from 3.8 to 4.6 world units. The current layout enriches
+the landscape with 66 additional trees, 95 bushes, 81 rock groups and 128 meadow
 patches. Seeded placement leaves the route, entrances, river and arrival sightlines
-clear. The 1,935 small detail parts are batched into 33 meshes to reduce draw calls.
+clear. The 1,895 small detail parts are batched into 33 meshes to reduce draw calls.
 Richer greens, blue water and warm paths use the same untone-mapped color treatment
 as the baked models; reduced fill light preserves more color. Original model
 assets remain unchanged.
+
+Revision 5 adds eight colored cottages with pitched roofs, porches, window herb
+boxes and mailboxes, plus eleven street signs, four pedestrian road signs, eleven
+lantern posts and a village welcome board. Street names include Noms Lane, Recipe
+Row, Whisk Way, Pantry Place, Simmer Street, Supper Lane, Sourdough Rise, Market
+Mews, Gathering Green, Campfire Crescent and Potluck Parade. Planting is placed
+after buildings and signs to keep their footprints clear. Signs use geometric
+Droid Sans lettering, preserved in Blender and embedded in the offline preview;
+the [Apache 2.0 font notice](../../../tools/about/village/DROID-FONT-NOTICE.txt)
+accompanies both preview formats and is stored in the Blender file.
 
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
@@ -26,7 +36,7 @@ its shaders and the current Penguini placements.
 
 ## Review files
 
-[Revision 4 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/7ebdb586eb34abb1802c8b4018cb2f9553f4f0c0/noms-village-mobile.zip)
+[Revision 5 portable preview ZIP](https://github.com/SamKoCPSC/Noms/raw/3cfbe98abc6e8670bec1936dd1fe0b90d22c511d/noms-village-mobile.zip)
 (about 71 MiB). Extract and open `OPEN-VILLAGE-MOBILE.html`.
 
 - [Portable native world](models/terraced-village-blockout.blend)
@@ -42,6 +52,7 @@ its shaders and the current Penguini placements.
 - [Shared environment geometry](source/world-environment.json)
 - [Entrance checks](source/entrance-verification.json)
 - [Landscape checks](source/landscape-verification.json)
+- [Neighborhood checks](source/neighborhood-verification.json)
 
 The browser starts at the first arrival, at walking height. **Walk tour** follows
 continuous paths around the model footprints, looks ahead during travel and turns
