@@ -1,5 +1,5 @@
 {
-  "source_sha256": "dd45fdf12e797d148161e757894c8dffdbeb7d86ba4523a084a9926460dff148",
+  "source_sha256": "063012f70777872dca95b951bc960468a6fa83bc7cc20adeeb68cb3cf97bbd07",
   "method": "About-tour diffuse direct + indirect + emission, display-baked unlit atlases",
   "bake_samples": 128,
   "atlas_size": 2048,
@@ -715,19 +715,70 @@
       ]
     }
   ],
-  "outward_winding_repairs": [
-    "Ivory tapered range hood"
-  ],
-  "static_meshes_after": 3,
-  "atlases": 2,
-  "moving_objects_baked": false,
+  "palette": "Noms | ivory, terracotta, sage and charcoal",
+  "palette_materials": {
+    "Kitchen | biscuit tile": {
+      "srgb": "#F0DCC8",
+      "token": "--bg-gradient-4"
+    },
+    "Kitchen | book print": {
+      "srgb": "#625B53",
+      "token": "--text-secondary"
+    },
+    "Kitchen | inset terracotta": {
+      "srgb": "#C4613F",
+      "token": "--accent-hover"
+    },
+    "Kitchen | ivory tile": {
+      "srgb": "#F5F0E8",
+      "token": "--surface"
+    },
+    "Kitchen | sage ceramic": {
+      "srgb": "#5A9E6F",
+      "token": "--success"
+    },
+    "Kitchen | seafoam glazed backsplash": {
+      "srgb": "#E8EDE2",
+      "token": "--bg-gradient-3"
+    },
+    "Kitchen | soft plaster": {
+      "srgb": "#F5F0E8",
+      "token": "--surface"
+    },
+    "Kitchen | terracotta painted cabinetry": {
+      "srgb": "#D9735A",
+      "token": "--accent"
+    },
+    "Kitchen | unbleached linen": {
+      "srgb": "#F5F0E8",
+      "token": "--surface"
+    },
+    "Kitchen | warm grout": {
+      "srgb": "#C8C1B4",
+      "token": "--shadow-dark"
+    },
+    "Kitchen | warm ivory enamel": {
+      "srgb": "#FAF7F2",
+      "token": "--bg-base"
+    },
+    "Kitchen | warm stove graphite": {
+      "srgb": "#2D2A26",
+      "token": "--text-primary"
+    }
+  },
   "world_color": [
     0.699999988079071,
     0.7599999904632568,
     0.8399999737739563
   ],
   "world_strength": 0.3499999940395355,
-  "uncompressed_bytes": 25908112,
-  "glb_bytes": 13050908,
+  "outward_winding_repairs": [
+    "Ivory tapered range hood"
+  ],
+  "static_meshes_after": 3,
+  "atlases": 2,
+  "moving_objects_baked": false,
+  "uncompressed_bytes": 25793460,
+  "glb_bytes": 12936252,
   "geometry_compression": "EXT_meshopt_compression; lossless vertex and animation values"
 }

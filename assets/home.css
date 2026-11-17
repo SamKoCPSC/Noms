@@ -32,7 +32,7 @@
 .landing-page img { display: block; max-width: 100%; }
 .landing-page figure { margin: 0; min-width: 0; }
 .landing-page .btn { border-radius: 17px; min-height: 48px; padding: 13px 22px; font-size: 15px; font-weight: 800; }
-.landing-page .btn-primary { background: var(--landing-accent); color: var(--landing-bg); box-shadow: var(--landing-raised); }
+.landing-page .btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: var(--landing-raised); }
 .landing-page .btn-secondary { color: var(--landing-ink); border: 1px solid var(--landing-line); background: transparent; }
 .landing-page :is(a,button):focus-visible { outline: 3px solid var(--landing-accent); outline-offset: 5px; }
 .landing-page .landing-eyebrow { color: var(--landing-accent); text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 2px; margin: 0 0 16px; }
@@ -50,7 +50,8 @@
 .landing-hero .landing-actions { margin-top: 18px; }
 .landing-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
 .landing-page .landing-tiny { font-size: 12px; margin-top: 16px; }
-.landing-hero-visual { height: 520px; min-width: 0; position: relative; }
+/* Give the diorama a little more room without zooming past its camera bounds. */
+.landing-hero-visual { width: calc(100% + 48px); height: 570px; margin-inline: -16px -32px; min-width: 0; position: relative; }
 .landing-kitchen { width: 100%; height: 100%; position: relative; }
 .landing-kitchen__scene { position: relative; width: 100%; height: 100%; }
 .landing-kitchen__poster, #landing-kitchen-canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -125,7 +126,8 @@
 .landing-enlarged-desktop { width: 1120px; }
 .landing-enlarged-phone { width: 390px; }
 /* Entrance motion never gates content visibility or requires JavaScript. */
-.landing-hero-copy { animation: landing-enter .65s ease-out both; }
+.landing-hero-copy, .landing-hero-visual { animation: landing-hero-enter .6s cubic-bezier(.22,1,.36,1) both; }
+@keyframes landing-hero-enter { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @keyframes landing-enter { from { opacity: .4; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @supports (animation-timeline: view()) {
     .landing-chapter-copy { animation: landing-enter linear both; animation-timeline: view(); animation-range: entry 0% entry 65%; }
@@ -133,6 +135,7 @@
 @media (max-width: 1050px) {
     .landing-page .landing-wrap { width: calc(100% - 64px); }
     .landing-hero { gap: 35px; }
+    .landing-hero-visual { width: calc(100% + 24px); margin-inline: -12px; }
     .landing-page .landing-hero h1 { font-size: 57px; }
     .landing-mission { gap: 36px; }
     .landing-chapter { gap: 35px; }
@@ -143,16 +146,20 @@
 }
 @media (max-width: 900px) {
     .landing-hero { min-height: 0; }
-    .landing-hero-visual { height: 430px; }
+    .landing-hero-visual { height: 470px; }
 }
 @media (max-width: 760px) {
     .landing-page .landing-wrap { width: calc(100% - 40px); }
     .landing-page h2 { font-size: 34px; }
     .landing-page p { font-size: 16px; }
-    .landing-hero { grid-template-columns: 1fr; gap: 35px; padding-block: 40px 35px; }
-    .landing-page .landing-hero h1 { font-size: 53px; }
-    .landing-page .landing-intro { font-size: 17px; }
-    .landing-hero-visual { height: 390px; margin: 6px 5px; }
+    .landing-hero { grid-template-columns: 1fr; gap: 8px; padding-block: 16px 24px; }
+    .landing-page .landing-hero h1 { font-size: clamp(35px,10vw,44px); line-height: 1.08; margin-bottom: 10px; }
+    .landing-page .landing-intro { font-size: 15px; line-height: 1.45; }
+    .landing-hero .landing-recipe-search { margin-top: 14px; }
+    .landing-hero .landing-actions { margin-top: 10px; }
+    .landing-hero .landing-tiny { margin-top: 8px; }
+    /* Match the scene's proportions instead of reserving empty space above it. */
+    .landing-hero-visual { width: auto; height: auto; aspect-ratio: 1.12; margin: 0 -12px; }
     .landing-actions { gap: 10px; margin-top: 25px; }
     .landing-page .btn { font-size: 13px; padding: 13px 17px; }
     .landing-page .landing-tiny { font-size: 11px; }
@@ -193,9 +200,16 @@
 @media (max-width: 719px) {
     .landing-page { padding-bottom: 10px; }
 }
+/* Short phone viewports need a little more room for Penguini above the fold. */
+@media (max-width: 760px) and (max-height: 680px) {
+    .landing-hero { padding-top: 12px; gap: 0; }
+    .landing-page .landing-hero h1 { font-size: clamp(31px,9vw,38px); margin-bottom: 8px; }
+    .landing-page .landing-intro { font-size: 14px; line-height: 1.4; }
+    .landing-hero .landing-recipe-search { margin-top: 10px; }
+    .landing-hero .landing-tiny { margin-top: 6px; }
+}
 @media (max-width: 359px) {
     .landing-page .landing-wrap { width: calc(100% - 32px); }
-    .landing-page .landing-hero h1 { font-size: 44px; }
     .landing-actions { flex-direction: column; }
     .landing-mobile-story { padding: 14px; }
     .landing-mobile-grid { gap: 8px; }
@@ -210,9 +224,9 @@
 }
 
 @media (max-width: 760px) {
-    .landing-recipe-search { gap: 8px; padding-left: 14px; min-height: 62px; border-radius: 18px; }
-    .landing-recipe-search input { font-size: 16px; }
-    .landing-recipe-search .btn { padding-inline: 16px; }
+    .landing-recipe-search { gap: 8px; padding: 2px 5px 2px 14px; min-height: 52px; border-radius: 18px; }
+    .landing-recipe-search input { font-size: 16px; padding-block: 6px; }
+    .landing-recipe-search .btn { min-height: 44px; padding: 8px 16px; }
 }
 @media (max-width: 359px) {
     .landing-recipe-search { gap: 6px; padding-left: 12px; }

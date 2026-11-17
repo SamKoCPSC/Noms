@@ -52,7 +52,7 @@ pub(super) fn HomeKitchen() -> Element {
                     });
                 }
             },
-            div { class: "landing-kitchen__scene", role: "img", aria_label: "Penguini bakes cookies in a coral and seafoam kitchen, mixing ingredients and reading his recipe book.",
+            div { class: "landing-kitchen__scene", role: "img", aria_label: "Penguini bakes cookies in a warm ivory and terracotta kitchen, mixing ingredients and reading his recipe book.",
                 img { class: "landing-kitchen__poster", src: POSTER, alt: "", width: "800", height: "720", fetchpriority: "high" }
                 canvas { id: "landing-kitchen-canvas", aria_hidden: "true" }
             }
