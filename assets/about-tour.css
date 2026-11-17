@@ -119,3 +119,43 @@ html:has(.about-tour.is-flight){scrollbar-gutter:stable}
 
 /* Full-viewport Three layer shares Rust camera framing across all tour stops. */
 .about-tour #story-three-canvas{display:none;position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* Village: one full-screen scene, with a clear space for the reading overlay. */
+.about-tour[data-village-layout-url].is-flight{--village-card-width:min(38vw,480px)}
+.about-tour[data-village-layout-url].is-flight #story-canvas{display:none}
+.about-tour[data-village-layout-url].is-flight .story{left:24px;width:var(--village-card-width);max-width:none}
+/* Frosted glass keeps the village visible while giving the copy contrast. */
+.about-tour[data-village-layout-url].is-flight .story-panel[id]{background:rgba(250,248,240,.9);border:1px solid rgba(255,255,255,.65);box-shadow:0 12px 32px #23391d24,inset 0 1px 0 #ffffff80;color:#273126}
+.about-tour[data-village-layout-url].is-flight .story-panel[id]::after{display:none}
+.about-tour[data-village-layout-url].is-flight .story-panel :is(.panel-meta,h1,h2,.lead,.detail,.back-link){text-shadow:none}
+.about-tour[data-village-layout-url].is-flight .story-panel :is(h1,h2){color:#273126}
+.about-tour[data-village-layout-url].is-flight .story-panel :is(.lead,.detail){color:#2c3928;font-weight:600}
+.about-tour[data-village-layout-url].is-flight .story-panel .eyebrow{color:#704225}
+.about-tour[data-village-layout-url].is-flight .story-panel :is(.panel-number,.back-link){color:#364a2e}
+@supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+ .about-tour[data-village-layout-url].is-flight .story-panel[id]{background:linear-gradient(145deg,rgba(255,253,245,.72),rgba(247,249,235,.52));-webkit-backdrop-filter:blur(18px) saturate(115%);backdrop-filter:blur(18px) saturate(115%)}
+}
+.about-tour[data-village-layout-url].is-flight #tour-scene-framing{left:calc(48px + var(--village-card-width));right:20px;top:calc(var(--tour-top) + 12px);bottom:48px}
+.about-tour[data-village-layout-url].is-flight .waypoint{height:85dvh}
+.about-tour[data-village-layout-url].is-flight .waypoint:last-child{height:100dvh}
+.about-tour .village-view-toggle{position:fixed;right:18px;bottom:12px;z-index:20;min-height:36px;padding:7px 14px;border:1px solid #6c79554d;border-radius:20px;background:#faf7f0ed;color:#445339;font:inherit;font-size:12px;cursor:pointer}
+.about-tour .village-view-toggle[hidden],.about-tour[data-entry-state=loading] .village-view-toggle{display:none}
+.about-tour[data-village-layout-url] .card-actions a{padding:0 12px;border-radius:22px;border:1px solid #70815b55}
+.about-tour[data-village-layout-url] .card-actions .next-link{background:#526b42;color:#fff;gap:12px}
+.about-tour[data-village-layout-url] .card-actions .arrow{color:inherit}
+.about-tour[data-village-layout-url] :is(.card-actions a,.village-view-toggle):focus-visible{outline:3px solid #a35632;outline-offset:3px}
+@media(max-width:700px){
+ .about-tour[data-village-layout-url].is-flight .story{left:12px;width:calc(100vw - 24px);top:calc(var(--tour-top) + 8px);height:var(--village-text-height,calc((100dvh - var(--tour-top) - 48px)*.48))}
+ .about-tour[data-village-layout-url].is-flight #tour-scene-framing{left:8px;right:8px;top:calc(var(--tour-top) + var(--village-text-height,(100dvh - var(--tour-top) - 48px)*.48) + 20px);bottom:48px}
+ .about-tour[data-village-layout-url] .card-actions a{font-size:12px;min-height:40px;padding-inline:10px}
+ .about-tour .village-view-toggle{bottom:8px;right:12px;min-height:32px;padding-block:5px}
+}
+@media print{.about-tour .village-view-toggle{display:none!important}}
+/* Reserve browser scrollbars independently of the full-viewport camera surface. */
+.about-tour[data-village-layout-url].is-flight .world{width:100vw;height:100dvh}
+html:has(.about-tour[data-village-layout-url].is-flight){scrollbar-gutter:auto}
+.about-tour[data-village-layout-url] :is(h1,h2)[tabindex="-1"]:focus{outline:none}
+@media(max-width:700px) and (max-height:740px){
+ .about-tour[data-village-layout-url].is-flight :is(h1,h2){font-size:22px;line-height:1.1;margin-bottom:8px}
+ .about-tour[data-village-layout-url].is-flight :is(.lead,.detail){font-size:12.5px;line-height:1.4;margin-bottom:6px}
+}

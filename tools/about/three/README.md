@@ -1,3 +1,53 @@
+# Village About tour (current default)
+
+The About page now renders the reviewed terraced village as one full-viewport
+Three.js world. `src/pages/about_tour/village_browser.rs` owns navigation,
+scrolling, card fades, the loading curtain, reduced-motion reading mode and
+cleanup. `village.js` owns only asset loading and rendering; it has no animation
+loop or navigation event handlers. The previous independent-room adapter remains
+below as a reference and for pages without the village asset catalog.
+
+Desktop reserves the left side for the text overlay and frames the current room
+on the right. Mobile puts the overlay above the room. `village-camera.js` uses
+an off-axis projection over the entire canvas, preserving proportions without
+cropping the scene behind the text. It evaluates the existing collision-checked
+walking-camera samples, keeping all room placements unchanged. Back/Continue,
+Page Up/Down and left/right arrows move between stops in 800 ms. Native scrolling
+works over both the scene and cards, settling at a readable stop after a swipe.
+Direct links and browser history retain the story destinations.
+
+The loader waits for all thirteen world-space GLBs and the first rendered frame.
+Two asset requests run concurrently. Unlike the old adapter, the whole village
+stays resident because other locations remain visible during a walk; it does not
+also load the legacy GLBs. The renderer sleeps at rest and disposes geometry,
+textures, reflection targets and pending requests on route exit. Unavailable
+WebGL, failed assets, lost context, reduced motion and very short viewports use
+the still-image reading page. A reading escape remains available while loading.
+
+The app derivatives live in `assets/about/village/`: geometry and clear glass
+match the approved preview, with the same WebP quality 76, original-resolution
+baked atlases. The package is about 136 MB before HTTP compression, so this still
+needs physical-phone memory/frame-rate profiling before making performance
+claims. Native masters and full-quality bakes remain in the models archive.
+
+```sh
+# Regenerate app GLBs only after changing the reviewed village/bakes:
+node tools/about/village/build-app-assets.mjs
+npm run about:three:build
+node --test tools/about/three/village-camera.test.mjs
+cargo check --bin noms --target wasm32-unknown-unknown --no-default-features --features web
+python scripts/tests/test-about-village-browser.py http://127.0.0.1:8765/about /tmp/about-village-check
+```
+
+Commit `assets/about-three-village.js` alongside the source. The camera test
+checks all twelve stops at desktop and mobile sizes plus every verified walking
+sample. The browser test exercises the real Rust About component, the complete
+world, framing, button timing, wheel gestures over text, reading mode, context
+loss and loading failures. Chromium software rendering verifies behavior, not
+hardware performance.
+
+## Previous independent-room adapter
+
 # About-tour Three.js renderer
 
 All twelve stops use the shared `tour.js` renderer. Rust owns navigation, camera

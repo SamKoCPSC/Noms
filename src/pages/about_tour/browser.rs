@@ -117,6 +117,9 @@ pub fn start() -> Result<(), JsValue> {
     let doc = window
         .document()
         .ok_or_else(|| JsValue::from_str("No document"))?;
+    if el(&doc, "about-tour")?.has_attribute("data-village-layout-url") {
+        return super::village_browser::start();
+    }
     let canvas: HtmlCanvasElement = el(&doc, "story-canvas")?.dyn_into()?;
     let media = window
         .match_media("(prefers-reduced-motion: reduce)")?
@@ -385,6 +388,7 @@ pub fn start() -> Result<(), JsValue> {
     Ok(())
 }
 pub fn stop() {
+    super::village_browser::stop();
     RUNTIME.with(|slot| {
         if let Some(s) = slot.borrow_mut().take() {
             let mut s = s.borrow_mut();

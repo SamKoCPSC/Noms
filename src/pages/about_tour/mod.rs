@@ -25,3 +25,6 @@ mod shadows;
 
 #[cfg(target_arch = "wasm32")]
 mod three_tour;
+
+#[cfg(target_arch = "wasm32")]
+mod village_browser;
