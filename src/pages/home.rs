@@ -6,7 +6,6 @@ use crate::components::informational::PageMeta;
 use crate::Route;
 
 const HOME_CSS: Asset = asset!("/assets/home.css");
-const TABLE: Asset = asset!("/assets/landing/table.webp");
 const COOKING: Asset = asset!("/assets/landing/cooking.webp");
 const MOBILE_BROWSE: Asset = asset!("/assets/landing/mobile-browse.webp");
 const MOBILE_EDIT: Asset = asset!("/assets/landing/mobile-edit.webp");
@@ -94,7 +93,7 @@ pub fn Home() -> Element {
                     LandingActions { signed_in: auth.is_authenticated, search: true }
                 }
                 div { class: "landing-hero-visual",
-                    img { src: TABLE, alt: "A shared table with homemade pasta, soup, bread, and salad", width: "1536", height: "1024", fetchpriority: "high" }
+                    super::home_kitchen::HomeKitchen {}
                 }
             }
             div { class: "landing-promises landing-wrap", aria_label: "Noms commitments",
