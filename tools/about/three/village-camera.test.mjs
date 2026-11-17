@@ -33,3 +33,20 @@ test('app catalog embeds usable lighting and matching world-space stop metadata'
  assert.equal(layout.routes.length,layout.stops.length-1);
  for(const stop of layout.stops)assert.equal(stop.pose.id,stop.id);
 });
+
+test('all stops look down from higher viewpoints without changing the ground route',()=>{
+ const base='assets/models/terraced-village/source/';
+ const poses=JSON.parse(readFileSync(base+'camera-poses.json'));
+ const routes=JSON.parse(readFileSync(base+'walking-camera.json'));
+ for(let i=0;i<12;i++){
+  const {eye,target}=layout.stops[i].pose;
+  assert.ok(eye[1]>=poses[i].eye[1]+2.5);
+  const angle=Math.atan2(eye[1]-target[1],Math.hypot(eye[0]-target[0],eye[2]-target[2]))*180/Math.PI;
+  assert.ok(angle>=32-1e-8,`${i}: ${angle}`);
+ }
+ for(let i=0;i<11;i++)for(let j=0;j<routes[i].length;j++){
+  const original=routes[i][j],raised=layout.routes[i][j];
+  assert.equal(raised.eye[0],original.eye[0]);assert.equal(raised.eye[2],original.eye[2]);
+  assert.deepEqual(raised.target,original.target);assert.ok(raised.eye[1]>=original.eye[1]+2.5-1e-8);
+ }
+});

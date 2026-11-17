@@ -52,16 +52,24 @@ async def main(url,out):
                 assert g['model'][0]>=-1 and g['model'][2]<=width+1 and g['model'][3]<=height+1,g
                 if (width,height) in [(1280,900),(393,852)] and i in [0,1,7,11]: await screenshot(page,out/f'{width}-stop-{i}.png')
                 print('PASS framing',width,height,i,flush=True)
-        # Adjacent button navigation finishes in 800ms (plus the initial RAF).
+        # A 1600ms quintic transition accelerates gently, then brakes symmetrically.
+        label=await page.locator('#panel-0 .next-link').text_content()
+        assert label.strip()=='Next page',repr(label)
         await page.set_viewport_size({'width':393,'height':852});await settle(page)
         await page.locator('#panel-11 .back-link').evaluate('e=>e.click()')
-        await page.evaluate('step(6)');assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='true'
-        mid=float(await page.locator('#story-three-canvas').get_attribute('data-progress'));assert 10<mid<11,mid
-        await page.evaluate('step(6)');assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
+        samples=[]
+        for count in [6,5,5]:
+            await page.evaluate('n=>step(n)',count)
+            assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='true'
+            samples.append(11-float(await page.locator('#story-three-canvas').get_attribute('data-progress')))
+        early,middle,late=samples
+        assert 0<early<.15 and abs(middle-.5)<.002 and .85<late<1,samples
+        assert middle-early>early and abs((1-late)-early)<.002,samples
+        await page.evaluate('step(5)');assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         assert abs(float(await page.locator('#story-three-canvas').get_attribute('data-progress'))-10)<.001
         assert await page.evaluate('document.activeElement.id')=='title-10'
         # A wheel gesture over text scrolls the document and camera, not the card.
-        await page.mouse.move(180,250);await page.mouse.wheel(0,-500);await page.wait_for_timeout(300);await settle(page)
+        await page.mouse.move(180,250);await page.mouse.wheel(0,-900);await page.wait_for_timeout(300);await settle(page)
         assert float(await page.locator('#story-three-canvas').get_attribute('data-progress'))<10
         assert await page.locator('.story-panel').evaluate_all('ps=>ps.every(p=>p.scrollTop===0)')
         await page.locator('#village-view-toggle').click();assert await page.locator('#about-tour').get_attribute('data-renderer')=='fallback'
