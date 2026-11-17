@@ -27,7 +27,7 @@ export function createVillage(canvas,catalog) {
  let reverseTurn = 0;
  const api={
   ready:null,
-  draw(progress,width,height,slot){
+  draw(progress,width,height,slot,openingDistance=0){
    if(disposed||!layout||loaded!==catalog.models.length+1)return false;
    if(renderer.domElement.clientWidth!==width||renderer.domElement.clientHeight!==height||canvas.dataset.cssSize!==`${width},${height}`){renderer.setSize(width,height,false);canvas.dataset.cssSize=`${width},${height}`;}
    if (previousProgress !== null && progress !== previousProgress) {
@@ -39,7 +39,7 @@ export function createVillage(canvas,catalog) {
     else reverseTurn += THREE.MathUtils.clamp(direction - reverseTurn, -8*Math.abs(distance), 8*Math.abs(distance));
    }
    previousProgress = progress;
-   frameCamera(camera,layout,progress,width,height,slot,THREE.MathUtils.smootherstep(reverseTurn,0,1));renderer.render(scene,camera);
+   frameCamera(camera,layout,progress,width,height,slot,THREE.MathUtils.smootherstep(reverseTurn,0,1),openingDistance);renderer.render(scene,camera);
    canvas.dataset.progress=String(progress);canvas.dataset.renderer='three-village';canvas.dataset.ready='true';canvas.dataset.calls=String(renderer.info.render.calls);
    canvas.dataset.cameraEye=JSON.stringify(camera.position.toArray());canvas.dataset.projection=JSON.stringify(camera.projectionMatrix.elements);
    const index=Math.round(progress),projected=[];

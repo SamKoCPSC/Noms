@@ -25,6 +25,7 @@ extern "C" {
         width: f32,
         height: f32,
         slot: &[f32],
+        opening_distance: f32,
     ) -> Result<bool, JsValue>;
     #[wasm_bindgen(catch, js_name = disposeVillage)]
     fn dispose_village(view: &JsValue) -> Result<(), JsValue>;
@@ -44,6 +45,36 @@ const MODELS: [&str; 12] = [
     "garden",
 ];
 const TRANSITION_MS: f64 = 3200.;
+const OPENING_MS: f64 = 2400.;
+
+#[derive(Clone, Copy)]
+enum OpeningShot {
+    Wide,
+    Approach(Option<f64>),
+    Finished,
+}
+
+impl OpeningShot {
+    fn distance(&mut self, now: f64) -> f32 {
+        match self {
+            // Reveal one wide frame before starting the clock. Compiling the
+            // first WebGL frame can otherwise consume the entire approach.
+            Self::Wide => {
+                *self = Self::Approach(None);
+                1.
+            }
+            Self::Approach(start) => {
+                let t = ((now - *start.get_or_insert(now)) / OPENING_MS).clamp(0., 1.);
+                if t >= 1. {
+                    *self = Self::Finished;
+                }
+                (1. - t * t * (3. - 2. * t)) as f32
+            }
+            Self::Finished => 0.,
+        }
+    }
+}
+
 type StateRef = Rc<RefCell<State>>;
 thread_local! { static RUNTIME: RefCell<Option<StateRef>> = const { RefCell::new(None) }; }
 struct Listener {
@@ -79,6 +110,7 @@ struct State {
     active: usize,
     // Timestamp is initialized by the first RAF, sharing its time origin.
     transition: Option<(f64, f64, Option<f64>)>,
+    opening: OpeningShot,
     expected_scroll: Option<f64>,
     focus: bool,
     raf: Option<i32>,
@@ -165,6 +197,11 @@ pub fn start() -> Result<(), JsValue> {
         target: initial as f64,
         active: initial,
         transition: None,
+        opening: if initial == 0 {
+            OpeningShot::Wide
+        } else {
+            OpeningShot::Finished
+        },
         expected_scroll: None,
         focus: false,
         raf: None,
@@ -193,6 +230,7 @@ pub fn start() -> Result<(), JsValue> {
         {
             return;
         }
+        s.opening = OpeningShot::Finished;
         s.expected_scroll = None;
         s.transition = None;
         s.focus = false;
@@ -497,6 +535,7 @@ impl State {
             }));
         }
         if !self.flying {
+            self.opening = OpeningShot::Finished;
             self.generation += 1;
             if !self.ready || self.failed {
                 self.ready = false;
@@ -567,6 +606,7 @@ impl State {
         (IDS.len() - 1) as f64
     }
     fn navigate(&mut self, index: usize, history: bool) {
+        self.opening = OpeningShot::Finished;
         if !self.flying {
             self.active = index;
             self.panels[index].scroll_into_view();
@@ -638,6 +678,7 @@ impl State {
                 .set_property("--village-text-height", &format!("{text_height}px"));
         }
         let slot = self.slot.get_bounding_client_rect();
+        let opening_distance = self.opening.distance(now);
         let drawn = self.view.as_ref().map(|view| {
             draw_village(
                 view,
@@ -650,20 +691,25 @@ impl State {
                     slot.width() as f32,
                     slot.height() as f32,
                 ],
+                opening_distance,
             )
         });
         match drawn {
             Some(Ok(true)) => {
-                if self.root.get_attribute("data-entry-state").as_deref() == Some("loading")
-                    && self
+                if self.root.get_attribute("data-entry-state").as_deref() == Some("loading") {
+                    if self
                         .doc
                         .active_element()
                         .and_then(|e| e.closest("#tour-loader").ok().flatten())
                         .is_some()
-                {
-                    self.focus = true;
+                    {
+                        self.focus = true;
+                    }
+                    self.gate(false);
+                    // The loading curtain locks page overflow. Align the document
+                    // after unlocking so the first swipe starts at the visible stop.
+                    self.align_scroll();
                 }
-                self.gate(false);
             }
             Some(Err(error)) => {
                 tracing::warn!(?error, "Village render failed");
@@ -693,7 +739,9 @@ impl State {
                 let _ = panel.set_attribute("inert", "");
             }
         }
-        let moving = self.transition.is_some() || (self.progress - self.target).abs() > 0.0001;
+        let moving = !matches!(self.opening, OpeningShot::Finished)
+            || self.transition.is_some()
+            || (self.progress - self.target).abs() > 0.0001;
         let _ = self
             .root
             .set_attribute("data-active-stop", &self.active.to_string());

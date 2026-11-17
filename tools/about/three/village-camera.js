@@ -23,7 +23,7 @@ function pathHeading(layout, index, fraction) {
 
 // Off-axis perspective moves the composition, not the viewport. The village
 // continues behind the text overlay, without scissoring or stretched proportions.
-export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn=0) {
+export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn=0,openingDistance=0) {
  const p=THREE.MathUtils.clamp(progress,0,layout.stops.length-1),i=Math.floor(p),j=Math.min(i+1,layout.stops.length-1),t=p-i;
  const a=stopFraming(layout.stops[i],width,height,slot),b=stopFraming(layout.stops[j],width,height,slot);
  const focal=THREE.MathUtils.lerp(a.focal,b.focal,t),x=THREE.MathUtils.lerp(a.x,b.x,t),y=THREE.MathUtils.lerp(a.y,b.y,t);
@@ -31,7 +31,13 @@ export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn
  camera.position.fromArray(pose.eye);
  const travel = THREE.MathUtils.smootherstep(Math.min(t, 1-t), 0, 0.22);
  if (travel === 0) {
-  camera.lookAt(new THREE.Vector3(...pose.target));
+  const target = new THREE.Vector3(...pose.target);
+  if (p === 0 && openingDistance > 0) {
+   // Dolly along the kitchen sightline to keep it in the model area on
+   // both layouts while the surrounding village moves in perspective.
+   camera.position.sub(target).multiplyScalar(1 + 1.6 * openingDistance).add(target);
+  }
+  camera.lookAt(target);
  } else {
   const endpoint = t < 0.5 ? 0 : 1;
   const stop = layout.stops[i + endpoint].pose;
