@@ -43,7 +43,7 @@ const MODELS: [&str; 12] = [
     "riverside-campsite",
     "garden",
 ];
-const TRANSITION_MS: f64 = 1600.;
+const TRANSITION_MS: f64 = 3200.;
 type StateRef = Rc<RefCell<State>>;
 thread_local! { static RUNTIME: RefCell<Option<StateRef>> = const { RefCell::new(None) }; }
 struct Listener {
@@ -80,11 +80,9 @@ struct State {
     // Timestamp is initialized by the first RAF, sharing its time origin.
     transition: Option<(f64, f64, Option<f64>)>,
     expected_scroll: Option<f64>,
-    scroll_idle: Option<gloo_timers::callback::Timeout>,
     focus: bool,
     raf: Option<i32>,
     callback: Option<Closure<dyn FnMut(f64)>>,
-    last: f64,
     listeners: Vec<Listener>,
     observer: Option<ResizeObserver>,
     observer_callback: Option<Closure<dyn FnMut()>>,
@@ -168,11 +166,9 @@ pub fn start() -> Result<(), JsValue> {
         active: initial,
         transition: None,
         expected_scroll: None,
-        scroll_idle: None,
         focus: false,
         raf: None,
         callback: None,
-        last: 0.,
         listeners: vec![],
         observer: None,
         observer_callback: None,
@@ -201,19 +197,6 @@ pub fn start() -> Result<(), JsValue> {
         s.transition = None;
         s.focus = false;
         s.target = s.scroll_progress();
-        // Finish a swipe at a readable stop instead of leaving two faded cards.
-        let weak = Rc::downgrade(state);
-        s.scroll_idle = Some(gloo_timers::callback::Timeout::new(180, move || {
-            if let Some(state) = weak.upgrade() {
-                {
-                    let mut s = state.borrow_mut();
-                    let index = (s.target.round() as usize).min(IDS.len() - 1);
-                    s.navigate(index, false);
-                    s.focus = false;
-                }
-                schedule(&state);
-            }
-        }));
     })?;
     for name in ["hashchange", "popstate"] {
         listen(&state, window.as_ref(), name, |state, _| {
@@ -523,7 +506,6 @@ impl State {
                 self.requested = false;
             }
             self.transition = None;
-            self.scroll_idle = None;
             self.gate(false);
             if was {
                 if let Some(id) = self.raf.take() {
@@ -559,8 +541,11 @@ impl State {
         }
     }
     fn align_scroll(&mut self) {
-        let y = self.anchors[self.active].get_bounding_client_rect().top()
-            + self.window.scroll_y().unwrap_or(0.);
+        let index = self.target.floor() as usize;
+        let anchor = self.anchors[index].get_bounding_client_rect();
+        let y = self.window.scroll_y().unwrap_or(0.)
+            + anchor.top()
+            + anchor.height() * self.target.fract();
         self.expected_scroll = Some(y);
         let options = web_sys::ScrollToOptions::new();
         options.set_top(y);
@@ -582,7 +567,6 @@ impl State {
         (IDS.len() - 1) as f64
     }
     fn navigate(&mut self, index: usize, history: bool) {
-        self.scroll_idle = None;
         if !self.flying {
             self.active = index;
             self.panels[index].scroll_into_view();
@@ -610,8 +594,6 @@ impl State {
         if !self.flying || !self.ready {
             return false;
         }
-        let delta = (now - self.last).clamp(0., 64.);
-        self.last = now;
         if let Some((from, to, start)) = self.transition {
             let start = start.unwrap_or(now);
             let t = ((now - start) / TRANSITION_MS).clamp(0., 1.);
@@ -624,10 +606,7 @@ impl State {
                 Some((from, to, Some(start)))
             };
         } else {
-            self.progress += (self.target - self.progress) * (1. - (-delta / 130.).exp());
-            if (self.target - self.progress).abs() < 0.0005 {
-                self.progress = self.target;
-            }
+            self.progress = self.target;
         }
         let rect = self.canvas.get_bounding_client_rect();
         // On short phones, give the longest card just enough room rather than
