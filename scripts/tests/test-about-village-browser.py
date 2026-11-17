@@ -27,6 +27,54 @@ async def settle(page):
     await page.evaluate('paint()'); await page.evaluate('step(22)'); await page.evaluate('paint()')
 async def geometry(page,i):
     return await page.evaluate('''i=>{const c=document.querySelector('#story-three-canvas'),p=document.querySelector(`#panel-${i}`),s=document.querySelector('#tour-scene-framing');const b=e=>{let r=e.getBoundingClientRect();return [r.left,r.top,r.right,r.bottom]};return {canvas:b(c),panel:b(p),slot:b(s),model:JSON.parse(c.dataset.modelBounds),progress:+c.dataset.progress,overflow:p.scrollHeight>p.clientHeight+1,frame:[document.documentElement.clientWidth,innerHeight],scroll:scrollY}}''',i)
+async def check_look_around(page):
+    root=page.locator('#about-tour')
+    canvas=page.locator('#story-three-canvas')
+    toggle=page.locator('#village-look-toggle')
+    async def pose():
+        return await canvas.evaluate('c=>[c.dataset.progress,c.dataset.cameraEye,c.dataset.projection,c.dataset.modelBounds]')
+    before=await pose()
+    await toggle.click()
+    await page.evaluate('step(2)')
+    assert await toggle.inner_text()=='Resume tour'
+    assert await page.locator('#story').evaluate('s=>s.inert')
+    assert await page.locator('#village-look-surface').is_visible()
+    centered=await pose()
+    mobile=page.viewport_size['width']<=700
+    if mobile:
+        session=await page.context.new_cdp_session(page)
+        await session.send('Emulation.setTouchEmulationEnabled',{'enabled':True})
+        for kind,points in [('touchStart',[{'x':190,'y':470}]),('touchMove',[{'x':270,'y':495}]),('touchEnd',[])]:
+            await session.send('Input.dispatchTouchEvent',{'type':kind,'touchPoints':points})
+        await session.detach()
+    else:
+        await page.mouse.move(190,470)
+        await page.mouse.down()
+        await page.mouse.move(270,495)
+        await page.mouse.up()
+    await page.evaluate('step(2)')
+    dragged=await pose()
+    assert dragged[:2]==before[:2] and dragged[3]!=centered[3]
+    await page.keyboard.press('ArrowLeft')
+    await page.mouse.wheel(0,400)
+    await page.evaluate('step(2)')
+    turned=await pose()
+    assert turned[:2]==before[:2] and turned[3]!=dragged[3]
+    if mobile:
+        await toggle.click()
+    else:
+        await page.keyboard.press('Escape')
+    await page.evaluate('step(1)')
+    await page.evaluate('step(1,225)')
+    halfway=await pose()
+    assert halfway[3]!=turned[3] and halfway[3]!=before[3]
+    await page.evaluate('step(1,225)')
+    assert await pose()==before
+    assert await toggle.inner_text()=='Look around'
+    assert not await page.locator('#story').evaluate('s=>s.inert')
+    assert await root.get_attribute('data-looking') is None
+    print('PASS look around, drag, keyboard and return at the same path position',flush=True)
+
 async def main(url,out):
     assert urlsplit(url).hostname in ['127.0.0.1','localhost'];out.mkdir(parents=True,exist_ok=True)
     async with async_playwright() as p:
@@ -97,6 +145,7 @@ async def main(url,out):
         assert float(await canvas.get_attribute('data-progress'))==paused
         assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         assert await page.locator('.story-panel').evaluate_all('ps=>ps.every(p=>p.scrollTop===0)')
+        await check_look_around(page)
         await page.locator('#village-view-toggle').click();assert await page.locator('#about-tour').get_attribute('data-renderer')=='fallback'
         await page.locator('#village-view-toggle').click();await settle(page);assert await page.locator('#about-tour').get_attribute('data-renderer')=='three-village'
         await page.locator('#story-three-canvas').evaluate('c=>c.dispatchEvent(new Event("webglcontextlost",{cancelable:true}))')

@@ -1,5 +1,6 @@
 //! Rust owns the village's navigation, loading gate, accessibility and lifecycle.
 //! The JS boundary only loads assets and renders the approved walking camera.
+mod look;
 use crate::pages::about::{IDS, NAMES};
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::{prelude::*, JsCast};
@@ -26,6 +27,7 @@ extern "C" {
         height: f32,
         slot: &[f32],
         opening_distance: f32,
+        look: &[f32],
     ) -> Result<bool, JsValue>;
     #[wasm_bindgen(catch, js_name = disposeVillage)]
     fn dispose_village(view: &JsValue) -> Result<(), JsValue>;
@@ -111,6 +113,8 @@ struct State {
     // Timestamp is initialized by the first RAF, sharing its time origin.
     transition: Option<(f64, f64, Option<f64>)>,
     opening: OpeningShot,
+    look: Option<look::Look>,
+    look_button: HtmlElement,
     expected_scroll: Option<f64>,
     focus: bool,
     raf: Option<i32>,
@@ -147,11 +151,21 @@ fn listen(
     name: &'static str,
     handler: impl Fn(&StateRef, Event) + 'static,
 ) -> Result<(), JsValue> {
+    subscribe(state, target, name, move |state, event| {
+        handler(state, event);
+        schedule(state);
+    })
+}
+fn subscribe(
+    state: &StateRef,
+    target: &EventTarget,
+    name: &'static str,
+    handler: impl Fn(&StateRef, Event) + 'static,
+) -> Result<(), JsValue> {
     let weak = Rc::downgrade(state);
     let callback = Closure::wrap(Box::new(move |event| {
         if let Some(state) = weak.upgrade() {
             handler(&state, event);
-            schedule(&state);
         }
     }) as Box<dyn FnMut(Event)>);
     target.add_event_listener_with_callback(name, callback.as_ref().unchecked_ref())?;
@@ -202,6 +216,8 @@ pub fn start() -> Result<(), JsValue> {
         } else {
             OpeningShot::Finished
         },
+        look: None,
+        look_button: el(&doc, "village-look-toggle")?.dyn_into()?,
         expected_scroll: None,
         focus: false,
         raf: None,
@@ -219,9 +235,10 @@ pub fn start() -> Result<(), JsValue> {
             }
         }
     }) as Box<dyn FnMut(f64)>));
+    look::bind_drag(&state)?;
     listen(&state, window.as_ref(), "scroll", |state, _| {
         let mut s = state.borrow_mut();
-        if !s.flying || !s.ready {
+        if !s.flying || !s.ready || s.look.is_some() {
             return;
         }
         let y = s.window.scroll_y().unwrap_or(0.);
@@ -278,6 +295,10 @@ pub fn start() -> Result<(), JsValue> {
         if !s.flying || !s.ready {
             return;
         }
+        if target.id() == "village-look-toggle" {
+            s.toggle_look();
+            return;
+        }
         if let Ok(Some(link)) = target.closest("a[href^='#']") {
             let hash = link.get_attribute("href").unwrap_or_default();
             if let Some(i) = IDS
@@ -311,6 +332,10 @@ pub fn start() -> Result<(), JsValue> {
         }
         let mut s = state.borrow_mut();
         if !s.flying || !s.ready {
+            return;
+        }
+        if s.look.is_some() {
+            s.look_key(key);
             return;
         }
         let next = match key.key().as_str() {
@@ -382,6 +407,7 @@ pub fn stop() {
             // runtime cancels timers/listeners and releases the Three scene.
             s.generation += 1;
             s.flying = false;
+            s.clear_look();
             s.root.set_class_name("about-tour is-reader");
             s.gate(false);
         }
@@ -535,6 +561,7 @@ impl State {
             }));
         }
         if !self.flying {
+            self.clear_look();
             self.opening = OpeningShot::Finished;
             self.generation += 1;
             if !self.ready || self.failed {
@@ -571,7 +598,7 @@ impl State {
             .set_attribute("aria-busy", if loading { "true" } else { "false" });
         for id in ["story", "scroll-track"] {
             if let Ok(node) = el(&self.doc, id) {
-                if loading {
+                if loading || self.look.is_some() {
                     let _ = node.set_attribute("inert", "");
                 } else {
                     let _ = node.remove_attribute("inert");
@@ -606,6 +633,7 @@ impl State {
         (IDS.len() - 1) as f64
     }
     fn navigate(&mut self, index: usize, history: bool) {
+        self.clear_look();
         self.opening = OpeningShot::Finished;
         if !self.flying {
             self.active = index;
@@ -679,6 +707,7 @@ impl State {
         }
         let slot = self.slot.get_bounding_client_rect();
         let opening_distance = self.opening.distance(now);
+        let look = self.look_frame(now);
         let drawn = self.view.as_ref().map(|view| {
             draw_village(
                 view,
@@ -692,10 +721,13 @@ impl State {
                     slot.height() as f32,
                 ],
                 opening_distance,
+                &look,
             )
         });
         match drawn {
             Some(Ok(true)) => {
+                self.look_button
+                    .set_hidden(!matches!(self.opening, OpeningShot::Finished));
                 if self.root.get_attribute("data-entry-state").as_deref() == Some("loading") {
                     if self
                         .doc
@@ -739,7 +771,8 @@ impl State {
                 let _ = panel.set_attribute("inert", "");
             }
         }
-        let moving = !matches!(self.opening, OpeningShot::Finished)
+        let moving = self.look_returning()
+            || !matches!(self.opening, OpeningShot::Finished)
             || self.transition.is_some()
             || (self.progress - self.target).abs() > 0.0001;
         let _ = self
