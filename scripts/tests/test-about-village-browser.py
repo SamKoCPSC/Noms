@@ -3,9 +3,9 @@
 Run against a local web build: python scripts/tests/test-about-village-browser.py URL OUTPUT
 The controlled RAF measures animation time independently of software GPU speed.
 """
-import asyncio, base64, json, sys
+import asyncio, base64, json, math, sys
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from playwright.async_api import async_playwright
 CLOCK = '''(()=>{const nativeRAF=requestAnimationFrame.bind(window);window.paint=()=>new Promise(r=>nativeRAF(()=>nativeRAF(r)));
 let q=new Map(),id=0,t=performance.now();requestAnimationFrame=f=>{q.set(++id,f);return id};cancelAnimationFrame=i=>q.delete(i);
@@ -31,12 +31,32 @@ async def main(url,out):
     assert urlsplit(url).hostname in ['127.0.0.1','localhost'];out.mkdir(parents=True,exist_ok=True)
     async with async_playwright() as p:
         browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader'])
-        context=await browser.new_context(viewport={'width':1280,'height':900},device_scale_factor=1)
+        initial_viewport={'width':393,'height':852} if '--mobile' in sys.argv else {'width':1280,'height':900}
+        context=await browser.new_context(viewport=initial_viewport,device_scale_factor=1)
         await context.add_init_script(CLOCK);page=await context.new_page();page.set_default_timeout(120000)
         errors=[];requests=[];page.on('pageerror',lambda e:errors.append(str(e)));page.on('request',lambda r:requests.append(r.url))
         await page.goto(url);await ready(page)
         assert await page.locator('#story-three-canvas').get_attribute('data-loaded-models')=='13'
         assert not any('/assets/about/' in u and '.glb' in u and '/village/' not in u for u in requests),'Legacy scenes fetched'
+        # The loading curtain reveals a distant kitchen, then the camera
+        # reaches exactly the ordinary first-stop pose without scrolling.
+        layout_url=await page.locator('#about-tour').get_attribute('data-village-layout-url')
+        layout=await (await page.request.get(urljoin(page.url,layout_url))).json()
+        first=layout['stops'][0]['pose']
+        async def eye():
+            return json.loads(await page.locator('#story-three-canvas').get_attribute('data-camera-eye'))
+        first_waypoint_top=await page.locator('.waypoint').first.evaluate('e=>e.getBoundingClientRect().top')
+        assert abs(first_waypoint_top)<2,first_waypoint_top
+        wide=await eye()
+        assert math.dist(wide,first['target'])>2*math.dist(first['eye'],first['target'])
+        await screenshot(page,out/'opening-wide.png')
+        await page.evaluate('step(1)')
+        await page.evaluate('step(1,1200)')
+        assert 0<math.dist(await eye(),first['eye'])<math.dist(wide,first['eye'])
+        await page.evaluate('step(1,1200)')
+        assert math.dist(await eye(),first['eye'])<1e-5
+        assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
+        print('PASS opening approach and first-stop landing',flush=True)
         results=[]
         for width,height in ([(393,852),(360,640)] if '--mobile' in sys.argv else [(1280,900),(393,852),(360,640)]):
             await page.set_viewport_size({'width':width,'height':height});await settle(page)
