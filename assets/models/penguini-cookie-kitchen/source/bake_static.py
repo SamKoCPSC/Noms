@@ -28,6 +28,8 @@ for o in animated:o.hide_render=True
 bpy.context.view_layer.update()
 meta={'source_sha256':sha,'method':'About-tour diffuse direct + indirect + emission, display-baked unlit atlases','bake_samples':s.cycles.samples,'atlas_size':2048,'view_transform':s.view_settings.view_transform,'look':s.view_settings.look,'exposure':s.view_settings.exposure,'static_source_objects':static_names,'excluded_animated_objects':animated_names,'animated_shadow_casters_during_bake':0,'duration_seconds':45.2,'lights':[{'name':o.name,'energy':o.data.energy,'color':list(o.data.color),'position':list(o.matrix_world.translation)} for o in s.objects if o.type=='LIGHT']}
 # Reflection lighting for the shared About/Home Three.js renderer (glTF Y-up).
+meta['palette']=s.get('palette','')
+meta['palette_materials']=json.loads(s.get('palette_materials','{}'))
 world=s.world.node_tree.nodes.get('Background')
 meta['world_color']=list(world.inputs['Color'].default_value[:3])
 meta['world_strength']=world.inputs['Strength'].default_value
