@@ -159,3 +159,14 @@ html:has(.about-tour[data-village-layout-url].is-flight){scrollbar-gutter:auto}
  .about-tour[data-village-layout-url].is-flight :is(h1,h2){font-size:22px;line-height:1.1;margin-bottom:8px}
  .about-tour[data-village-layout-url].is-flight :is(.lead,.detail){font-size:12.5px;line-height:1.4;margin-bottom:6px}
 }
+
+/* The drag surface only intercepts gestures while the tour is paused. */
+.about-tour #village-look-surface,.about-tour #village-look-hint,
+.about-tour:not(.is-flight) #village-look-toggle{display:none}
+.about-tour #village-look-toggle{left:16px;right:auto;min-height:44px}
+.about-tour[data-looking] #village-look-surface{display:block;position:fixed;inset:0;z-index:15;touch-action:none;cursor:grab;user-select:none}
+.about-tour[data-looking] #village-look-surface:active{cursor:grabbing}
+.about-tour[data-looking] #story{opacity:0;pointer-events:none}
+.about-tour[data-looking] #village-view-toggle{display:none}
+.about-tour[data-looking] #village-look-hint{display:block;position:fixed;left:128px;bottom:16px;z-index:20;padding:6px 12px;border-radius:16px;color:#35412f;background:#faf7f0ed;font-size:12px;pointer-events:none}
+html:has(.about-tour[data-looking]),body:has(.about-tour[data-looking]){overflow:hidden;overscroll-behavior:none}

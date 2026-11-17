@@ -488,6 +488,9 @@ pub fn About() -> Element {
       }
      }
      div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}canvas{id:"story-three-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
+     div{id:"village-look-surface",aria_hidden:"true"}
+     button{id:"village-look-toggle",class:"village-view-toggle",r#type:"button",hidden:true,aria_describedby:"village-look-hint","Look around"}
+     span{id:"village-look-hint","Drag or use arrow keys to look around"}
      button{id:"village-view-toggle",class:"village-view-toggle",r#type:"button",hidden:true,"Read as page"}
      div{id:"story",class:"story",
       for i in 0..IDS.len() {

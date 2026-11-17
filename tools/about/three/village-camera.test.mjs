@@ -70,3 +70,21 @@ test('travel looks along the level path in either direction', () => {
   }
  }
 });
+
+test('look around rotates in place, keeps the horizon upright, and limits vertical tilt', () => {
+ const camera = new THREE.PerspectiveCamera();
+ const slot = [8, 450, 377, 350];
+ const progress = 2.5;
+ frameCamera(camera, layout, progress, 393, 852, slot);
+ const eye = camera.position.clone();
+ const heading = camera.getWorldDirection(new THREE.Vector3());
+ for (const tilt of [-1, 0, 1]) {
+  frameCamera(camera, layout, progress, 393, 852, slot, 0, 0, [Math.PI, tilt, 1]);
+  const view = camera.getWorldDirection(new THREE.Vector3());
+  assert.ok(camera.position.equals(eye));
+  assert.ok(Math.abs(view.y - Math.sin(THREE.MathUtils.degToRad(80) * tilt)) < 1e-6);
+  view.y = 0;
+  assert.ok(view.normalize().dot(heading) < -0.999);
+  assert.ok(Math.abs(camera.rotation.z) < 1e-6);
+ }
+});

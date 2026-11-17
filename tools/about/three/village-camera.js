@@ -23,7 +23,7 @@ function pathHeading(layout, index, fraction) {
 
 // Off-axis perspective moves the composition, not the viewport. The village
 // continues behind the text overlay, without scissoring or stretched proportions.
-export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn=0,openingDistance=0) {
+export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn=0,openingDistance=0,look=[0,0,0]) {
  const p=THREE.MathUtils.clamp(progress,0,layout.stops.length-1),i=Math.floor(p),j=Math.min(i+1,layout.stops.length-1),t=p-i;
  const a=stopFraming(layout.stops[i],width,height,slot),b=stopFraming(layout.stops[j],width,height,slot);
  const focal=THREE.MathUtils.lerp(a.focal,b.focal,t),x=THREE.MathUtils.lerp(a.x,b.x,t),y=THREE.MathUtils.lerp(a.y,b.y,t);
@@ -53,6 +53,14 @@ export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn
   )));
  }
  camera.aspect=width/height;camera.fov=THREE.MathUtils.radToDeg(2*Math.atan(height/(2*focal)));
- camera.setViewOffset(width,height,(width/2-x)*(1-travel),(height/2-y)*(1-travel),width,height);camera.updateMatrixWorld(true);
- return {pose,focal,principal:[THREE.MathUtils.lerp(x,width/2,travel),THREE.MathUtils.lerp(y,height/2,travel)]};
+ const [yaw, tilt, lookWeight] = look;
+ if (lookWeight > 0) {
+  camera.rotation.reorder('YXZ');
+  camera.rotation.y += yaw;
+  const limit = THREE.MathUtils.degToRad(80);
+  camera.rotation.x = THREE.MathUtils.lerp(camera.rotation.x, Math.sign(tilt)*limit, Math.abs(tilt));
+ }
+ const centered = travel + (1-travel)*lookWeight;
+ camera.setViewOffset(width,height,(width/2-x)*(1-centered),(height/2-y)*(1-centered),width,height);camera.updateMatrixWorld(true);
+ return {pose,focal,principal:[THREE.MathUtils.lerp(x,width/2,centered),THREE.MathUtils.lerp(y,height/2,centered)]};
 }
