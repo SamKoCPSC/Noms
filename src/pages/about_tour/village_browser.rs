@@ -43,7 +43,7 @@ const MODELS: [&str; 12] = [
     "riverside-campsite",
     "garden",
 ];
-const TRANSITION_MS: f64 = 800.;
+const TRANSITION_MS: f64 = 1600.;
 type StateRef = Rc<RefCell<State>>;
 thread_local! { static RUNTIME: RefCell<Option<StateRef>> = const { RefCell::new(None) }; }
 struct Listener {
@@ -615,7 +615,8 @@ impl State {
         if let Some((from, to, start)) = self.transition {
             let start = start.unwrap_or(now);
             let t = ((now - start) / TRANSITION_MS).clamp(0., 1.);
-            let ease = t * t * (3. - 2. * t);
+            // Quintic ease: start and finish with zero velocity and acceleration.
+            let ease = t * t * t * (t * (t * 6. - 15.) + 10.);
             self.progress = from + (to - from) * ease;
             self.transition = if t >= 1. {
                 None
@@ -623,7 +624,7 @@ impl State {
                 Some((from, to, Some(start)))
             };
         } else {
-            self.progress += (self.target - self.progress) * (1. - (-delta / 65.).exp());
+            self.progress += (self.target - self.progress) * (1. - (-delta / 130.).exp());
             if (self.target - self.progress).abs() < 0.0005 {
                 self.progress = self.target;
             }

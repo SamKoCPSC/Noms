@@ -11,9 +11,12 @@ Desktop reserves the left side for the text overlay and frames the current room
 on the right. Mobile puts the overlay above the room. `village-camera.js` uses
 an off-axis projection over the entire canvas, preserving proportions without
 cropping the scene behind the text. It evaluates the existing collision-checked
-walking-camera samples, keeping all room placements unchanged. Back/Continue,
-Page Up/Down and left/right arrows move between stops in 800 ms. Native scrolling
-works over both the scene and cards, settling at a readable stop after a swipe.
+walking-camera ground route, with smoothly interpolated elevation offsets for a
+32° downward view at each stop. All room placements stay unchanged. Back/Next page,
+Page Up/Down and left/right arrows move between stops in 1600 ms with quintic
+ease-in/ease-out (zero starting and ending velocity and acceleration). Native scrolling
+works over both the scene and cards, with 170vh of travel per section (half the
+previous scroll speed), settling at a readable stop after a swipe.
 Direct links and browser history retain the story destinations.
 
 The loader waits for all thirteen world-space GLBs and the first rendered frame.
@@ -33,6 +36,8 @@ claims. Native masters and full-quality bakes remain in the models archive.
 ```sh
 # Regenerate app GLBs only after changing the reviewed village/bakes:
 node tools/about/village/build-app-assets.mjs
+# Camera-only changes do not require repacking the GLBs:
+node tools/about/village/build-camera.mjs
 npm run about:three:build
 node --test tools/about/three/village-camera.test.mjs
 cargo check --bin noms --target wasm32-unknown-unknown --no-default-features --features web

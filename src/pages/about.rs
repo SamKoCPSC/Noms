@@ -513,7 +513,7 @@ pub fn About() -> Element {
         div{class:"card-actions",
         if i>0 {a{class:"back-link",href:format!("#{}",IDS[i-1]),"Back"}}
         a{class:"next-link",href:if i+1<IDS.len(){format!("#{}",IDS[i+1])}else{"#idea".into()},
-         if i==0{"Continue the story"}else if i+1==IDS.len(){"Take the tour again"}else{"Continue the story"}
+         if i+1==IDS.len(){"Take the tour again"}else{"Next page"}
          span{class:"arrow",aria_hidden:"true"}
         }}
         }}
