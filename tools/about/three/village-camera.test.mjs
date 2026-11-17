@@ -50,3 +50,23 @@ test('all stops look down from higher viewpoints without changing the ground rou
   assert.deepEqual(raised.target,original.target);assert.ok(raised.eye[1]>=original.eye[1]+2.5-1e-8);
  }
 });
+
+test('travel looks along the level path in either direction', () => {
+ const camera = new THREE.PerspectiveCamera();
+ for (let leg = 0; leg < layout.routes.length; leg++) {
+  for (const fraction of [0.25, 0.5, 0.75]) {
+   const progress = leg + fraction;
+   const before = routePose(layout, progress - 0.01).eye;
+   const after = routePose(layout, progress + 0.01).eye;
+   const tangent = new THREE.Vector3(after[0]-before[0], 0, after[2]-before[2]).normalize();
+   for (const reverse of [0, 1]) {
+    frameCamera(camera, layout, progress, 393, 852, [8,450,377,350], reverse);
+    const view = camera.getWorldDirection(new THREE.Vector3());
+    assert.ok(Math.abs(view.y) < 1e-6);
+    assert.ok(view.dot(tangent) * (reverse ? -1 : 1) > 0.95);
+    assert.ok(Math.abs(camera.projectionMatrix.elements[8]) < 1e-6);
+    assert.ok(Math.abs(camera.projectionMatrix.elements[9]) < 1e-6);
+   }
+  }
+ }
+});
