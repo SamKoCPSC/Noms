@@ -3,7 +3,8 @@
   "scripts": {
     "tailwind:build": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css",
     "tailwind:watch": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css --watch",
-    "about:three:build": "node tools/about/three/build.mjs"
+    "about:three:build": "node tools/about/three/build.mjs",
+    "home:three:build": "node tools/home/three/build.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.2.1",
