@@ -1,4 +1,26 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "corporate-office::glass::170fd7e8": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "corporate-office::sky::5737ef08": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [
+      "corporate-office::Daylight glazing::98e6eec8"
+    ],
+    "hidden_fake_scenery": [],
+    "openings": []
+  },
   "model": "corporate-office",
   "lighting": {
     "sun_direction_y_up": [
@@ -185,8 +207,8 @@
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 10664024,
-  "uncompressed_bytes": 31422876,
+  "glb_bytes": 10591132,
+  "uncompressed_bytes": 31206592,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -195,5 +217,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "3258ff4461c85eadc8ef838e30f83b1f5bf485dde222c4f01c7d66621e835e19"
+  "packed_sha256": "239f643d52d291ddf1738adfdf67d458f9b70536e7309a7a09b8cfa031f6d500"
 }

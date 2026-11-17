@@ -1,27 +1,9 @@
 [
   {
     "id": "kitchen",
-    "source_sha256": "0fe62af5127a0858e93bc13e9e3ea19d03796798aaceaa0d6c374cbb759e3c7d",
-    "original_bytes": 12030516,
-    "preview_bytes": 6204392,
-    "texture_dimensions": [
-      [
-        2048,
-        2048
-      ],
-      [
-        2048,
-        2048
-      ]
-    ],
-    "geometry_views_verified": 30,
-    "texture_format": "WebP quality 76, original resolution"
-  },
-  {
-    "id": "library",
-    "source_sha256": "e80f1a1e9c71ecb2ce57b531ff38a0caf67a1233f15a6c9c7a55f567be15fbba",
-    "original_bytes": 22879708,
-    "preview_bytes": 15147032,
+    "source_sha256": "d656bdd3f1589f150183619161456b4eb01ab9f868bfdcbc0b89092535dc0ba1",
+    "original_bytes": 12077532,
+    "preview_bytes": 6214068,
     "texture_dimensions": [
       [
         2048,
@@ -36,10 +18,28 @@
     "texture_format": "WebP quality 76, original resolution"
   },
   {
+    "id": "library",
+    "source_sha256": "3e0487b85e8474677921ff2d0b4c797170c2bbc8778716d9c6b4625d9346fc0d",
+    "original_bytes": 22962984,
+    "preview_bytes": 15206548,
+    "texture_dimensions": [
+      [
+        2048,
+        2048
+      ],
+      [
+        2048,
+        2048
+      ]
+    ],
+    "geometry_views_verified": 39,
+    "texture_format": "WebP quality 76, original resolution"
+  },
+  {
     "id": "bedroom",
-    "source_sha256": "83c430a4d33bbe44698e84d6284895e5ad3c02140206ce38c00239217ea58e33",
-    "original_bytes": 22542788,
-    "preview_bytes": 17666580,
+    "source_sha256": "b58897f3b02752eda35b649eaf2655ceb27f52b81c605005bef86e68e4200762",
+    "original_bytes": 22601032,
+    "preview_bytes": 17669968,
     "texture_dimensions": [
       [
         2048,
@@ -55,9 +55,9 @@
   },
   {
     "id": "supermarket",
-    "source_sha256": "066e37055aab0d941da09ef9c98091e9bec027a6085346cce3ce95f0838d8061",
-    "original_bytes": 17630644,
-    "preview_bytes": 9936800,
+    "source_sha256": "447fd8dbfa199cf7c593d1e77af574ab1b9a951c3451d3f476567a607a456abc",
+    "original_bytes": 17694068,
+    "preview_bytes": 9958480,
     "texture_dimensions": [
       [
         2048,
@@ -73,9 +73,9 @@
   },
   {
     "id": "office",
-    "source_sha256": "8bde7a23e784f25751a7ddff4ec41174ed36b816b81a048fcd63be0d0dc54c3a",
-    "original_bytes": 18664264,
-    "preview_bytes": 12798208,
+    "source_sha256": "fcf829a50ff48572d487421016433ff7404efb8aca876c407bc7517b296db4e3",
+    "original_bytes": 18651264,
+    "preview_bytes": 12790560,
     "texture_dimensions": [
       [
         2048,
@@ -91,9 +91,9 @@
   },
   {
     "id": "corporate-office",
-    "source_sha256": "3258ff4461c85eadc8ef838e30f83b1f5bf485dde222c4f01c7d66621e835e19",
-    "original_bytes": 10664024,
-    "preview_bytes": 3923564,
+    "source_sha256": "239f643d52d291ddf1738adfdf67d458f9b70536e7309a7a09b8cfa031f6d500",
+    "original_bytes": 10591132,
+    "preview_bytes": 3925876,
     "texture_dimensions": [
       [
         2048,
@@ -104,14 +104,14 @@
         2048
       ]
     ],
-    "geometry_views_verified": 34,
+    "geometry_views_verified": 37,
     "texture_format": "WebP quality 76, original resolution"
   },
   {
     "id": "brick-kitchen",
-    "source_sha256": "7a34d8078d502f9db0c4138ce9a7684d766dda617d9951293e83dffe9dff57f7",
-    "original_bytes": 11947908,
-    "preview_bytes": 6401056,
+    "source_sha256": "c720a0a7b9bcdf92968839f4bd6f7f5779454c262a50b0a4063e3b94379d052d",
+    "original_bytes": 11959752,
+    "preview_bytes": 6409020,
     "texture_dimensions": [
       [
         2048,
@@ -122,14 +122,14 @@
         2048
       ]
     ],
-    "geometry_views_verified": 29,
+    "geometry_views_verified": 32,
     "texture_format": "WebP quality 76, original resolution"
   },
   {
     "id": "bakery",
-    "source_sha256": "2cb7bf22db4f9d5d1a53c82011b605d7abbdec161a2c7945446d90f88d433d8b",
-    "original_bytes": 17793808,
-    "preview_bytes": 10496212,
+    "source_sha256": "d3385ad976a387f672e52bb8a6e571dcbef6986e38efdeff84010f40ac0f9cc1",
+    "original_bytes": 17942080,
+    "preview_bytes": 10535540,
     "texture_dimensions": [
       [
         2048,
@@ -145,9 +145,9 @@
   },
   {
     "id": "farmers-market",
-    "source_sha256": "a87911d6160e2a629c1fd1965226dfd355086eea68c96449d7e833b102e2ad71",
-    "original_bytes": 19908728,
-    "preview_bytes": 12117360,
+    "source_sha256": "8a55f09a1cc234eecd887d6f8b674e83e469d5b9a8fcb748f175a875bd2a3d06",
+    "original_bytes": 19916348,
+    "preview_bytes": 12120168,
     "texture_dimensions": [
       [
         2048,
@@ -163,9 +163,9 @@
   },
   {
     "id": "social-kitchen",
-    "source_sha256": "bc34756cdf55583cd93e6535af443a7e4383eea1f56867e2c7898a71ec8b413f",
-    "original_bytes": 10242364,
-    "preview_bytes": 4990408,
+    "source_sha256": "7cbe55cf207966da0bb73ac3b93d7e248e5c64054ee97b6e34e8136bf6c0638c",
+    "original_bytes": 10185164,
+    "preview_bytes": 5016808,
     "texture_dimensions": [
       [
         2048,
@@ -176,14 +176,14 @@
         2048
       ]
     ],
-    "geometry_views_verified": 23,
+    "geometry_views_verified": 26,
     "texture_format": "WebP quality 76, original resolution"
   },
   {
     "id": "riverside-campsite",
-    "source_sha256": "d258e0ddbafd7cab16b28c5acea236097d41955c529b3d23b992e4c113460881",
-    "original_bytes": 10775896,
-    "preview_bytes": 2820312,
+    "source_sha256": "cdc34cd3582cf62368959516e120d7932c108656430e6969733aa88a3ab12522",
+    "original_bytes": 11328404,
+    "preview_bytes": 2924500,
     "texture_dimensions": [
       [
         2048,
@@ -194,14 +194,14 @@
         2048
       ]
     ],
-    "geometry_views_verified": 23,
+    "geometry_views_verified": 26,
     "texture_format": "WebP quality 76, original resolution"
   },
   {
     "id": "garden",
-    "source_sha256": "3327eff740481c52c32627967f8d7eea1e0a7b415c0c6ee64179c0a37889eb36",
-    "original_bytes": 17262780,
-    "preview_bytes": 11159652,
+    "source_sha256": "04e699a863ec7469b756dc95e47512b98823f40f76fa519641c3a30fdb33ce2d",
+    "original_bytes": 17491516,
+    "preview_bytes": 11163104,
     "texture_dimensions": [
       [
         2048,
@@ -212,14 +212,14 @@
         2048
       ]
     ],
-    "geometry_views_verified": 41,
+    "geometry_views_verified": 44,
     "texture_format": "WebP quality 76, original resolution"
   },
   {
     "id": "world",
-    "source_sha256": "fa1858c0610a80cd51d2460675a603e43bf6b5e94bd76e7ce447e99d5bc02d2b",
-    "original_bytes": 41589180,
-    "preview_bytes": 22303992,
+    "source_sha256": "b17d1e977cfd7051a766f4c5d7ce790969d8bbaf9f6bc8f0fe3844959cc478df",
+    "original_bytes": 41761296,
+    "preview_bytes": 22436432,
     "texture_dimensions": [
       [
         2048,
@@ -238,7 +238,7 @@
         2048
       ]
     ],
-    "geometry_views_verified": 151,
+    "geometry_views_verified": 153,
     "texture_format": "WebP quality 76, original resolution"
   }
 ]

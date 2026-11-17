@@ -1,4 +1,224 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "riverside-campsite::windowBlue::bb4f520f": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "riverside-campsite::glass::170fd7e8": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [
+      "riverside-campsite::Door blue glazing::8093249c",
+      "riverside-campsite::Ground floor window blue panel::806b7e7c",
+      "riverside-campsite::Side window blue panel.001::19606bfd",
+      "riverside-campsite::Side window blue panel::a846e24f",
+      "riverside-campsite::Upper left window blue panel::0cb5bfb8",
+      "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+    ],
+    "hidden_fake_scenery": [],
+    "openings": [
+      {
+        "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+        "operation": "hollow cabin interior"
+      },
+      {
+        "object": "riverside-campsite::Walnut cabin door::42eb429b",
+        "pane": "riverside-campsite::Door blue glazing::8093249c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.009::289ee3b1",
+        "pane": "riverside-campsite::Door blue glazing::8093249c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.006::2359e2dd",
+        "pane": "riverside-campsite::Door blue glazing::8093249c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.010::3aa89a05",
+        "pane": "riverside-campsite::Door blue glazing::8093249c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.007::c1020d3a",
+        "pane": "riverside-campsite::Door blue glazing::8093249c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.008::5fd4d464",
+        "pane": "riverside-campsite::Door blue glazing::8093249c"
+      },
+      {
+        "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+        "pane": "riverside-campsite::Door blue glazing::8093249c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.003::ecdde204",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.004::525b4f71",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.005::7203a37b",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.009::289ee3b1",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.006::2359e2dd",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.007::c1020d3a",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.008::5fd4d464",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+        "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.014::8ab0cb3f",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.015::d1e1a752",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.016::05ace26e",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.017::245d97d7",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.018::b6f4dccf",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.019::b721e11b",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.020::610aaf84",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+        "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.007::8eb252f7",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.008::d41027ab",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.009::2a9ebe74",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.003::8c02ee75",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.004::4f158cb3",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.005::58f9967c",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Right cedar clapboard.006::902d8abe",
+        "pane": "riverside-campsite::Side window blue panel::a846e24f"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.016::bf4b96e2",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.017::ce2fc7e3",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.018::17be11db",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.019::ff738003",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.020::1b807ac3",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.014::7e75d514",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.015::22faaa2a",
+        "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.016::bf4b96e2",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.017::ce2fc7e3",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.018::17be11db",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.019::ff738003",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.020::1b807ac3",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      },
+      {
+        "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.014::7e75d514",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      },
+      {
+        "object": "riverside-campsite::Front cedar clapboard.015::22faaa2a",
+        "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      }
+    ]
+  },
   "model": "riverside-campsite",
   "lighting": {
     "sun_direction_y_up": [
@@ -80,15 +300,15 @@
   ],
   "context_radius": 45,
   "objects": 637,
-  "triangles": 161725,
+  "triangles": 164637,
   "atlases": 2,
   "atlas_size": 2048,
   "bake_samples": 64,
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 10775896,
-  "uncompressed_bytes": 30891572,
+  "glb_bytes": 11328404,
+  "uncompressed_bytes": 32734964,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -97,5 +317,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "d258e0ddbafd7cab16b28c5acea236097d41955c529b3d23b992e4c113460881"
+  "packed_sha256": "cdc34cd3582cf62368959516e120d7932c108656430e6969733aa88a3ab12522"
 }

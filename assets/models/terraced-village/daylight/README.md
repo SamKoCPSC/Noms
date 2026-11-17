@@ -7,7 +7,7 @@ contact shadows. The matte surfaces, rounded world geometry, existing room
 contents, placements and walking route are preserved.
 
 The editable [native world](models/terraced-village-daylight.blend) includes all
-original room shaders, packed images, one sun and the walking camera. It contains
+room shaders with the clear-glass corrections, packed images, one sun and the walking camera. It contains
 24,226 source objects in twelve collection instances, plus the outdoor landscape.
 The original world and individual masters are retained separately, unchanged.
 
@@ -34,16 +34,17 @@ browser derivatives; triangle counts are recorded in the asset receipts.
 ## Rebuild
 
 Run from the repository root with Blender 4.3.2, Python with Pillow, and the
-repository's Node dependencies. Two room workers with two threads each fit the
-four-core bake machine; run the complete-world bakes afterward to bound memory.
+repository's Node dependencies. With dense landscape context, use one room worker and four threads on a
+16 GiB machine; run complete-world bakes afterward to bound memory. The runner
+also supports multiple workers when more memory is available.
 
 ```sh
 python -m pip install numpy shapely==2.2.0 zopfli
 python tools/about/village/stone-paths.py
 python tools/about/village/vegetation.py
 node tools/about/village/daylight/anchors.mjs
-blender -b -t 2 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/build-world.py -- assets/models/terraced-village/daylight/models/terraced-village-daylight.blend
-python tools/about/village/daylight/run.py /tmp/village-daylight --workers 2 --threads 2
+python tools/about/village/daylight/run.py /tmp/village-daylight --workers 1 --threads 4
+blender -b -t 2 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/build-world.py -- assets/models/terraced-village/daylight/models/terraced-village-daylight.blend --glass-source /tmp/village-daylight/clear-rooms.blend
 blender -b -t 4 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/bake-ground.py -- /tmp/village-daylight/world
 blender -b -t 4 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/bake-landscape.py -- /tmp/village-daylight/world
 node tools/about/village/daylight/pack-world.mjs /tmp/village-daylight/world
@@ -175,3 +176,39 @@ python tools/about/village/export-signage.py http://127.0.0.1:8766
 
 Then rebuild the native world and the two outdoor lighting passes, pack the
 world and rebuild the normal/mobile previews using the commands above.
+
+## Clear glass and window openings (revision 12)
+
+`daylight/glass.py` identifies opaque window substitutes by explicit material and
+room names. It converts those panes and authored transmitting glass to Principled
+transmission 1, roughness 0, IOR 1.45, metallic 0 and alpha 1. Clear panes are neutral;
+the library's colored art glass retains its tint. Shader replacements remove frost
+normal/roughness maps and fake emission. Screens, smoked appliance panels, liquids,
+and glazed food are not treated as architectural glass.
+
+The first kitchen, garden house and cabin receive actual openings through their
+wall/door backing. The solid cabin and eight background cottages are hollowed;
+cottage window casings become frames. The bedroom's painted sky and hills are
+hidden in the derivative so its windows show the village. Trim and mullions stay.
+The archived baseline and individual Blender masters are never overwritten.
+
+Thin clear glass passes shadow rays during the diffuse bake, avoiding opaque black
+shadows from unsupported refractive caustics. Camera and reflection rays still see
+the physical glass. Display-baked opaque surfaces remain unlit in Three.js; clear
+glass stays live with full-resolution transmission captures and no second tone map
+of the baked view behind it. `clear-glass.js` uses a level-zero transmission lookup
+for explicitly clear glass, avoiding Three.js's minimum-roughness/bicubic blur while
+retaining Fresnel, IOR and reflected-highlight anti-aliasing. Clear panes also
+avoid applying distance fog a second time to the already fogged transmission
+image, reducing excess haze in distant views. A pixel regression
+checks a sharp stripe pattern through a physical pane: the standard shader softens
+38 sampled pixels, while the clear shader and unobstructed view soften none. Run
+`python tools/about/village/check-clear-glass.py /tmp/clear-glass-check` to repeat it. This does not introduce real-time shadow maps.
+
+The room runner caches the corrected native source once, checks its policy and
+original-file hashes, and invalidates old bakes when the glass policy changes.
+`--only bakery` supports a focused visual check before rebuilding all locations.
+The full native world retains the corrected materials and geometry, and
+`source/glass-native.json` records every material, opening and hidden backdrop.
+Asset verification checks exported transmission, roughness, tint, absence of frost
+textures, and the current policy hash alongside normal geometry/lighting checks.

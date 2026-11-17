@@ -1,6 +1,6 @@
 {
-  "version": 11,
-  "stage": "Noms village place names and clear sign mounts with shared bright daylight",
+  "version": 12,
+  "stage": "Clear village windows and display glass with shared bright daylight",
   "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
   "stops": [
     {
@@ -384,5 +384,12 @@
   "signage": {
     "geometry": "assets/models/terraced-village/daylight/source/signage.json.gz",
     "verification": "assets/models/terraced-village/daylight/source/signage-verification.json"
+  },
+  "clear_glass": {
+    "policy": "tools/about/village/daylight/glass.py",
+    "verification": "assets/models/terraced-village/daylight/source/glass-native.json",
+    "surface_roughness": 0,
+    "transmission": 1,
+    "window_openings": true
   }
 }

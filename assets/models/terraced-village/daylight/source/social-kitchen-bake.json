@@ -1,4 +1,26 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "social-kitchen::glass::170fd7e8": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "social-kitchen::windowBlue::bb4f520f": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [
+      "social-kitchen::Opaque blue daylight glazing::6f6444e0"
+    ],
+    "hidden_fake_scenery": [],
+    "openings": []
+  },
   "model": "social-kitchen",
   "lighting": {
     "sun_direction_y_up": [
@@ -92,8 +114,8 @@
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 10242364,
-  "uncompressed_bytes": 32926480,
+  "glb_bytes": 10185164,
+  "uncompressed_bytes": 32522980,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -102,5 +124,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "bc34756cdf55583cd93e6535af443a7e4383eea1f56867e2c7898a71ec8b413f"
+  "packed_sha256": "7cbe55cf207966da0bb73ac3b93d7e248e5c64054ee97b6e34e8136bf6c0638c"
 }

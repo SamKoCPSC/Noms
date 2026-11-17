@@ -54,6 +54,12 @@ async def main(url,out):
             assert plants['minimum_grass_center_path_clearance']>plants['grass_envelope_radius']
             assert plants['grass_clumps']>5000 and plants['individual_flowers']>1000
             (out/'vegetation-verification.json').write_text(json.dumps(plants,indent=2)+'\n')
+        if layout.get('clear_glass'):
+            glass=await page.evaluate('village.glass()')
+            assert glass['transmissionResolutionScale']==1
+            assert len(glass['materials'])>=13,glass
+            assert all(m['physical'] and m['transmission']==1 and m['roughness']==0 and m['opacity']==1 and not m['transparent'] and not m['normalMap'] and not m['roughnessMap'] and not m['toneMapped'] and not m['fog'] and m['sampling']=='level-zero' for m in glass['materials']),glass
+            (out/'glass-browser-verification.json').write_text(json.dumps(glass,indent=2)+'\n')
         await screenshot('initial-arrival')
         await page.locator('#next').click()
         await page.wait_for_function('village.getState().progress > 0',timeout=90000,polling=250)
@@ -142,7 +148,7 @@ async def main(url,out):
         state=await page.evaluate('village.getState()');assert abs(state['aspect']-393/852)<1e-8
         assert not errors,errors
         assert not external,external
-        (out/'verification.json').write_text(json.dumps({'models':12,'all_stops_checked':True,'walking_route_samples':2211,'camera_clear_of_model_bounds':True,'eye_height_above_terrain':eye_height,'continuous_segment_endpoints':True,'playback_advances':True,'responsive_aspect':True,'unchanged_master_hashes':True,'errors':errors,'layout_revision':layout['version'],'single_file_external_requests':len(external) if single_file else None,'next_navigation_checked':True,'landscape_clearance_checked':True,'shared_daylight':initial.get('shared_daylight',False),'realtime_shadows':initial.get('realtime_shadows',False),'android_content_url_tested':False,'sign_names_and_mounts_checked':bool(layout.get('signage'))},indent=2)+'\n')
+        (out/'verification.json').write_text(json.dumps({'models':12,'all_stops_checked':True,'walking_route_samples':2211,'camera_clear_of_model_bounds':True,'eye_height_above_terrain':eye_height,'continuous_segment_endpoints':True,'playback_advances':True,'responsive_aspect':True,'unchanged_master_hashes':True,'errors':errors,'layout_revision':layout['version'],'single_file_external_requests':len(external) if single_file else None,'next_navigation_checked':True,'landscape_clearance_checked':True,'shared_daylight':initial.get('shared_daylight',False),'realtime_shadows':initial.get('realtime_shadows',False),'android_content_url_tested':False,'sign_names_and_mounts_checked':bool(layout.get('signage')),'clear_glass_checked':bool(layout.get('clear_glass'))},indent=2)+'\n')
         await browser.close()
     print('VILLAGE_CHECK_PASS')
 

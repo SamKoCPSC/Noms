@@ -56,11 +56,18 @@ Revision 10 makes the meadow denser: 28,080 tufts, more evenly spread across the
 open grass, with 60% more blades. Flower patches and ridged foliage are retained,
 and the stone paths and entrances stay clear. Outdoor daylight is rebaked.
 
+Revision 12 replaces simulated blue window panels with clear transmitting glass,
+opens the architectural backing behind them, and removes the bedroom's painted
+outside scenery. The eight village cottages also have hollow interiors and actual
+window openings. Display cases, jars and other glass use polished surfaces with
+no frosted blur; intentional stained-glass colors and liquids retain their colors.
+Room and outdoor daylight are rebaked with the existing bright settings.
+
 The [layout manifest](layout.json) is shared by the browser and Blender builders.
 Each location has its own position, elevation, yaw and uniform footprint scale.
-The original source files are never saved over. Furniture and room geometry stay
-intact. Blender retains each source as a separate native collection, including
-its shaders and the current Penguini placements.
+The original source files are never saved over. Furniture and Penguini placements stay intact. Blender retains each room as a
+separate native collection; revision 12 applies its clear-glass materials and
+window openings only to the derivative world.
 
 ## Review files
 

@@ -1,4 +1,18 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "farmers-market::glass::170fd7e8": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [],
+    "hidden_fake_scenery": [],
+    "openings": []
+  },
   "model": "farmers-market",
   "lighting": {
     "sun_direction_y_up": [
@@ -151,8 +165,8 @@
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 19908728,
-  "uncompressed_bytes": 60385744,
+  "glb_bytes": 19916348,
+  "uncompressed_bytes": 60390036,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -161,5 +175,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "a87911d6160e2a629c1fd1965226dfd355086eea68c96449d7e833b102e2ad71"
+  "packed_sha256": "8a55f09a1cc234eecd887d6f8b674e83e469d5b9a8fcb748f175a875bd2a3d06"
 }

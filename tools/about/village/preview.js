@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { configureClearGlass } from './clear-glass.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -15,6 +16,9 @@ let renderer;
 try { renderer = new THREE.WebGLRenderer({canvas, antialias:true, logarithmicDepthBuffer:true}); }
 catch { $('status').textContent='This preview needs a browser with WebGL.'; throw Error('WebGL unavailable'); }
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+// Keep refraction captures at full canvas resolution; low-resolution captures
+// soften the view through bakery cases even when surface roughness is zero.
+renderer.transmissionResolutionScale=1;
 renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.AgXToneMapping;
 const scene=new THREE.Scene(); scene.background=new THREE.Color('#c6e0ed');
 scene.fog=new THREE.Fog('#c6e0ed',100,300);
@@ -65,7 +69,7 @@ try {
     else if(globalThis.__VILLAGE_LAYOUT__)throw Error('This HTML could not access its model files. Use OPEN-VILLAGE-MOBILE.html from the single-file mobile ZIP.');
     else gltf=await loader.loadAsync(s.model);
     const root=gltf.scene;
-    root.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.isMeshBasicMaterial||m.transmission>0)m.toneMapped=false;}});
+    root.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.isMeshBasicMaterial||m.transmission>0)m.toneMapped=false;configureClearGlass(m);}});
     root.updateMatrixWorld(true);const b=s.shared_model?new THREE.Box3(new THREE.Vector3(...s.reference_bounds.min),new THREE.Vector3(...s.reference_bounds.max)):new THREE.Box3().setFromObject(root),size=b.getSize(new THREE.Vector3()),center=b.getCenter(new THREE.Vector3());
     const scale=s.width/Math.max(size.x,size.z);const anchor=new THREE.Group();anchor.name=s.id;
     if(!s.shared_model){anchor.position.fromArray(s.position);anchor.rotation.y=s.yaw;root.position.set(-center.x*scale,-b.min.y*scale,-center.z*scale);root.scale.setScalar(scale);}
@@ -115,7 +119,7 @@ if(layout.shared_lighting){
   if(embedded){const bytes=Uint8Array.from(atob(embedded.textContent.trim()),c=>c.charCodeAt(0));embedded.remove();gltf=await loader.parseAsync(bytes.buffer,'');}
   else if(globalThis.__VILLAGE_LAYOUT__)throw Error('Embedded village landscape missing.');
   else gltf=await loader.loadAsync(layout.shared_lighting.environment);
-  sharedEnvironment=gltf.scene;sharedEnvironment.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.isMeshBasicMaterial||m.transmission>0)m.toneMapped=false;}});
+  sharedEnvironment=gltf.scene;sharedEnvironment.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){if(m.isMeshBasicMaterial||m.transmission>0)m.toneMapped=false;configureClearGlass(m);}});
   scene.add(sharedEnvironment);terrain.visible=false;
  }catch(error){$('status').textContent='The village landscape could not load.';$('error').textContent=error.message;$('retry').hidden=false;$('retry').onclick=()=>location.reload();throw error;}
 }
@@ -149,7 +153,12 @@ function frame(now){const dt=Math.min((now-last)/1000,.25);last=now;
  else if(playing){if(hold>0)hold-=dt;else{const prev=progress,i=Math.min(10,Math.floor(progress));progress=Math.min(11,progress+dt*layout.walk.speed/walking.routes[i].length);if(Math.floor(progress)>Math.floor(prev)){progress=Math.floor(progress);hold=2.5;}apply(viewAt(progress));updateLabel();if(progress>=11)setPlaying(false);}}
  controls.update();if(dirty){renderer.render(scene,camera);dirty=false;}requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.village={go,overview,style:styleSummary,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,shared_daylight:!!sharedEnvironment,realtime_shadows:renderer.shadowMap.enabled,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
+function glassAudit(){
+ const materials=new Map();scene.traverse(o=>{if(o.isMesh)for(const m of Array.isArray(o.material)?o.material:[o.material]){
+  if(m.userData.village_clear_glass||m.name.startsWith('Village clear cottage glazing'))materials.set(m.uuid,{name:m.name,physical:m.isMeshPhysicalMaterial===true,transmission:m.transmission,roughness:m.roughness,opacity:m.opacity,transparent:m.transparent,normalMap:!!m.normalMap,roughnessMap:!!m.roughnessMap,toneMapped:m.toneMapped,fog:m.fog,sampling:m.userData.clearTransmissionSampling});
+ }});return {transmissionResolutionScale:renderer.transmissionResolutionScale,materials:[...materials.values()]};
+}
+window.village={go,overview,glass:glassAudit,style:styleSummary,frontages:()=>frontages.check(),landscape:()=>landscape.check(),neighborhood:()=>neighborhood.check(),paths:()=>walkPaths,getState:()=>({ready:true,progress,playing,overviewMode,models:stops.length,shared_daylight:!!sharedEnvironment,realtime_shadows:renderer.shadowMap.enabled,eye:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect,triangles:renderer.info.render.triangles}),poses:()=>stops.map((s,i)=>({id:s.id,...Object.fromEntries(Object.entries(pose(i)).map(([k,v])=>[k,v.toArray()])),bounds:{min:s.box.min.toArray(),max:s.box.max.toArray()}})),
  routeSamples:()=>walking.routes.map((r,i)=>Array.from({length:201},(_,j)=>{const p=viewAt(i+j/200);return {progress:i+j/200,eye:p.eye.toArray(),target:p.target.toArray(),ground:groundHeight(layout,p.eye.x,p.eye.z),blocked:walking.blocked(p.eye.x,p.eye.z)};})),
  environment:()=>exportEnvironment(terrain),
  inspectView:(eye,target)=>{setPlaying(false);transition=null;overviewMode=false;apply({eye:new THREE.Vector3(...eye),target:new THREE.Vector3(...target)});}

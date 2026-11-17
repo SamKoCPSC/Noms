@@ -86,6 +86,8 @@ def environment(scene,bounds=None):
                 ramp.color_ramp.elements[1].position=.85;ramp.color_ramp.elements[1].color=(*(v*1.16 for v in color),1)
                 links.new(noise.outputs['Fac'],ramp.inputs['Fac']);links.new(ramp.outputs['Color'],p.inputs['Base Color'])
         mesh.materials.append(materials[key]);obj=bpy.data.objects.new(item['name'],mesh);collection.objects.link(obj);obj['environment_index']=i
+    from glass import apply_environment_glass
+    apply_environment_glass(collection)
     return collection
 def originals():
     import hashlib

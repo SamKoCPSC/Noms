@@ -1,4 +1,67 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "library::glassBlue::df21be45": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": true
+      },
+      "library::glassTeal::f911d81d": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": true
+      },
+      "library::glassPurple::f0b5ff39": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": true
+      },
+      "library::glassLime::4e329283": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": true
+      },
+      "library::Matte pale blue simulated window::044a5532": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "library::Matte blue simulated window::075a315c": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [
+      "library::Blue simulated window panel.001::6b003b6d",
+      "library::Blue simulated window panel.002::b0a403c0",
+      "library::Blue simulated window panel.003::90dc9856",
+      "library::Blue simulated window panel.004::2ba26b84",
+      "library::Blue simulated window panel.005::3852f195",
+      "library::Blue simulated window panel.006::ea583baa",
+      "library::Blue simulated window panel.007::b5521ec5",
+      "library::Blue simulated window panel.008::57af4930",
+      "library::Blue simulated window panel.009::14cc7f9d",
+      "library::Blue simulated window panel.010::83ac54c7",
+      "library::Blue simulated window panel.011::5076acdd",
+      "library::Blue simulated window panel.012::f0db70d8",
+      "library::Blue simulated window panel.013::49e7ea11",
+      "library::Blue simulated window panel.014::d5adddc9",
+      "library::Blue simulated window panel.015::9f022987",
+      "library::Blue simulated window panel.016::68acec3a",
+      "library::Blue simulated window panel.017::9e0da21f",
+      "library::Blue simulated window panel::dcd882bb"
+    ],
+    "hidden_fake_scenery": [],
+    "openings": []
+  },
   "model": "library",
   "lighting": {
     "sun_direction_y_up": [
@@ -177,8 +240,8 @@
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 22879708,
-  "uncompressed_bytes": 81786280,
+  "glb_bytes": 22962984,
+  "uncompressed_bytes": 81504872,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -187,5 +250,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "e80f1a1e9c71ecb2ce57b531ff38a0caf67a1233f15a6c9c7a55f567be15fbba"
+  "packed_sha256": "3e0487b85e8474677921ff2d0b4c797170c2bbc8778716d9c6b4625d9346fc0d"
 }

@@ -1,4 +1,30 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "office::Clear empty glass::d17dc34a": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "office::V2 Clear tempered PC glass::ae05279d": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "office::Window very clear glazing::0927bdd7": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [],
+    "hidden_fake_scenery": [],
+    "openings": []
+  },
   "model": "office",
   "lighting": {
     "sun_direction_y_up": [
@@ -107,8 +133,8 @@
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 18664264,
-  "uncompressed_bytes": 71428192,
+  "glb_bytes": 18651264,
+  "uncompressed_bytes": 71419908,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -117,5 +143,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "8bde7a23e784f25751a7ddff4ec41174ed36b816b81a048fcd63be0d0dc54c3a"
+  "packed_sha256": "fcf829a50ff48572d487421016433ff7404efb8aca876c407bc7517b296db4e3"
 }

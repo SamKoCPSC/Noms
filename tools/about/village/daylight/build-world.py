@@ -4,9 +4,19 @@ from pathlib import Path
 from mathutils import Matrix
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from common import *
+from glass import apply_room_glass, glass_revision
 out=Path(sys.argv[sys.argv.index('--')+1]);out.parent.mkdir(parents=True,exist_ok=True)
 hashes=originals()
-bpy.ops.wm.open_mainfile(filepath=str(ASSET/'models/terraced-village-blockout.blend'),load_ui=False,use_scripts=False)
+if '--glass-source' in sys.argv:
+    source=Path(sys.argv[sys.argv.index('--glass-source')+1]);glass_report=json.loads(source.with_suffix('.json').read_text())
+    assert glass_report['revision']==glass_revision() and glass_report['source_hashes']==hashes
+    import hashlib
+    assert glass_report['cached_blend_sha256']==hashlib.sha256(source.read_bytes()).hexdigest()
+    bpy.ops.wm.open_mainfile(filepath=str(source),load_ui=False,use_scripts=False)
+else:
+    bpy.ops.wm.open_mainfile(filepath=str(ASSET/'models/terraced-village-blockout.blend'),load_ui=False,use_scripts=False)
+    glass_report=apply_room_glass()
+(DAY/'source/glass-native.json').write_text(json.dumps(glass_report,indent=2)+'\n')
 scene=bpy.context.scene
 if LAYOUT.get('stone_paths') or LAYOUT.get('vegetation') or LAYOUT.get('signage'):
     previous=bpy.data.collections['World terrain — blockout']

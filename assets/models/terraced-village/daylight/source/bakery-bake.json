@@ -1,4 +1,18 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "bakery::glass::170fd7e8": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [],
+    "hidden_fake_scenery": [],
+    "openings": []
+  },
   "model": "bakery",
   "lighting": {
     "sun_direction_y_up": [
@@ -89,8 +103,8 @@
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 17793808,
-  "uncompressed_bytes": 58662300,
+  "glb_bytes": 17942080,
+  "uncompressed_bytes": 58762780,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -99,5 +113,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "2cb7bf22db4f9d5d1a53c82011b605d7abbdec161a2c7945446d90f88d433d8b"
+  "packed_sha256": "d3385ad976a387f672e52bb8a6e571dcbef6986e38efdeff84010f40ac0f9cc1"
 }

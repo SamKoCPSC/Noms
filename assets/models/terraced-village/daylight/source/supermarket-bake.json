@@ -1,4 +1,18 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "supermarket::glass::170fd7e8": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [],
+    "hidden_fake_scenery": [],
+    "openings": []
+  },
   "model": "supermarket",
   "lighting": {
     "sun_direction_y_up": [
@@ -622,8 +636,8 @@
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 17630644,
-  "uncompressed_bytes": 54734008,
+  "glb_bytes": 17694068,
+  "uncompressed_bytes": 54786620,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -632,5 +646,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "066e37055aab0d941da09ef9c98091e9bec027a6085346cce3ce95f0838d8061"
+  "packed_sha256": "447fd8dbfa199cf7c593d1e77af574ab1b9a951c3451d3f476567a607a456abc"
 }

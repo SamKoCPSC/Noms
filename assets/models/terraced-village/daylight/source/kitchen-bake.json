@@ -1,4 +1,36 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "kitchen::Window \u00b7 misted daylight::71874b8b": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "kitchen::Clear borosilicate glass::847108cd": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [
+      "kitchen::Left wall window \u00b7 pale daylight::3ba675ea",
+      "kitchen::Right wall window \u00b7 pale dayligh::5cd05bcc"
+    ],
+    "hidden_fake_scenery": [],
+    "openings": [
+      {
+        "object": "kitchen::Walls \u00b7 continuous closed L shel::10da7838",
+        "pane": "kitchen::Left wall window \u00b7 pale daylight::3ba675ea"
+      },
+      {
+        "object": "kitchen::Walls \u00b7 continuous closed L shel::10da7838",
+        "pane": "kitchen::Right wall window \u00b7 pale dayligh::5cd05bcc"
+      }
+    ]
+  },
   "model": "kitchen",
   "lighting": {
     "sun_direction_y_up": [
@@ -83,15 +115,15 @@
     "kitchen::Sourdough \u00b7 scored baked boule::64c6dc0b",
     "kitchen::Chef knife \u00b7 forged blade::99698475"
   ],
-  "triangles": 447855,
+  "triangles": 447823,
   "atlases": 2,
   "atlas_size": 2048,
   "bake_samples": 64,
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 12030516,
-  "uncompressed_bytes": 38782676,
+  "glb_bytes": 12077532,
+  "uncompressed_bytes": 38856512,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -100,5 +132,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "0fe62af5127a0858e93bc13e9e3ea19d03796798aaceaa0d6c374cbb759e3c7d"
+  "packed_sha256": "d656bdd3f1589f150183619161456b4eb01ab9f868bfdcbc0b89092535dc0ba1"
 }

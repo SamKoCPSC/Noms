@@ -4,8 +4,17 @@ from pathlib import Path
 from mathutils import Matrix, Vector
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from common import *
+from glass import apply_room_glass, glass_revision
 key,out=sys.argv[sys.argv.index('--')+1:sys.argv.index('--')+3];out=Path(out);out.mkdir(parents=True,exist_ok=True)
-bpy.ops.wm.open_mainfile(filepath=str(ASSET/'models/terraced-village-blockout.blend'),load_ui=False,use_scripts=False)
+if '--glass-source' in sys.argv:
+    source=Path(sys.argv[sys.argv.index('--glass-source')+1]);glass_report=json.loads(source.with_suffix('.json').read_text())
+    assert glass_report['revision']==glass_revision()
+    import hashlib
+    assert glass_report['cached_blend_sha256']==hashlib.sha256(source.read_bytes()).hexdigest()
+    bpy.ops.wm.open_mainfile(filepath=str(source),load_ui=False,use_scripts=False)
+else:
+    bpy.ops.wm.open_mainfile(filepath=str(ASSET/'models/terraced-village-blockout.blend'),load_ui=False,use_scripts=False)
+    glass_report=apply_room_glass()
 scene=bpy.data.scenes.new('Daylight room');bpy.context.window.scene=scene
 entry=next(s for s in LAYOUT['stops'] if s['id']==key);x,_,z=entry['position'];r=CONFIG['context_radius']
 near=[s['id'] for s in LAYOUT['stops'] if max(abs(s['position'][0]-x),abs(s['position'][2]-z))<=r]
@@ -40,7 +49,7 @@ print('PREPARE_TERRAIN',key,flush=True)
 environment(scene,[x-r,x+r,z-r,z+r]);lighting(scene);camera(scene,key)
 scene['scope']='Full village daylight bake: '+key
 bpy.context.preferences.filepaths.save_version=0;bpy.ops.file.pack_all();bpy.ops.wm.save_as_mainfile(filepath=str(out/'scene.blend'),compress=True)
-meta=dict(model=key,lighting=CONFIG,anchor=ANCHORS[key],source_hashes=originals(),context=near,context_radius=r,objects=len(objects))
+meta=dict(glass_revision=glass_revision(),glass=glass_report['rooms'][key],model=key,lighting=CONFIG,anchor=ANCHORS[key],source_hashes=originals(),context=near,context_radius=r,objects=len(objects))
 (out/'metadata.json').write_text(json.dumps(meta,indent=2)+'\n')
 if '--reference' in sys.argv:
     scene.cycles.samples=32;scene.render.filepath=str(out/'reference.png');bpy.ops.render.render(write_still=True)

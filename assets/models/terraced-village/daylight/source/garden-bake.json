@@ -1,4 +1,198 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "garden::glass::170fd7e8": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "garden::glassSky::e422caef": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [
+      "garden::Back door glazing export::1ae51aac",
+      "garden::Back door glazing.001 export::8f6be538",
+      "garden::Window softly reflective glazing::53b11c6d",
+      "garden::Window softly reflective glazing::c26df3a9"
+    ],
+    "hidden_fake_scenery": [],
+    "openings": [
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::f12c02d9",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::d937dda6",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::054d98f2",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Back door walnut leaf export::36f63e2e",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::House solid facade export::0e6c883b",
+        "pane": "garden::Back door glazing export::1ae51aac"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::f12c02d9",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::d937dda6",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::054d98f2",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Back door walnut leaf.001 export::f75b068f",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::House solid facade export::0e6c883b",
+        "pane": "garden::Back door glazing.001 export::8f6be538"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::House solid facade export::0e6c883b",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Window shadow recess.001 export::c1f6a0bc",
+        "pane": "garden::Window softly reflective glazing::53b11c6d"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::House solid facade export::0e6c883b",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      },
+      {
+        "object": "garden::Window shadow recess export::d3f6a4e3",
+        "pane": "garden::Window softly reflective glazing::c26df3a9"
+      }
+    ]
+  },
   "model": "garden",
   "lighting": {
     "sun_direction_y_up": [
@@ -82,15 +276,15 @@
     "garden::Ice surface inside bucket::37b9f073",
     "garden::Lounge coffee coffee export::e7bfb91e"
   ],
-  "triangles": 916065,
+  "triangles": 921589,
   "atlases": 2,
   "atlas_size": 2048,
   "bake_samples": 64,
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 17262780,
-  "uncompressed_bytes": 58512896,
+  "glb_bytes": 17491516,
+  "uncompressed_bytes": 58978120,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -99,5 +293,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "3327eff740481c52c32627967f8d7eea1e0a7b415c0c6ee64179c0a37889eb36"
+  "packed_sha256": "04e699a863ec7469b756dc95e47512b98823f40f76fa519641c3a30fdb33ce2d"
 }

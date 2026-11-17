@@ -1,4 +1,28 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "glass": {
+    "materials": {
+      "bedroom::Anti reflective display glazing::18d5531e": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      },
+      "bedroom::Clear empty glass::d17dc34a": {
+        "transmission": 1,
+        "roughness": 0,
+        "ior": 1.45,
+        "tinted": false
+      }
+    },
+    "converted_window_objects": [],
+    "hidden_fake_scenery": [
+      "bedroom::Window nearer hill::7b72c28f",
+      "bedroom::Window distant mountain::ba4807b0",
+      "bedroom::Window exterior pale sky::d459bc80"
+    ],
+    "openings": []
+  },
   "model": "bedroom",
   "lighting": {
     "sun_direction_y_up": [
@@ -81,26 +105,25 @@
     "riverside-campsite"
   ],
   "context_radius": 45,
-  "objects": 3498,
+  "objects": 3495,
   "front_facing_relief_repairs": [
     "bedroom::Left shoe Yonex logo triangle.00::de7da1c1",
     "bedroom::Left shoe Yonex logo triangle.00::44d2a7f1",
     "bedroom::Dive clock bezel zero triangle::f98df5d0",
-    "bedroom::Window distant mountain::ba4807b0",
     "bedroom::Yonex emblem triangle::a08c6061",
     "bedroom::Right shoe Yonex logo triangle.0::52f4447f",
     "bedroom::Right shoe Yonex logo triangle.0::f1b76940",
     "bedroom::Latte heart milk foam art::9cfd18cf"
   ],
-  "triangles": 1676197,
+  "triangles": 1676174,
   "atlases": 2,
   "atlas_size": 2048,
   "bake_samples": 64,
   "animations": false,
   "penguini": true,
   "world_coordinates": true,
-  "glb_bytes": 22542788,
-  "uncompressed_bytes": 104251744,
+  "glb_bytes": 22601032,
+  "uncompressed_bytes": 104253328,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -109,5 +132,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "83c430a4d33bbe44698e84d6284895e5ad3c02140206ce38c00239217ea58e33"
+  "packed_sha256": "b58897f3b02752eda35b649eaf2655ceb27f52b81c605005bef86e68e4200762"
 }

@@ -11,6 +11,7 @@ const layout = JSON.parse(await readFile('assets/models/terraced-village/layout.
 await MeshoptDecoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
 const reports = [];
+const glassRevision=createHash('sha256').update(await readFile('tools/about/village/daylight/glass.py')).digest('hex');
 for (const id of [...layout.stops.map(s => s.id), 'world']) {
   const bytes = await readFile(`${base}/models/${id}.glb`);
   const receipt = JSON.parse(await readFile(`${base}/source/${id}-bake.json`));
@@ -22,6 +23,20 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
   const triangles = root.listMeshes().flatMap(m => m.listPrimitives())
     .reduce((sum, p) => sum + (p.getIndices()?.getCount() ?? p.getAttribute('POSITION').getCount()) / 3, 0);
   assert.equal(triangles, receipt.triangles, id);
+  const clear=root.listMaterials().filter(m=>m.getExtras().village_clear_glass || m.getName().startsWith('Village clear cottage glazing'));
+  assert(clear.length>0,`${id}: missing clear glass`);
+  for(const m of clear){
+    assert.equal(m.getExtension('KHR_materials_transmission')?.getTransmissionFactor(),1, m.getName());
+    assert.equal(m.getRoughnessFactor(),0,m.getName());
+    assert(Math.abs((m.getExtension('KHR_materials_ior')?.getIOR()??1.5)-1.45)<1e-6,m.getName());
+    assert.equal(m.getMetallicFactor(),0,m.getName());
+    assert.equal(m.getAlphaMode(),'OPAQUE',m.getName()); // Transmission, not alpha-faded plastic.
+    assert(!m.getNormalTexture() && !m.getMetallicRoughnessTexture(),m.getName());
+    assert(!m.getExtension('KHR_materials_unlit'),m.getName());
+    if(!m.getExtras().intentional_stained_glass)assert.deepEqual(m.getBaseColorFactor(),[1,1,1,1],m.getName());
+  }
+  assert.equal(id==='world'?receipt.ground.glass_revision:receipt.glass_revision,glassRevision,id);
+  if(id==='world')assert.equal(receipt.landscape.glass_revision,glassRevision);
   const unlit = root.listMaterials().filter(m => m.getExtension('KHR_materials_unlit'));
   assert.equal(unlit.length, id === 'world' ? 5 : 2, id);
   const textures = unlit.map(m => m.getBaseColorTexture()).filter(Boolean);
@@ -68,7 +83,7 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
       assert.equal(createHash('sha256').update(await readFile(path)).digest('hex'), hash, path);
     }
   }
-  reports.push({ id, bytes: bytes.length, triangles, baked_materials: unlit.length,
+  reports.push({ id, bytes: bytes.length, triangles, baked_materials: unlit.length, clear_glass_materials:clear.length,
     texture_dimensions: textures.map(t => t.getSize()), sha256: receipt.packed_sha256 });
 }
 await writeFile(`${base}/source/asset-verification.json`, JSON.stringify({

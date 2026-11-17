@@ -1,4 +1,7 @@
 {
+  "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "clear_cottage_window_openings": 32,
+  "clear_backing_rays": 91,
   "native_world_reopened": true,
   "model_instances": 12,
   "native_objects": 24226,
@@ -44,8 +47,8 @@
   "portable_images": true,
   "external_libraries": 0,
   "walking_camera_preserved": true,
-  "sha256": "327ca86e2cd1c0439c9a8b5d89b8bb539ddeedf44319dab4e3b3698332d27879",
-  "bytes": 86275186,
+  "sha256": "840b3b0418d18e5e4d3d33a836fed601f4775faace3bd060d8c242d11181b556",
+  "bytes": 86344763,
   "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
   "vegetation_geometry_sha256": "65b568c84d517879c7d8590bb0878b4b5fb4135800047498b08c8f4d32064e16",
   "signage_geometry_sha256": "5191fe7f9e3abc9c60108558900834988cb191573c93aecb9b9701f70da39664"

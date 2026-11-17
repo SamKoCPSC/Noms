@@ -8,6 +8,7 @@ import numpy as np
 
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from common import *
+from glass import glass_revision
 from terrain import split_ground
 args=sys.argv[sys.argv.index('--')+1:];out=Path(args[0]);out.mkdir(parents=True,exist_ok=True)
 bpy.ops.wm.open_mainfile(filepath=str(DAY/'models/terraced-village-daylight.blend'),load_ui=False,use_scripts=False)
@@ -15,6 +16,8 @@ scene=bpy.context.scene;scene.cycles.samples=CONFIG['landscape_samples'];scene.c
 assert sum(o.instance_type=='COLLECTION' and 'stop' in o for o in scene.objects)==12
 split_ground()
 members=[o for o in bpy.data.collections['World terrain — blockout'].objects if o.type=='MESH' and o.get('ground_tile',4)==4]
+glass=[o for o in members if o.active_material.get('village_clear_glass')]
+members=[o for o in members if o not in glass]
 bpy.ops.object.select_all(action='DESELECT')
 for obj in members:obj.select_set(True)
 bpy.context.view_layer.objects.active=members[0];bpy.ops.object.join();obj=bpy.context.object;obj.name='Baked village landscape vertex lighting'
@@ -60,12 +63,18 @@ assert sum(len(piece.data.loops) for piece in pieces)==count
 for piece in pieces:
     piece.data.materials.clear();piece.data.materials.append(mat)
     for polygon in piece.data.polygons:polygon.material_index=0
+for pane in glass:pane.select_set(True)
 path=out/'landscape-vertex.glb'
-bpy.ops.export_scene.gltf(filepath=str(path),export_format='GLB',use_selection=True,export_animations=False,export_cameras=False,export_lights=False,export_yup=True)
+bpy.ops.export_scene.gltf(filepath=str(path),export_format='GLB',use_selection=True,export_animations=False,export_cameras=False,export_lights=False,export_yup=True,export_extras=True)
 data=path.read_bytes();size=struct.unpack_from('<I',data,12)[0];doc=json.loads(data[20:20+size])
-assert len(doc['materials'])==1 and all('COLOR_0' in p['attributes'] for mesh in doc['meshes'] for p in mesh['primitives'])
-doc['materials'][0].setdefault('extensions',{})['KHR_materials_unlit']={};doc.setdefault('extensionsUsed',[]).append('KHR_materials_unlit')
+baked_indices=[i for i,m in enumerate(doc['materials']) if m['name']=='Baked world vertex lighting']
+assert len(baked_indices)==1 and glass
+for mesh in doc['meshes']:
+ for p in mesh['primitives']:
+  if p['material'] in baked_indices:assert 'COLOR_0' in p['attributes']
+for i in baked_indices:doc['materials'][i].setdefault('extensions',{})['KHR_materials_unlit']={}
+doc.setdefault('extensionsUsed',[]).append('KHR_materials_unlit')
 encoded=json.dumps(doc,separators=(',',':')).encode();encoded+=b' '*(-len(encoded)%4)
 chunks=struct.pack('<I4s',len(encoded),b'JSON')+encoded+data[20+size:];path.write_bytes(struct.pack('<4sII',b'glTF',2,12+len(chunks))+chunks)
-(out/'vertex-verification.json').write_text(json.dumps(dict(lighting=CONFIG,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),vegetation_geometry_sha256=vegetation_revision(),signage_geometry_sha256=signage_revision(),baked_corners=count,export_chunks=len(pieces),bake_samples=scene.cycles.samples,display_transform=scene.view_settings.view_transform,unlit_vertex_colors=True,texture_uvs_required=False),indent=2)+'\n')
+(out/'vertex-verification.json').write_text(json.dumps(dict(glass_revision=glass_revision(),clear_glass_meshes=len(glass),lighting=CONFIG,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),vegetation_geometry_sha256=vegetation_revision(),signage_geometry_sha256=signage_revision(),baked_corners=count,export_chunks=len(pieces),bake_samples=scene.cycles.samples,display_transform=scene.view_settings.view_transform,unlit_vertex_colors=True,texture_uvs_required=False),indent=2)+'\n')
 print('LANDSCAPE_VERTEX_BAKE_COMPLETE',count,flush=True)
