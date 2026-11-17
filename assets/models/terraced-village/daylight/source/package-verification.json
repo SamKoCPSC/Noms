@@ -1,0 +1,11 @@
+{
+  "layout_revision": 12,
+  "webp_quality": 76,
+  "archive_compression": "Standard ZIP Deflate level 6",
+  "zip_bytes": 106045456,
+  "zip_sha256": "98990eb96e33f6dd504059cc52e16571ea3be11cdab2fbf869c88684f0b245e5",
+  "html_bytes": 183028890,
+  "html_sha256": "425697825e6dfe9ac427799654d5588c5791302d5b13d5b56c98edbf634e44b1",
+  "zip_crc_verified": true,
+  "extracted_html_hash_verified": true
+}

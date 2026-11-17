@@ -1,0 +1,676 @@
+{
+  "revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
+  "rooms": {
+    "bakery": {
+      "materials": {
+        "bakery::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [],
+      "hidden_fake_scenery": [],
+      "openings": []
+    },
+    "bedroom": {
+      "materials": {
+        "bedroom::Anti reflective display glazing::18d5531e": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "bedroom::Clear empty glass::d17dc34a": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [],
+      "hidden_fake_scenery": [
+        "bedroom::Window nearer hill::7b72c28f",
+        "bedroom::Window distant mountain::ba4807b0",
+        "bedroom::Window exterior pale sky::d459bc80"
+      ],
+      "openings": []
+    },
+    "brick-kitchen": {
+      "materials": {
+        "brick-kitchen::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "brick-kitchen::window::320ad267": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [
+        "brick-kitchen::Window daylight panes::4e80dac3"
+      ],
+      "hidden_fake_scenery": [],
+      "openings": []
+    },
+    "corporate-office": {
+      "materials": {
+        "corporate-office::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "corporate-office::sky::5737ef08": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [
+        "corporate-office::Daylight glazing::98e6eec8"
+      ],
+      "hidden_fake_scenery": [],
+      "openings": []
+    },
+    "farmers-market": {
+      "materials": {
+        "farmers-market::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [],
+      "hidden_fake_scenery": [],
+      "openings": []
+    },
+    "garden": {
+      "materials": {
+        "garden::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "garden::glassSky::e422caef": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [
+        "garden::Back door glazing export::1ae51aac",
+        "garden::Back door glazing.001 export::8f6be538",
+        "garden::Window softly reflective glazing::53b11c6d",
+        "garden::Window softly reflective glazing::c26df3a9"
+      ],
+      "hidden_fake_scenery": [],
+      "openings": [
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::f12c02d9",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::d937dda6",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::054d98f2",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Back door walnut leaf export::36f63e2e",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::House solid facade export::0e6c883b",
+          "pane": "garden::Back door glazing export::1ae51aac"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::f12c02d9",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::d937dda6",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::054d98f2",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Back door walnut leaf.001 export::f75b068f",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::House solid facade export::0e6c883b",
+          "pane": "garden::Back door glazing.001 export::8f6be538"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::House solid facade export::0e6c883b",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Window shadow recess.001 export::c1f6a0bc",
+          "pane": "garden::Window softly reflective glazing::53b11c6d"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::c1f4a7b7",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::2cf82b6e",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::8a006c2a",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::602b2b0b",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::675e0f77",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::88ceda06",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::Horizontal clapboard lower lip.0::fa5c89e3",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::House solid facade export::0e6c883b",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        },
+        {
+          "object": "garden::Window shadow recess export::d3f6a4e3",
+          "pane": "garden::Window softly reflective glazing::c26df3a9"
+        }
+      ]
+    },
+    "kitchen": {
+      "materials": {
+        "kitchen::Window \u00b7 misted daylight::71874b8b": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "kitchen::Clear borosilicate glass::847108cd": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [
+        "kitchen::Left wall window \u00b7 pale daylight::3ba675ea",
+        "kitchen::Right wall window \u00b7 pale dayligh::5cd05bcc"
+      ],
+      "hidden_fake_scenery": [],
+      "openings": [
+        {
+          "object": "kitchen::Walls \u00b7 continuous closed L shel::10da7838",
+          "pane": "kitchen::Left wall window \u00b7 pale daylight::3ba675ea"
+        },
+        {
+          "object": "kitchen::Walls \u00b7 continuous closed L shel::10da7838",
+          "pane": "kitchen::Right wall window \u00b7 pale dayligh::5cd05bcc"
+        }
+      ]
+    },
+    "library": {
+      "materials": {
+        "library::glassBlue::df21be45": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": true
+        },
+        "library::glassTeal::f911d81d": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": true
+        },
+        "library::glassPurple::f0b5ff39": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": true
+        },
+        "library::glassLime::4e329283": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": true
+        },
+        "library::Matte pale blue simulated window::044a5532": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "library::Matte blue simulated window::075a315c": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [
+        "library::Blue simulated window panel.001::6b003b6d",
+        "library::Blue simulated window panel.002::b0a403c0",
+        "library::Blue simulated window panel.003::90dc9856",
+        "library::Blue simulated window panel.004::2ba26b84",
+        "library::Blue simulated window panel.005::3852f195",
+        "library::Blue simulated window panel.006::ea583baa",
+        "library::Blue simulated window panel.007::b5521ec5",
+        "library::Blue simulated window panel.008::57af4930",
+        "library::Blue simulated window panel.009::14cc7f9d",
+        "library::Blue simulated window panel.010::83ac54c7",
+        "library::Blue simulated window panel.011::5076acdd",
+        "library::Blue simulated window panel.012::f0db70d8",
+        "library::Blue simulated window panel.013::49e7ea11",
+        "library::Blue simulated window panel.014::d5adddc9",
+        "library::Blue simulated window panel.015::9f022987",
+        "library::Blue simulated window panel.016::68acec3a",
+        "library::Blue simulated window panel.017::9e0da21f",
+        "library::Blue simulated window panel::dcd882bb"
+      ],
+      "hidden_fake_scenery": [],
+      "openings": []
+    },
+    "office": {
+      "materials": {
+        "office::Clear empty glass::d17dc34a": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "office::V2 Clear tempered PC glass::ae05279d": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "office::Window very clear glazing::0927bdd7": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [],
+      "hidden_fake_scenery": [],
+      "openings": []
+    },
+    "riverside-campsite": {
+      "materials": {
+        "riverside-campsite::windowBlue::bb4f520f": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "riverside-campsite::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [
+        "riverside-campsite::Door blue glazing::8093249c",
+        "riverside-campsite::Ground floor window blue panel::806b7e7c",
+        "riverside-campsite::Side window blue panel.001::19606bfd",
+        "riverside-campsite::Side window blue panel::a846e24f",
+        "riverside-campsite::Upper left window blue panel::0cb5bfb8",
+        "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+      ],
+      "hidden_fake_scenery": [],
+      "openings": [
+        {
+          "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+          "operation": "hollow cabin interior"
+        },
+        {
+          "object": "riverside-campsite::Walnut cabin door::42eb429b",
+          "pane": "riverside-campsite::Door blue glazing::8093249c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.009::289ee3b1",
+          "pane": "riverside-campsite::Door blue glazing::8093249c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.006::2359e2dd",
+          "pane": "riverside-campsite::Door blue glazing::8093249c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.010::3aa89a05",
+          "pane": "riverside-campsite::Door blue glazing::8093249c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.007::c1020d3a",
+          "pane": "riverside-campsite::Door blue glazing::8093249c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.008::5fd4d464",
+          "pane": "riverside-campsite::Door blue glazing::8093249c"
+        },
+        {
+          "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+          "pane": "riverside-campsite::Door blue glazing::8093249c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.003::ecdde204",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.004::525b4f71",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.005::7203a37b",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.009::289ee3b1",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.006::2359e2dd",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.007::c1020d3a",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.008::5fd4d464",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+          "pane": "riverside-campsite::Ground floor window blue panel::806b7e7c"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.014::8ab0cb3f",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.015::d1e1a752",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.016::05ace26e",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.017::245d97d7",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.018::b6f4dccf",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.019::b721e11b",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.020::610aaf84",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+          "pane": "riverside-campsite::Side window blue panel.001::19606bfd"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.007::8eb252f7",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.008::d41027ab",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.009::2a9ebe74",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.003::8c02ee75",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.004::4f158cb3",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.005::58f9967c",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Right cedar clapboard.006::902d8abe",
+          "pane": "riverside-campsite::Side window blue panel::a846e24f"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.016::bf4b96e2",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.017::ce2fc7e3",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.018::17be11db",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.019::ff738003",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.020::1b807ac3",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.014::7e75d514",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.015::22faaa2a",
+          "pane": "riverside-campsite::Upper left window blue panel::0cb5bfb8"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.016::bf4b96e2",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.017::ce2fc7e3",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.018::17be11db",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.019::ff738003",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.020::1b807ac3",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        },
+        {
+          "object": "riverside-campsite::Cabin enclosed body::d8fa54e9",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.014::7e75d514",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        },
+        {
+          "object": "riverside-campsite::Front cedar clapboard.015::22faaa2a",
+          "pane": "riverside-campsite::Upper right window blue panel::b6fc1bb4"
+        }
+      ]
+    },
+    "social-kitchen": {
+      "materials": {
+        "social-kitchen::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        },
+        "social-kitchen::windowBlue::bb4f520f": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [
+        "social-kitchen::Opaque blue daylight glazing::6f6444e0"
+      ],
+      "hidden_fake_scenery": [],
+      "openings": []
+    },
+    "supermarket": {
+      "materials": {
+        "supermarket::glass::170fd7e8": {
+          "transmission": 1,
+          "roughness": 0,
+          "ior": 1.45,
+          "tinted": false
+        }
+      },
+      "converted_window_objects": [],
+      "hidden_fake_scenery": [],
+      "openings": []
+    }
+  },
+  "source_hashes": {
+    "assets/models/terraced-village/models/terraced-village-blockout.blend": "8f65fbf895f00220350c0f5162c1405c36604bb2b696b0d25d1e4e5f8719ca21",
+    "assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-manager.blend": "8a2139153fedbe73592e5b2e90541d855f9c570cf7dead5accb34faeb9640cf4",
+    "assets/models/university-library/models/university-library.blend": "eb5ed51a7c14041b142a4b4444f8cff98a992f0768ee5530fb5bf5d1d278fd73",
+    "assets/models/corner-cocoon-bedroom/models/sams-corner-cocoon.blend": "1f97b7b32ef46d39406c3e9ae228989ae8b85928d2fb4ddf97d3268e7be2d092",
+    "assets/models/european-arcade-supermarket/models/european-arcade-supermarket.blend": "e06b687cccc0f731fa483fd14277d5871be20a52a8295353aff794914d7a98e1",
+    "assets/models/home-office/models/sams-project-room.blend": "c4d0c73fbe9ce797dabd6b103db8d69ab57a2773f9d35afe84d3c222d25ce080",
+    "assets/models/corporate-workspace-pantry/models/corporate-workspace-pantry.blend": "639717d8e787f0e2a37c30a9ef6ab56f6eb8289b98e239241bacaa96946551de",
+    "assets/models/brick-loft-kitchen/models/brick-loft-kitchen.blend": "0142dd90be54d5243e83be083c9112b9479a19e6b2373fedae62542e9381ef87",
+    "assets/models/modern-baking-lab/models/modern-baking-lab.blend": "85c5265636123679305f7cc69b031b2b1fed75be08954cb045514aa080dee949",
+    "assets/models/community-spaces/models/farmers-market.blend": "a22d8f4fcbecafdb0956de2c506c5dbc66808281c017bccf8e0bc1424a064e84",
+    "assets/models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend": "a3a52438bc2662b14b55b21e7d9f2495b38983791776a55a04300e39e82e4196",
+    "assets/models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend": "f5581f0d3f8d3204fa76b69456f1bf5fa0487d319378e07588935cf27bcf3ffd",
+    "assets/models/garden-cookout/models/garden-v6.blend": "6766c06921799b251c859767d62f56731ef689891f2ee5085de7c21db6aef26f"
+  },
+  "cached_blend_sha256": "582c977d167ef2b7cd9c28765c0bb68a6af738ae39b804e11e56c91359d9bb25"
+}

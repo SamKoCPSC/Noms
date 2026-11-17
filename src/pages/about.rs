@@ -389,6 +389,42 @@ fn LoadingPenguini() -> Element {
     }
 }
 
+const VILLAGE_BRIDGE: Asset = asset!(
+    "/assets/about-three-village.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const _: &[u8] = include_bytes!("../../assets/about-three-village.js");
+const VILLAGE_LAYOUT: Asset = asset!("/assets/about/village/layout.json");
+// Track regenerated derivatives so incremental builds refresh Manganis URLs.
+const _: &str = include_str!("../../assets/about/village/layout.json");
+const _: &[u8] = include_bytes!("../../assets/about/village/world.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/kitchen.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/library.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/bedroom.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/supermarket.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/office.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/corporate-office.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/brick-kitchen.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/bakery.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/farmers-market.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/social-kitchen.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/riverside-campsite.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/garden.glb");
+
+const VILLAGE_WORLD: Asset = asset!("/assets/about/village/world.glb");
+const VILLAGE_KITCHEN: Asset = asset!("/assets/about/village/kitchen.glb");
+const VILLAGE_LIBRARY: Asset = asset!("/assets/about/village/library.glb");
+const VILLAGE_BEDROOM: Asset = asset!("/assets/about/village/bedroom.glb");
+const VILLAGE_SUPERMARKET: Asset = asset!("/assets/about/village/supermarket.glb");
+const VILLAGE_OFFICE: Asset = asset!("/assets/about/village/office.glb");
+const VILLAGE_CORPORATE_OFFICE: Asset = asset!("/assets/about/village/corporate-office.glb");
+const VILLAGE_BRICK_KITCHEN: Asset = asset!("/assets/about/village/brick-kitchen.glb");
+const VILLAGE_BAKERY: Asset = asset!("/assets/about/village/bakery.glb");
+const VILLAGE_FARMERS_MARKET: Asset = asset!("/assets/about/village/farmers-market.glb");
+const VILLAGE_SOCIAL_KITCHEN: Asset = asset!("/assets/about/village/social-kitchen.glb");
+const VILLAGE_RIVERSIDE_CAMPSITE: Asset = asset!("/assets/about/village/riverside-campsite.glb");
+const VILLAGE_GARDEN: Asset = asset!("/assets/about/village/garden.glb");
+
 #[component]
 pub fn About() -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -397,6 +433,19 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
+       "data-village-layout-url":VILLAGE_LAYOUT,"data-village-world-url":VILLAGE_WORLD,"data-village-bridge-url":VILLAGE_BRIDGE,
+    "data-village-kitchen-url":VILLAGE_KITCHEN,
+    "data-village-library-url":VILLAGE_LIBRARY,
+    "data-village-bedroom-url":VILLAGE_BEDROOM,
+    "data-village-supermarket-url":VILLAGE_SUPERMARKET,
+    "data-village-office-url":VILLAGE_OFFICE,
+    "data-village-corporate-office-url":VILLAGE_CORPORATE_OFFICE,
+    "data-village-brick-kitchen-url":VILLAGE_BRICK_KITCHEN,
+    "data-village-bakery-url":VILLAGE_BAKERY,
+    "data-village-farmers-market-url":VILLAGE_FARMERS_MARKET,
+    "data-village-social-kitchen-url":VILLAGE_SOCIAL_KITCHEN,
+    "data-village-riverside-campsite-url":VILLAGE_RIVERSIDE_CAMPSITE,
+    "data-village-garden-url":VILLAGE_GARDEN,
        "data-three-bridge-url":THREE_BRIDGE,
        "data-baked-kitchen-url":BAKED_KITCHEN,"data-baked-kitchen-lighting":LIGHTING_KITCHEN,
        "data-baked-office-url":BAKED_OFFICE,"data-baked-office-lighting":LIGHTING_OFFICE,
@@ -439,6 +488,7 @@ pub fn About() -> Element {
       }
      }
      div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}canvas{id:"story-three-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
+     button{id:"village-view-toggle",class:"village-view-toggle",r#type:"button",hidden:true,"Read as page"}
      div{id:"story",class:"story",
       for i in 0..IDS.len() {
        article{id:"panel-{i}",class:"story-panel","data-panel":"{i}","data-model":"{MODEL_FOR_STOP[i]}",aria_labelledby:"title-{i}",
