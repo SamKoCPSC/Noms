@@ -32,7 +32,6 @@
 .landing-page img { display: block; max-width: 100%; }
 .landing-page figure { margin: 0; min-width: 0; }
 .landing-page .btn { border-radius: 17px; min-height: 48px; padding: 13px 22px; font-size: 15px; font-weight: 800; }
-.landing-page .btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: var(--landing-raised); }
 .landing-page .btn-secondary { color: var(--landing-ink); border: 1px solid var(--landing-line); background: transparent; }
 .landing-page :is(a,button):focus-visible { outline: 3px solid var(--landing-accent); outline-offset: 5px; }
 .landing-page .landing-eyebrow { color: var(--landing-accent); text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 2px; margin: 0 0 16px; }
