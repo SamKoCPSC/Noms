@@ -72,6 +72,7 @@ struct State {
     dirty: bool,
     active: usize,
     focus_destination: Option<usize>,
+    focus_loader_on_entry: bool,
     last: f64,
     time: f32,
     frames: u64,
@@ -166,6 +167,7 @@ pub fn start() -> Result<(), JsValue> {
         dirty: true,
         active: usize::MAX,
         focus_destination: None,
+        focus_loader_on_entry: false,
         last: 0.,
         time: 0.,
         frames: 0,
@@ -744,8 +746,11 @@ impl State {
         if !blocked {
             self.loading_timeout = None;
             self.loading_phrases = None;
-            if focus_in_loader {
-                self.focus_chapter(self.active.min(flight::COUNT - 1));
+            if focus_in_loader || self.focus_loader_on_entry {
+                self.focus_loader_on_entry = self.flying;
+                if !self.flying {
+                    self.focus_chapter(self.active.min(flight::COUNT - 1));
+                }
             }
         }
     }
@@ -1085,9 +1090,13 @@ impl State {
             let _ = panel.set_attribute("aria-hidden", if interactive { "false" } else { "true" });
             if interactive {
                 let _ = panel.remove_attribute("inert");
-                if self.focus_destination == Some(i) {
+                // The gate opens after this loop, while every panel is still
+                // inert. Restore loader focus on the next interactive panel,
+                // after any entry-fragment alignment has selected its chapter.
+                if self.focus_destination == Some(i) || self.focus_loader_on_entry {
                     self.focus_chapter(i);
                     self.focus_destination = None;
+                    self.focus_loader_on_entry = false;
                 }
             } else {
                 let _ = panel.set_attribute("inert", "");
