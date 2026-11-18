@@ -75,6 +75,73 @@ async def check_look_around(page):
     assert await root.get_attribute('data-looking') is None
     print('PASS look around, drag, keyboard and return at the same path position',flush=True)
 
+async def check_explore(page, out):
+    canvas = page.locator('#story-three-canvas')
+    button = page.locator('#village-look-toggle')
+    # Enter midway through the walk to check that the tour can resume between stops.
+    await page.locator('.waypoint').first.evaluate('e=>window.scrollBy(0,e.getBoundingClientRect().top+e.clientHeight*.55)')
+    await settle(page)
+    async def pose():
+        return await canvas.evaluate('e=>[JSON.parse(e.dataset.cameraEye),e.dataset.modelBounds,e.dataset.projection,e.dataset.progress]')
+    saved = await pose()
+    assert abs(float(saved[3])-.55)<.002
+    assert await button.inner_text()=='Explore village'
+    await button.click()
+    await page.evaluate('step(1)')
+    await page.evaluate('step(1,1200)')
+    lowered = await pose()
+    assert lowered[0][1]<saved[0][1]-2 and lowered[3]==saved[3]
+    mobile = page.viewport_size['width']<=700
+    assert await page.locator('.touch-walk-help' if mobile else '.desktop-walk-help').is_visible()
+    if mobile:
+        session = await page.context.new_cdp_session(page)
+        await session.send('Emulation.setTouchEmulationEnabled',{'enabled':True})
+        box = await page.locator('#village-walk-stick').bounding_box()
+        finger = {'x':box['x']+box['width']/2,'y':box['y']+box['height']*.2,'id':1}
+        async def touch(kind,points):
+            await session.send('Input.dispatchTouchEvent',{'type':kind,'touchPoints':points})
+        await touch('touchStart',[finger])
+        await touch('touchStart',[finger,{'x':240,'y':380,'id':2}])
+        await touch('touchMove',[finger,{'x':260,'y':370,'id':2}])
+        await page.evaluate('step(7)')
+        await touch('touchEnd',[])
+        await session.detach()
+    else:
+        await page.mouse.click(580,350)
+        await page.wait_for_function("document.pointerLockElement?.id === 'village-look-surface'",polling=50)
+        async def check_speed(expected, ramp_frames):
+            await page.evaluate('n=>step(n,50)',ramp_frames)
+            start = (await pose())[0]
+            await page.evaluate('step(1,50)')
+            end = (await pose())[0]
+            speed = math.hypot(end[0]-start[0], end[2]-start[2]) / .05
+            assert abs(speed-expected)<.05,(speed,expected)
+        # Hold Shift before W, release it while walking, then sprint mid-stride.
+        await page.keyboard.down('ShiftLeft')
+        await page.keyboard.down('w')
+        await check_speed(5.,16)
+        await page.keyboard.up('ShiftLeft')
+        await check_speed(2.5,8)
+        await page.keyboard.down('ShiftRight')
+        await check_speed(5.,8)
+        await page.keyboard.up('ShiftRight')
+        await page.mouse.move(600,350)
+        await page.keyboard.press('Escape')
+        await page.keyboard.up('w')
+        await page.wait_for_function('!document.pointerLockElement',polling=50)
+    await page.evaluate('step(8)')
+    walking = await pose()
+    assert math.dist(walking[0],lowered[0])>.2 and walking[3]==saved[3]
+    await page.evaluate('step(4)')
+    assert await pose()==walking
+    await screenshot(page,out/'first-person.png')
+    await button.click()
+    await page.evaluate('step(1)')
+    await page.evaluate('step(1,1201)')
+    assert await pose()==saved
+    assert await button.inner_text()=='Explore village'
+    print('PASS first-person movement and return to fractional tour pose',flush=True)
+
 async def main(url,out):
     assert urlsplit(url).hostname in ['127.0.0.1','localhost'];out.mkdir(parents=True,exist_ok=True)
     async with async_playwright() as p:
@@ -105,6 +172,9 @@ async def main(url,out):
         assert math.dist(await eye(),first['eye'])<1e-5
         assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         print('PASS opening approach and first-stop landing',flush=True)
+        await check_explore(page,out)
+        await page.locator(".waypoint").first.evaluate("e=>e.scrollIntoView({behavior:'instant'})")
+        await settle(page)
         results=[]
         for width,height in ([(393,852),(360,640)] if '--mobile' in sys.argv else [(1280,900),(393,852),(360,640)]):
             await page.set_viewport_size({'width':width,'height':height});await settle(page)

@@ -1,6 +1,7 @@
 //! Rust owns the village's navigation, loading gate, accessibility and lifecycle.
 //! The JS boundary only loads assets and renders the approved walking camera.
 mod look;
+mod walk;
 use crate::pages::about::{IDS, NAMES};
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen::{prelude::*, JsCast};
@@ -28,7 +29,10 @@ extern "C" {
         slot: &[f32],
         opening_distance: f32,
         look: &[f32],
+        walk: &[f32],
     ) -> Result<bool, JsValue>;
+    #[wasm_bindgen(js_name = captureWalkMouse)]
+    fn capture_walk_mouse(surface: &Element);
     #[wasm_bindgen(catch, js_name = disposeVillage)]
     fn dispose_village(view: &JsValue) -> Result<(), JsValue>;
 }
@@ -236,6 +240,7 @@ pub fn start() -> Result<(), JsValue> {
         }
     }) as Box<dyn FnMut(f64)>));
     look::bind_drag(&state)?;
+    walk::bind(&state)?;
     listen(&state, window.as_ref(), "scroll", |state, _| {
         let mut s = state.borrow_mut();
         if !s.flying || !s.ready || s.look.is_some() {
@@ -315,7 +320,7 @@ pub fn start() -> Result<(), JsValue> {
         let Some(key) = event.dyn_ref::<KeyboardEvent>() else {
             return;
         };
-        if key.alt_key() || key.ctrl_key() || key.meta_key() || key.shift_key() {
+        if key.alt_key() || key.ctrl_key() || key.meta_key() {
             return;
         }
         if event
@@ -332,6 +337,9 @@ pub fn start() -> Result<(), JsValue> {
         }
         let mut s = state.borrow_mut();
         if !s.flying || !s.ready {
+            return;
+        }
+        if key.shift_key() && s.walk().is_none() {
             return;
         }
         if s.look.is_some() {
@@ -707,7 +715,7 @@ impl State {
         }
         let slot = self.slot.get_bounding_client_rect();
         let opening_distance = self.opening.distance(now);
-        let look = self.look_frame(now);
+        let (look, walk) = self.look_frame(now);
         let drawn = self.view.as_ref().map(|view| {
             draw_village(
                 view,
@@ -722,10 +730,17 @@ impl State {
                 ],
                 opening_distance,
                 &look,
+                walk.as_ref().map_or(&[], |frame| frame.as_slice()),
             )
         });
         match drawn {
             Some(Ok(true)) => {
+                if self.look.is_none() {
+                    let label = self.explore_label();
+                    if self.look_button.text_content().as_deref() != Some(label) {
+                        self.look_button.set_text_content(Some(label));
+                    }
+                }
                 self.look_button
                     .set_hidden(!matches!(self.opening, OpeningShot::Finished));
                 if self.root.get_attribute("data-entry-state").as_deref() == Some("loading") {
@@ -771,7 +786,7 @@ impl State {
                 let _ = panel.set_attribute("inert", "");
             }
         }
-        let moving = self.look_returning()
+        let moving = self.look_moving()
             || !matches!(self.opening, OpeningShot::Finished)
             || self.transition.is_some()
             || (self.progress - self.target).abs() > 0.0001;
