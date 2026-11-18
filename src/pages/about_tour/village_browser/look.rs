@@ -54,7 +54,7 @@ impl State {
             return [0.; 3];
         };
         let weight = if look.returning {
-            let t = ((now - *look.started.get_or_insert(now)) / 450.).clamp(0., 1.) as f32;
+            let t = ((now - *look.started.get_or_insert(now)) / 1200.).clamp(0., 1.) as f32;
             if t >= 1. {
                 self.clear_look();
                 self.align_scroll();
@@ -74,10 +74,10 @@ impl State {
     pub(super) fn look_key(&mut self, key: &KeyboardEvent) {
         let Some(look) = &mut self.look else { return };
         match key.key().as_str() {
-            "ArrowLeft" => look.turn(0.14, 0.),
-            "ArrowRight" => look.turn(-0.14, 0.),
-            "ArrowUp" => look.turn(0., 0.1),
-            "ArrowDown" => look.turn(0., -0.1),
+            "ArrowLeft" => look.turn(0.07, 0.),
+            "ArrowRight" => look.turn(-0.07, 0.),
+            "ArrowUp" => look.turn(0., 0.05),
+            "ArrowDown" => look.turn(0., -0.05),
             "Escape" => self.toggle_look(),
             _ => return,
         }
@@ -117,7 +117,7 @@ pub(super) fn bind_drag(state: &StateRef) -> Result<(), JsValue> {
                     }
                 }
                 ("pointermove", Some((active, prev_x, prev_y))) if id == active => {
-                    look.turn((x - prev_x) as f32 * 0.006, (y - prev_y) as f32 * 0.004);
+                    look.turn((x - prev_x) as f32 * 0.003, (y - prev_y) as f32 * 0.002);
                     look.drag = Some((id, x, y));
                     drop(s);
                     schedule(state);

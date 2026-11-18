@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {frameCamera,routePose} from './village-camera.js';
+import {createWalkingTurn,frameCamera,routePose} from './village-camera.js';
 const layout=JSON.parse(readFileSync('assets/about/village/layout.json'));
 for(const [width,height,slot] of [[1440,900,[528,116,892,736]],[393,852,[8,448.56,377,355.44]],[360,640,[8,346.8,344,245.2]]]){
  test(`all 12 locations fit their overlay-free space at ${width}×${height}`,()=>{
@@ -54,7 +54,7 @@ test('all stops look down from higher viewpoints without changing the ground rou
 test('travel looks along the level path in either direction', () => {
  const camera = new THREE.PerspectiveCamera();
  for (let leg = 0; leg < layout.routes.length; leg++) {
-  for (const fraction of [0.25, 0.5, 0.75]) {
+  for (const fraction of [0.36, 0.5, 0.64]) {
    const progress = leg + fraction;
    const before = routePose(layout, progress - 0.01).eye;
    const after = routePose(layout, progress + 0.01).eye;
@@ -68,6 +68,40 @@ test('travel looks along the level path in either direction', () => {
     assert.ok(Math.abs(camera.projectionMatrix.elements[9]) < 1e-6);
    }
   }
+ }
+});
+
+test('eased walks turn less than four degrees per frame at 60 Hz on every leg', () => {
+ const camera = new THREE.PerspectiveCamera();
+ const previous = new THREE.Quaternion();
+ const frames = 6.4 * 60;
+ for (let leg = 0; leg < layout.routes.length; leg++) {
+  for (const backwards of [false, true]) {
+   for (let frame = 0; frame <= frames; frame++) {
+    const t = THREE.MathUtils.smootherstep(frame / frames, 0, 1);
+    frameCamera(camera, layout, leg + (backwards ? 1-t : t), 393, 852, [8,450,377,350], backwards);
+    if (frame) assert.ok(previous.angleTo(camera.quaternion) < THREE.MathUtils.degToRad(4));
+    previous.copy(camera.quaternion);
+   }
+  }
+ }
+});
+
+test('scroll reversals ease from the visible bearing and hold that bearing when paused', () => {
+ const camera = new THREE.PerspectiveCamera();
+ const turn = createWalkingTurn();
+ function bearing(p) {
+  const {backwards, offset} = turn(layout, p);
+  frameCamera(camera, layout, p, 393, 852, [8,450,377,350], backwards, 0, [0,0,0], offset);
+  return camera.quaternion.clone();
+ }
+ for (const p of [0.03, 0.41, 0.55, 0.97]) {
+  bearing(p - 0.01);
+  const forward = bearing(p);
+  assert.ok(forward.angleTo(bearing(p - 0.0001)) < 0.005);
+  const paused = bearing(p - 0.02);
+  assert.ok(paused.angleTo(bearing(p - 0.02)) < 1e-6);
+  assert.ok(paused.angleTo(bearing(p - 0.0199)) < 0.005);
  }
 });
 

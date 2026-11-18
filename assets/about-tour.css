@@ -136,7 +136,7 @@ html:has(.about-tour.is-flight){scrollbar-gutter:stable}
  .about-tour[data-village-layout-url].is-flight .story-panel[id]{background:linear-gradient(145deg,rgba(255,253,245,.72),rgba(247,249,235,.52));-webkit-backdrop-filter:blur(18px) saturate(115%);backdrop-filter:blur(18px) saturate(115%)}
 }
 .about-tour[data-village-layout-url].is-flight #tour-scene-framing{left:calc(48px + var(--village-card-width));right:20px;top:calc(var(--tour-top) + 12px);bottom:48px}
-.about-tour[data-village-layout-url].is-flight .waypoint{height:170dvh}
+.about-tour[data-village-layout-url].is-flight .waypoint{height:340dvh}
 .about-tour[data-village-layout-url].is-flight .waypoint:last-child{height:100dvh}
 .about-tour .village-view-toggle{position:fixed;right:18px;bottom:12px;z-index:20;min-height:36px;padding:7px 14px;border:1px solid #6c79554d;border-radius:20px;background:#faf7f0ed;color:#445339;font:inherit;font-size:12px;cursor:pointer}
 .about-tour .village-view-toggle[hidden],.about-tour[data-entry-state=loading] .village-view-toggle{display:none}
