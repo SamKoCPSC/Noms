@@ -715,7 +715,7 @@ impl State {
         }
         let slot = self.slot.get_bounding_client_rect();
         let opening_distance = self.opening.distance(now);
-        let (look, walk) = self.look_frame(now);
+        let walk = self.look_frame(now);
         let drawn = self.view.as_ref().map(|view| {
             draw_village(
                 view,
@@ -729,18 +729,12 @@ impl State {
                     slot.height() as f32,
                 ],
                 opening_distance,
-                &look,
+                &[0.; 3],
                 walk.as_ref().map_or(&[], |frame| frame.as_slice()),
             )
         });
         match drawn {
             Some(Ok(true)) => {
-                if self.look.is_none() {
-                    let label = self.explore_label();
-                    if self.look_button.text_content().as_deref() != Some(label) {
-                        self.look_button.set_text_content(Some(label));
-                    }
-                }
                 self.look_button
                     .set_hidden(!matches!(self.opening, OpeningShot::Finished));
                 if self.root.get_attribute("data-entry-state").as_deref() == Some("loading") {

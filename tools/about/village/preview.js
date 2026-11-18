@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { MeshoptDecoder } from 'meshoptimizer';
 import { groundHeight, makeWalkingRoutes } from './walking-world.js';
+import {createFence, createPerimeter} from './perimeter.js';
 import { addFrontages } from './frontages.js';
 import { addLandscape } from './landscape.js';
 import { addNeighborhood } from './neighborhood.js';
@@ -38,6 +39,7 @@ function line(points,color,radius=.5){const c=new THREE.CatmullRomCurve3(points.
 function label(text,x,y,z){const c=document.createElement('canvas');c.width=512;c.height=80;const ctx=c.getContext('2d');ctx.fillStyle='#faf6e9';ctx.beginPath();ctx.roundRect(0,0,512,80,24);ctx.fill();ctx.fillStyle='#3f4935';ctx.font='600 29px system-ui';ctx.textAlign='center';ctx.fillText(text,256,51);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true}));sprite.position.set(x,y,z);sprite.scale.set(8,1.25,1);scene.add(sprite);return sprite;}
 function tree(x,y,z,size){const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.28,size*.4,6),mat('#805132'));trunk.position.set(x,y+size*.2,z);terrain.add(trunk);for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.ConeGeometry(size*(.32-i*.055),size*.55,5),mat(i%2?'#7fa638':'#4e7e30'));m.position.set(x,y+size*(.48+i*.22),z);terrain.add(m);}}
 const layout=globalThis.__VILLAGE_LAYOUT__||await fetch('layout.json').then(r=>{if(!r.ok)throw Error('Layout unavailable');return r.json();});
+scene.add(createFence(createPerimeter(layout.ground_outline),layout));
 if(layout.shared_lighting){
  const settings=layout.shared_lighting.settings;hemisphere.color.setRGB(...settings.sky_color);hemisphere.intensity=settings.sky_strength;
  sun.color.setRGB(...settings.sun_color);sun.intensity=settings.sun_energy;sun.position.fromArray(settings.sun_direction_y_up);renderer.toneMappingExposure=2**settings.exposure;
