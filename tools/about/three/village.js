@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'meshoptimizer/meshopt_decoder.module.js';
 import { configureClearGlass } from '../village/clear-glass.js';
-import { frameCamera } from './village-camera.js';
+import { createWalkingTurn, frameCamera } from './village-camera.js';
 
 export function createVillage(canvas,catalog) {
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
@@ -23,23 +23,14 @@ export function createVillage(canvas,catalog) {
  }
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
  function disposeRoot(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());textures.forEach(t=>{t.source?.data?.close?.();t.dispose();});materials.forEach(m=>m.dispose());}
- let previousProgress = null;
- let reverseTurn = 0;
+ const walkingTurn = createWalkingTurn();
  const api={
   ready:null,
   draw(progress,width,height,slot,openingDistance=0,look){
    if(disposed||!layout||loaded!==catalog.models.length+1)return false;
    if(renderer.domElement.clientWidth!==width||renderer.domElement.clientHeight!==height||canvas.dataset.cssSize!==`${width},${height}`){renderer.setSize(width,height,false);canvas.dataset.cssSize=`${width},${height}`;}
-   if (previousProgress !== null && progress !== previousProgress) {
-    const distance = progress - previousProgress;
-    const direction = distance < 0 ? 1 : 0;
-    // At a room the travel heading is invisible. Mid-path reversals turn
-    // progressively with scroll distance, including when the user pauses.
-    if (Number.isInteger(previousProgress)) reverseTurn = direction;
-    else reverseTurn += THREE.MathUtils.clamp(direction - reverseTurn, -8*Math.abs(distance), 8*Math.abs(distance));
-   }
-   previousProgress = progress;
-   frameCamera(camera,layout,progress,width,height,slot,THREE.MathUtils.smootherstep(reverseTurn,0,1),openingDistance,look);renderer.render(scene,camera);
+   const {backwards, offset} = walkingTurn(layout, progress);
+   frameCamera(camera,layout,progress,width,height,slot,backwards,openingDistance,look,offset);renderer.render(scene,camera);
    canvas.dataset.progress=String(progress);canvas.dataset.renderer='three-village';canvas.dataset.ready='true';canvas.dataset.calls=String(renderer.info.render.calls);
    canvas.dataset.cameraEye=JSON.stringify(camera.position.toArray());canvas.dataset.projection=JSON.stringify(camera.projectionMatrix.elements);
    const index=Math.round(progress),projected=[];

@@ -13,10 +13,14 @@ an off-axis projection over the entire canvas, preserving proportions without
 cropping the scene behind the text. It evaluates the existing collision-checked
 walking-camera ground route, with smoothly interpolated elevation offsets for a
 32° downward view at each stop. All room placements stay unchanged. Back/Next page,
-Page Up/Down and left/right arrows move between stops in 3200 ms with quintic
-ease-in/ease-out (zero starting and ending velocity and acceleration). During travel the view levels out and follows the path in the direction of motion.
+Page Up/Down and left/right arrows move between stops in 6400 ms with quintic
+ease-in/ease-out (zero starting and ending velocity and acceleration). The
+camera turns toward the path over the first 36% of each leg and toward the
+destination over the last 36%. Reversing a scroll eases from the current bearing.
 Native scrolling over the scene or cards controls the camera directly, including
-when paused between sections.
+when paused between sections. Each full leg spans 3.4 viewport heights of scrolling.
+The opening approach takes 4.8 seconds. Look around supports dragging and
+arrow keys, and Resume tour eases back to the paused view over 1.2 seconds.
 Direct links and browser history retain the story destinations.
 
 The loader waits for all thirteen world-space GLBs and the first rendered frame.

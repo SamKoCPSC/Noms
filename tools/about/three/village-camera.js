@@ -16,21 +16,66 @@ export function stopFraming(stop,width,height,slot) {
 
 // Sample a short stretch of path so the heading turns with the bends.
 function pathHeading(layout, index, fraction) {
- const before = routePose(layout, index + Math.max(0, fraction - 0.035)).eye;
- const after = routePose(layout, index + Math.min(1, fraction + 0.035)).eye;
+ const before = routePose(layout, index + Math.max(0, fraction - 0.07)).eye;
+ const after = routePose(layout, index + Math.min(1, fraction + 0.07)).eye;
  return Math.atan2(after[0] - before[0], after[2] - before[2]);
+}
+
+const turnSpan = 0.36;
+const shortestAngle = angle => Math.atan2(Math.sin(angle), Math.cos(angle));
+
+function roomTurn(layout, leg, t, backwards) {
+ const endpoint = t < 0.5 ? 0 : 1;
+ const room = layout.stops[leg + endpoint].pose;
+ const [dx, dy, dz] = room.target.map((value, axis) => value - room.eye[axis]);
+ const travel = THREE.MathUtils.smootherstep(Math.min(t, 1-t), 0, turnSpan);
+ // Aim for the visible stretch of path ahead. The camera can turn directly
+ // from the room to that heading even when the first steps curve sharply.
+ const along = THREE.MathUtils.clamp(t, turnSpan, 1-turnSpan);
+ const pathYaw = pathHeading(layout, leg, along) + (backwards ? Math.PI : 0);
+ return {
+  yaw: pathYaw + (1-travel) * shortestAngle(Math.atan2(dx, dz) - pathYaw),
+  pitch: (1-travel) * Math.atan2(dy, Math.hypot(dx, dz)),
+  travel
+ };
+}
+
+// Carry the current bearing through a mid-walk reversal, then ease into the
+// new travel direction with scroll distance. Holding still holds the view.
+export function createWalkingTurn() {
+ let previous = null, backwards = false, offset = 0;
+ let start = 0, span = 0, initialOffset = 0;
+ return (layout, progress) => {
+  if (previous !== null && progress !== previous) {
+   const reverse = progress < previous;
+   if (reverse !== backwards && !Number.isInteger(previous)) {
+    const leg = Math.floor(previous), t = previous - leg;
+    const from = roomTurn(layout, leg, t, backwards).yaw + offset;
+    const to = roomTurn(layout, leg, t, reverse).yaw;
+    initialOffset = shortestAngle(from - to);
+    start = previous;
+    span = Math.min(turnSpan, reverse ? t : 1-t);
+   } else if (Number.isInteger(previous)) {
+    span = 0;
+   }
+   backwards = reverse;
+   offset = span > 0 ? initialOffset * (1-THREE.MathUtils.smootherstep(Math.abs(progress-start), 0, span)) : 0;
+  }
+  previous = progress;
+  return {backwards, offset};
+ };
 }
 
 // Off-axis perspective moves the composition, not the viewport. The village
 // continues behind the text overlay, without scissoring or stretched proportions.
-export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn=0,openingDistance=0,look=[0,0,0]) {
+export function frameCamera(camera,layout,progress,width,height,slot,backwards=false,openingDistance=0,look=[0,0,0],yawOffset=0) {
  const p=THREE.MathUtils.clamp(progress,0,layout.stops.length-1),i=Math.floor(p),j=Math.min(i+1,layout.stops.length-1),t=p-i;
  const a=stopFraming(layout.stops[i],width,height,slot),b=stopFraming(layout.stops[j],width,height,slot);
  const focal=THREE.MathUtils.lerp(a.focal,b.focal,t),x=THREE.MathUtils.lerp(a.x,b.x,t),y=THREE.MathUtils.lerp(a.y,b.y,t);
  const pose = routePose(layout, p);
  camera.position.fromArray(pose.eye);
- const travel = THREE.MathUtils.smootherstep(Math.min(t, 1-t), 0, 0.22);
- if (travel === 0) {
+ let travel = 0;
+ if (t === 0) {
   const target = new THREE.Vector3(...pose.target);
   if (p === 0 && openingDistance > 0) {
    // Dolly along the kitchen sightline to keep it in the model area on
@@ -39,15 +84,9 @@ export function frameCamera(camera,layout,progress,width,height,slot,reverseTurn
   }
   camera.lookAt(target);
  } else {
-  const endpoint = t < 0.5 ? 0 : 1;
-  const stop = layout.stops[i + endpoint].pose;
-  const room = new THREE.Vector3(...stop.target).sub(new THREE.Vector3(...stop.eye));
-  const roomHeading = Math.atan2(room.x, room.z);
-  const departure = pathHeading(layout, i, endpoint);
-  const difference = roomHeading - departure;
-  const turnToRoom = Math.atan2(Math.sin(difference), Math.cos(difference));
-  const heading = pathHeading(layout, i, t) + Math.PI * reverseTurn * travel + (1-travel) * turnToRoom;
-  const pitch = (1-travel) * Math.atan2(room.y, Math.hypot(room.x, room.z));
+  const aim = roomTurn(layout, i, t, backwards);
+  travel = aim.travel;
+  const heading = aim.yaw + yawOffset, pitch = aim.pitch;
   camera.lookAt(camera.position.clone().add(new THREE.Vector3(
    Math.sin(heading) * Math.cos(pitch), Math.sin(pitch), Math.cos(heading) * Math.cos(pitch)
   )));

@@ -65,10 +65,10 @@ async def check_look_around(page):
     else:
         await page.keyboard.press('Escape')
     await page.evaluate('step(1)')
-    await page.evaluate('step(1,225)')
+    await page.evaluate('step(1,600)')
     halfway=await pose()
     assert halfway[3]!=turned[3] and halfway[3]!=before[3]
-    await page.evaluate('step(1,225)')
+    await page.evaluate('step(1,600)')
     assert await pose()==before
     assert await toggle.inner_text()=='Look around'
     assert not await page.locator('#story').evaluate('s=>s.inert')
@@ -99,9 +99,9 @@ async def main(url,out):
         assert math.dist(wide,first['target'])>2*math.dist(first['eye'],first['target'])
         await screenshot(page,out/'opening-wide.png')
         await page.evaluate('step(1)')
-        await page.evaluate('step(1,1200)')
+        await page.evaluate('step(1,2400)')
         assert 0<math.dist(await eye(),first['eye'])<math.dist(wide,first['eye'])
-        await page.evaluate('step(1,1200)')
+        await page.evaluate('step(1,2400)')
         assert math.dist(await eye(),first['eye'])<1e-5
         assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         print('PASS opening approach and first-stop landing',flush=True)
@@ -120,27 +120,28 @@ async def main(url,out):
                 assert g['model'][0]>=-1 and g['model'][2]<=width+1 and g['model'][3]<=height+1,g
                 if (width,height) in [(1280,900),(393,852)] and i in [0,1,7,11]: await screenshot(page,out/f'{width}-stop-{i}.png')
                 print('PASS framing',width,height,i,flush=True)
-        # A 3200ms quintic transition accelerates gently, then brakes symmetrically.
+        # A 6400ms quintic transition accelerates gently, then brakes symmetrically.
         label=await page.locator('#panel-0 .next-link').text_content()
         assert label.strip()=='Next page',repr(label)
         await page.set_viewport_size({'width':393,'height':852});await settle(page)
         await page.locator('#panel-11 .back-link').evaluate('e=>e.click()')
         samples=[]
-        for count in [11,10,10]:
-            await page.evaluate('n=>step(n)',count)
+        await page.evaluate('step(1)')
+        for _ in range(3):
+            await page.evaluate('step(1,1600)')
             assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='true'
             samples.append(11-float(await page.locator('#story-three-canvas').get_attribute('data-progress')))
         early,middle,late=samples
         assert 0<early<.15 and abs(middle-.5)<.002 and .85<late<1,samples
         assert middle-early>early and abs((1-late)-early)<.002,samples
-        await page.evaluate('step(10)');assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
+        await page.evaluate('step(1,1600)');assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         assert abs(float(await page.locator('#story-three-canvas').get_attribute('data-progress'))-10)<.001
         assert await page.evaluate('document.activeElement.id')=='title-10'
         # A wheel gesture over text scrolls the document and camera, not the card.
         await page.mouse.move(180,250);await page.mouse.wheel(0,-900);await page.wait_for_timeout(300);await settle(page)
         canvas=page.locator('#story-three-canvas')
         paused=float(await canvas.get_attribute('data-progress'))
-        assert 9.05<paused<9.95,paused
+        assert abs(paused-(10-900/(3.4*852)))<.005,paused
         await page.evaluate('step(45)')
         assert float(await canvas.get_attribute('data-progress'))==paused
         assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'

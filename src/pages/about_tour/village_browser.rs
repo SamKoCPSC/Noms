@@ -46,8 +46,8 @@ const MODELS: [&str; 12] = [
     "riverside-campsite",
     "garden",
 ];
-const TRANSITION_MS: f64 = 3200.;
-const OPENING_MS: f64 = 2400.;
+const TRANSITION_MS: f64 = 6400.;
+const OPENING_MS: f64 = 4800.;
 
 #[derive(Clone, Copy)]
 enum OpeningShot {
