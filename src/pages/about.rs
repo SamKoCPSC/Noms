@@ -491,7 +491,7 @@ pub fn About() -> Element {
      div{id:"village-look-surface",aria_hidden:"true"}
      button{id:"village-look-toggle",class:"village-view-toggle",r#type:"button",hidden:true,aria_describedby:"village-look-hint","Explore village"}
      span{id:"village-look-hint",
-      span{class:"walk-help desktop-walk-help","WASD to walk · Hold Shift to sprint · Click or use arrows to look · Esc to release"}
+      span{class:"walk-help desktop-walk-help","WASD to walk · Shift to sprint · Space to jump · Hold Left Ctrl to crouch · Click or use arrows to look · Esc to release"}
       span{class:"walk-help touch-walk-help","Move with the stick · Swipe to look"}
      }
      div{id:"village-walk-stick",aria_hidden:"true",span{}}

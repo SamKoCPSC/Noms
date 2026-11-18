@@ -60,7 +60,7 @@ impl State {
         }
     }
 
-    pub(super) fn look_frame(&mut self, now: f64) -> Option<[f32; 5]> {
+    pub(super) fn look_frame(&mut self, now: f64) -> Option<[f32; 6]> {
         let look = self.look.as_mut()?;
         let frame = look.walk.frame(
             now,

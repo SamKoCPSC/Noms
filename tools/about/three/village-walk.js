@@ -50,11 +50,11 @@ export function createFirstPersonCamera(layout, perimeter) {
    position=surface.constrain(camera.position.x,camera.position.z);
    initialYaw=camera.rotation.y;
   }
-  const [weight,turn,pitch,side,forward]=walk;
+  const [weight,turn,pitch,side,forward,eyeOffset=0]=walk;
   const yaw=initialYaw+turn, sin=Math.sin(yaw), cos=Math.cos(yaw);
   position=surface.constrain(position[0]+side*cos-forward*sin,position[1]-side*sin-forward*cos);
   const [x,z]=position;
-  camera.position.lerp(new THREE.Vector3(x,surface.floor(x,z)+eyeHeight,z),weight);
+  camera.position.lerp(new THREE.Vector3(x,surface.floor(x,z)+eyeHeight+eyeOffset,z),weight);
   camera.rotation.y+=weight*Math.atan2(Math.sin(yaw-camera.rotation.y),Math.cos(yaw-camera.rotation.y));
   camera.rotation.x=THREE.MathUtils.lerp(camera.rotation.x,pitch,weight);
   camera.fov=THREE.MathUtils.lerp(camera.fov,65,weight);
