@@ -19,6 +19,13 @@ camera turns toward the path over the first 36% of each leg and toward the
 destination over the last 36%. Reversing a scroll eases from the current bearing.
 Native scrolling over the scene or cards controls the camera directly, including
 when paused between sections. Each full leg spans 3.4 viewport heights of scrolling.
+From the kitchen through the library stop, Explore village lowers the camera to
+a 1.65 m eye height. Visitors can walk at up to 2.5 m/s with WASD or the touch
+stick, hold Shift to sprint at 5 m/s, and look with a captured mouse, touch drag or arrow keys. The walkable
+surface follows the stone path, its entrance branches and both forecourts, with
+a 0.3 m inset for wall clearance. Escape releases the mouse and stops walking.
+Resume tour restores the saved guided pose. Later legs offer Look around.
+
 The opening approach takes 4.8 seconds. Look around supports dragging and
 arrow keys, and Resume tour eases back to the paused view over 1.2 seconds.
 Direct links and browser history retain the story destinations.
@@ -43,7 +50,7 @@ node tools/about/village/build-app-assets.mjs
 # Camera-only changes do not require repacking the GLBs:
 node tools/about/village/build-camera.mjs
 npm run about:three:build
-node --test tools/about/three/village-camera.test.mjs
+node --test tools/about/three/village-{camera,walk}.test.mjs
 cargo check --bin noms --target wasm32-unknown-unknown --no-default-features --features web
 python scripts/tests/test-about-village-browser.py http://127.0.0.1:8765/about /tmp/about-village-check
 ```
