@@ -320,7 +320,7 @@ pub fn start() -> Result<(), JsValue> {
         let Some(key) = event.dyn_ref::<KeyboardEvent>() else {
             return;
         };
-        if key.alt_key() || key.ctrl_key() || key.meta_key() {
+        if key.alt_key() || key.meta_key() {
             return;
         }
         if event
@@ -337,6 +337,14 @@ pub fn start() -> Result<(), JsValue> {
         }
         let mut s = state.borrow_mut();
         if !s.flying || !s.ready {
+            return;
+        }
+        // Left Ctrl is a movement modifier only during first-person exploration.
+        if key.ctrl_key()
+            && !s
+                .walk()
+                .is_some_and(|walk| walk.crouching || key.code() == "ControlLeft")
+        {
             return;
         }
         if key.shift_key() && s.walk().is_none() {

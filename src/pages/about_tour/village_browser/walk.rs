@@ -3,9 +3,11 @@ use super::{capture_walk_mouse, el, listen, schedule, subscribe, State, StateRef
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent, PointerEvent};
 
-const WALK_SPEED: f32 = 2.5;
-const SPRINT_SPEED: f32 = 5.;
-const ACCELERATION: f32 = 7.5;
+const WALK_SPEED: f32 = 5.;
+const SPRINT_SPEED: f32 = 2. * WALK_SPEED;
+const CROUCH_DROP: f32 = 0.6;
+const JUMP_DURATION: f32 = 0.8;
+const JUMP_HEIGHT: f32 = 0.85;
 
 #[derive(Default)]
 pub(super) struct Walk {
@@ -13,7 +15,8 @@ pub(super) struct Walk {
     sprinting: bool,
     stick: [f32; 2],
     stick_id: Option<i32>,
-    velocity: [f32; 2],
+    pub(super) crouching: bool,
+    jump_elapsed: Option<f32>,
     blend: f32,
     last: Option<f64>,
 }
@@ -21,18 +24,29 @@ pub(super) struct Walk {
 impl Walk {
     pub fn key(&mut self, key: &KeyboardEvent, down: bool) -> bool {
         let slot = match key.code().as_str() {
-            "ShiftLeft" | "ShiftRight" => {
-                self.sprinting = key.shift_key();
-                return true;
+            "ShiftLeft" | "ShiftRight" => None,
+            "ControlLeft" => {
+                if !key.repeat() {
+                    self.crouching = down;
+                }
+                None
             }
-            "KeyW" => 0,
-            "KeyS" => 1,
-            "KeyA" => 2,
-            "KeyD" => 3,
+            "Space" => {
+                if down && !key.repeat() && self.blend == 1. && self.jump_elapsed.is_none() {
+                    self.jump_elapsed = Some(0.);
+                }
+                None
+            }
+            "KeyW" => Some(0),
+            "KeyS" => Some(1),
+            "KeyA" => Some(2),
+            "KeyD" => Some(3),
             _ => return false,
         };
         if !key.repeat() {
-            self.keys[slot] = down;
+            if let Some(slot) = slot {
+                self.keys[slot] = down;
+            }
             self.sprinting = key.shift_key();
         }
         key.prevent_default();
@@ -44,7 +58,8 @@ impl Walk {
         self.sprinting = false;
         self.stick = [0.; 2];
         self.stick_id = None;
-        self.velocity = [0.; 2];
+        self.crouching = false;
+        self.jump_elapsed = None;
         self.last = None;
     }
 
@@ -52,17 +67,19 @@ impl Walk {
         self.blend < 1.
             || self.keys.contains(&true)
             || self.stick != [0.; 2]
-            || self.velocity != [0.; 2]
+            || self.jump_elapsed.is_some()
     }
 
-    pub fn frame(&mut self, now: f64, returning: bool, yaw: f32, pitch: f32) -> [f32; 5] {
+    pub fn frame(&mut self, now: f64, returning: bool, yaw: f32, pitch: f32) -> [f32; 6] {
         let dt = ((now - self.last.replace(now).unwrap_or(now)).max(0.) / 1000.) as f32;
         self.blend = (self.blend + if returning { -dt } else { dt } / 1.2).clamp(0., 1.);
         let weight = self.blend * self.blend * (3. - 2. * self.blend);
         let axis = |positive: bool, negative: bool| positive as i8 as f32 - negative as i8 as f32;
         let side = self.stick[0] + axis(self.keys[3], self.keys[2]);
         let forward = self.stick[1] + axis(self.keys[0], self.keys[1]);
-        let speed = if self.sprinting {
+        let speed = if self.crouching {
+            WALK_SPEED * 0.5
+        } else if self.sprinting {
             SPRINT_SPEED
         } else {
             WALK_SPEED
@@ -70,13 +87,19 @@ impl Walk {
         let scale = speed / side.hypot(forward).max(1.);
         // Bound the physics step after a suspended tab or a slow draw.
         let dt = dt.min(0.08);
-        for (speed, axis) in self.velocity.iter_mut().zip([side, forward]) {
-            let target = if returning || self.blend < 1. {
-                0.
-            } else {
-                axis * scale
-            };
-            *speed += (target - *speed).clamp(-ACCELERATION * dt, ACCELERATION * dt);
+        let distance = if returning || self.blend < 1. {
+            0.
+        } else {
+            scale * dt
+        };
+        let mut eye_offset = if self.crouching { -CROUCH_DROP } else { 0. };
+        if let Some(elapsed) = &mut self.jump_elapsed {
+            *elapsed += dt;
+            let t = (*elapsed / JUMP_DURATION).min(1.);
+            eye_offset += 4. * JUMP_HEIGHT * t * (1. - t);
+            if t >= 1. {
+                self.jump_elapsed = None;
+            }
         }
         if !returning && !self.moving() {
             self.last = None;
@@ -85,8 +108,9 @@ impl Walk {
             weight,
             yaw,
             pitch,
-            self.velocity[0] * dt,
-            self.velocity[1] * dt,
+            side * distance,
+            forward * distance,
+            eye_offset,
         ]
     }
 }

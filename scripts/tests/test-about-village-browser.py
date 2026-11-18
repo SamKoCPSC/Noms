@@ -62,22 +62,50 @@ async def check_explore(page, out, progress):
     else:
         await page.mouse.click(580,350)
         await page.wait_for_function("document.pointerLockElement?.id === 'village-look-surface'",polling=50)
-        async def check_speed(expected, ramp_frames):
-            await page.evaluate('n=>step(n,50)',ramp_frames)
+        async def check_speed(expected):
             start = (await pose())[0]
             await page.evaluate('step(1,50)')
             end = (await pose())[0]
             speed = math.hypot(end[0]-start[0], end[2]-start[2]) / .05
             assert abs(speed-expected)<.05,(speed,expected)
-        # Hold Shift before W, release it while walking, then sprint mid-stride.
-        await page.keyboard.down('ShiftLeft')
+        # Check consecutive physics steps without allowing time to ramp or coast.
         await page.keyboard.down('w')
-        await check_speed(5.,16)
+        await page.evaluate('step(1,50)')  # wake the idle renderer
+        await check_speed(5.)
+        await page.keyboard.down('ShiftLeft')
+        await check_speed(10.)
         await page.keyboard.up('ShiftLeft')
-        await check_speed(2.5,8)
-        await page.keyboard.down('ShiftRight')
-        await check_speed(5.,8)
-        await page.keyboard.up('ShiftRight')
+        await check_speed(5.)
+        await page.keyboard.up('w')
+        await check_speed(0.)
+        standing = (await pose())[0]
+        await page.keyboard.down('ControlLeft')
+        await page.evaluate('step(1,50)')
+        assert abs((await pose())[0][1]-standing[1]+.6)<.001
+        await page.keyboard.down('d')
+        await page.evaluate('step(1,50)')
+        await check_speed(2.5)
+        await page.keyboard.up('d')
+        await page.keyboard.up('ControlLeft')
+        await page.evaluate('step(1,50)')
+        ground = (await pose())[0]
+        await page.keyboard.down('Space')
+        await page.evaluate('step(1,50)')
+        await page.evaluate('step(8,50)')
+        assert abs((await pose())[0][1]-ground[1]-.85)<.001
+        # A fresh press in midair and key repeats after landing cannot start another jump.
+        await page.keyboard.up('Space')
+        await page.keyboard.down('Space')
+        await page.evaluate('step(10,50)')
+        await page.keyboard.down('Space')
+        await page.evaluate('step(3,50)')
+        assert (await pose())[0]==ground
+        await page.keyboard.up('Space')
+        await page.keyboard.press('Space')
+        await page.evaluate('step(3,50)')
+        assert (await pose())[0][1]>ground[1]
+        await page.evaluate('step(18,50)')
+        assert (await pose())[0]==ground
         await page.mouse.move(600,350)
         await page.keyboard.press('Escape')
         await page.keyboard.up('w')
