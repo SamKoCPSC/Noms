@@ -5,10 +5,14 @@ const layout=JSON.parse(await readFile(`${source}/layout.json`,'utf8'));
 const originalPoses=JSON.parse(await readFile(`${source}/source/camera-poses.json`,'utf8'));
 const originalRoutes=JSON.parse(await readFile(`${source}/source/walking-camera.json`,'utf8'));
 const entrances=JSON.parse(await readFile(`${source}/source/entrance-verification.json`,'utf8')).entrances;
+const anchors=JSON.parse(await readFile(`${source}/daylight/source/anchors.json`,'utf8'));
 const walk={
- pathWidth:layout.walk.path_width,
- stops:layout.stops.map(({position,width})=>({position,width})),
- entrances:entrances.slice(0,2).map(({threshold,approach_end},i)=>({
+ outline:layout.ground_outline,
+ stops:layout.stops.map(({id,position,width,yaw})=>{
+  const {min,max,scale}=anchors[id];
+  return {position,width,yaw,halfSize:[0,2].map(axis=>(max[axis]-min[axis])*scale/2)};
+ }),
+ entrances:entrances.map(({threshold,approach_end},i)=>({
   threshold,end:approach_end,width:layout.stops[i].entrance.width,depth:layout.stops[i].entrance.depth
  }))
 };

@@ -19,15 +19,16 @@ camera turns toward the path over the first 36% of each leg and toward the
 destination over the last 36%. Reversing a scroll eases from the current bearing.
 Native scrolling over the scene or cards controls the camera directly, including
 when paused between sections. Each full leg spans 3.4 viewport heights of scrolling.
-From the kitchen through the library stop, Explore village lowers the camera to
-a 1.65 m eye height. Visitors can walk at up to 2.5 m/s with WASD or the touch
-stick, hold Shift to sprint at 5 m/s, and look with a captured mouse, touch drag or arrow keys. The walkable
-surface follows the stone path, its entrance branches and both forecourts, with
-a 0.3 m inset for wall clearance. Escape releases the mouse and stops walking.
-Resume tour restores the saved guided pose. Later legs offer Look around.
+Explore village lowers the camera to a 1.65 m eye height from any stop or point
+along the route. Visitors can cross the paths, lawns and room footprints inside
+the timber fence. Its rails follow the terrain around the master layout's
+220 × 260 m ground outline. The walking boundary uses those same edges and
+leaves 0.3 m between the camera and the inside face of the fence posts.
+WASD and the touch stick move at up to 2.5 m/s. Hold Shift to sprint at 5 m/s.
+Use the mouse, a touch drag or the arrow keys to look. Escape releases the mouse
+and stops movement. Resume tour eases back to the saved pose over 1.2 seconds.
 
-The opening approach takes 4.8 seconds. Look around supports dragging and
-arrow keys, and Resume tour eases back to the paused view over 1.2 seconds.
+The opening approach takes 4.8 seconds.
 Direct links and browser history retain the story destinations.
 
 The loader waits for all thirteen world-space GLBs and the first rendered frame.

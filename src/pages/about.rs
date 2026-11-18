@@ -489,11 +489,10 @@ pub fn About() -> Element {
      }
      div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}canvas{id:"story-three-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
      div{id:"village-look-surface",aria_hidden:"true"}
-     button{id:"village-look-toggle",class:"village-view-toggle",r#type:"button",hidden:true,aria_describedby:"village-look-hint","Look around"}
+     button{id:"village-look-toggle",class:"village-view-toggle",r#type:"button",hidden:true,aria_describedby:"village-look-hint","Explore village"}
      span{id:"village-look-hint",
-      span{class:"look-help","Drag or use arrow keys to look around"}
-      span{class:"walk-help desktop-walk-help","Kitchen to library · WASD to walk · Hold Shift to sprint · Click to look · Esc to release"}
-      span{class:"walk-help touch-walk-help","Kitchen to library · Move with the stick · Swipe to look"}
+      span{class:"walk-help desktop-walk-help","WASD to walk · Hold Shift to sprint · Click or use arrows to look · Esc to release"}
+      span{class:"walk-help touch-walk-help","Move with the stick · Swipe to look"}
      }
      div{id:"village-walk-stick",aria_hidden:"true",span{}}
      button{id:"village-view-toggle",class:"village-view-toggle",r#type:"button",hidden:true,"Read as page"}

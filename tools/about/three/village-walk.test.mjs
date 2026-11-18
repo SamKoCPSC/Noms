@@ -5,34 +5,56 @@ import * as THREE from 'three';
 import {frameCamera} from './village-camera.js';
 import {createFirstPersonCamera,createWalkSurface} from './village-walk.js';
 
+import {createFence,createPerimeter} from '../village/perimeter.js';
+import {groundHeight} from '../village/walking-world.js';
+
 const layout=JSON.parse(readFileSync('assets/about/village/layout.json'));
 const surface=createWalkSurface(layout);
 
-test('the complete first leg and both entrance approaches are connected at pedestrian height',()=>{
- for(const {eye:[x,,z]} of layout.routes[0]){
+const outline=JSON.parse(readFileSync('assets/models/terraced-village/layout.json')).ground_outline;
+const xs=outline.map(p=>p[0]), zs=outline.map(p=>p[1]);
+const west=Math.min(...xs), east=Math.max(...xs), north=Math.min(...zs), south=Math.max(...zs);
+
+test('all twelve stops, route samples and the open meadow are freely walkable',()=>{
+ for(const route of layout.routes) for(const {eye:[x,,z]} of route) {
+  assert.deepEqual(surface.constrain(x,z),[x,z]);
+ }
+ for(const [i,{position:[x,,z]}] of layout.walk.stops.entries()) {
+  assert.deepEqual(surface.constrain(x,z),[x,z]);
+  assert.ok(Math.abs(surface.floor(x,z)-layout.walk.entrances[i].threshold[1])<1e-5);
+ }
+ for(let x=west+1;x<east;x+=7) for(let z=north+1;z<south;z+=7) {
   assert.deepEqual(surface.constrain(x,z),[x,z]);
   assert.ok(Number.isFinite(surface.floor(x,z)));
  }
- for(const [i,{threshold,end,depth}] of layout.walk.entrances.entries()){
-  const xy=([x,,z])=>new THREE.Vector2(x,z);
-  const b=xy(end),normal=b.clone().sub(xy(threshold)).normalize();
-  const branch=new THREE.QuadraticBezierCurve(xy(layout.stops[i].pose.eye),b.clone().addScaledVector(normal,2.5),b);
-  for(const point of [...branch.getPoints(48),b.clone().addScaledVector(normal,-depth/2)]){
-   assert.ok(point.distanceTo(new THREE.Vector2(...surface.constrain(point.x,point.y)))<1e-5);
-  }
-  assert.ok(Math.abs(surface.floor(b.x,b.y)-end[1])<0.15);
+});
+
+test('even a large sprint step stays inside the posts and can slide along every side',()=>{
+ const inset=0.4;
+ for(const farX of [-10000,10000]) for(const farZ of [-10000,10000]) {
+  const x=farX<0?west+inset:east-inset, z=farZ<0?north+inset:south-inset;
+  assert.deepEqual(surface.constrain(farX,farZ),[x,z]);
+  assert.deepEqual(surface.constrain(farX,17),[x,17]);
+  assert.deepEqual(surface.constrain(14,farZ),[14,z]);
  }
 });
 
-test('walking diagonally against the path edge slides along it and stays outside the rooms',()=>{
- let [x,,z]=layout.routes[0][22].eye;
- const startX=x;
- for(let i=0;i<80;i++) [x,z]=surface.constrain(x-.05,z+.05);
- assert.ok(x<startX-2);
- assert.ok(z<47);
- for(const {box} of layout.stops.slice(0,2)){
-  const [cx,cz]=surface.constrain((box.min[0]+box.max[0])/2,(box.min[2]+box.max[2])/2);
-  assert.ok(cx<box.min[0]||cx>box.max[0]||cz<box.min[2]||cz>box.max[2]);
+test('the visible rails join each neighboring post, including the last corner, on the ground outline',()=>{
+ assert.deepEqual(layout.walk.outline,outline);
+ const [posts,rails]=createFence(createPerimeter(outline),layout.walk).children;
+ assert.equal(rails.count,posts.count*2);
+ const at=(mesh,i)=>{const matrix=new THREE.Matrix4();mesh.getMatrixAt(i,matrix);return matrix;};
+ const base=i=>new THREE.Vector3().setFromMatrixPosition(at(posts,i));
+ for(let i=0;i<posts.count;i++) {
+  const point=base(i),next=base((i+1)%posts.count);
+  assert.ok(point.x===west||point.x===east||point.z===north||point.z===south);
+  assert.ok(Math.abs(point.y-groundHeight(layout.walk,point.x,point.z))<1e-5);
+  assert.ok(point.distanceTo(next)<3.21 && point.distanceTo(next)>0);
+  for(let level=0;level<2;level++){
+   const rail=at(rails,i*2+level), lift=new THREE.Vector3(0,0.52+0.58*level,0);
+   assert.ok(new THREE.Vector3(-0.5,0,0).applyMatrix4(rail).distanceTo(point.clone().add(lift))<1e-4);
+   assert.ok(new THREE.Vector3(0.5,0,0).applyMatrix4(rail).distanceTo(next.clone().add(lift))<1e-4);
+  }
  }
 });
 

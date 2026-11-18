@@ -1,4 +1,4 @@
-//! First-person controls for the outdoor kitchen–library pilot.
+//! First-person controls for the fenced village.
 use super::{capture_walk_mouse, el, listen, schedule, subscribe, State, StateRef};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent, PointerEvent};
@@ -93,7 +93,7 @@ impl Walk {
 
 impl State {
     pub(super) fn walk(&mut self) -> Option<&mut Walk> {
-        self.look.as_mut()?.walk.as_mut()
+        self.look.as_mut().map(|look| &mut look.walk)
     }
 
     pub(super) fn pause_walk(&mut self) {

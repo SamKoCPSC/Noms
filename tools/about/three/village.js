@@ -6,6 +6,7 @@ import { MeshoptDecoder } from 'meshoptimizer/meshopt_decoder.module.js';
 import { configureClearGlass } from '../village/clear-glass.js';
 import { createWalkingTurn, frameCamera } from './village-camera.js';
 
+import {createFence, createPerimeter} from '../village/perimeter.js';
 import { createFirstPersonCamera } from './village-walk.js';
 
 export function createVillage(canvas,catalog) {
@@ -24,7 +25,7 @@ export function createVillage(canvas,catalog) {
   finally{clearTimeout(timer);controllers.delete(controller);}
  }
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
- function disposeRoot(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());textures.forEach(t=>{t.source?.data?.close?.();t.dispose();});materials.forEach(m=>m.dispose());}
+ function disposeRoot(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(o.geometry)geometries.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());textures.forEach(t=>{t.source?.data?.close?.();t.dispose();});materials.forEach(m=>m.dispose());}
  let firstPerson;
  const walkingTurn = createWalkingTurn();
  const api={
@@ -50,7 +51,10 @@ export function createVillage(canvas,catalog) {
   try{
    layout=await fetchAsset(catalog.layout,true);if(disposed)throw new DOMException('Disposed','AbortError');
    if(layout.stops.length!==catalog.models.length)throw Error('Village/story mismatch');
-   firstPerson=createFirstPersonCamera(layout);
+   const perimeter=createPerimeter(layout.walk.outline);
+   firstPerson=createFirstPersonCamera(layout,perimeter);
+   const fence=createFence(perimeter,layout.walk);
+   scene.add(fence);roots.push(fence);
    const settings=layout.lighting;renderer.toneMappingExposure=2**settings.exposure;
    scene.add(new THREE.HemisphereLight(new THREE.Color(...settings.sky_color),'#869956',settings.sky_strength));
    const sun=new THREE.DirectionalLight(new THREE.Color(...settings.sun_color),settings.sun_energy);sun.position.fromArray(settings.sun_direction_y_up);scene.add(sun);
