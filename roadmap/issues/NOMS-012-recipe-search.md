@@ -1,10 +1,8 @@
 # NOMS-012: Recipe Search
 
-> **Current-state review — 2026-11-03:** Recipe/user/collection/All search and live title suggestions (PR #50) are implemented. Full anonymous Search remains NOMS-021; public Explore/suggestions do not complete it.
-> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
-> acceptance lists below are historical; they do not override this summary.
+> **Current contract — 2026-11-18:** Search and suggestions support guests across Recipes, Collections, Cooks and All. Guests see public content. Signed-in visitors can additionally discover their own private and unlisted resources. The [public Search contract](../../docs/public-search.md) records the visibility, limits and browser evidence from [PR #61](https://github.com/SamKoCPSC/Noms/pull/61). The authenticated-only proposal below is historical.
 
-**Status:** ✅ Done — authenticated search baseline implemented
+**Status:** ✅ Done — public and signed-in search delivered
 **Phase:** Phase 2 (discovery and organization)  
 **Revised:** 2026-08-01
 **Depends on:** NOMS-008 current recipe model; NOMS-011 collection hierarchy for collection search; NOMS-010 may be implemented in parallel

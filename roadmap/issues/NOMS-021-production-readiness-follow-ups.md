@@ -1,10 +1,6 @@
 # NOMS-021: Production Readiness and Reliability Follow-ups
 
-> **Current-state review — 2026-11-03:** Use the review checkpoint matrix for current triage: image termination and the CI thread cap exist; residual bounds/cleanup/metadata/public-Search/coverage work remains. Explore tags are now informational, and PR #56 includes a fixture-cleanup fix.
-> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
-> acceptance lists below are historical; they do not override this summary.
-
-> **2026-11-04 implementation — PR #61:** CP2 and CP11 are implemented on the public-search branch, pending merge. See [the public Search contract and browser regression](../../docs/public-search.md) for scope and verification. Other checkpoints remain separate work.
+> **Current checkpoint status — 2026-11-18:** CP2 and CP11 shipped in [PR #61](https://github.com/SamKoCPSC/Noms/pull/61). The existing test thread cap and [private PostgreSQL fixture sockets](../../docs/database-test-isolation.md) address observed startup failures. [PR #79](https://github.com/SamKoCPSC/Noms/pull/79) and [PR #83](https://github.com/SamKoCPSC/Noms/pull/83) restored affected audit and PostgreSQL image checks. The [delivery review](../reviews/2026-11-18-delivery-reconciliation.md) records remaining work. Browser image processing has termination paths (CP5), and Explore uses informational tags (CP8). The [November 3 checkpoint matrix](../reviews/2026-11-03-current-state.md) records the earlier findings and their evidence. The original findings below preserve that context.
 
 **Status:** 🟡 In Progress — checkpoints partly implemented
 **Phase:** Production hardening
@@ -85,6 +81,8 @@ correctness, resilience, and maintainability follow-ups.
 
 ### CP2: Complete aggregate search limits
 
+**Delivered.** Collection and cook searches enforce the 64-term ceiling. See [PR #61](https://github.com/SamKoCPSC/Noms/pull/61).
+
 - Count simple and advanced terms across collection and user search requests.
 - Reject more than 64 aggregate terms before query construction.
 - Cover boundary, exclusion, multi-field, and maximum-shape requests.
@@ -100,6 +98,8 @@ correctness, resilience, and maintainability follow-ups.
   forward progress for expired and retained candidates.
 
 ### CP4: Stabilize production test execution
+
+**Implementation recorded.** The thread cap was already in place. [PR #60](https://github.com/SamKoCPSC/Noms/pull/60) isolated temporary clusters and checked startup readiness. [PR #79](https://github.com/SamKoCPSC/Noms/pull/79) rebuilt and exercised the PostgreSQL search-test image. Full production application image and release acceptance stay under CP13.
 
 - Apply the repository's PostgreSQL-safe test-thread cap to the Docker build and
   ordinary GitHub test job.
@@ -174,6 +174,8 @@ correctness, resilience, and maintainability follow-ups.
   public, authenticated, dynamic, and not-found routes.
 
 ### CP11: Restore visibility-aware anonymous search
+
+**Delivered.** The [public Search contract](../../docs/public-search.md) records the signed-out UI, public projections, identity rules and browser verification.
 
 - Remove the unconditional authentication guard from the Search page and treat
   a missing session as an anonymous viewer rather than an exceptional request.

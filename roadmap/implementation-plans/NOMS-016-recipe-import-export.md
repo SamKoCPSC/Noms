@@ -4,6 +4,8 @@
 > [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
 > acceptance lists below are historical; they do not override this summary.
 
+> **2026-11-18 update:** [Collection import name recovery](../issues/NOMS-025-collection-import-name-recovery.md) allows editable names in the preview and retrying with the original verified archive.
+
 **Status:** 🟡 In Progress — clipboard and file portability delivered
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
