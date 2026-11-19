@@ -1,7 +1,7 @@
-# Marmalade, Nutmeg and Bao
+# Cattatouille, Nutmeg and Bao
 
 Selected chef mascots and excited jump animations, approved on 2026-11-04.
-Marmalade is the ginger tabby (proposal C1), Nutmeg the russet owl (O5), and Bao
+Cattatouille is the ginger tabby (proposal C1), Nutmeg the russet owl (O5), and Bao
 the panda (P1). Their cream chef hats, warm outlines and rounded proportions
 take their visual direction from [Chef Penguini](../penguini/README.md).
 
@@ -9,15 +9,24 @@ take their visual direction from [Chef Penguini](../penguini/README.md).
 
 | Character | Editable resting artwork | Excited animation |
 | --- | --- | --- |
-| Marmalade | [source/marmalade-still.svg](source/marmalade-still.svg) | [marmalade-excited.svg](marmalade-excited.svg) |
+| Cattatouille | [source/cattatouille-still.svg](source/cattatouille-still.svg) | [cattatouille-excited.svg](cattatouille-excited.svg) |
 | Nutmeg | [source/nutmeg-still.svg](source/nutmeg-still.svg) | [nutmeg-excited.svg](nutmeg-excited.svg) |
 | Bao | [source/bao-still.svg](source/bao-still.svg) | [bao-excited.svg](bao-excited.svg) |
+
+Cattatouille also has a [standalone 3D model](3d/cattatouille/cattatouille.glb)
+and an [editable Blender scene](3d/cattatouille/source/cattatouille.blend).
+The Blender scene uses Penguini’s scale and studio lighting. Rotate the head
+and the two foreleg pivots to pose the cat for a scene.
+
+The [desk concept](../../../design/landing/recipe-desk/concept.webp) shows
+the planned landing-page composition. The [Blender pose study](../../../design/landing/recipe-desk/collaboration-study.blend)
+pairs Cattatouille with Penguini at a simple laptop to check scale and gestures.
 
 [kitchen-crew-excited.svg](kitchen-crew-excited.svg) shows all three together,
 synchronized. Each animation plays once in **6.6 seconds**, finishing in its
 selected resting pose. The action follows Penguini's approved jump-and-wave
 timing: an anticipation crouch, a higher hop, a smaller hop, a soft landing,
-waving, and a gradual recovery. Happy eyes, head and hat motion, and Marmalade's
+waving, and a gradual recovery. Happy eyes, head and hat motion, and Cattatouille's
 tail add follow-through. The shadow stays on the ground during the jumps.
 Nutmeg's wing, whisk, grip and finger marks share the same shoulder transform.
 
@@ -50,9 +59,9 @@ Animated character files use a `512 × 672` canvas. The extra headroom keeps hat
 inside the frame during jumps. Reserve this aspect ratio in an `img` element:
 
 ```html
-<img src="marmalade-excited.svg"
+<img src="cattatouille-excited.svg"
      width="256" height="336"
-     alt="Marmalade jumps excitedly and waves">
+     alt="Cattatouille jumps excitedly and waves">
 ```
 
 Use `alt=""` when decorative beside existing content. The combined SVG uses a

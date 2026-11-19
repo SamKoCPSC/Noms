@@ -4,7 +4,7 @@ The approved [Chef Penguini mascot assets](penguini/README.md) are available
 alongside the book logo. They include standalone animations and a reusable
 player; app placement is a separate integration step.
 
-The selected [Marmalade, Nutmeg and Bao chef mascots](kitchen-crew/README.md)
+The selected [Cattatouille, Nutmeg and Bao chef mascots](kitchen-crew/README.md)
 include editable vector artwork, excited jump-and-wave SVGs, and a replayable
 preview alongside Penguini.
 

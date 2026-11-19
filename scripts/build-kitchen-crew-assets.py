@@ -13,7 +13,7 @@ OUTPUTS = {}
 NS = 'http://www.w3.org/2000/svg'
 ET.register_namespace('', NS)
 DURATION = 6600
-CHARACTERS = [('marmalade', 'c1', 'Marmalade', 'cat'),
+CHARACTERS = [('cattatouille', 'c1', 'Cattatouille', 'cat'),
               ('nutmeg', 'o5', 'Nutmeg', 'owl'),
               ('bao', 'p1', 'Bao', 'panda')]
 
@@ -176,7 +176,7 @@ def gallery(roots):
     cards=[]
     for root,(name,old,display,species) in zip(roots,CHARACTERS):
         cards.append(f'<article><div class="stage">{ET.tostring(root,encoding="unicode")}</div><div class="caption"><h2>{display}</h2><a href="{name}-excited.svg" download>Download SVG</a></div></article>')
-    body='''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Marmalade, Nutmeg &amp; Bao — excited jump</title><style>
+    body='''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cattatouille, Nutmeg &amp; Bao — excited jump</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f7f2e9;color:#493428;font:14px/1.5 system-ui,sans-serif}main{max-width:1240px;margin:auto;padding:35px 34px 28px}.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:10px;color:#967254;font-weight:700}header{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:20px}h1{font:normal 38px/1.2 Georgia,serif;letter-spacing:-.025em;margin:8px 0 6px}header p{color:#8c7661;margin:0;font-size:12px}.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}button{font:inherit;cursor:pointer;border-radius:9px;padding:9px 14px;color:#664631;border:1px solid #cbb59b;background:#fffaf2}button.primary{background:#a7613f;color:#fff8e9;border-color:#a7613f}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #a7613f;outline-offset:3px}label{display:flex;gap:6px;align-items:center;font-size:12px;padding:0 4px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}article{border:1px solid #e2d5c4;border-radius:20px;background:#fffbf4;padding:9px 16px 15px}.stage svg{display:block;width:100%;height:auto}.caption{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #ecdfce;padding-top:12px}h2{font:normal 25px Georgia,serif;margin:0}.caption a{font-size:11px;color:#925a3d;text-decoration:none}footer{display:flex;justify-content:space-between;gap:16px;font-size:11px;color:#8a725d;margin-top:18px}.note{font-size:12px;color:#8a725d}.note[hidden]{display:none}@media(max-width:750px){main{padding:22px 18px}header{align-items:start;flex-direction:column}.grid{grid-template-columns:1fr}h1{font-size:32px}article{max-width:440px;width:100%;margin:auto}footer{flex-direction:column}}
 </style><main><header><div><div class="eyebrow">The little kitchen crew / selected mascots</div><h1>A little jump for joy.</h1><p>Two excited hops, a cheerful wave, and a soft landing.</p></div><div class="controls"><button class="primary" id="replay">Replay all</button><button id="pause" aria-pressed="false">Pause</button><label><input id="loop" type="checkbox"> Loop</label></div></header><p class="note" id="reduced" hidden>Reduced motion is on. Showing the resting poses.</p><div class="grid">'''+''.join(cards)+'''</div><footer><span>6.6 seconds · Transparent SVGs · Original selected designs</span><span>Motion inspired by Chef Penguini</span></footer></main><script>
 const replay=document.querySelector('#replay'),pause=document.querySelector('#pause'),loop=document.querySelector('#loop');
@@ -197,7 +197,7 @@ refresh();
 def combined(roots):
     svg=node('svg',{'viewBox':'0 0 1536 672','width':'1536','height':'672',
                     'role':'img','aria-labelledby':'crew-title crew-desc'})
-    svg.append(node('title',{'id':'crew-title'},'Marmalade, Nutmeg and Bao — excited jumps'))
+    svg.append(node('title',{'id':'crew-title'},'Cattatouille, Nutmeg and Bao — excited jumps'))
     svg.append(node('desc',{'id':'crew-desc'},'All three selected chef mascots do two hops and wave together. Plays once in 6.6 seconds and respects reduced motion.'))
     for i,root in enumerate(roots):
         # Nested SVG viewports give every rig its own coordinate system.
