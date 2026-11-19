@@ -46,12 +46,14 @@ The [November delivery review](reviews/2026-11-18-delivery-reconciliation.md) li
 | [NOMS-026](issues/NOMS-026-about-village-tour.md) | Guided About village and first-person exploration | ✅ Done | Twelve story stops, reading fallback, fenced exploration and resume at the saved camera position. |
 | [NOMS-027](issues/NOMS-027-animated-introduction-kitchen.md) | Animated Penguini kitchen | ✅ Done | Responsive looping Introduction hero with pause, reduced motion and poster fallback. |
 | [NOMS-028](issues/NOMS-028-reusable-brand-and-scene-assets.md) | Reusable mascots and 3D scenes | ✅ Done | Editable mascot art, SVG and 3D animations, diorama sources and exports. |
+| [NOMS-029](issues/NOMS-029-pantry-near-matches-and-substitutions.md) | Almost-cookable recipes and pantry substitutions | ⚪ Backlog | Find recipes missing one or two required ingredients and confirm available authored swaps before shopping. |
+| [NOMS-030](issues/NOMS-030-weekly-meal-planning.md) | Weekly meal planning | ⚪ Backlog | Schedule recipes and servings by day, then generate a grocery list with an optional pantry check. |
+| [NOMS-031](issues/NOMS-031-community-interaction.md) | Community posts, comments and replies | ⚪ Backlog | Add member posts, recipe and post comments, and replies. |
 
 ## Open work
 
-[NOMS-019 — Visual recipe flow and cooking timeline](implementation-plans/NOMS-019-visual-recipe-flow.md)
-is the only open item. Give future work a new NOMS ID and link back to related
-delivery records as needed.
+NOMS-019 and NOMS-029 through NOMS-031 are in Backlog. Give future work a new
+NOMS ID and link back to related delivery records as needed.
 
 ## Conventions
 
