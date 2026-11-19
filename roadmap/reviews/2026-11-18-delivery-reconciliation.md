@@ -7,7 +7,8 @@ and the first-parent history since its source revision `c112ca9`.
 
 This record maps subsequent merged work to the roadmap. Verification below
 comes from the linked delivery records. The board's **Done** status applies
-to each item's stated baseline. Release acceptance is tracked separately.
+to the closed roadmap item. Future work gets a new task. The notes below
+record what was verified and where the delivery evidence stopped.
 
 | Area | What shipped | Roadmap and delivery evidence |
 | --- | --- | --- |
@@ -21,7 +22,7 @@ to each item's stated baseline. Release acceptance is tracked separately.
 | Reusable art and shared UI | Penguini's SVG and 3D animation assets, Kitchen Crew mascots, reusable dioramas, stronger inset rims and consistent Introduction menu alignment. | [NOMS-028](../issues/NOMS-028-reusable-brand-and-scene-assets.md), [NOMS-020](../implementation-plans/NOMS-020-visual-design-refinement.md), [PR #73](https://github.com/SamKoCPSC/Noms/pull/73), [PR #75](https://github.com/SamKoCPSC/Noms/pull/75) |
 | Test and release tooling | Private sockets and bounded PostgreSQL fixture readiness address test-cluster collisions. Updated dependency locks and PostgreSQL extension pins restored the affected CI jobs. | [NOMS-021](../issues/NOMS-021-production-readiness-follow-ups.md), [fixture diagnosis](../../docs/database-test-isolation.md), [PR #60](https://github.com/SamKoCPSC/Noms/pull/60), [PR #79](https://github.com/SamKoCPSC/Noms/pull/79), [PR #83](https://github.com/SamKoCPSC/Noms/pull/83) |
 
-## Recorded validation and remaining scope
+## Recorded validation and possible follow-ups
 
 - Search and Kitchen PRs record real browser and database tests, including guest
   visibility, retry behavior, pantry ownership and list persistence. Kitchen
@@ -32,9 +33,9 @@ to each item's stated baseline. Release acceptance is tracked separately.
   replay open. The About and Introduction checks cover camera, touch/keyboard
   inputs and fallback behavior across relevant revisions. Physical devices,
   assistive technology and production performance acceptance remain open.
-- NOMS-021 still tracks dashboard projections, cleanup fairness, graph/lineage
-  work limits, identity lookup, route metadata and release regressions. NOMS-015
-  tracks the final independent security review. The conditional inactive SQLite
+- NOMS-021 recorded dashboard projections, cleanup fairness, graph/lineage
+  work limits, identity lookup, route metadata and release regressions as possible
+  follow-ups. NOMS-015 recorded the independent security review separately. The conditional inactive SQLite
   audit exception recorded in PR #79 expires on November 30, 2026. Review it
   against the current dependency graph and policy before expiry.
 - Merge and PR validation establish the delivery baselines above. Production

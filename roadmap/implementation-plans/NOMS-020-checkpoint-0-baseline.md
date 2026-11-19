@@ -2,6 +2,9 @@
 
 Started 2026-09-19. Status: complete for the representative checkpoint-0 baseline; source review and independent evidence validation PASS. No intentional application behavior or visual changes in this checkpoint.
 
+**Roadmap status:** ✅ Done. The [NOMS-020 plan](NOMS-020-visual-design-refinement.md)
+records the delivered baseline. The checkpoint below preserves the original review.
+
 ## Revision and scope
 
 - Worktree: `/home/samko/GitRepos/Noms/.worktrees/NOMS-020-visual-design-refinement`.

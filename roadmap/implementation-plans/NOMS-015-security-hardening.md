@@ -4,7 +4,10 @@
 > [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
 > acceptance lists below are historical; they do not override this summary.
 
-**Status:** 🟡 In Progress — hardening delivered; CP9C/CP10 acceptance unresolved
+**Status:** ✅ Done — hardening baseline delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28

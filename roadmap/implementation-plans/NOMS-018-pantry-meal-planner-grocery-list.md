@@ -2,7 +2,10 @@
 
 > **Current delivery — 2026-11-18:** Kitchen has private pantries and grocery lists, recipe presence checks, cookable-recipe discovery, missing-ingredient list generation, and transfer of purchased rows to a pantry. Optional ingredients do not block feasibility and can be excluded from grocery generation. Purchased rows can be kept or removed after a successful transfer. The sections below describe the delivered contracts and preserve earlier proposals.
 
-**Status:** 🟡 In Progress — lists, inventory, feasibility and purchased transfer delivered
+**Status:** ✅ Done — lists, inventory, feasibility and purchased transfer delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-08-15
 **Updated:** 2026-11-18
 **First delivery:** Multiple private, database-backed grocery lists; manual-only or generated as independent snapshots from selected recipes

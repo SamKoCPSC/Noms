@@ -4,10 +4,13 @@
 
 **Created:** 2026-07-16
 **Revised:** 2026-09-04
-**Status:** 🟡 In Progress — public pages/tour implemented; acceptance open
+**Status:** ✅ Done — public pages and tour delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Depends on:** The current application shell, design tokens, authentication context, and canonical recipe/application routes
-**Coordination:** The landing page now has public recipe-title suggestions and search (PR #50). Keep canonical application routes; complete current About-tour acceptance with NOMS-020/022.
-**Current approach:** Maintain Introduction, How-to and the About village. Complete editorial, fallback, accessibility, physical-device and performance acceptance for the current experience.
+**Coordination:** The landing page now has public recipe-title suggestions and search (PR #50). NOMS-020 and NOMS-022 record the shared design and mobile baselines.
+**Current approach:** The delivered experience includes Introduction, How-to and the About village. The checkpoints below retain earlier acceptance criteria.
 
 ---
 

@@ -4,7 +4,10 @@
 > [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
 > acceptance lists below are historical; they do not override this summary.
 
-**Status:** 🟡 In Progress — ingredient/unit/equipment slices delivered
+**Status:** ✅ Done — ingredient, unit and equipment slices delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-08-15
 **Updated:** 2026-09-30
 **Depends on:** Current recipe schema, recipe editor, versioning, and search contracts

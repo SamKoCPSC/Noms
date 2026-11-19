@@ -26,5 +26,5 @@ and mobile puts it above the scene.
 The [tour implementation record](../implementation-plans/NOMS-026-about-village-tour.md)
 tracks the sequence of renderer, camera, scene and controls changes. The latest
 movement PR records 14 camera/movement tests and Chromium verification of
-jumping, landing and crouching with the full village. Physical-device, assistive
-technology and release performance acceptance remain under NOMS-013/020/022.
+jumping, landing and crouching with the full village. Physical-device, assistive technology and release performance checks can be
+scoped as new tasks if needed.

@@ -6,7 +6,10 @@
 
 > **2026-11-18 update:** Shared inset rims gained visible outer shadows in both themes ([PR #73](https://github.com/SamKoCPSC/Noms/pull/73)). Introduction now uses the same menu row as other destinations ([PR #75](https://github.com/SamKoCPSC/Noms/pull/75)). [NOMS-028](../issues/NOMS-028-reusable-brand-and-scene-assets.md) inventories the reusable art.
 
-**Status:** 🟡 In Progress — designs integrated; final acceptance open
+**Status:** ✅ Done — visual design changes integrated
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-08-15
 **Depends on:** Current application routes, components, design tokens, and the visual direction established by NOMS-013
 **Coordination:** Feature tickets NOMS-016 through NOMS-019 should use shared primitives where stable; NOMS-020 must avoid redesigning feature behavior owned by those tickets.

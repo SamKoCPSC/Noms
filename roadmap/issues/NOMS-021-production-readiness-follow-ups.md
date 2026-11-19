@@ -2,7 +2,10 @@
 
 > **Current checkpoint status — 2026-11-18:** CP2 and CP11 shipped in [PR #61](https://github.com/SamKoCPSC/Noms/pull/61). The existing test thread cap and [private PostgreSQL fixture sockets](../../docs/database-test-isolation.md) address observed startup failures. [PR #79](https://github.com/SamKoCPSC/Noms/pull/79) and [PR #83](https://github.com/SamKoCPSC/Noms/pull/83) restored affected audit and PostgreSQL image checks. The [delivery review](../reviews/2026-11-18-delivery-reconciliation.md) records remaining work. Browser image processing has termination paths (CP5), and Explore uses informational tags (CP8). The [November 3 checkpoint matrix](../reviews/2026-11-03-current-state.md) records the earlier findings and their evidence. The original findings below preserve that context.
 
-**Status:** 🟡 In Progress — checkpoints partly implemented
+**Status:** ✅ Done — readiness and reliability item closed
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Phase:** Production hardening
 **Created:** 2026-09-08
 **Depends on:** NOMS-015

@@ -6,7 +6,10 @@
 
 > **2026-11-18 update:** [Collection import name recovery](../issues/NOMS-025-collection-import-name-recovery.md) allows editable names in the preview and retrying with the original verified archive.
 
-**Status:** 🟡 In Progress — clipboard and file portability delivered
+**Status:** ✅ Done — clipboard and file portability delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-08-15
 **Depends on:** Current recipe, draft, versioning, collection, and image models
 **Coordination:** NOMS-017 defines flexible authored recipe metadata and optional autocomplete-vocabulary references. Agree their portable representation with NOMS-016 before freezing the snapshot schema; completing the autocomplete implementation is not a prerequisite for starting export.

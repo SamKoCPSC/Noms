@@ -22,6 +22,5 @@ entrances describe the renderer that preceded the assembled village.
 Evidence comes from the linked PRs. Camera and collision tests cover all twelve
 locations, the perimeter, gait changes and restoration. Browser checks cover
 framing, guided motion, input, reading fallback, failing assets, context loss and
-cleanup across the relevant revisions. Final editorial, physical-device,
-assistive technology and resource-budget acceptance remain in the
-[parent plan](NOMS-013-marketing-pages-3d-experience.md).
+cleanup across the relevant revisions. The [parent plan](NOMS-013-marketing-pages-3d-experience.md) preserves the
+earlier acceptance criteria for reference when defining future tasks.
