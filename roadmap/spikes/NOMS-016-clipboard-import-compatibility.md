@@ -1,6 +1,6 @@
 # NOMS-016 Clipboard Import Compatibility Spike
 
-**Status:** In progress
+**Status:** ✅ Done — spike closed with NOMS-016. The analysis below is the historical record.
 **Started:** 2026-08-20
 **Parent plan:** [NOMS-016 recipe import and export](../implementation-plans/NOMS-016-recipe-import-export.md)
 

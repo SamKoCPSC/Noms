@@ -1,6 +1,9 @@
 # NOMS-023: Optional and substitute ingredients in Kitchen checks
 
-**Status:** 🟡 In Progress — optional-only slice authorized and implemented; substitution behavior remains backlog
+**Status:** ✅ Done — optional ingredient handling delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Recorded:** 2026-11-03 current-state review
 **Depends on:** NOMS-017 ingredient options; NOMS-018 presence checks
 **Review:** [Application current state](../reviews/2026-11-03-current-state.md)

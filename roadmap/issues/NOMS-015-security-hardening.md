@@ -4,7 +4,10 @@
 > [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
 > acceptance lists below are historical; they do not override this summary.
 
-**Status:** 🟡 In Progress — hardening implemented; final acceptance open
+**Status:** ✅ Done — hardening baseline delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Phase:** Security
 **Created:** 2026-07-29
 **Depends on:** NOMS-004, NOMS-006, NOMS-008, NOMS-009, NOMS-014

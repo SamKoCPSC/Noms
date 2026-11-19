@@ -1,15 +1,16 @@
 # NOMS-013: Marketing Pages & 3D Feasibility Experiment — Implementation Plan
 
-> **Current-state review — 2026-11-03:** Later approved production About work supersedes the original no-3D/isolated-experiment restriction. The app now has five Rust-rendered scenes (PRs #20–24, #31–33, #54–55); do not schedule the old experiment as unstarted without reconciling that scope. Editorial/device/accessibility/performance closeout remains.
-> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
-> acceptance lists below are historical; they do not override this summary.
+> **Current delivery — 2026-11-18:** The public About page uses a twelve-stop Three.js village with guided navigation, free exploration and reading fallback. Introduction has an animated kitchen with playback controls and poster fallback. The [village implementation record](NOMS-026-about-village-tour.md) and [Introduction delivery](../issues/NOMS-027-animated-introduction-kitchen.md) record scope and evidence. Earlier checkpoints and the isolated 3D experiment proposal preserve design history.
 
 **Created:** 2026-07-16
 **Revised:** 2026-09-04
-**Status:** 🟡 In Progress — public pages/tour implemented; acceptance open
+**Status:** ✅ Done — public pages and tour delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Depends on:** The current application shell, design tokens, authentication context, and canonical recipe/application routes
-**Coordination:** The landing page now has public recipe-title suggestions and search (PR #50). Keep canonical application routes; complete current About-tour acceptance with NOMS-020/022.
-**Current approach:** Maintain the delivered Introduction and How-to pages and approved five-scene Rust About tour. Complete current content, fallback, accessibility, device and performance acceptance. The dated no-production-3D/isolated-experiment proposal below is retained as superseded history.
+**Coordination:** The landing page now has public recipe-title suggestions and search (PR #50). NOMS-020 and NOMS-022 record the shared design and mobile baselines.
+**Current approach:** The delivered experience includes Introduction, How-to and the About village. The checkpoints below retain earlier acceptance criteria.
 
 ---
 
