@@ -5,8 +5,9 @@ use crate::components::base::{NavigationArtwork, PageIconKind, SharedModal};
 use crate::components::informational::PageMeta;
 use crate::Route;
 
+use super::home_scene::{HomeScene, Scene};
+
 const HOME_CSS: Asset = asset!("/assets/home.css");
-const COOKING: Asset = asset!("/assets/landing/cooking.webp");
 const MOBILE_BROWSE: Asset = asset!("/assets/landing/mobile-browse.webp");
 const MOBILE_EDIT: Asset = asset!("/assets/landing/mobile-edit.webp");
 const COOK_ONE: Asset = asset!("/assets/landing/cook-1.webp");
@@ -93,7 +94,7 @@ pub fn Home() -> Element {
                     LandingActions { signed_in: auth.is_authenticated, search: true }
                 }
                 div { class: "landing-hero-visual",
-                    super::home_kitchen::HomeKitchen {}
+                    HomeScene { scene: Scene::Kitchen }
                 }
             }
             div { class: "landing-promises landing-wrap", aria_label: "Noms commitments",
@@ -107,10 +108,7 @@ pub fn Home() -> Element {
                     h2 { id: "landing-mission-title", "Create and share your signature recipes." }
                     p { "Noms makes it easier for cooks from all backgrounds to save and discover their best dishes. Bringing together a community that's passionate about making and eating great food." }
                 }
-                figure {
-                    img { src: COOKING, alt: "Two home cooks preparing a meal together in a sunlit kitchen", width: "1536", height: "1024", loading: "lazy", decoding: "async" }
-                    figcaption { "Good food brings people together." }
-                }
+                HomeScene { scene: Scene::RecipeDesk, caption: "Good food brings people together." }
             }
             section { class: "landing-chapters landing-wrap", aria_label: "Six ways to use Noms",
                 for story in STORIES.iter().copied() {

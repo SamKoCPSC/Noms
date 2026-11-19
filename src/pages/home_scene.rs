@@ -1,8 +1,10 @@
 //! Landing-page enhancement: a real image remains usable before hydration or if 3D fails.
 use dioxus::prelude::*;
 
-const POSTER: Asset = asset!("/assets/landing/kitchen/poster.webp");
-const MODEL: Asset = asset!("/assets/landing/kitchen/penguini-kitchen.glb");
+const KITCHEN_POSTER: Asset = asset!("/assets/landing/kitchen/poster.webp");
+const KITCHEN_MODEL: Asset = asset!("/assets/landing/kitchen/penguini-kitchen.glb");
+const DESK_POSTER: Asset = asset!("/assets/landing/recipe-desk/poster.webp");
+const DESK_MODEL: Asset = asset!("/assets/landing/recipe-desk/recipe-desk.glb");
 const LIGHTING: Asset = asset!("/assets/landing/kitchen/lighting.json");
 const RENDERER: Asset = asset!(
     "/assets/home-kitchen.js",
@@ -10,8 +12,27 @@ const RENDERER: Asset = asset!(
 );
 const _: &[u8] = include_bytes!("../../assets/home-kitchen.js");
 
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum Scene {
+    Kitchen,
+    RecipeDesk,
+}
+
 #[component]
-pub(super) fn HomeKitchen() -> Element {
+pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element {
+    let (id, model, poster, width, height, description) = match scene {
+        Scene::Kitchen => ("landing-kitchen", KITCHEN_MODEL, KITCHEN_POSTER, 800, 720,
+            "Penguini bakes cookies in a warm ivory and terracotta kitchen, mixing ingredients and reading his recipe book."),
+        Scene::RecipeDesk => ("landing-recipe-desk", DESK_MODEL, DESK_POSTER, 1200, 1000,
+            "Penguini and Cattatouille work on a recipe at their laptops, pointing out changes and nodding in agreement."),
+    };
+    let canvas_id = format!("{id}-canvas");
+    let is_desk = scene == Scene::RecipeDesk;
+    let animation = if is_desk {
+        "recipe desk animation"
+    } else {
+        "kitchen animation"
+    };
     let mut paused = use_signal(|| true);
     #[allow(unused_mut)]
     let mut ready = use_signal(|| false);
@@ -33,10 +54,13 @@ pub(super) fn HomeKitchen() -> Element {
             }
         });
     }
+    let control = if paused() { "Play" } else { "Pause" };
     rsx! {
         figure {
-            id: "landing-kitchen", class: "landing-kitchen", "data-state": "loading",
-            "data-model-url": MODEL, "data-lighting-url": LIGHTING, "data-renderer-url": RENDERER,
+            id, class: "landing-model", "data-state": "loading",
+            "data-scene": if is_desk { "recipe-desk" } else { "kitchen" },
+            "data-model-url": model, "data-renderer-url": RENDERER,
+            "data-lighting-url": (!is_desk).then(|| LIGHTING.to_string()),
             onmounted: move |_| {
                 #[cfg(target_arch = "wasm32")]
                 {
@@ -46,32 +70,36 @@ pub(super) fn HomeKitchen() -> Element {
                         let reduced = window.match_media("(prefers-reduced-motion: reduce)")
                             .ok().flatten().is_some_and(|m| m.matches());
                         paused.set(reduced);
-                        if browser::mount(runtime.clone(), paused).await.is_ok() && !runtime.borrow().disposed {
+                        if browser::mount(runtime.clone(), paused, id).await.is_ok() && !runtime.borrow().disposed {
                             ready.set(true);
                         }
                     });
                 }
             },
-            div { class: "landing-kitchen__scene", role: "img", aria_label: "Penguini bakes cookies in a warm ivory and terracotta kitchen, mixing ingredients and reading his recipe book.",
-                img { class: "landing-kitchen__poster", src: POSTER, alt: "", width: "800", height: "720", fetchpriority: "high" }
-                canvas { id: "landing-kitchen-canvas", aria_hidden: "true" }
-            }
-            if ready() {
-                button {
-                    class: "landing-kitchen__pause", r#type: "button",
-                    aria_label: if paused() { "Play animation" } else { "Pause animation" },
-                    title: if paused() { "Play animation" } else { "Pause animation" },
-                    aria_controls: "landing-kitchen-canvas", aria_pressed: paused(),
-                    onclick: move |_| paused.toggle(),
-                    svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "currentColor", "aria-hidden": "true", "focusable": "false",
-                        if paused() {
-                            path { d: "M8 5.5v13l10-6.5z" }
-                        } else {
-                            path { d: "M6 5h4v14H6zM14 5h4v14h-4z" }
+            div { class: "landing-model__viewer",
+                div { role: "img", aria_label: description,
+                    img { class: "landing-model__poster", src: poster, alt: "", width: "{width}", height: "{height}",
+                        loading: if is_desk { "lazy" } else { "eager" }, fetchpriority: if is_desk { "low" } else { "high" }
+                    }
+                    canvas { id: "{canvas_id}", aria_hidden: "true" }
+                }
+                if ready() {
+                    button {
+                        class: "landing-model__pause", r#type: "button",
+                        aria_label: "{control} {animation}", title: "{control} {animation}",
+                        aria_controls: "{canvas_id}", aria_pressed: paused(),
+                        onclick: move |_| paused.toggle(),
+                        svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "currentColor", "aria-hidden": "true", "focusable": "false",
+                            if paused() {
+                                path { d: "M8 5.5v13l10-6.5z" }
+                            } else {
+                                path { d: "M6 5h4v14H6zM14 5h4v14h-4z" }
+                            }
                         }
                     }
                 }
             }
+            if let Some(caption) = caption { figcaption { "{caption}" } }
         }
     }
 }
@@ -85,17 +113,12 @@ mod browser {
 
     #[wasm_bindgen(module = "/assets/home-kitchen-bootstrap.js")]
     extern "C" {
-        #[wasm_bindgen(catch, js_name = loadKitchen)]
-        async fn load(
-            canvas: &HtmlCanvasElement,
-            model: &str,
-            lighting: &str,
-            bridge: &str,
-            signal: &AbortSignal,
-        ) -> Result<JsValue, JsValue>;
-        #[wasm_bindgen(catch, js_name = pauseKitchen)]
+        #[wasm_bindgen(catch, js_name = loadScene)]
+        async fn load(canvas: &HtmlCanvasElement, signal: &AbortSignal)
+            -> Result<JsValue, JsValue>;
+        #[wasm_bindgen(catch, js_name = pauseScene)]
         fn set_paused(view: &JsValue, paused: bool) -> Result<(), JsValue>;
-        #[wasm_bindgen(catch, js_name = disposeKitchen)]
+        #[wasm_bindgen(catch, js_name = disposeScene)]
         fn release(view: &JsValue) -> Result<(), JsValue>;
     }
     #[derive(Default)]
@@ -130,6 +153,7 @@ mod browser {
     pub(super) async fn mount(
         runtime: Rc<RefCell<Runtime>>,
         mut paused: dioxus::prelude::Signal<bool>,
+        id: &str,
     ) -> Result<(), JsValue> {
         if let Some(query) = web_sys::window().and_then(|w| {
             w.match_media("(prefers-reduced-motion: reduce)")
@@ -148,29 +172,15 @@ mod browser {
         let doc = web_sys::window()
             .and_then(|w| w.document())
             .ok_or("No document")?;
-        let host = doc
-            .get_element_by_id("landing-kitchen")
-            .ok_or("Missing kitchen")?;
+        let host = doc.get_element_by_id(id).ok_or("Missing landing scene")?;
         let canvas = doc
-            .get_element_by_id("landing-kitchen-canvas")
+            .get_element_by_id(&format!("{id}-canvas"))
             .ok_or("Missing canvas")?
             .dyn_into::<HtmlCanvasElement>()?;
-        let url = |name| {
-            host.get_attribute(name)
-                .ok_or_else(|| JsValue::from_str("Missing kitchen asset"))
-        };
         let controller = AbortController::new()?;
         let signal = controller.signal();
         runtime.borrow_mut().controller = Some(controller);
-        match load(
-            &canvas,
-            &url("data-model-url")?,
-            &url("data-lighting-url")?,
-            &url("data-renderer-url")?,
-            &signal,
-        )
-        .await
-        {
+        match load(&canvas, &signal).await {
             Ok(view) => {
                 let mut state = runtime.borrow_mut();
                 if state.disposed {
