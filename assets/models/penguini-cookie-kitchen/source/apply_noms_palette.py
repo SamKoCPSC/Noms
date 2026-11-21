@@ -6,6 +6,7 @@ Run before baking, with Blender 4.3.2:
 Only material colors and palette metadata change. Penguini, food, wood, metal,
 the logo book, geometry, lighting and animation retain their existing design.
 """
+import colorsys
 import json
 from pathlib import Path
 import re
@@ -31,6 +32,27 @@ MATERIAL_TOKENS = {
 }
 
 
+# Increase chroma in sRGB before converting the paint to Blender's linear color.
+# Skin, paper and the cream worktop retain their original lightness and hue.
+SATURATION_GAIN = {
+    "accent": 1.38,
+    "accent-hover": 1.38,
+    "success": 1.5,
+    "bg-gradient-3": 1.65,
+    "bg-gradient-4": 1.25,
+}
+
+
+def paint_color(hex_color, token):
+    gain = SATURATION_GAIN.get(token, 1)
+    if gain == 1:
+        return hex_color
+    rgb = [int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    hue, lightness, saturation = colorsys.rgb_to_hls(*rgb)
+    rgb = colorsys.hls_to_rgb(hue, lightness, min(1, saturation * gain))
+    return "#" + "".join(f"{round(channel * 255):02X}" for channel in rgb)
+
+
 def linear_rgba(hex_color, alpha):
     srgb = [int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
     return (*[v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
@@ -45,7 +67,7 @@ def apply(master, css):
     palette = {}
     for name, token in MATERIAL_TOKENS.items():
         material = bpy.data.materials[name]
-        color = tokens[token]
+        color = paint_color(tokens[token], token)
         material.diffuse_color = linear_rgba(color, material.diffuse_color[3])
         for node in material.node_tree.nodes:
             if node.type == 'BSDF_PRINCIPLED':

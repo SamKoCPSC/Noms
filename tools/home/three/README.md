@@ -5,7 +5,7 @@ and route cleanup. Both scenes share one locally bundled Three.js renderer. The
 hero loads immediately. The recipe desk waits until the mission section is near
 the viewport.
 
-The hero's 45.2-second kitchen clip fades across the ingredient reset. The desk's
+The hero's kitchen clip plays the full recipe and fades as the tray and bowl reset. The desk's
 25.5-second collaboration clip loops continuously, with the orthographic camera
 framed to match its poster. Both scenes suspend playback offscreen and in
 background tabs. Reduced motion starts them paused. Each can be played

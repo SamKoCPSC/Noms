@@ -1,4 +1,4 @@
-"""Bake stationary kitchen surfaces; preserve the 45.2-second animated sequence.
+"""Bake stationary kitchen surfaces; preserve the animated recipe sequence.
 Adapted from Noms tools/about/baked/bake_scene.py, read 2026-11-16.
 Run: blender -b -t 6 --python bake_static.py
 """
@@ -26,7 +26,7 @@ static_names=[o.name for o in static];animated_names=sorted(o.name for o in anim
 hidden={o:o.hide_render for o in animated}
 for o in animated:o.hide_render=True
 bpy.context.view_layer.update()
-meta={'source_sha256':sha,'method':'About-tour diffuse direct + indirect + emission, display-baked unlit atlases','bake_samples':s.cycles.samples,'atlas_size':2048,'view_transform':s.view_settings.view_transform,'look':s.view_settings.look,'exposure':s.view_settings.exposure,'static_source_objects':static_names,'excluded_animated_objects':animated_names,'animated_shadow_casters_during_bake':0,'duration_seconds':45.2,'lights':[{'name':o.name,'energy':o.data.energy,'color':list(o.data.color),'position':list(o.matrix_world.translation)} for o in s.objects if o.type=='LIGHT']}
+meta={'source_sha256':sha,'method':'About-tour diffuse direct + indirect + emission, display-baked unlit atlases','bake_samples':s.cycles.samples,'atlas_size':2048,'view_transform':s.view_settings.view_transform,'look':s.view_settings.look,'exposure':s.view_settings.exposure,'static_source_objects':static_names,'excluded_animated_objects':animated_names,'animated_shadow_casters_during_bake':0,'duration_seconds':(s.frame_end-s.frame_start)*s.render.fps_base/s.render.fps,'lights':[{'name':o.name,'energy':o.data.energy,'color':list(o.data.color),'position':list(o.matrix_world.translation)} for o in s.objects if o.type=='LIGHT']}
 # Reflection lighting for the shared About/Home Three.js renderer (glTF Y-up).
 meta['palette']=s.get('palette','')
 meta['palette_materials']=json.loads(s.get('palette_materials','{}'))

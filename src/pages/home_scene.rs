@@ -22,7 +22,7 @@ pub(super) enum Scene {
 pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element {
     let (id, model, poster, width, height, description) = match scene {
         Scene::Kitchen => ("landing-kitchen", KITCHEN_MODEL, KITCHEN_POSTER, 800, 720,
-            "Penguini bakes cookies in a warm ivory and terracotta kitchen, mixing ingredients and reading his recipe book."),
+            "Penguini browns butter while checking his recipe book. He pours it into an empty bowl on a kitchen scale, adds brown sugar, eggs, vanilla and baking soda, then opens a jar and shakes in espresso powder. He stirs, adds flour and chocolate chips, mixes again, and bakes three cookies. He eats one in five bites and does a happy dance."),
         Scene::RecipeDesk => ("landing-recipe-desk", DESK_MODEL, DESK_POSTER, 1200, 1000,
             "Penguini and Cattatouille work on a recipe at their laptops, pointing out changes and nodding in agreement."),
     };

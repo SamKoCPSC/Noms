@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Exercise the actual landing component and Three renderer (local app URL only)."""
-import argparse, asyncio
+import argparse, asyncio, json
 from pathlib import Path
 from urllib.parse import urlsplit
 from playwright.async_api import async_playwright, expect
@@ -32,7 +32,9 @@ async def main(args):
         canvas=page.locator('#landing-kitchen-canvas');control=page.locator('#landing-kitchen button')
         assert await canvas.get_attribute('data-renderer')=='three'
         assert await canvas.get_attribute('data-baked-shadows')=='true'
-        assert abs(float(await canvas.get_attribute('data-duration'))-45.2)<.01
+        manifest = Path(__file__).resolve().parents[2] / 'assets/landing/kitchen/lighting.json'
+        duration = json.loads(manifest.read_text())['duration_seconds']
+        assert duration > 0 and abs(float(await canvas.get_attribute('data-duration')) - duration) < .01
         assert await control.get_attribute('aria-label')=='Pause kitchen animation'
         await page.evaluate('step(25)')
         await control.click();await page.evaluate('step(2)')
@@ -47,7 +49,8 @@ async def main(args):
         await page.evaluate('document.documentElement.classList.add("dark")');await page.locator('.landing-hero').screenshot(path=str(args.output/'mobile-dark.png'))
         await page.evaluate('document.documentElement.classList.remove("dark")')
         # Repeat the full sequence twice and confirm it progresses after both resets.
-        await control.click();await page.evaluate('step(32,3000)')
+        await control.click();await page.evaluate('step(1)')
+        await page.evaluate('ms => step(32, ms)', 2 * (duration + .4) * 1000 / 32)
         assert int(await canvas.get_attribute('data-cycles'))>=2
         t=float(await canvas.get_attribute('data-time'));await page.evaluate('step(8)')
         assert float(await canvas.get_attribute('data-time'))>t

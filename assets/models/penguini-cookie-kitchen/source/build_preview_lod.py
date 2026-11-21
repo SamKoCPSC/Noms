@@ -2,8 +2,9 @@
 import bpy,json
 from pathlib import Path
 r=Path(__file__).parent
-bpy.ops.wm.read_factory_settings(use_empty=True);s=bpy.context.scene;s.render.fps=30;s.frame_start=0;s.frame_end=1356;s.name='Penguini bakes cookies'
+bpy.ops.wm.read_factory_settings(use_empty=True);s=bpy.context.scene;s.render.fps=30;s.frame_start=0;s.name='Penguini bakes cookies'
 bpy.ops.import_scene.gltf(filepath=str(r/'penguini-cookie-kitchen-baking.glb'))
+s.frame_end=round(json.loads((r/'lighting-bake.json').read_text())['duration_seconds'] * s.render.fps)
 s.frame_set(0)
 before=0;after=0;parts=[]
 for o in s.objects:
