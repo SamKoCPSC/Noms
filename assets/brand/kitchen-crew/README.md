@@ -1,34 +1,46 @@
-# Cattatouille, Nutmeg and Bao
+# Kitchen Crew mascots
 
 Selected chef mascots and excited jump animations, approved on 2026-11-04.
-Cattatouille is the ginger tabby (proposal C1), Nutmeg the russet owl (O5), and Bao
-the panda (P1). Their cream chef hats, warm outlines and rounded proportions
+Cattatouille is the ginger tabby (proposal C1), Owlfredo the russet owl (O5),
+and Pandacotta the panda (P1). Their cream chef hats, warm outlines and rounded proportions
 take their visual direction from [Chef Penguini](../penguini/README.md).
+Terrimisu, the wheaten terrier from dog proposal D9, joins the 3D collection
+with a shaggy beard, folded ears and a teal apron.
 
 ## Assets
 
 | Character | Editable resting artwork | Excited animation |
 | --- | --- | --- |
 | Cattatouille | [source/cattatouille-still.svg](source/cattatouille-still.svg) | [cattatouille-excited.svg](cattatouille-excited.svg) |
-| Nutmeg | [source/nutmeg-still.svg](source/nutmeg-still.svg) | [nutmeg-excited.svg](nutmeg-excited.svg) |
-| Bao | [source/bao-still.svg](source/bao-still.svg) | [bao-excited.svg](bao-excited.svg) |
+| Owlfredo | [source/owlfredo-still.svg](source/owlfredo-still.svg) | [owlfredo-excited.svg](owlfredo-excited.svg) |
+| Pandacotta | [source/pandacotta-still.svg](source/pandacotta-still.svg) | [pandacotta-excited.svg](pandacotta-excited.svg) |
 
-Cattatouille also has a [standalone 3D model](3d/cattatouille/cattatouille.glb)
-and an [editable Blender scene](3d/cattatouille/source/cattatouille.blend).
-The Blender scene uses Penguini’s scale and studio lighting. Rotate the head
-and the two foreleg pivots to pose the cat for a scene.
+### 3D models
+
+| Chef | Web model | Editable Blender scene | Pose or gesture |
+| --- | --- | --- | --- |
+| Cattatouille | [GLB](3d/cattatouille/cattatouille.glb) | [Blender](3d/cattatouille/source/cattatouille.blend) | Standing pose with head and foreleg pivots |
+| Owlfredo | [GLB](3d/owlfredo/owlfredo.glb) | [Blender](3d/owlfredo/source/owlfredo.blend) | **Whisk flourish**. The whisk and grip follow the wing as Owlfredo lifts it and tilts her head. |
+| Pandacotta | [GLB](3d/pandacotta/pandacotta.glb) | [Blender](3d/pandacotta/source/pandacotta.blend) | **Welcoming wave**. Pandacotta waves the raised paw twice with a small head tilt. |
+| Terrimisu | [GLB](3d/terrimisu/terrimisu.glb) | [Blender](3d/terrimisu/source/terrimisu.blend) | **Shake off crumbs**. Terrimisu flicks three breadcrumbs from his raised paw and wags his tail. |
+
+The chefs share Penguini’s scale. Owlfredo, Pandacotta and Terrimisu face −Y in Blender
+and +Z in their standalone GLBs, with their soles at ground level. In their
+Blender scenes, use the head and shoulder pivots to pose each chef, or play
+frames 0–72 at 24 fps to preview the gesture. Each GLB contains its chef’s
+three-second gesture. The studio lights, cameras and floor live in the Blender scenes.
 
 The [desk concept](../../../design/landing/recipe-desk/concept.webp) shows
 the planned landing-page composition. The [Blender pose study](../../../design/landing/recipe-desk/collaboration-study.blend)
 pairs Cattatouille with Penguini at a simple laptop to check scale and gestures.
 
-[kitchen-crew-excited.svg](kitchen-crew-excited.svg) shows all three together,
-synchronized. Each animation plays once in **6.6 seconds**, finishing in its
+[kitchen-crew-excited.svg](kitchen-crew-excited.svg) shows Cattatouille, Owlfredo
+and Pandacotta jumping together. Each animation plays once in **6.6 seconds**, finishing in its
 selected resting pose. The action follows Penguini's approved jump-and-wave
 timing: an anticipation crouch, a higher hop, a smaller hop, a soft landing,
 waving, and a gradual recovery. Happy eyes, head and hat motion, and Cattatouille's
 tail add follow-through. The shadow stays on the ground during the jumps.
-Nutmeg's wing, whisk, grip and finger marks share the same shoulder transform.
+Owlfredo's wing, whisk, grip and finger marks share the same shoulder transform.
 
 These are stored assets for future placement in the app. No application page
 currently loads this collection.

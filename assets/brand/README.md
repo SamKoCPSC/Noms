@@ -4,9 +4,10 @@ The approved [Chef Penguini mascot assets](penguini/README.md) are available
 alongside the book logo. They include standalone animations and a reusable
 player; app placement is a separate integration step.
 
-The selected [Cattatouille, Nutmeg and Bao chef mascots](kitchen-crew/README.md)
-include editable vector artwork, excited jump-and-wave SVGs, and a replayable
-preview alongside Penguini.
+The [Kitchen Crew](kitchen-crew/README.md) includes Cattatouille, Owlfredo,
+Pandacotta and Terrimisu. All four have editable Blender scenes and web-ready
+GLBs. Cattatouille, Owlfredo and Pandacotta also have editable vector artwork,
+excited jump-and-wave SVGs and an offline preview.
 
 The [3D Penguini assets](penguini/3d/README.md) include the approved Blender model
 and an animated GLB of the excited jump-and-wave.
