@@ -1,5 +1,5 @@
 {
-  "source_sha256": "1623243f13f2bfd88028fa8913d89f725d978fc09b0cda76e300befec9a48c69",
+  "source_sha256": "5513f62b4e2b8a0cffa2845a6037934b1696bf5a9c0ce3d8bfa992bd6d86b095",
   "method": "About-tour diffuse direct + indirect + emission, display-baked unlit atlases",
   "bake_samples": 128,
   "atlas_size": 2048,
