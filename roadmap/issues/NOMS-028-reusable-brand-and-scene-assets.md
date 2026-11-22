@@ -9,9 +9,11 @@
   approved 3D model includes the excited jump-and-wave animation.
   [PR #57](https://github.com/SamKoCPSC/Noms/pull/57) ·
   [PR #72](https://github.com/SamKoCPSC/Noms/pull/72)
-- Marmalade, Nutmeg and Bao have editable resting artwork, individual excited
+- Cattatouille, Owlfredo and Pandacotta have editable resting artwork, individual excited
   animations, a synchronized group animation and an offline preview.
   [PR #67](https://github.com/SamKoCPSC/Noms/pull/67)
+- Owlfredo flourishes a whisk, Pandacotta waves and Terrimisu shakes crumbs
+  from his paw. Each gesture loops in the [Kitchen Crew Blender scenes and GLBs](../../assets/brand/kitchen-crew/README.md#3d-models).
 - Eight reusable dioramas were checked in as model collections with native
   sources and exports. Later revisions supplied the library, market, bakery,
   kitchen and campsite used in the About story.
