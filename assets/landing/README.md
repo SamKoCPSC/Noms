@@ -8,7 +8,7 @@ cropped and composited into the original screenshots.
 
 | Photo | Source and license |
 | --- | --- |
-| Butter croissants | [Close-Up Shot of Croissants](https://www.pexels.com/photo/close-up-shot-of-croissants-6202224/), Pexels |
+| Butter croissants | [Freshly Baked Artisan Croissants in Berlin Bakery](https://www.pexels.com/photo/freshly-baked-artisan-croissants-in-berlin-bakery-30853716/), Pexels |
 | Chocolate layer cake | [Sliced chocolate on a ceramic plate](https://www.pexels.com/photo/close-up-photo-of-sliced-chocolate-on-a-ceramic-plate-4110007/), Pexels |
 | Korean fried chicken | [Yangnyeom-chikin 1 by anokarina](https://commons.wikimedia.org/wiki/File:Yangnyeom-chikin_1.jpg), [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/), cropped |
 | Mushroom burger | [Gourmet cheeseburger with mushrooms](https://www.pexels.com/photo/delicious-gourmet-cheeseburger-with-mushrooms-31138240/), Pexels |
