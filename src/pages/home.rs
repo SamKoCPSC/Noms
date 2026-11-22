@@ -183,6 +183,17 @@ pub fn Home() -> Element {
                     Link { to: Route::About {}, "About Noms" }
                     Link { to: Route::HowTo {}, "How to use Noms" }
                 }
+                p { class: "landing-tiny",
+                    "Photo credits · "
+                    a { href: "https://commons.wikimedia.org/wiki/File:Yangnyeom-chikin_1.jpg", "Korean fried chicken by anokarina" }
+                    " ("
+                    a { href: "https://creativecommons.org/licenses/by-sa/2.0/", "CC BY-SA 2.0" }
+                    ", cropped) · "
+                    a { href: "https://commons.wikimedia.org/wiki/File:You_Po_Mian%EF%BC%88_Oil_poured_noodles%EF%BC%89.webp", "Chili oil noodles by syctown" }
+                    " ("
+                    a { href: "https://creativecommons.org/licenses/by-sa/4.0/", "CC BY-SA 4.0" }
+                    ", cropped)"
+                }
             }
         }
     }
