@@ -55,7 +55,7 @@ function lightDesk(renderer, scene, root) {
     studio.dispose();
   }
   scene.environment = environment.texture;
-  scene.environmentIntensity = .64;
+  scene.environmentIntensity = .54;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = .78;
   scene.add(new THREE.HemisphereLight(0xfffbf5, 0xd4cbbf, .55));
@@ -69,15 +69,15 @@ function lightDesk(renderer, scene, root) {
   Object.assign(key.shadow.camera, {left: -4.2, right: 4.2, top: 3.7, bottom: -3.7, near: .5, far: 18});
   key.shadow.mapSize.set(512, 512);
   key.shadow.normalBias = .015;
-  key.shadow.intensity = .5;
+  key.shadow.intensity = .78;
   root.traverse(mesh => {
     if (mesh.isMesh) mesh.castShadow = mesh.receiveShadow = true;
   });
-  const fill = new THREE.DirectionalLight(0xe0edff, 1.2);
+  const fill = new THREE.DirectionalLight(0xe0edff, .8);
   fill.position.set(4, 4.5, 4);
   const rim = new THREE.DirectionalLight(0xffe3c6, 1.8);
   rim.position.set(1.4, 6, -3);
-  const bounce = new THREE.DirectionalLight(0xfff7ed, .9);
+  const bounce = new THREE.DirectionalLight(0xfff7ed, .6);
   bounce.position.set(-.5, .6, 6);
   scene.add(fill, rim, bounce);
   return {dispose() {key.shadow.dispose(); environment.dispose();}};
