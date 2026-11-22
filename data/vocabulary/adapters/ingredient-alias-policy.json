@@ -1,0 +1,2580 @@
+{
+  "schema_version": 1,
+  "version": "ingredient-aliases-2026-10-24-v1",
+  "approved": true,
+  "base_commit": "c60162b0ad827963be7541ec12f21fd29764781d",
+  "base_seed_checksum": "e0c81295695b84d2d9183364a066b169a3b2d063856117e1812415272e88c312",
+  "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
+  "scope": "Reproducible alias review plus explicit ingredient-scope retirements. Keep all UUIDs, mappings and wording for history; no hard merge, runtime stemming, blanket synonym import or automatic keyword retirement.",
+  "expected_output_checksum": "1726e0d5332dd3869cf6ba9cb7a5ee3e6adc76cb606a9f4d00aee2d9c67a73ca",
+  "count_nouns": {
+    "almond": "almonds",
+    "apple": "apples",
+    "apricot": "apricots",
+    "artichoke": "artichokes",
+    "avocado": "avocados",
+    "banana": "bananas",
+    "bean": "beans",
+    "beet": "beets",
+    "beetroot": "beetroots",
+    "berry": "berries",
+    "biscuit": "biscuits",
+    "blackberry": "blackberries",
+    "blueberry": "blueberries",
+    "bonbon": "bonbons",
+    "boysenberry": "boysenberries",
+    "breast": "breasts",
+    "brussels-sprout": "brussels-sprouts",
+    "bun": "buns",
+    "burger": "burgers",
+    "burrito": "burritos",
+    "cabbage": "cabbages",
+    "cap": "caps",
+    "caper": "capers",
+    "carrot": "carrots",
+    "cashew": "cashews",
+    "cauliflower": "cauliflowers",
+    "cherry": "cherries",
+    "chestnut": "chestnuts",
+    "chickpea": "chickpeas",
+    "chili": "chilies",
+    "chilli": "chillies",
+    "chip": "chips",
+    "chop": "chops",
+    "claw": "claws",
+    "cloudberry": "cloudberries",
+    "clove": "cloves",
+    "coconut": "coconuts",
+    "cookie": "cookies",
+    "cracker": "crackers",
+    "cranberry": "cranberries",
+    "crawfish": "crawfishes",
+    "cucumber": "cucumbers",
+    "currant": "currants",
+    "cutlet": "cutlets",
+    "date": "dates",
+    "dumpling": "dumplings",
+    "ear": "ears",
+    "egg": "eggs",
+    "eggplant": "eggplants",
+    "elderberry": "elderberries",
+    "fig": "figs",
+    "fillet": "fillets",
+    "flake": "flakes",
+    "floret": "florets",
+    "frank": "franks",
+    "frankfurter": "frankfurters",
+    "fritter": "fritters",
+    "fruit": "fruits",
+    "gherkin": "gherkins",
+    "gooseberry": "gooseberries",
+    "grape": "grapes",
+    "grapefruit": "grapefruits",
+    "hazelnut": "hazelnuts",
+    "head": "heads",
+    "heart": "hearts",
+    "huckleberry": "huckleberries",
+    "jalapeno": "jalapenos",
+    "jalapeño": "jalapeños",
+    "kernel": "kernels",
+    "kidney": "kidneys",
+    "kumquat": "kumquats",
+    "leaf": "leaves",
+    "leek": "leeks",
+    "leg": "legs",
+    "lemon": "lemons",
+    "lentil": "lentils",
+    "lime": "limes",
+    "lingonberry": "lingonberries",
+    "loaf": "loaves",
+    "lobster": "lobsters",
+    "lychee": "lychees",
+    "macadamia": "macadamias",
+    "mandarin": "mandarins",
+    "mango": "mangoes",
+    "meatball": "meatballs",
+    "melon": "melons",
+    "morel": "morels",
+    "muffin": "muffins",
+    "mulberry": "mulberries",
+    "mushroom": "mushrooms",
+    "mussel": "mussels",
+    "nectarine": "nectarines",
+    "noodle": "noodles",
+    "nut": "nuts",
+    "olive": "olives",
+    "onion": "onions",
+    "orange": "oranges",
+    "oyster": "oysters",
+    "pancake": "pancakes",
+    "papaya": "papayas",
+    "parsnip": "parsnips",
+    "patty": "patties",
+    "pea": "peas",
+    "peach": "peaches",
+    "peanut": "peanuts",
+    "pear": "pears",
+    "pecan": "pecans",
+    "pepper": "peppers",
+    "peppercorn": "peppercorns",
+    "pickle": "pickles",
+    "pie": "pies",
+    "pistachio": "pistachios",
+    "pita": "pitas",
+    "plantain": "plantains",
+    "plum": "plums",
+    "pod": "pods",
+    "potato": "potatoes",
+    "prawn": "prawns",
+    "prune": "prunes",
+    "pumpkin": "pumpkins",
+    "radish": "radishes",
+    "raisin": "raisins",
+    "raspberry": "raspberries",
+    "rib": "ribs",
+    "roll": "rolls",
+    "root": "roots",
+    "rutabaga": "rutabagas",
+    "salmonberry": "salmonberries",
+    "sandwich": "sandwiches",
+    "sausage": "sausages",
+    "scallion": "scallions",
+    "scallop": "scallops",
+    "scone": "scones",
+    "seed": "seeds",
+    "shallot": "shallots",
+    "shoot": "shoots",
+    "skewer": "skewers",
+    "snail": "snails",
+    "spear": "spears",
+    "sprout": "sprouts",
+    "squash": "squashes",
+    "stalk": "stalks",
+    "steak": "steaks",
+    "strawberry": "strawberries",
+    "sweetpotato": "sweetpotatos",
+    "taco": "tacos",
+    "tail": "tails",
+    "tangerine": "tangerines",
+    "tart": "tarts",
+    "tayberry": "tayberries",
+    "thigh": "thighs",
+    "tomato": "tomatoes",
+    "truffle": "truffles",
+    "tuber": "tubers",
+    "turnip": "turnips",
+    "walnut": "walnuts",
+    "wineberry": "wineberries",
+    "wing": "wings",
+    "wonton": "wontons",
+    "yam": "yams",
+    "yolk": "yolks",
+    "zucchini": "zucchinis"
+  },
+  "spelling_tokens": {
+    "chili": [
+      "chilli"
+    ],
+    "chilli": [
+      "chili"
+    ],
+    "chilies": [
+      "chillies"
+    ],
+    "chillies": [
+      "chilies"
+    ],
+    "yogurt": [
+      "yoghurt"
+    ],
+    "yoghurt": [
+      "yogurt"
+    ],
+    "savory": [
+      "savoury"
+    ],
+    "savoury": [
+      "savory"
+    ],
+    "flavor": [
+      "flavour"
+    ],
+    "flavour": [
+      "flavor"
+    ],
+    "flavored": [
+      "flavoured"
+    ],
+    "flavoured": [
+      "flavored"
+    ],
+    "pasteurized": [
+      "pasteurised"
+    ],
+    "pasteurised": [
+      "pasteurized"
+    ],
+    "unpasteurized": [
+      "unpasteurised"
+    ],
+    "unpasteurised": [
+      "unpasteurized"
+    ],
+    "homogenized": [
+      "homogenised"
+    ],
+    "homogenised": [
+      "homogenized"
+    ],
+    "caramelized": [
+      "caramelised"
+    ],
+    "caramelised": [
+      "caramelized"
+    ],
+    "aubergine": [
+      "eggplant"
+    ],
+    "eggplant": [
+      "aubergine"
+    ],
+    "aubergines": [
+      "eggplants"
+    ],
+    "eggplants": [
+      "aubergines"
+    ],
+    "courgette": [
+      "zucchini"
+    ],
+    "zucchini": [
+      "courgette"
+    ],
+    "courgettes": [
+      "zucchinis"
+    ],
+    "zucchinis": [
+      "courgettes"
+    ],
+    "licorice": [
+      "liquorice"
+    ],
+    "liquorice": [
+      "licorice"
+    ],
+    "fiber": [
+      "fibre"
+    ],
+    "fibre": [
+      "fiber"
+    ]
+  },
+  "prefix_qualifiers": [
+    "raw",
+    "fresh",
+    "dried",
+    "dry",
+    "frozen",
+    "canned",
+    "cooked",
+    "uncooked",
+    "roasted",
+    "toasted",
+    "smoked",
+    "salted",
+    "unsalted",
+    "ground",
+    "powdered",
+    "crushed",
+    "granulated",
+    "desiccated",
+    "dehydrated",
+    "freeze-dried",
+    "peeled",
+    "pitted",
+    "shelled",
+    "pickled",
+    "fermented",
+    "pasteurized",
+    "unpasteurized",
+    "refined",
+    "unrefined",
+    "extra-virgin",
+    "virgin",
+    "boneless",
+    "skinless",
+    "sweetened",
+    "unsweetened",
+    "evaporated",
+    "condensed",
+    "strained",
+    "concentrated",
+    "clarified",
+    "blanched",
+    "flaked",
+    "shredded",
+    "sliced",
+    "chopped",
+    "minced",
+    "whole",
+    "split",
+    "hulled",
+    "unhulled",
+    "decaffeinated",
+    "malted",
+    "mature",
+    "immature",
+    "liquid",
+    "instant",
+    "low sodium",
+    "lowfat",
+    "low fat",
+    "salt-free",
+    "reduced fat",
+    "candied",
+    "cured",
+    "whipped",
+    "preserved",
+    "sprouted",
+    "blended",
+    "crystallized",
+    "homemade",
+    "grated",
+    "green",
+    "red",
+    "white",
+    "yellow",
+    "ripe",
+    "unripe",
+    "sparkling",
+    "seasoned",
+    "sweet",
+    "sugarless",
+    "pressed",
+    "glazed",
+    "aromatized",
+    "baby",
+    "sugared",
+    "stone ground",
+    "creamed",
+    "cultured",
+    "fresh frozen",
+    "jellied",
+    "dry roasted",
+    "energy-reduced",
+    "reduced calorie",
+    "part-skim",
+    "salt-cured",
+    "self-rising",
+    "cracked",
+    "light",
+    "meatless",
+    "alcoholic",
+    "charcoal-broiled",
+    "boiled",
+    "fried",
+    "deep-fried",
+    "stir-fried",
+    "grilled",
+    "baked",
+    "steamed",
+    "braised",
+    "stewed",
+    "poached"
+  ],
+  "qualifier_prefixes": {
+    "shell on": "in-shell",
+    "shell off": "shelled",
+    "with skin": "skin-on",
+    "with bone": "bone-in"
+  },
+  "inverted_heads": [
+    "cheese",
+    "noodle",
+    "prawn",
+    "crab",
+    "lobster",
+    "shrimp",
+    "vinegar",
+    "oil",
+    "sauce",
+    "flour",
+    "rice"
+  ],
+  "blocked_aliases": {
+    "pepper": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "red pepper": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "green pepper": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "yellow pepper": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "orange pepper": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "corn flour": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "cornflour": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "pimento": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "haricot": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "coriander": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "vanilla": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "yeast": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "oil": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "white fish": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "callaloo": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "red bean": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "red mung bean": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "butter bean": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "piri piri": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "biscuit": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "cookie": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "cracker": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "pudding rice": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "raw vegetables": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "vegan butter": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "all-purpose seasoning": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "chicken stock": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "beef stock": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "fish stock": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "lamb stock": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "double cream": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "passata": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "almond essence": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "fresh cream": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "sushi rice": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "paella rice": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "spaghetti": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "ground coriander": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "shredded Mexican cheese": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "ground sirloin": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "turkey": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "king prawn": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "raw king prawn": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "tiger prawn": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "poblano": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias.",
+    "ancho powder": "Ambiguous ingredient identity, part/form, regional usage or unsupported equivalence; no unconditional alias."
+  },
+  "representatives": {
+    "pistachio": {
+      "canonical_id": "50083c76-346f-43fc-881f-b5150e4a35a9",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "rice noodles": {
+      "canonical_id": "87b8cc5f-f8aa-4231-bc4d-5a92c6889d20",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "soy milk": {
+      "canonical_id": "d3bb9248-c0a7-4740-823f-b4f274cf94a1",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "soya milk": {
+      "canonical_id": "d3bb9248-c0a7-4740-823f-b4f274cf94a1",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "fava bean": {
+      "canonical_id": "97f3b1e3-4d83-48b2-9aaa-ca129cb61464",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "fava beans": {
+      "canonical_id": "97f3b1e3-4d83-48b2-9aaa-ca129cb61464",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "borlotti bean": {
+      "canonical_id": "7de70e0d-28f1-4808-be5e-f0d666b246be",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "borlotti beans": {
+      "canonical_id": "7de70e0d-28f1-4808-be5e-f0d666b246be",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "cannellini bean": {
+      "canonical_id": "00cf58a5-5ab4-40de-90e4-fe670c951fa7",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "cannellini beans": {
+      "canonical_id": "00cf58a5-5ab4-40de-90e4-fe670c951fa7",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "sugar snap pea": {
+      "canonical_id": "b1762914-28b5-4a4c-a62e-7103c224c17c",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    },
+    "sugar snap peas": {
+      "canonical_id": "b1762914-28b5-4a4c-a62e-7103c224c17c",
+      "note": "Reviewed cooking-material name; use this suggestion representative while keeping all source identities and authored references separate."
+    }
+  },
+  "entry_aliases": {
+    "379290ce-8290-40de-8e59-972240f1c423": {
+      "label": "hot dog",
+      "aliases": [
+        "hotdog"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6e39d4d5-324d-4644-9be4-eba11145b5e2": {
+      "label": "yogurt",
+      "aliases": [
+        "yoghurt",
+        "yoghourt"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "1e2f0c49-ee4b-48a0-b49f-932ec1dafc13": {
+      "label": "Bleu de Bresse cheese",
+      "aliases": [
+        "Bresse Blue"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "19ed44a1-dacf-40f5-b0e1-387850e8e68b": {
+      "label": "emmenthal cheese",
+      "aliases": [
+        "Emmental cheese",
+        "Emmentaler cheese"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "fe06fec7-aa0d-4760-8722-10948a6ec84b": {
+      "label": "flaxseed oil",
+      "aliases": [
+        "flax oil",
+        "flax seed oil",
+        "linseed oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a9b3263b-038f-4b5a-9da7-68a82061f6c4": {
+      "label": "beef (ground)",
+      "aliases": [
+        "ground beef",
+        "beef mince",
+        "hamburger meat"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "54627fbe-f140-47b4-93fa-1749a038c59d": {
+      "label": "calf meat",
+      "aliases": [
+        "veal"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "123b2354-5663-4879-8380-42ef5d422a3c": {
+      "label": "cardamom",
+      "aliases": [
+        "cardamon",
+        "cardamum"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "677c2698-3942-42ee-ad3f-6ebdebfda5aa": {
+      "label": "azuki bean paste",
+      "aliases": [
+        "aduki bean paste"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "fa165d0c-3d9b-49fc-9c0e-77f8ea7df55b": {
+      "label": "Huangjiu",
+      "aliases": [
+        "yellow rice wine"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6eb58fbb-bbc0-4eba-986b-22ad7d192a4e": {
+      "label": "moromi of sake",
+      "aliases": [
+        "sake mash",
+        "sake moromi"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6155a5ce-91c4-4f98-b3f2-d3e9fd580adf": {
+      "label": "canastrato cheese",
+      "aliases": [
+        "canestrato"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a5bc1a42-7857-493c-9f05-ad4749f13454": {
+      "label": "roquefort cheese",
+      "aliases": [
+        "roquefort"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "3944b9b0-6285-45f5-add1-b4b7f74f702c": {
+      "label": "jujube fruit",
+      "aliases": [
+        "jujube"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "30bbc8c0-087e-4f6c-b647-cb2ce9c1ad85": {
+      "label": "Bordeaux wine",
+      "aliases": [
+        "claret"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "9f4af35e-a0af-4adb-8a58-fd1d045e69f0": {
+      "label": "mixed vegetables",
+      "aliases": [
+        "assorted vegetables",
+        "assorted veggies",
+        "mixed veggies"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "ffe88cfa-6d59-4f8f-a6d8-d745700247b2": {
+      "label": "spiny lobster",
+      "aliases": [
+        "langouste",
+        "rock lobster"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "85edb047-c018-4773-ae72-70e3f70b7ab1": {
+      "label": "romaine lettuce head",
+      "aliases": [
+        "cos lettuce head",
+        "romaine head"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e829fa95-b9ef-46ba-94af-a29e552a42bf": {
+      "label": "soft-shell crab",
+      "aliases": [
+        "softshell crab"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "5deecbb2-5ed6-4767-b4f1-6fb1e2daa139": {
+      "label": "guajillo chili",
+      "aliases": [
+        "guajillo pepper"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "97f3b1e3-4d83-48b2-9aaa-ca129cb61464": {
+      "label": "broad bean",
+      "aliases": [
+        "fava bean",
+        "faba bean",
+        "broadbean",
+        "Windsor bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "79c2eef3-ad4b-47b5-97af-320887e0e85c": {
+      "label": "broad bean (dried)",
+      "aliases": [
+        "dried fava bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "2e9b18fd-ebe5-4290-9d67-998c09676fa4": {
+      "label": "chickpea (dried)",
+      "aliases": [
+        "dried garbanzo bean",
+        "garbanzo bean (dried)"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "efbf199e-2ce8-475b-ba18-b9b91d44d224": {
+      "label": "broad bean pod",
+      "aliases": [
+        "fava bean pod"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "413e5d1c-d6ca-4a87-83ba-30d432701aea": {
+      "label": "lamb neck",
+      "aliases": [
+        "neck of lamb"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b494e57b-f866-46ab-a2d5-4079917bac43": {
+      "label": "Williams pear",
+      "aliases": [
+        "Bartlett pear"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "dfb579fa-0de9-45ee-9bf3-f1a60d9181f9": {
+      "label": "cream soda",
+      "aliases": [
+        "creme soda"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b7476363-c02d-40de-b5ae-4b22d8a4848a": {
+      "label": "frybread",
+      "aliases": [
+        "fry bread"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e3fdb414-2ba6-408f-b309-fdb65250ce4b": {
+      "label": "Medjool date",
+      "aliases": [
+        "Majhool date",
+        "Medjoul date"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d2adf2b1-f901-4b31-856d-6c20b8170182": {
+      "label": "okara",
+      "aliases": [
+        "soy pulp",
+        "tofu dregs"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8aae6f31-2cf0-44d4-8b64-c6f0d180c4ba": {
+      "label": "Sōmen",
+      "aliases": [
+        "somen"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "bc79bc1d-3abf-4c8b-8e79-6129207897c9": {
+      "label": "tea seed oil",
+      "aliases": [
+        "camellia seed oil",
+        "teaseed oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a1e37f33-8215-44b5-87ec-7139b54a2e49": {
+      "label": "blue crabmeat",
+      "aliases": [
+        "blue crab meat"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "2f75a1a4-669d-4ed2-955d-db94921e1410": {
+      "label": "king crabmeat",
+      "aliases": [
+        "king crab meat"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6a92f450-c8fe-408f-8ea3-d9636fbb6b0b": {
+      "label": "black turtle bean",
+      "aliases": [
+        "black bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d9983279-aa2d-4ed6-9061-dfe1b15037c9": {
+      "label": "black cardamom pod",
+      "aliases": [
+        "black cardamom pods",
+        "Bengal cardamom",
+        "Nepal cardamom",
+        "greater cardamom"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "024d2bd4-f154-4e35-b9e9-5c9f1c1d8c20": {
+      "label": "mole verde",
+      "aliases": [
+        "green mole",
+        "green mole sauce"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "19e31c51-2a09-4163-aae9-84f5185d947a": {
+      "label": "heirloom tomato",
+      "aliases": [
+        "heritage tomato"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e6992fa3-02dd-4c85-8e4d-93c5a6c9554e": {
+      "label": "asafoetida",
+      "aliases": [
+        "hing",
+        "hengu"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a834d9ba-97ee-44ed-94d1-282c530aca76": {
+      "label": "soursop",
+      "aliases": [
+        "graviola",
+        "guyabano"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8bd3787d-3a67-4907-8950-b4dfa031e9f6": {
+      "label": "horchata",
+      "aliases": [
+        "orxata"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "00dbd0ba-5a2d-49fb-baa3-88c60c0f7a0d": {
+      "label": "kohlrabi",
+      "aliases": [
+        "German turnip"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e5dcb39a-a1d5-4032-9097-4e1117a2521f": {
+      "label": "vegetable patty",
+      "aliases": [
+        "vegetarian patty",
+        "veggie patty"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d7afc21a-54df-46b3-aa67-16909d292d12": {
+      "label": "fish steak",
+      "aliases": [
+        "fish cutlet"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a3f06e8d-0a49-4a48-9c67-9b27c4d47ee4": {
+      "label": "tuna steak",
+      "aliases": [
+        "tuna cutlet"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0535609a-f5d0-485d-ae67-90bde53ef765": {
+      "label": "ancho pepper",
+      "aliases": [
+        "ancho",
+        "chile ancho",
+        "ancho chili",
+        "ancho chilli"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "97eb4123-5bee-4a41-80ea-22a8e1f3ca90": {
+      "label": "macadamia nut",
+      "aliases": [
+        "macadamia",
+        "Queensland nut"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4fb19913-37ab-4448-9c25-24b3a2c02386": {
+      "label": "wax bean",
+      "aliases": [
+        "yellow wax bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "1e3ea6b9-6965-42e0-9987-9927cbc201be": {
+      "label": "golden zucchini squash",
+      "aliases": [
+        "golden zucchini",
+        "yellow zucchini"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8e40e05c-8046-4624-a13b-7169f1b3859b": {
+      "label": "pomelo fruit",
+      "aliases": [
+        "pomelo",
+        "pummelo",
+        "shaddock"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "41f5b745-d03e-4d29-850e-8df6f304ebdf": {
+      "label": "savoy cabbage head",
+      "aliases": [
+        "savoy cabbage"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "df02d883-3902-4cce-b154-2d512f279177": {
+      "label": "softneck garlic",
+      "aliases": [
+        "soft-necked garlic"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6a2fb9a0-9961-4882-8f5e-270297ea77df": {
+      "label": "hardneck garlic",
+      "aliases": [
+        "hard-necked garlic"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6664a754-1e85-49a4-84a1-62e0ab94076a": {
+      "label": "grits",
+      "aliases": [
+        "corn grits"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "dc71eff1-b50b-464d-a8f9-b0439d62e65f": {
+      "label": "pita bread",
+      "aliases": [
+        "pita",
+        "pitta",
+        "pitta bread"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a81bcdce-aad0-48b5-8e37-9e93ad3842ab": {
+      "label": "black radish",
+      "aliases": [
+        "black Spanish radish"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6a614955-b440-4367-bbcc-11079c2b638e": {
+      "label": "prickly pear pad",
+      "aliases": [
+        "nopal pad"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "24ea815a-52e4-4185-a3f6-22de3f74c2a9": {
+      "label": "mountain yam",
+      "aliases": [
+        "Japanese mountain yam",
+        "yamaimo"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "fbc057a0-ec54-4ee0-a99e-8bf55729dbc2": {
+      "label": "jackfruit",
+      "aliases": [
+        "jack fruit",
+        "jakfruit",
+        "langka"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "dc723c43-bffa-44cf-a494-cabb4ebd0252": {
+      "label": "lychee",
+      "aliases": [
+        "lichee",
+        "lichi",
+        "litchee",
+        "litchi",
+        "litchi nut"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "eb8cf239-9879-4ad0-994c-40bfc2f35f17": {
+      "label": "star fruit",
+      "aliases": [
+        "carambola"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b57628da-3d9c-4668-9910-3260f208bea4": {
+      "label": "surinam cherry",
+      "aliases": [
+        "pitanga"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c86313d6-308a-4f00-803f-20e1e615ea1a": {
+      "label": "crabapple",
+      "aliases": [
+        "crab apple"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4b264aa4-561a-4178-9cb7-01f3fd119b0b": {
+      "label": "bulgur",
+      "aliases": [
+        "bulgur wheat"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "34d4527a-601b-4e92-ad03-1d631604785b": {
+      "label": "caffè mocha",
+      "aliases": [
+        "coffee mocha",
+        "mochaccino",
+        "mocaccino"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "3faee375-134d-45f2-ab46-97358a9b1691": {
+      "label": "Canadian bacon",
+      "aliases": [
+        "Canadian-style bacon"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "897b74d0-fc42-43f9-b518-dab8d197dfdd": {
+      "label": "leavening agent",
+      "aliases": [
+        "raising agent"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c328489c-0f27-4096-86cd-106ee5ea1da8": {
+      "label": "wine gum",
+      "aliases": [
+        "winegum"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7ffad4df-0101-4ed3-8968-cd237fac23da": {
+      "label": "horned melon",
+      "aliases": [
+        "kiwano",
+        "jelly melon",
+        "African horned melon"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "40e94ac5-5017-49e6-bbd9-9c4b0565507e": {
+      "label": "soy yogurt",
+      "aliases": [
+        "soya yogurt"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "f885178a-7274-47d2-9b74-beb477491bf6": {
+      "label": "filo",
+      "aliases": [
+        "fillo",
+        "filo pastry",
+        "phyllo",
+        "phyllo dough",
+        "phyllo pastry"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c0c0591e-1393-4e16-8be9-898b0dd0ee4a": {
+      "label": "steel cut oats",
+      "aliases": [
+        "steel-cut oats",
+        "pinhead oats"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7bd49fb5-ef57-4b43-beaf-9eea6049f022": {
+      "label": "poppyseed oil",
+      "aliases": [
+        "poppy seed oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "534e1797-f76d-42f9-a3a6-d366fc483008": {
+      "label": "parmesan cheese",
+      "aliases": [
+        "parmesan"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "dc3739ae-5d38-4779-8952-400b0b270220": {
+      "label": "Béchamel sauce",
+      "aliases": [
+        "bechamel sauce",
+        "bechamel"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a08214d9-7023-4b49-8684-f9e98f6edf59": {
+      "label": "lemongrass",
+      "aliases": [
+        "lemon grass",
+        "lemongrass stalk",
+        "lemon grass stalk"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d71533bf-6ac9-4220-a15b-ac04a175eb86": {
+      "label": "cassava",
+      "aliases": [
+        "manioc",
+        "yuca"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "a733a8c9-6f76-4fc2-a281-e621f0f59230": {
+      "label": "white mushroom",
+      "aliases": [
+        "white button mushroom",
+        "button mushroom",
+        "champignon mushroom"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "acb1560f-8bcf-4e0e-80a9-976cfaa921b8": {
+      "label": "portobello mushroom",
+      "aliases": [
+        "portabella mushroom",
+        "portobella mushroom",
+        "portobello",
+        "portabella"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c761993e-774c-44a8-b8b9-c9ca3acb5153": {
+      "label": "Sichuan pepper",
+      "aliases": [
+        "Szechuan pepper",
+        "Szechwan pepper"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "bae9cc14-57dc-4dd3-b29d-e94a76d909ca": {
+      "label": "akee",
+      "aliases": [
+        "ackee",
+        "ackee apple"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "326e452e-0382-49f9-9a91-7fc78b207a9f": {
+      "label": "blackeyed pea",
+      "aliases": [
+        "black-eyed pea",
+        "black-eyed bean",
+        "black eyed pea"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d68a040b-4b43-418a-a506-d884cf6a9f7e": {
+      "label": "star anise",
+      "aliases": [
+        "Chinese star anise"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4f475c47-3ec1-4c4b-825e-fd5a527441f4": {
+      "label": "crisphead lettuce",
+      "aliases": [
+        "iceberg lettuce"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "efa6a1dc-185e-40ee-83de-43c2134b8a4f": {
+      "label": "lingonberry",
+      "aliases": [
+        "cowberry"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "3781969e-73a8-417d-9c9e-7001d13c58ca": {
+      "label": "mandarin orange",
+      "aliases": [
+        "mandarin",
+        "mandarine"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "14c8b6eb-67b9-4fd9-821e-c8cb1908b98d": {
+      "label": "garlic scape",
+      "aliases": [
+        "garlic spear",
+        "garlic top"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7d38e15b-1f36-4d1b-8111-d2d858108764": {
+      "label": "arugula leaf",
+      "aliases": [
+        "rocket",
+        "rocket leaf",
+        "roquette",
+        "rucola"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "5b03c929-7d18-41c3-aedd-70b07d06575c": {
+      "label": "asian pear",
+      "aliases": [
+        "Asian pear",
+        "Chinese pear",
+        "Japanese pear",
+        "Korean pear"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "127afb33-ee9b-453f-b4e5-a786e6e925c3": {
+      "label": "cocoa bean",
+      "aliases": [
+        "cacao bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "45d50a3d-9bcd-4a64-932a-2e957221cdbe": {
+      "label": "eggplant",
+      "aliases": [
+        "aubergine",
+        "brinjal",
+        "egg plant",
+        "egg plants"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e9f9a43d-b2ad-4a79-8fe6-1d16f92438a0": {
+      "label": "fenugreek leaf",
+      "aliases": [
+        "methi leaf"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "bdee9ace-77ad-4cd6-8a7a-af2b28735d80": {
+      "label": "java apple",
+      "aliases": [
+        "wax apple",
+        "wax jambu"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "ba1109a7-b8ad-4a16-b8e8-996367f05098": {
+      "label": "beechnut",
+      "aliases": [
+        "beech nut"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "695cd245-0c33-47dd-8ef5-a7957bab554c": {
+      "label": "beet leaf",
+      "aliases": [
+        "beetroot leaf"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "71c984d9-47cb-4156-9347-8f554dc9d992": {
+      "label": "chayote",
+      "aliases": [
+        "christophine",
+        "mirliton squash"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "1a35e6c7-5697-4332-aee9-57ba8dd5a24a": {
+      "label": "kola nut",
+      "aliases": [
+        "colanut",
+        "kolanut"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "16f514c8-e7c6-48a5-aad2-f9a2adb1a901": {
+      "label": "filbert nut",
+      "aliases": [
+        "filbert"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "aa27cbd6-2583-4728-974c-586ca2167b31": {
+      "label": "miracle berry",
+      "aliases": [
+        "miracle fruit"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "9dd32e24-60b6-4e8b-bea2-a78cb0c8b514": {
+      "label": "flaxseed",
+      "aliases": [
+        "linseed",
+        "flax seed"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8d3dc48d-5d5c-44db-b3a0-8cb17a1f2a22": {
+      "label": "naranjilla",
+      "aliases": [
+        "lulo"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "50083c76-346f-43fc-881f-b5150e4a35a9": {
+      "label": "pistachio nut",
+      "aliases": [
+        "pistachio"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0decd9d3-3d7b-4f08-96ad-0bb99fc868bc": {
+      "label": "finger millet seed",
+      "aliases": [
+        "finger millet",
+        "ragi"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b4a5ff49-a600-493e-a44d-4831df97e5a2": {
+      "label": "pawpaw",
+      "aliases": [
+        "paw paw",
+        "paw-paw"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c55ac25c-0d2b-42cf-8a69-1be391b19541": {
+      "label": "tamarillo",
+      "aliases": [
+        "tree tomato",
+        "tree-tomato"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7c0019a3-7b4d-4d9c-b509-e8ffe0eb25d4": {
+      "label": "lupine bean",
+      "aliases": [
+        "lupin bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "276292ed-724f-471a-82f6-fff87e2cc2ae": {
+      "label": "jicama tuber",
+      "aliases": [
+        "jicama",
+        "Mexican yam bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b940ee2d-3277-4160-9f09-346458e3e104": {
+      "label": "chili pepper",
+      "aliases": [
+        "chilli",
+        "chili",
+        "chile pepper",
+        "chilli pepper"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "615bf83c-7369-473f-8718-4f0aa4fb03b2": {
+      "label": "seville orange",
+      "aliases": [
+        "sour Seville orange"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "641f6be4-b020-4766-8016-8a55c05b64ea": {
+      "label": "white peppercorn",
+      "aliases": [
+        "white peppercorns"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "567986d5-8dbb-49a3-b095-31e45617743d": {
+      "label": "soybean sprout",
+      "aliases": [
+        "soy sprout",
+        "soya bean sprout"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "f31b030e-4d9f-40e5-8b56-940dd5da7681": {
+      "label": "pork ear",
+      "aliases": [
+        "pig ear",
+        "pig's ear"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "31ccd0b4-5ff5-490c-80ae-c6a701fc2ea0": {
+      "label": "pork ear (dried)",
+      "aliases": [
+        "dried pig ear",
+        "dried pork ear"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "9a0f8a6d-4964-498d-9401-e45526035d0e": {
+      "label": "coconut flakes",
+      "aliases": [
+        "flaked coconut"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "2bb1e958-206c-4cf1-8394-202f0a4510e7": {
+      "label": "leberkase",
+      "aliases": [
+        "leberkäse",
+        "fleischkase",
+        "fleischkäse"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e006a1ca-f846-43a3-ae9d-fa28711abc4b": {
+      "label": "white tahini",
+      "aliases": [
+        "white tahina"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "316a327f-d054-424f-9464-ab7dd622cfcc": {
+      "label": "pico de gallo",
+      "aliases": [
+        "salsa fresca",
+        "salsa cruda"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "20b6fdd9-ae6f-414e-a4b2-054489d8b5b1": {
+      "label": "mixed greens",
+      "aliases": [
+        "mixed leafy vegetables",
+        "mixed leafy veggies"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d1aab18a-1d45-4304-ab88-6f6eb4341e12": {
+      "label": "lemongrass powder",
+      "aliases": [
+        "lemon grass powder"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "63b13e92-6889-4ff6-9f79-a40ea72c1399": {
+      "label": "corn dog",
+      "aliases": [
+        "corndog"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "3a66a98a-3950-412c-9d19-e068f50ae84d": {
+      "label": "pork frankfurter",
+      "aliases": [
+        "pork frank"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "86cae9a2-5302-41ac-ac04-a1d5aa437fcd": {
+      "label": "pork heart",
+      "aliases": [
+        "pig heart",
+        "pig's heart"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0624cb0a-af88-47e4-905c-bc4683d58814": {
+      "label": "krachai",
+      "aliases": [
+        "fingerroot",
+        "Chinese keys"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "51681146-d109-4974-bfc7-c547ec42fd5e": {
+      "label": "chinese five spice powder",
+      "aliases": [
+        "Chinese five-spice powder",
+        "five-spice powder",
+        "five spice powder"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "5f10dadd-2994-419a-a38a-6e9d8bdc948e": {
+      "label": "kiwifruit",
+      "aliases": [
+        "kiwi fruit",
+        "kiwi"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "f593dbfb-7036-4df3-a287-f189f9224e45": {
+      "label": "holy basil leaf",
+      "aliases": [
+        "tulsi leaf"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "1f07ab61-1ea8-4b23-941a-357b4d373d87": {
+      "label": "holy basil leaf (dried)",
+      "aliases": [
+        "dried tulsi leaf"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "24671664-ff6d-486c-b7b8-251b81838079": {
+      "label": "tofu",
+      "aliases": [
+        "bean curd"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0ad102b6-69c6-4ddb-aff1-0b3ccd189aeb": {
+      "label": "pork fat",
+      "aliases": [
+        "pig fat"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "04556143-801f-45d9-aae7-1583ed76f511": {
+      "label": "cellophane noodle",
+      "aliases": [
+        "Chinese cellophane noodle",
+        "fensi"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "174302f7-0a42-421c-898b-4d8deff2d54b": {
+      "label": "acid whey",
+      "aliases": [
+        "sour whey"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e80e69bb-c98e-4aa5-9f65-6a4ebc7269ac": {
+      "label": "corn starch",
+      "aliases": [
+        "cornstarch",
+        "maize starch"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "371b08f6-9302-42a1-84e1-9e962b6ea7b0": {
+      "label": "leaf lard",
+      "aliases": [
+        "pork leaf fat"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4158d309-881f-43a3-8681-4625295f97f2": {
+      "label": "rapini",
+      "aliases": [
+        "broccoli rabe",
+        "broccoli raab"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4b0aea33-000f-4d0b-a733-0b7a601470c8": {
+      "label": "celtuce",
+      "aliases": [
+        "stem lettuce",
+        "asparagus lettuce"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "9a13a5cb-12d9-4457-9e95-df7f9ee548d0": {
+      "label": "spaghetti squash",
+      "aliases": [
+        "vegetable spaghetti"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "28d52e5c-40de-4c53-a468-e2556dcce48f": {
+      "label": "crookneck squash",
+      "aliases": [
+        "yellow crookneck squash"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "92e0b320-bd94-4848-9ede-9679b5a1251c": {
+      "label": "black cumin seed",
+      "aliases": [
+        "nigella seed",
+        "kalonji seed"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c6265662-4ad8-4362-b838-f7768417e3b4": {
+      "label": "banana pepper",
+      "aliases": [
+        "banana chili",
+        "yellow wax pepper"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "fc8101c1-8a1a-4f85-bff3-7065d30a6da4": {
+      "label": "light sour cream",
+      "aliases": [
+        "sour cream (reduced fat)",
+        "reduced-fat sour cream"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "30150ff3-cb15-4073-82d4-b54c63929e03": {
+      "label": "chocolate liquor",
+      "aliases": [
+        "cocoa liquor"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8a7d72b5-901c-464d-b391-6fdf11608b94": {
+      "label": "whole wheat bread",
+      "aliases": [
+        "wholemeal bread"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "3294e264-c38b-491b-8df0-b8951041f232": {
+      "label": "soybean",
+      "aliases": [
+        "soy bean",
+        "soya bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "bd5b235a-891d-484d-8efb-f773c629d45e": {
+      "label": "bouillon cube",
+      "aliases": [
+        "stock cube",
+        "broth cube",
+        "soup cube"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "5b77d700-6515-4a13-9544-dd5bb42ee589": {
+      "label": "brazilnut",
+      "aliases": [
+        "brazil nut"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "70bf95b8-45f3-4222-a0fa-b990808eeb85": {
+      "label": "tonka bean",
+      "aliases": [
+        "tonkin bean",
+        "tonquin bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7de70e0d-28f1-4808-be5e-f0d666b246be": {
+      "label": "cranberry bean",
+      "aliases": [
+        "borlotti bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "93e9b298-5280-4da4-974d-8ac3eff15867": {
+      "label": "soybean flour",
+      "aliases": [
+        "soy flour",
+        "soya flour"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "906c5dd8-e9bc-4238-998f-ac0c1c080254": {
+      "label": "soybean beverage",
+      "aliases": [
+        "soy beverage",
+        "soya beverage"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "39907eb2-9194-4407-9656-b8366515ca4d": {
+      "label": "soybean oil",
+      "aliases": [
+        "soy oil",
+        "soya oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4f641c2c-3f72-49bd-83fe-dcef5455b43d": {
+      "label": "provolone cheese",
+      "aliases": [
+        "provolone"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b76caa5c-1f2d-4064-9dcb-107cc3cdf9fa": {
+      "label": "chickpea flour",
+      "aliases": [
+        "garbanzo bean flour"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "ed0b5663-d873-449a-938d-cca4d5758f0c": {
+      "label": "spice mixture",
+      "aliases": [
+        "spice blend",
+        "spice mix"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "3ecc32bd-292a-4dbf-82ee-0a621c0a35b0": {
+      "label": "tempeh",
+      "aliases": [
+        "tempe"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d3bb9248-c0a7-4740-823f-b4f274cf94a1": {
+      "label": "soybean milk",
+      "aliases": [
+        "soy milk",
+        "soya milk",
+        "soya bean milk"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "99072554-0fa5-45cc-b9eb-87e50ca56767": {
+      "label": "porcini mushroom",
+      "aliases": [
+        "porcini",
+        "porcino",
+        "cep"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "cfefaf05-9b42-4a46-88f1-4d00033177c0": {
+      "label": "poppadum",
+      "aliases": [
+        "papad",
+        "papadam",
+        "papadum",
+        "poppadom",
+        "pappadam",
+        "popadom",
+        "appalam"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "00cf58a5-5ab4-40de-90e4-fe670c951fa7": {
+      "label": "white kidney bean",
+      "aliases": [
+        "cannellini bean",
+        "safaid lobia"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "df2e686c-19a2-41b7-80c1-5abd69fe7fb8": {
+      "label": "moth bean",
+      "aliases": [
+        "matki",
+        "mat bean",
+        "mothbean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "97f54504-152e-4dce-a93a-6abb5be87673": {
+      "label": "peanut oil",
+      "aliases": [
+        "groundnut oil",
+        "ground nut oil",
+        "arachis oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4438b71d-9150-4bf1-b524-a9730c5bc1e9": {
+      "label": "black gram bean",
+      "aliases": [
+        "black gram",
+        "urad bean",
+        "urd bean",
+        "urid bean",
+        "black matpe bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "f116f760-6481-4c56-ba45-fa7e02d9b2b8": {
+      "label": "rice bean",
+      "aliases": [
+        "ricebean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "00bbe0a9-94c2-4a1e-b534-c4c4f31c00f1": {
+      "label": "cornmeal",
+      "aliases": [
+        "corn meal",
+        "maize meal"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c41a913e-c571-48c6-851c-d6b795de785a": {
+      "label": "winged bean",
+      "aliases": [
+        "four-angled bean",
+        "four-cornered bean",
+        "Goa bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0d3da5f5-3f4b-46fd-9b20-bd54ce36fee4": {
+      "label": "sunflower seed oil",
+      "aliases": [
+        "sunflower oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "17a80467-05f7-4c34-9a1c-45428dab9fc2": {
+      "label": "edible oil",
+      "aliases": [
+        "cooking oil",
+        "food oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "57fe3ccb-44c7-4ace-b6dc-14385a5cdd67": {
+      "label": "asparagus bean pod",
+      "aliases": [
+        "yardlong bean",
+        "Chinese long bean",
+        "long bean",
+        "snake bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "cc0f6bae-0423-4339-a5de-815542ec6e7d": {
+      "label": "luncheon meat",
+      "aliases": [
+        "lunch meat"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "be064e22-d715-4143-9385-5d346b6e2c71": {
+      "label": "rosé wine",
+      "aliases": [
+        "rosé"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b1762914-28b5-4a4c-a62e-7103c224c17c": {
+      "label": "sugar pea pod (edible, fresh)",
+      "aliases": [
+        "sugar snap pea",
+        "snap pea"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8d10078f-0079-4da7-a38a-e08b943cd21c": {
+      "label": "kombucha tea",
+      "aliases": [
+        "kombucha"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d0405383-d709-4a79-b46a-143cbaa34af5": {
+      "label": "rice with husk",
+      "aliases": [
+        "paddy rice"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "23c47943-e1de-4cce-9da8-89be21ccf8ec": {
+      "label": "compressed yeast",
+      "aliases": [
+        "cake yeast",
+        "yeast cake"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "cb37931f-bc4a-4bcf-ae7c-f7e3ace12a06": {
+      "label": "pecan nut",
+      "aliases": [
+        "pecan"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "5c4cb6bd-81cb-4903-9cbc-075c7b7deaf4": {
+      "label": "adzuki bean",
+      "aliases": [
+        "aduki bean",
+        "azuki bean"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "053393af-0f18-45ca-be13-a5ff9f360871": {
+      "label": "wonton pastry (case)",
+      "aliases": [
+        "wonton wrapper"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6f4401ed-f435-4ae4-9440-f399edcbcaba": {
+      "label": "bakers margarine",
+      "aliases": [
+        "baking margarine",
+        "bakery margarine"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "9d6f5d3e-ed01-4549-b74e-e7fd1d5f30e4": {
+      "label": "head cheese",
+      "aliases": [
+        "brawn"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d2faea85-6a10-46c7-9a77-4cf126c5e43d": {
+      "label": "onion",
+      "aliases": [
+        "bulb onion",
+        "common onion"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "950b068f-f89f-4300-90ec-10d79ebbfe5a": {
+      "label": "straw mushroom",
+      "aliases": [
+        "paddy straw mushroom"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "2f37e42a-a5eb-48f0-908b-d6ef286d46eb": {
+      "label": "field mushroom",
+      "aliases": [
+        "meadow mushroom"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0ccd674c-e724-4edc-96c4-5f870587381f": {
+      "label": "reishi mushroom",
+      "aliases": [
+        "lingzhi mushroom"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e26e4c31-b8bb-43d6-a95c-1ea43893566e": {
+      "label": "enoki mushroom",
+      "aliases": [
+        "enoki",
+        "enokitake",
+        "golden needle mushroom"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0c8e1ca2-a54b-47de-afc5-664d1462afbc": {
+      "label": "nameko mushroom",
+      "aliases": [
+        "nameko"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b413bc41-1f6e-46d8-ab5d-01edb7db9ded": {
+      "label": "king oyster mushroom",
+      "aliases": [
+        "king trumpet mushroom",
+        "king brown mushroom"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d0f9f315-06ce-441c-a8b4-2a349913e024": {
+      "label": "brown beech mushroom",
+      "aliases": [
+        "brown shimeji",
+        "buna-shimeji",
+        "bunashimeji"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8e3f28fa-8e5e-4eef-a84f-d54614f20a38": {
+      "label": "white beech mushroom",
+      "aliases": [
+        "white shimeji",
+        "bunapi-shimeji",
+        "bunapishimeji"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "1a44a59a-f04b-4520-bcc0-4f9be364f0f5": {
+      "label": "hon-shimeji",
+      "aliases": [
+        "honshimeji"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "cf0d9407-e6d7-4dd4-8f4c-f4d78a2a3ed0": {
+      "label": "horn of plenty",
+      "aliases": [
+        "black trumpet",
+        "black chanterelle"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "34e3be1e-96ea-46de-b340-55e3adf5fe23": {
+      "label": "common morel",
+      "aliases": [
+        "yellow morel",
+        "true morel"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d5508d15-d464-40f3-9449-2687cc827253": {
+      "label": "paneer",
+      "aliases": [
+        "ponir"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "710903e7-f2f6-4702-9b10-f6e8a46a5fba": {
+      "label": "split chickpea",
+      "aliases": [
+        "chana dal",
+        "split Bengal gram"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b2ecb658-d98a-469f-9bc3-0503fd1f1a3f": {
+      "label": "dhana jiru",
+      "aliases": [
+        "dhana jeera",
+        "dhanjiru"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "da16b817-6d7d-4611-8621-66617878e709": {
+      "label": "gram flour",
+      "aliases": [
+        "besan"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "3bf07877-efe4-4ae4-af3c-0649e6c9895a": {
+      "label": "all-purpose flour",
+      "aliases": [
+        "plain flour"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "19718867-576d-4282-9fb0-b06204631d48": {
+      "label": "cumin (powdered)",
+      "aliases": [
+        "ground cumin"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "ee4475cc-b2d3-4ad2-a46f-3011a0e59c75": {
+      "label": "olive oil (extra-virgin)",
+      "aliases": [
+        "extra virgin olive oil",
+        "extra-virgin olive oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b1853361-c2b1-4b74-ae33-f5fc097524f1": {
+      "label": "crème fraîche",
+      "aliases": [
+        "creme fraiche"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "df3a353e-6ee2-44c3-8cac-9911739e5dde": {
+      "label": "cashew nut",
+      "aliases": [
+        "cashew"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "6a3d8b78-57f4-4849-983e-41322483923b": {
+      "label": "feta cheese",
+      "aliases": [
+        "feta"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "e646c9bd-a210-45ec-89df-62cb01b83df3": {
+      "label": "gruyere cheese",
+      "aliases": [
+        "gruyère",
+        "gruyere"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "2f7b55c2-cbc0-42b9-8bc5-146244d35b90": {
+      "label": "Monterey Jack",
+      "aliases": [
+        "Monterey Jack cheese"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "20040eca-d057-44f9-bc9d-5a8a613541ca": {
+      "label": "Colby-Jack",
+      "aliases": [
+        "Colby Jack cheese",
+        "Colby Jack"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "c5b3ca31-fcf1-49d0-b69b-19c883358cf5": {
+      "label": "salted cod",
+      "aliases": [
+        "salt cod"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "ec3c3c3d-7dba-4176-852f-7edbe6628d56": {
+      "label": "sesame oil",
+      "aliases": [
+        "sesame seed oil"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7004c533-4786-40cb-922d-559f67ca6891": {
+      "label": "muscovado",
+      "aliases": [
+        "muscovado sugar"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "35b71713-6f79-4150-b5c0-c17df2c14a82": {
+      "label": "pak-choi",
+      "aliases": [
+        "pak choi",
+        "pak choy",
+        "bok choi"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0f3f6a56-756e-450c-bceb-4546f0172de7": {
+      "label": "chili powder",
+      "aliases": [
+        "chilli powder"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "de54fd2e-fed7-4dbd-8353-bf86681c7f82": {
+      "label": "chili sauce",
+      "aliases": [
+        "chilli sauce"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7bd90d3c-2743-4925-a695-2ce4002c47b8": {
+      "label": "hot sauce",
+      "aliases": [
+        "hotsauce"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "8f4baf3d-6b84-4661-9b7c-4b6e21fd68eb": {
+      "label": "makrut lime leaf",
+      "aliases": [
+        "makrut lime leaves",
+        "kaffir lime leaf"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4fdbacfd-247d-4365-b893-4c577b327b9c": {
+      "label": "phanaeng curry paste",
+      "aliases": [
+        "panang curry paste"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "7781f13b-9c3e-4645-911f-c60f7e57dcdc": {
+      "label": "red curry paste",
+      "aliases": [
+        "Thai red curry paste"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "b00598bf-8c0b-403b-94e2-516757bfd165": {
+      "label": "coconut sugar",
+      "aliases": [
+        "coco sugar"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "34d12aef-000a-457d-9ab2-95f716f75184": {
+      "label": "linguine",
+      "aliases": [
+        "linguine pasta"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "9f5c51b0-10ba-443c-8c9d-ebe9a2321040": {
+      "label": "vermicelli",
+      "aliases": [
+        "vermicelli pasta"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "4af770a0-6ee5-4951-b267-b49e93ff6195": {
+      "label": "cherry glace",
+      "aliases": [
+        "glacé cherry",
+        "glace cherry"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "f4405f6c-fd9c-449c-b85a-8a7b4f5f77c8": {
+      "label": "raisin (dried)",
+      "aliases": [
+        "raisin",
+        "raisins"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "d27de3b8-0ad4-4997-9dac-a1f01a394112": {
+      "label": "jew's mallow leaves",
+      "aliases": [
+        "mulukhiyah",
+        "molokhia",
+        "mulukhiyya"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "450c98c6-6fc2-434d-8a02-93454721bf79": {
+      "label": "pork mince",
+      "aliases": [
+        "ground pork",
+        "minced pork"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "18638c1b-66b5-483b-9b44-ebed7e0234b9": {
+      "label": "lamb meat (ground)",
+      "aliases": [
+        "lamb mince",
+        "ground lamb",
+        "minced lamb"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "bfd55fe0-5f53-4cd7-9ce4-1b77bed2925c": {
+      "label": "chicken bouillon cube",
+      "aliases": [
+        "chicken stock cube",
+        "chicken broth cube"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "22f2b775-3d21-4136-a0ca-c4e0034adf3a": {
+      "label": "mexican blend cheese",
+      "aliases": [
+        "Mexican cheese blend"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "34e66d10-6015-4b61-b306-40e3c25f4bb2": {
+      "label": "sweet corn",
+      "aliases": [
+        "sweetcorn"
+      ],
+      "note": "Reviewed culinary alternative/spelling; retain the named ingredient, species/part and food form. No new UUID or source equivalence inferred."
+    },
+    "0674716b-f5e9-41a5-9bac-143c75da4843": {
+      "label": "bird's eye chili",
+      "aliases": [
+        "birds-eye chili",
+        "birds eye chili",
+        "bird eye chili"
+      ],
+      "note": "Reviewed apostrophe/hyphen spellings of bird's-eye chili; no piri-piri or generic Thai-chili equivalence."
+    },
+    "95f518e5-ccd4-4293-8eb1-72dbd93c3306": {
+      "label": "coriander leaf",
+      "aliases": [
+        "cilantro leaves"
+      ],
+      "note": "Plural leaves of the existing cilantro herb alias; never coriander seeds."
+    },
+    "ab6f4bfb-7b96-4d7b-b016-c798c0a8b310": {
+      "label": "red pepper (crushed)",
+      "aliases": [
+        "red pepper flakes",
+        "red chili flakes",
+        "red chilli flakes",
+        "chili flakes",
+        "chilli flakes"
+      ],
+      "note": "Reviewed culinary names for crushed red chili flakes; do not equate with powder, bell pepper, or named Korean gochugaru."
+    }
+  },
+  "entry_rule_holds": {
+    "55f4459e-a9b9-4d4e-9173-67d1a7dd228b": {
+      "rules": [
+        "count-noun-number"
+      ],
+      "note": "Canned chili is a prepared chili dish, not countable chili peppers. Retain regional spelling but never infer chilies/chillies."
+    }
+  },
+  "scope_review": {
+    "version": "ingredient-scope-2026-10-24-v1",
+    "criterion": "Keyword screening of every active label with source/definition review of flagged contexts. Explicit retirements only; keep named pantry ingredients and culinary materials, including rare/regional names. Absence of a flag is not semantic certification.",
+    "label_flags": {
+      "feed_clinical_or_process": "\\b(?:feed|fodder|livestock|silage|for animals|pet food|replacer|grill|moulding|molding|packaging|industrial|manufactur|pharmaceutical|injection|parenteral|intravenous|medicinal|medical|clinical|therapeutic|tablet|capsule|supplement)\\b",
+      "catchall": "\\b(?:unspecified|not specified|unknown|miscellaneous|unidentified|unclassified|various|nonspecific|nondescript|other|nonfood|inedible|unfit|inedibility)\\b",
+      "technical": "\\b(?:substance|material|product|extractive|fraction|formulation|residue|waste|byproduct|by-product|biomass|substrate|medium|standard|sample|additive|reagent|suspension|alkali|acidulant|ingredients|preparation|process|processing|coating|mould|mold|molding|moulding|gelifying|insecticide|feedstuff|laboratory)\\b",
+      "meal_word": "\\b(?:benedict|breakfast|dinner|meal|platter|pizza|sandwich|casserole|stew|curry|salad|soup|pasta|rice dish|noodle dish|hotpot|hot pot|luncheon|lunch)\\b"
+    },
+    "retirements": {
+      "d2460389-6b12-4739-aa38-23cd1beb71a5": {
+        "label": "salt block for livestock",
+        "category": "animal_feed",
+        "note": "Livestock feed/salt-lick material is outside human recipe ingredients; preserve the ID for historical references.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03302932",
+          "relationship": "exact"
+        }
+      },
+      "2339aecb-1c17-4c4a-8ce2-b9f94bffc0d5": {
+        "label": "calf milk replacer",
+        "category": "animal_feed",
+        "note": "Calf-rearing milk replacement is animal feed, not a cooking milk or human milk substitute.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03304398",
+          "relationship": "exact"
+        }
+      },
+      "e8545363-0862-4a85-a9a3-0eafbea8b4d2": {
+        "label": "oil grill",
+        "category": "unclear_identity",
+        "note": "The source supplies an unexplained oil-grill label with no definition; no reliable cooking identity can be assigned. Retire pending source clarification, not an inferred rename to cooking oil.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315524",
+          "relationship": "exact"
+        }
+      },
+      "f261fbec-205d-4b2f-b476-28b17989d680": {
+        "label": "flour dough moulding",
+        "category": "technical_label",
+        "note": "The source means a moulded portion of dough; this production-unit label does not identify a useful recipe ingredient. Keep flour/dough ingredients separately.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03316657",
+          "relationship": "exact"
+        }
+      },
+      "41be81af-520f-42ca-9cd4-ce6d7eba0bb7": {
+        "label": "starch molding",
+        "category": "manufacturing_process",
+        "note": "The source definition describes the starch-mogul candy manufacturing method, not edible starch as an ingredient.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315182",
+          "relationship": "exact"
+        }
+      },
+      "f2977f78-2ad0-4a4b-b9d7-8c9350f7644e": {
+        "label": "nutritive preparation for clinical use",
+        "category": "clinical_formulation",
+        "note": "Clinical nutritional formulation, outside the cooking seed; do not equate with ordinary food.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03316899",
+          "relationship": "exact"
+        }
+      },
+      "76af8740-0c4b-4444-85c4-9abf722ca095": {
+        "label": "nutritional preparation",
+        "category": "supplement_category",
+        "note": "An undefined food-supplement preparation, not a named cooking material; its source parent is food supplement.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03317089",
+          "relationship": "exact"
+        }
+      },
+      "1f60e1f4-2336-4eda-8362-26d790ff101e": {
+        "label": "natural extractive",
+        "category": "undefined_category",
+        "note": "No plant/animal identity or extract formulation is supplied; the generic extract/concentrate/isolate category is not an actionable ingredient name.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315655",
+          "relationship": "exact"
+        }
+      },
+      "8bbfc799-81af-4798-954a-132967d8b358": {
+        "label": "cocoa ingredients",
+        "category": "classification_catchall",
+        "note": "FoodEx2 category for any cocoa-related ingredients, not a particular ingredient. Cocoa and cocoa powder remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03543428",
+          "relationship": "exact"
+        }
+      },
+      "00033baf-954a-4d6c-8e9e-8e1fe2f34c37": {
+        "label": "coffee ingredients",
+        "category": "classification_catchall",
+        "note": "FoodEx2 category for any coffee-related ingredients, not a particular ingredient. Coffee products remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03543404",
+          "relationship": "exact"
+        }
+      },
+      "142e2d0e-d53b-4b9b-b3e2-e51925c23f19": {
+        "label": "gravy ingredients",
+        "category": "classification_catchall",
+        "note": "Catch-all class for anything used in gravies, with no ingredient composition. Defined gravy mixes and sauce materials remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03544068",
+          "relationship": "exact"
+        }
+      },
+      "d2a95f47-bf96-4149-8387-31f8ed9e1b48": {
+        "label": "loaf (nonspecific)",
+        "category": "undefined_category",
+        "note": "Explicitly nonspecific loaf with no formulation or definition; named breads and loaves remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03317301",
+          "relationship": "exact"
+        }
+      },
+      "8bf9c925-c563-4426-abc4-68ca6b8ccc55": {
+        "label": "various pastry",
+        "category": "classification_catchall",
+        "note": "FoodEx2 miscellaneous pastries not listed elsewhere; this catalog bucket does not identify a recipe ingredient.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03540297",
+          "relationship": "exact"
+        }
+      },
+      "66556019-ce5a-4a8b-a9e2-56fc76b2f1db": {
+        "label": "breakfast (frozen)",
+        "category": "finished_meal",
+        "note": "Unspecified complete frozen breakfast, not a cooking ingredient; cereal, sausage and other breakfast ingredients are retained.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03304282",
+          "relationship": "exact"
+        }
+      },
+      "16fcd2fa-4c5f-4541-8f92-99c69de5cf3a": {
+        "label": "breakfast, ready",
+        "category": "finished_meal",
+        "note": "Source classifies a ready-to-consume breakfast meal; no single ingredient identity is supplied.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03315812",
+          "relationship": "exact"
+        }
+      },
+      "bcc61acc-7f1e-4695-a67a-2b610b17e237": {
+        "label": "eggs benedict",
+        "category": "finished_meal",
+        "note": "Source defines a complete dish of toast, ham/bacon, eggs and Hollandaise; it is not an alias or form of ordinary eggs.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03543879",
+          "relationship": "exact"
+        }
+      },
+      "a937f97c-31a6-40cb-84b8-7892e944012a": {
+        "label": "pizza (sausage with cheese, mix)",
+        "category": "finished_meal",
+        "note": "Source places this under pizza food product, with sausage/cheese as a complete dish composition. Pizza crust, dough, sauce and toppings remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03306792",
+          "relationship": "exact"
+        }
+      },
+      "a9e201c2-1b86-4a68-aaa7-8af91ef51cd2": {
+        "label": "pizza with meat topping",
+        "category": "finished_meal",
+        "note": "Complete pizza with meat topping, not a cooking ingredient. Individual pizza components remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03311484",
+          "relationship": "exact"
+        }
+      },
+      "7fe2f7f2-4cda-4582-b51b-32d84a5c6edc": {
+        "label": "breakfast beverage (dry, instant)",
+        "category": "undefined_formula",
+        "note": "Unspecified breakfast milk-formula drink, with no ingredient composition; not an ordinary instant coffee/cocoa cooking ingredient.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03306353",
+          "relationship": "exact"
+        }
+      },
+      "5cffc882-00cf-4964-a18c-025d14e87058": {
+        "label": "nut coating",
+        "category": "unclear_identity",
+        "note": "No definition distinguishes a coating made of nuts from a coating applied to nuts; do not guess an ingredient or formulation.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03316142",
+          "relationship": "exact"
+        }
+      },
+      "f5cc094c-3e91-41fc-9777-960246345c3d": {
+        "label": "edible coating",
+        "category": "technical_category",
+        "note": "Undefined baking-supply/coating category without composition. Defined batters, chocolate coatings and icing ingredients remain available.",
+        "source_mapping": {
+          "source": "foodon",
+          "external_id": "FOODON_03305702",
+          "relationship": "exact"
+        }
+      }
+    },
+    "retained": {
+      "bcdfd942-1852-44f9-9abf-7139d0fe3ca6": {
+        "label": "blood (fresh, livestock)",
+        "note": "Edible animal blood can be used in recipes; livestock describes origin and does not make this animal feed."
+      },
+      "30fb0c21-06c2-45da-a957-83f50f35ac84": {
+        "label": "bee pollen",
+        "note": "Previously reviewed edible human ingredient even though FoodOn also places it under animal food material. Ancestry alone does not justify retirement."
+      },
+      "9bb5eef7-5ccf-41c1-87f5-ba4429874b07": {
+        "label": "breakfast cereal",
+        "note": "Recognizable pantry ingredient used in cooking; the word breakfast does not make cereal a complete plated meal."
+      },
+      "2c0aff7b-dd0e-4b7c-ae1a-cbc9351b798c": {
+        "label": "breakfast sausage",
+        "note": "Recognizable sausage ingredient, not an unspecified breakfast meal."
+      },
+      "9c4c9280-7aca-441a-8304-d123cb56a022": {
+        "label": "canned mushroom soup",
+        "note": "A reviewed convenience ingredient used in recipes; complete-dish word matching must not remove it."
+      },
+      "d34b969b-6238-46bb-ba74-1a8298bf1499": {
+        "label": "cream of mushroom soup",
+        "note": "A reviewed convenience ingredient used in recipes; retained alongside soup mixes."
+      },
+      "c33b24bb-4186-4bb1-ac04-abb344da81a5": {
+        "label": "salad dressing",
+        "note": "Recognizable sauce/condiment ingredient; salad in the name is not a scope violation."
+      },
+      "55d7a42c-a927-40fc-bd9b-3a22fa9cf6f8": {
+        "label": "pizza crust dough",
+        "note": "Dough component used to make pizza; not a finished pizza meal."
+      },
+      "3dbbba75-2d45-4a4e-b0e8-9e0462df5aa1": {
+        "label": "pizza sauce",
+        "note": "Defined tomato-based pizza sauce, not finished pizza."
+      },
+      "3f247fd8-844e-4acf-85c5-e1bd00c73943": {
+        "label": "pizza topping (meat-based)",
+        "note": "Defined cooking component category; distinguish a topping from a complete pizza."
+      },
+      "2adf35ca-5854-41d6-af64-7f3b8473fdf0": {
+        "label": "cocoa (breakfast)",
+        "note": "Source defines pulverized cocoa material after cocoa-butter removal; this is cooking cocoa, not a breakfast meal."
+      },
+      "9fe95189-fe66-4def-b2b6-9ebd25bd31a7": {
+        "label": "beef (ground, medium)",
+        "note": "Medium is the grind size, not laboratory culture medium."
+      },
+      "224e9a20-2c14-4658-b46a-e676b0b3e0cd": {
+        "label": "oyster (standard)",
+        "note": "Standard is a food grade; do not infer a laboratory standard."
+      },
+      "fabd31e0-4ba8-4397-9ecc-fd0c0a39e412": {
+        "label": "medium rye flour",
+        "note": "Medium is a milling/refinement grade, a legitimate flour form."
+      },
+      "9bb02b57-1535-425f-bac8-24e9671cca01": {
+        "label": "olive oil (refined residue blends)",
+        "note": "An identified refined oil blend, not an industrial waste classification; no source evidence justifies exclusion."
+      },
+      "c89f93d8-524d-4af0-9d41-25ebd3336d74": {
+        "label": "fruit mix soup",
+        "note": "An edible fruit-soup preparation; unfamiliar/region-specific food names alone are not grounds for retirement."
+      },
+      "46fd4ccd-d211-42db-ba5d-a2a61f64ab23": {
+        "label": "beverage powder for home preparation of drinks",
+        "note": "Identifies a pantry drink-mix material under beverage mix; retain despite verbose wording."
+      },
+      "8b7a36f6-db21-4b76-9004-eca0e540900f": {
+        "label": "beverage powder for preparation of hot beverage",
+        "note": "A pantry hot-drink powder/mix, not a manufacturing process or medical preparation."
+      },
+      "2b7bee5c-764e-412d-9822-5b9ac1a65642": {
+        "label": "drink mix for the preparation of alcoholic beverage",
+        "note": "A drink-mix ingredient used to make a beverage, not the finished alcoholic drink."
+      },
+      "b6d3f928-6a9c-45ab-ab9b-048accddd9dc": {
+        "label": "coating cream for zwieback",
+        "note": "A culinary cream/coating component for rusks; retains a specified cooking use."
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "revision": 8,
+  "reconstructed": true,
+  "native_meshes": 1128,
+  "steak_sauce_bowls": 1,
+  "steak_sauce_pots": 1,
+  "matching_sauce_material": true,
+  "plated_dinners": 4,
+  "beef_slices": 5,
+  "board_slices": 1,
+  "slices_per_plate": 1,
+  "flat_roast_base": true,
+  "matching_oval_slices": true,
+  "carving_board_size": [
+    1.0,
+    0.65
+  ],
+  "potato_chunks": 54,
+  "tray_potatoes": 30,
+  "soup_bowls": 4,
+  "oval_roast": true,
+  "roast_cut_face_direction": "+X",
+  "roast_scale": 0.42,
+  "fanned_bread_slices": 4,
+  "butter_on_shared_board": true,
+  "food_meshes_with_vertex_colors": 61,
+  "glb_bytes": 11348736,
+  "glb_meshes": 1150,
+  "triangles": 362574,
+  "sha256": "58d3376987d786ce041ac397cf5baf1d7273db93614824714da79dbaca8ce9e8",
+  "structure_valid": true,
+  "fresh_blender_glb_import": "passed"
+}

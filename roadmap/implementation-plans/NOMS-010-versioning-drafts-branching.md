@@ -1,5 +1,13 @@
 # NOMS-010: Recipe Versioning, Drafts & Branching — Implementation Plan
 
+> **Current-state review — 2026-11-03:** Immutable snapshots, drafts, publication, restore/fork and graph reading are implemented. Current ingredient fields and editor refinements preserve these contracts.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+> **2026-11-18 update:** [Draft conflict recovery](../issues/NOMS-024-draft-conflict-recovery.md) covers both editors. Autosave pauses on conflicts and resumes after a confirmed revision-guarded merge.
+
+**Status:** ✅ Done — full-snapshot baseline implemented
+
 **Issue:** [NOMS-010-versioning-drafts-branching.md](../issues/NOMS-010-versioning-drafts-branching.md)
 **Created:** 2026-06-08
 **Revised:** 2026-07-15

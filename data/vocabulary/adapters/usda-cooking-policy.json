@@ -1,0 +1,1339 @@
+{
+  "schema_version": 1,
+  "version": "usda-cooking-v1",
+  "descriptor_checksum": "dda2d44a3551e96dc69fa1c982f885bd0ce6e559b4983b7964f596da3af71824",
+  "held_categories": {
+    "3": "Baby foods and infant formulations are outside this cooking seed.",
+    "8": "Breakfast-cereal category is held for product/mixture review; plain grains use the grain category or explicit exceptions.",
+    "21": "Fast foods are outside the initial ingredient scope.",
+    "22": "Meals, entrees and side dishes are held.",
+    "23": "Finished snack products are held.",
+    "25": "Restaurant foods are held.",
+    "26": "Branded product category is deferred.",
+    "27": "Quality-control materials are not cooking ingredients."
+  },
+  "hold_rules": [
+    {
+      "status": "hold_undefined_or_formulated_material",
+      "pattern": "\\b(?:meatless|vegetarian fillets|soy protein concentrate|meat extender|omega-3|jams and preserves|toppings|Turkey and gravy|cupu assu|Oil, oat|Oil, nutmeg butter|sugar free|unspecified type|loaf,|ham and cheese spread|loaf sausage)\\b",
+      "note": "Aggregate, formulated material or unclear culinary scope; do not manufacture a specific ingredient definition."
+    },
+    {
+      "status": "hold_finished_drink_or_dessert",
+      "pattern": "\\b(?:milk shakes|frozen yogurts|juice drink|root beer|whiskey sour|whipped topping|dessert|Schar)\\b",
+      "note": "Finished drink, dessert or commercial formulation rather than an initial ingredient."
+    },
+    {
+      "status": "hold_industrial_fat",
+      "pattern": "\\b(?:fish oil|soybean lecithin|Margarine-like|margarine-like|fractionated|replacement|hydrogenated)\\b",
+      "note": "Industrial fat, supplement oil or functional spread; ordinary culinary identity needs separate review."
+    },
+    {
+      "status": "hold_restaurant_or_product",
+      "pattern": "\\b(?:restaurant|brand|Udi.s|Ready Crust|ConAgra|SMART ONES|Healthy Choice|Stouffer|LEAN CUISINE|Salisbury|BERKELEY|MORI-NU|MORI NU)\\b",
+      "note": "Restaurant or named product record is held for product-versus-generic review."
+    },
+    {
+      "status": "hold_brand",
+      "pattern": "\\b(?:Pillsbury|Kraft|Kellogg\\w*|Nabisco|Campbell\\w*|McDonald\\w*|Burger King|Wendy\\w*|Taco Bell|Pizza Hut|Subway|Starbucks|StarKist|Hormel|Oscar Mayer|Butterball|Tyson|Perdue|Jimmy Dean|Louis Rich|Jennie-O|Hillshire|Dole|Del Monte|Heinz|General Mills|Quaker|Kashi|Post|Nestle|Nestlé|Hershey\\w*|MARS|M&M|Snickers|Milky Way|Twix|Reese\\w*|Ghirardelli|Godiva|Lindt|Dove|Malt-O-Meal|Martha White|Betty Crocker|Duncan Hines|Jiffy|Bisquick|Aunt Jemima|Hungry Jack|Eggo|Smucker\\w*|Jif|Skippy|Peter Pan|Planters|Silk|Almond Breeze|Blue Diamond|So Delicious|Vitasoy|Westsoy|Pacific Foods|Boca|Morningstar|MorningStar|Worthington|Lightlife|Gardenburger|Yves|Gardein|Tofurky|Smart Balance|Promise|Parkay|Fleischmann\\w*|Land O.?Lakes|Country Crock|Benecol|Becel|I Can.t Believe|Daisy|Dannon|Yoplait|Chobani|Oikos|Fage|Philadelphia|Borden|Velveeta|Cheez|Reddi|Cool Whip|Libby\\w*|Gerber|Beech-Nut|Enfamil|Similac|Abbott|Ensure|Boost|Slim.?Fast|Carnation|Ovaltine|Gatorade|Powerade|Pepsi|Coca-Cola|Sprite|Dr Pepper|Monster|Red Bull|Ocean Spray|Welch\\w*|Tropicana|Minute Maid|Sunny D|Capri Sun|Tang|Crystal Light|Country Time|Hawaiian Punch|Sunkist|V8|V-8|George Weston|Thomas\\b|Sara Lee|Pepperidge|Arnold|Wonder|Nature.s Own|Great Value|HEALTH VALLEY|WEETABIX|ALPEN|FAMILIA)\\b",
+      "note": "Named commercial/product record; do not infer a generic equivalent."
+    },
+    {
+      "status": "hold_dish_or_finished_food",
+      "pattern": "\\b(?:sandwich|pizza|lasagna|lasagne|ravioli|tortellini|burrito|taco|enchilada|chili con carne|beef stew|pot pie|meatloaf|meatballs|rice pudding|bread pudding|omelet|omelette|souffle|soufflé|casserole|coleslaw|potato salad|macaroni salad|French fries|onion rings|potato puffs|tater tots|french toast|waffles?|pancakes?|fritters?|egg rolls?|spring rolls?|chicken nuggets?|chicken tenders?|potato pancakes?|ice cream|ice milk|frozen yogurt|sherbet|sorbet|popsicle|candy|candies|candied|chocolate-covered|chocolate covered|energy bar|protein bar|granola bar)\\b|\\b(?:ice creams|dessert|frozen dessert|puddings?|custards?|pie filling|salad)\\b",
+      "note": "Prepared dish, finished dessert/snack or meal product rather than an initial ingredient."
+    },
+    {
+      "status": "hold_medical_or_industrial",
+      "pattern": "\\b(?:infant|babyfood|baby food|toddler|formula|enteral|medical|therapeutic|supplement|meal replacement|weight loss|protein powder|isolate|textured vegetable protein|imitation|substitute|low calorie sweetener|sugar substitute|sucralose|aspartame|saccharin)\\b",
+      "note": "Medical, infant, functional or industrial formulation needs a separate scope review."
+    },
+    {
+      "status": "hold_mixed_preparation",
+      "pattern": "\\b(?:with (?:cheese sauce|cream sauce|butter sauce|seasoning|sauce|rice|pasta|vegetables)|in (?:cheese sauce|cream sauce|butter sauce)|au gratin|scalloped|breaded|battered|stuffed|ready.to.eat meal|dinner|breakfast (?:bowl|entree)|cooked .+with margarine)\\b",
+      "note": "Multi-ingredient cooked preparation; keep the underlying material identities separate."
+    },
+    {
+      "status": "hold_sweetened_drink",
+      "pattern": "\\b(?:fruit.flavored drink|fruit.flavoured drink|soft drink|energy drink|sports drink|drink mix|cocktail mix|juice cocktail|fruit punch|fruit drink|chocolate.flavored drink|chocolate.flavoured drink|milkshake|eggnog)\\b",
+      "note": "Prepared beverage/mix rather than the underlying pantry ingredient."
+    }
+  ],
+  "association_only_drop_parts": [
+    "(?:commercial|commercially prepared|regular|regular pack|ready-to-serve|ready-to-eat|unprepared|all types|all varieties|all commercial brands|all commercial varieties|shelf stable|refrigerated|fluid|generic)",
+    "(?:with|without) (?:added )?(?:vitamin.*|salt.*|ascorbic acid.*)",
+    "(?:enriched|unenriched|fortified|not fortified|unfortified)",
+    "(?:whole|halves|pieces|whole kernels|kernels|chopped)",
+    "(?:table|for cooking)",
+    "(?:includes .*)",
+    "(?:solid|sliced|block|crumbled|refrigerated|shelf.stable|prepackaged|ready-to-drink|all areas|all regions|drained|drained and rinsed|sodium added|total can contents)",
+    "(?:cooked|raw|dry heat|moist heat|braised|broiled|boiled|steamed|pan-fried|pan-broiled|stir-fried|microwaved|baked)",
+    "(?:wild caught|farm raised|farmed|wild|grass-fed|domesticated|restaurant)",
+    "(?:separable lean.*|separable fat.*|trimmed.*|[0-9]+.*fat.*|.*grade|select|choice|prime|all grades|retail cuts.*|composite.*|variety meats and by-products|meat only)",
+    "(?:fresh|creamy|smooth style|fresh-refrigerated|crude|plain|whole grain)",
+    "(?:all classes|all classes.*|all grades.*)"
+  ],
+  "no_import_patterns": [
+    "\\b(?:separable|select|choice|prime|trimmed|trim|retail|composite|grade|0\\\"|1/8|1/4|1/2|external fat|internal fat|lean only|lean and fat|braised|pan.fried|pan.broiled|broiled|baked|roasted|boiled|steamed|microwaved|fried|stir.fried|prepared|recipe|with added|vitamin|fortified|unenriched|enriched|percent|[0-9]+%|[0-9]+\\.\\d+|or|NFS|NS|NSF)\\b",
+    "\\b(?:from frozen|from concentrate|drained solids|solids and liquids|liquid and solids|cooking liquid|pack|syrup pack|heavy syrup|light syrup|sulfured|sulphured|sulfur dioxide|pitted|with skin|without skin|without refuse|not further specified|as purchased|yield|assumed|industrial)\\b",
+    "[()/;]",
+    "\\b(?:commercial|regular|unprepared|prepackaged|meat and skin|variety meats|by-products|added|ready.to|reduced|lowfat|nonfat|low fat|fat free|full fat|stick|flavored|flavoured|[0-9]+ proof|table|frozen milk|dry mix|diet|lite|with additives|drained|unheated|heated|fluid|reconstituted|seam fat|mature seeds|mature|all areas|all regions|farmed|farm raised|wild caught|mixed species|root removed)\\b"
+  ],
+  "overrides": {
+    "foundation:1750344": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "lion's mane mushroom",
+        "aliases": [],
+        "description": "USDA food description: Mushroom, lion's mane"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "foundation:1750347": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "white button mushroom",
+        "aliases": [],
+        "description": "USDA food description: Mushrooms, white button"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. White-button wording remains separate from the FoodOn white-lepiota synonym conflict."
+    },
+    "foundation:2003586": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "00 flour",
+        "aliases": [],
+        "description": "USDA food description: Flour, 00"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "foundation:2003601": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "cremini mushroom",
+        "aliases": [
+          "crimini mushroom"
+        ],
+        "description": "USDA food description: Mushroom, crimini"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "foundation:2003603": {
+      "action": "hold",
+      "note": "Beech mushroom lacks the white/brown identity needed to choose between maintained species/material entries."
+    },
+    "foundation:2261420": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "almond flour",
+        "aliases": [],
+        "description": "USDA food description: Flour, almond"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "foundation:2758992": {
+      "action": "hold",
+      "note": "Classic bologna is a marketing/unspecified mixture rather than a specific new food definition."
+    },
+    "sr_legacy:167532": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "bread (white wheat)",
+        "aliases": [],
+        "description": "USDA food description: Bread, white wheat"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167695": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tofu mayonnaise",
+        "aliases": [],
+        "description": "USDA food description: Mayonnaise, made with tofu"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167708": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tomato and vegetable juice (low sodium)",
+        "aliases": [],
+        "description": "USDA food description: Tomato and vegetable juice, low sodium"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167717": {
+      "action": "hold",
+      "note": "Yeast-extract spread does not specify the mixture; keep generic yeast extract and named products separate."
+    },
+    "sr_legacy:167722": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tofu yogurt",
+        "aliases": [],
+        "description": "USDA food description: Tofu yogurt"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167736": {
+      "action": "hold",
+      "note": "No-cholesterol is a nutritional claim, not a new mayonnaise identity."
+    },
+    "sr_legacy:167782": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "abiyuch (raw)",
+        "aliases": [],
+        "description": "USDA food description: Abiyuch, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167785": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "mango nectar (canned)",
+        "aliases": [],
+        "description": "USDA food description: Mango nectar, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167786": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tamarind nectar (canned)",
+        "aliases": [],
+        "description": "USDA food description: Tamarind nectar, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167792": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "orange pineapple juice blend",
+        "aliases": [],
+        "description": "USDA food description: Orange Pineapple Juice Blend"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:167807": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "cherry juice (tart)",
+        "aliases": [],
+        "description": "USDA food description: Cherry juice, tart"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168106": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "papad",
+        "aliases": [],
+        "description": "USDA food description: Papad"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168117": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "cranberry juice (unsweetened)",
+        "aliases": [],
+        "description": "USDA food description: Cranberry juice, unsweetened"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168131": {
+      "action": "hold",
+      "note": "Low-sodium frankfurter is held at the initial pantry granularity rather than creating a nutrition-claim identity."
+    },
+    "sr_legacy:168147": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "vital wheat gluten",
+        "aliases": [],
+        "description": "USDA food description: Vital wheat gluten"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168151": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "jujube (raw)",
+        "aliases": [],
+        "description": "USDA food description: Jujube, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168166": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "raisins (seeded)",
+        "aliases": [],
+        "description": "USDA food description: Raisins, seeded"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168176": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "feijoa (raw)",
+        "aliases": [],
+        "description": "USDA food description: Feijoa, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168196": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "guanabana nectar (canned)",
+        "aliases": [],
+        "description": "USDA food description: Guanabana nectar, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168418": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pepeao (dried)",
+        "aliases": [],
+        "description": "USDA food description: Pepeao, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168459": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "sesbania flower (raw)",
+        "aliases": [],
+        "description": "USDA food description: Sesbania flower, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168559": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pimento (canned)",
+        "aliases": [],
+        "description": "USDA food description: Pimento, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168560": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pickle relish (hot dog)",
+        "aliases": [],
+        "description": "USDA food description: Pickle relish, hot dog"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168561": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pickle relish (sweet)",
+        "aliases": [],
+        "description": "USDA food description: Pickle relish, sweet"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168888": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "triticale flour (whole-grain)",
+        "aliases": [],
+        "description": "USDA food description: Triticale flour, whole-grain"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168889": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "wheat (hard red spring)",
+        "aliases": [],
+        "description": "USDA food description: Wheat, hard red spring"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168890": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "wheat (hard red winter)",
+        "aliases": [],
+        "description": "USDA food description: Wheat, hard red winter"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168891": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "wheat (soft red winter)",
+        "aliases": [],
+        "description": "USDA food description: Wheat, soft red winter"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168920": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "corn grain (white)",
+        "aliases": [],
+        "description": "USDA food description: Corn grain, white"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:168943": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "sorghum flour (whole-grain)",
+        "aliases": [],
+        "description": "USDA food description: Sorghum flour, whole-grain"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169081": {
+      "action": "hold",
+      "note": "Cream-cheese-base spread is an unspecified formulation, not a defined cheese."
+    },
+    "sr_legacy:169083": {
+      "action": "hold",
+      "note": "Soybean curd cheese is ambiguous between tofu and fermented curd preparations; no equivalence inferred."
+    },
+    "sr_legacy:169088": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "loganberries (frozen)",
+        "aliases": [],
+        "description": "USDA food description: Loganberries, frozen"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169219": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "corn salad leaf",
+        "aliases": [],
+        "description": "USDA food description: Cornsalad, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169222": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "yardlong bean (raw)",
+        "aliases": [],
+        "description": "USDA food description: Yardlong bean, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169270": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pumpkin flowers (raw)",
+        "aliases": [],
+        "description": "USDA food description: Pumpkin flowers, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169273": {
+      "action": "hold",
+      "note": "Pumpkin pie mix is a multi-ingredient filling; plain canned pumpkin remains separate."
+    },
+    "sr_legacy:169274": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "purslane (raw)",
+        "aliases": [],
+        "description": "USDA food description: Purslane, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169301": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "water spinach",
+        "aliases": [],
+        "description": "USDA food description: Water convolvulus,raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169386": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pickle relish (hamburger)",
+        "aliases": [],
+        "description": "USDA food description: Pickle relish, hamburger"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169400": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "malabar spinach (cooked)",
+        "aliases": [],
+        "description": "USDA food description: Malabar spinach, cooked"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169407": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "watermelon seed kernels (dried)",
+        "aliases": [],
+        "description": "USDA food description: Seeds, watermelon seed kernels, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169658": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "maple sugar",
+        "aliases": [],
+        "description": "USDA food description: Sugars, maple"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169719": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "wheat (hard white)",
+        "aliases": [],
+        "description": "USDA food description: Wheat, hard white"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169720": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "wheat (soft white)",
+        "aliases": [],
+        "description": "USDA food description: Wheat, soft white"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169725": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "wheat (sprouted)",
+        "aliases": [],
+        "description": "USDA food description: Wheat, sprouted"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169741": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:169867": {
+      "action": "hold",
+      "note": "Corn/canola blend is an unspecified multi-oil formulation; preserve individual oils."
+    },
+    "sr_legacy:169884": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "vermicelli (made from soy)",
+        "aliases": [],
+        "description": "USDA food description: Vermicelli, made from soy"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169885": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "kidney bean cooking liquid",
+        "aliases": [],
+        "description": "USDA food description: Beans, liquid from stewed kidney beans"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169892": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "eggplant (pickled)",
+        "aliases": [],
+        "description": "USDA food description: Eggplant, pickled"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:169912": {
+      "action": "hold",
+      "note": "Frozen melon balls do not specify the fruit identity or blend."
+    },
+    "sr_legacy:169915": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "oheloberries (raw)",
+        "aliases": [],
+        "description": "USDA food description: Oheloberries, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170075": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "chives (freeze-dried)",
+        "aliases": [],
+        "description": "USDA food description: Chives, freeze-dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170076": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "dock leaf (raw)",
+        "aliases": [],
+        "description": "USDA food description: Dock, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170078": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "eppaw (raw)",
+        "aliases": [],
+        "description": "USDA food description: Eppaw, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170082": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "shallot (freeze-dried)",
+        "aliases": [],
+        "description": "USDA food description: Shallots, freeze-dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170148": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "hemp seed (hulled)",
+        "aliases": [],
+        "description": "USDA food description: Seeds, hemp seed, hulled"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170153": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:170156": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:170176": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "ginkgo nuts (canned)",
+        "aliases": [],
+        "description": "USDA food description: Nuts, ginkgo nuts, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170192": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:170288": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "corn grain (yellow)",
+        "aliases": [],
+        "description": "USDA food description: Corn grain, yellow"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170387": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "butterbur (canned)",
+        "aliases": [],
+        "description": "USDA food description: Butterbur, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170392": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "cabbage kimchi",
+        "aliases": [],
+        "description": "USDA food description: Cabbage, kimchi"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170431": {
+      "action": "hold",
+      "note": "Poi is a finished cooked taro preparation, outside this initial ingredient pass."
+    },
+    "sr_legacy:170486": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "parsley (freeze-dried)",
+        "aliases": [],
+        "description": "USDA food description: Parsley, freeze-dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170500": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "carrot (dehydrated)",
+        "aliases": [],
+        "description": "USDA food description: Carrot, dehydrated"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170552": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "breadnut tree seeds (raw)",
+        "aliases": [],
+        "description": "USDA food description: Seeds, breadnut tree seeds, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170553": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "breadnut tree seeds (dried)",
+        "aliases": [],
+        "description": "USDA food description: Seeds, breadnut tree seeds, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170556": {
+      "action": "hold",
+      "note": "Combined pumpkin/squash-seed aggregate does not establish one plant identity."
+    },
+    "sr_legacy:170558": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "safflower seed kernels (dried)",
+        "aliases": [],
+        "description": "USDA food description: Seeds, safflower seed kernels, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170559": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:170560": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:170561": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:170562": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "sunflower seed kernels (dried)",
+        "aliases": [],
+        "description": "USDA food description: Seeds, sunflower seed kernels, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170565": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "acorn (dried)",
+        "aliases": [],
+        "description": "USDA food description: Nuts, acorns, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170568": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "almond (blanched)",
+        "aliases": [],
+        "description": "USDA food description: Nuts, almonds, blanched"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170591": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pine nuts (dried)",
+        "aliases": [],
+        "description": "USDA food description: Nuts, pine nuts, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170593": {
+      "action": "hold",
+      "note": "Glazed walnuts are a finished sweet preparation."
+    },
+    "sr_legacy:170688": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "bulgur (dry)",
+        "aliases": [],
+        "description": "USDA food description: Bulgur, dry"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170921": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "coriander leaf (dried)",
+        "aliases": [],
+        "description": "USDA food description: Spices, coriander leaf, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:170936": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "savory (ground)",
+        "aliases": [],
+        "description": "USDA food description: Spices, savory, ground"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:171288": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "mexican blend cheese",
+        "aliases": [],
+        "description": "USDA food description: Cheese, Mexican blend"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:171318": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "chervil (dried)",
+        "aliases": [],
+        "description": "USDA food description: Spices, chervil, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:171637": {
+      "action": "hold",
+      "note": "Meat-and-poultry bologna lacks animal and preparation specificity."
+    },
+    "sr_legacy:171726": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "date (deglet noor)",
+        "aliases": [],
+        "description": "USDA food description: Dates, deglet noor"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:171849": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "bread (cinnamon)",
+        "aliases": [],
+        "description": "USDA food description: Bread, cinnamon"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:171869": {
+      "action": "map",
+      "canonical_id": "1574b0fb-09e6-45cf-adba-4a9ccc4aaca4",
+      "relationship": "related",
+      "note": "Tonic-water record is the maintained tonic-water name family; carbonation is retained in USDA evidence, no duplicate UUID."
+    },
+    "sr_legacy:171882": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "clam and tomato juice (canned)",
+        "aliases": [],
+        "description": "USDA food description: Beverages, Clam and tomato juice, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:171906": {
+      "action": "hold",
+      "note": "Higher-alcohol beer is a nutritional/analytical grouping, not a specific recipe ingredient."
+    },
+    "sr_legacy:171907": {
+      "action": "hold",
+      "note": "Malt liquor beverage is an unspecified beverage category."
+    },
+    "sr_legacy:171942": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "rice milk (unsweetened)",
+        "aliases": [],
+        "description": "USDA food description: Beverages, rice milk, unsweetened"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172013": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "bologna (beef and pork)",
+        "aliases": [],
+        "description": "USDA food description: Bologna, beef and pork"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172239": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "spearmint (dried)",
+        "aliases": [],
+        "description": "USDA food description: Spearmint, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172673": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "bread (egg)",
+        "aliases": [],
+        "description": "USDA food description: Bread, egg"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172676": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "bread (oat bran)",
+        "aliases": [],
+        "description": "USDA food description: Bread, oat bran"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172926": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "olive loaf (pork)",
+        "aliases": [],
+        "description": "USDA food description: Olive loaf, pork"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172931": {
+      "action": "hold",
+      "note": "Luxury loaf is an undefined commercial-style meat mixture."
+    },
+    "sr_legacy:172932": {
+      "action": "hold",
+      "note": "Mother's loaf is an undefined commercial-style meat mixture."
+    },
+    "sr_legacy:172943": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "honey roll sausage (beef)",
+        "aliases": [],
+        "description": "USDA food description: Honey roll sausage, beef"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172961": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "beerwurst (pork and beef)",
+        "aliases": [],
+        "description": "USDA food description: Beerwurst, pork and beef"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:172967": {
+      "action": "hold",
+      "note": "Truffle-flavour pate does not specify the base animal/material."
+    },
+    "sr_legacy:172968": {
+      "action": "hold",
+      "note": "Generic meat frankfurter omits animal identity."
+    },
+    "sr_legacy:172969": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "scrapple (pork)",
+        "aliases": [],
+        "description": "USDA food description: Scrapple, pork"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173032": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "goji berries (dried)",
+        "aliases": [],
+        "description": "USDA food description: Goji berries, dried"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173412": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "butter oil (anhydrous)",
+        "aliases": [],
+        "description": "USDA food description: Butter oil, anhydrous"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173461": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "dulce de leche",
+        "aliases": [],
+        "description": "USDA food description: Dulce de Leche"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173676": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "monkfish (raw)",
+        "aliases": [],
+        "description": "USDA food description: Fish, monkfish, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173700": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "spot fish (raw)",
+        "aliases": [],
+        "description": "USDA food description: Fish, spot, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173705": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "tilefish (raw)",
+        "aliases": [],
+        "description": "USDA food description: Fish, tilefish, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173860": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "corned beef loaf (jellied)",
+        "aliases": [],
+        "description": "USDA food description: Corned beef loaf, jellied"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173865": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "ham (minced)",
+        "aliases": [],
+        "description": "USDA food description: Ham, minced"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173868": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "lebanon bologna (beef)",
+        "aliases": [],
+        "description": "USDA food description: Lebanon bologna, beef"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173947": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "blackberry juice (canned)",
+        "aliases": [],
+        "description": "USDA food description: Blackberry juice, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173953": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "cherimoya (raw)",
+        "aliases": [],
+        "description": "USDA food description: Cherimoya, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:173962": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "cranberry-orange relish (canned)",
+        "aliases": [],
+        "description": "USDA food description: Cranberry-orange relish, canned"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:174122": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "cocoa mix (powder)",
+        "aliases": [],
+        "description": "USDA food description: Beverages, Cocoa mix, powder"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:174141": {
+      "action": "hold",
+      "note": "Hard lemonade is a finished mixed beverage."
+    },
+    "sr_legacy:174157": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "wine (non-alcoholic)",
+        "aliases": [],
+        "description": "USDA food description: Beverages, Wine, non-alcoholic"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:174267": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:174275": {
+      "action": "hold",
+      "note": "Defatting/debranning formulation needs a precise editorial material definition; not promoted from the terse record alone."
+    },
+    "sr_legacy:174279": {
+      "action": "hold",
+      "note": "Hydrolyzed-vegetable-protein soy-sauce-style product is held for formulation review."
+    },
+    "sr_legacy:174523": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "barbecue sauce",
+        "aliases": [],
+        "description": "USDA food description: Sauce, barbecue"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:174576": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "pickle and pimiento loaf (pork)",
+        "aliases": [],
+        "description": "USDA food description: Pickle and pimiento loaf, pork"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:174587": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "luncheon sausage (pork and beef)",
+        "aliases": [],
+        "description": "USDA food description: Luncheon sausage, pork and beef"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:174597": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "roast beef spread",
+        "aliases": [],
+        "description": "USDA food description: Roast beef spread"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:174602": {
+      "action": "hold",
+      "note": "Bacon-and-beef sticks are a finished snack product."
+    },
+    "sr_legacy:174923": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "bread (rice bran)",
+        "aliases": [],
+        "description": "USDA food description: Bread, rice bran"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    },
+    "sr_legacy:175141": {
+      "action": "import",
+      "relationship": "exact",
+      "canonical": {
+        "label": "scup fish (raw)",
+        "aliases": [],
+        "description": "USDA food description: Fish, scup, raw"
+      },
+      "note": "Reviewed culinary material and maintained labels/aliases; source part/form retained, no upstream aliases bulk copied. "
+    }
+  },
+  "case_sensitive_no_import_patterns": [
+    "\\b[A-Z]{3,}\\b"
+  ],
+  "max_unmatched_parts": 2,
+  "association_names": {
+    "mushroom portabella": "acb1560f-8bcf-4e0e-80a9-976cfaa921b8",
+    "blackeye dried pea": "0473eb3a-44f1-49d1-9389-9372c884b6ce",
+    "brussels sprout": "b02ad695-ab94-40a7-9069-0b7b752973d8",
+    "dressing ranch": "5550018d-30e1-4675-a75b-bb98b1c01834",
+    "ground pork": "450c98c6-6fc2-434d-8a02-93454721bf79",
+    "cheese monterey": "2f7b55c2-cbc0-42b9-8bc5-146244d35b90",
+    "cheese jack monterey": "2f7b55c2-cbc0-42b9-8bc5-146244d35b90",
+    "cheese neufchatel": "79bcae68-27f2-4ecd-8b17-46d61e586af2",
+    "butter creamy sesame": "fbd95e3e-8d3c-4677-903a-fcdc8111117d",
+    "almond butter creamy": "f4acb426-34ba-4174-b16c-49b4a55cee9b",
+    "catsup": "cebc92f8-1790-440d-b8f9-46dce8bd1310",
+    "catsup low sodium": "ca3fc4b8-8d11-4e6a-bfb5-b2d8c88563b5",
+    "broccoli raab": "4158d309-881f-43a3-8681-4625295f97f2",
+    "dill fresh weed": "61b83d62-dd8d-4899-9a55-38f8d21afa88",
+    "dill dried weed": "ce9faaf8-f1e7-466b-932a-d1414605969e",
+    "dried einkorn grain": "64fb58a6-c3c0-4228-95cb-6447234be4f0",
+    "quinoa raw": "47863304-dc9e-41e8-994e-334f728727d1",
+    "pummelo": "8e40e05c-8046-4624-a13b-7169f1b3859b",
+    "maple syrup": "8f4ab83b-8ce8-47ad-bc9e-4c4465ef243b",
+    "malt syrup": "91098312-4c3f-48ee-b002-0fe212e9e9fb",
+    "grenadine syrup": "096516e6-548c-4eca-a1ca-c1334dc92304",
+    "beef fat tallow": "d244961e-509b-434a-a689-91bdbeb64c3b",
+    "babassu oil": "0dd9f390-0867-44c2-8a17-58c434b914e7",
+    "kernel oil palm vegetable": "4272a446-e809-40bc-a500-5415f5eca4da",
+    "fish mahi mahi": "93f1c4e0-e0f2-483f-b74f-ff9224c17d5d",
+    "basil fresh": "b8d24e38-a421-4a04-9149-0c2287149031",
+    "fresh rosemary": "1b1452df-2cdd-4932-a266-69acf94f8198",
+    "fresh parsley": "b0ad3e7b-39ed-4e38-8d13-64b7dd2d125a",
+    "fresh peppermint": "7a0d8dc1-0d19-4783-9fef-1a98bc8d14b5",
+    "fresh spearmint": "7ff92ee6-1d4e-4478-9502-0b4d7a6e4033",
+    "dried oregano": "bba8c94d-842c-42a2-9a46-8e33e3c1a2b8",
+    "dried parsley": "f1197414-d249-49c5-bc90-c06b29fecb15",
+    "dried rosemary": "1042bdcd-baa0-428b-ba54-caae48fe92c5",
+    "jellies": "3deccff3-4dfc-4a47-9201-45683d3df966",
+    "cheese de port salut": "55617ca2-1a5b-4bbf-b922-974137907f16",
+    "blackeye pea": "326e452e-0382-49f9-9a91-7fc78b207a9f",
+    "beet greens": "695cd245-0c33-47dd-8ef5-a7957bab554c",
+    "drumstick leaf": "603d7cec-44f8-4a83-b288-ffdaa85fbe38",
+    "drumstick pods": "38c757f7-5b18-4c59-9cf4-7fd88a1ab15d",
+    "ferns fiddlehead": "cf4f5c2a-cc3b-4583-b92d-ba0722fccb21",
+    "heart of palm": "f452c889-9223-48fe-987c-c89610f780b9",
+    "canned heart of palm": "2998bd11-98db-48f9-8efb-61f20b7d9bc9",
+    "dandelion greens": "da58c691-cfaa-4686-971f-b3bbb5c6402f",
+    "lambsquarters": "e80d0bf9-4cb6-43c6-ba56-4085c795c49a",
+    "chicory greens": "21b65e5e-2a4d-406c-ac6e-6c2fe1515c08",
+    "chicory root": "ac146b8e-c3dd-46b6-84a1-456ced59cac3",
+    "amaranth grain": "ebeed198-bdb3-4ce2-b03b-410f52ec0f20",
+    "dried noodle rice": "87b8cc5f-f8aa-4231-bc4d-5a92c6889d20",
+    "poultry seasoning": "8bd8a087-17f9-4072-acec-2cc2e751b336",
+    "headcheese pork": "b2e1de1c-1780-470a-a2df-94b2eab77216",
+    "polish pork sausage": "43a78d6e-759b-47f0-8ed6-d9ca7b0d37e8",
+    "animal bacon fat grease": "0e38081e-9a73-49ce-9063-6a3ca334fb2e",
+    "bottled juice pomegranate": "c7583977-20db-4ff2-b9f3-9150a24246de",
+    "butter paste sesame": "fbd95e3e-8d3c-4677-903a-fcdc8111117d",
+    "dried hickorynut": "50e33aed-2fc1-42af-816d-cbd3dd0b33b0",
+    "bamboo shoot": "05ad22c8-d7d8-467f-b750-3bf25591aece",
+    "lotus root": "c6b89af4-826e-4361-a3b9-1fc5b354e808",
+    "spelt": "3006eee1-ffb0-4555-a155-aa42cf68b0c9",
+    "canned ginkgo nut": "b1ba27cc-e9b1-4e49-ab18-543098e37816",
+    "canned grape leaf": "a2d681b1-5294-402d-b1e7-9a6f6ea611f7",
+    "elk": "68a299b5-7c5c-4b77-b0c6-3054f753b68a",
+    "rabbit": "4a4fb253-3a08-439e-b654-3fb2010e3dba",
+    "goat": "e3e3df33-db66-4195-bf4c-7fb7374b652c",
+    "bison": "74d49cec-4fc2-4cfb-8854-1c8d1b796d05",
+    "deer": "bb230985-dfbc-4531-94d0-03b38550cf6b",
+    "moose": "a5cce4b5-6a64-4890-857e-2397e64215fd",
+    "horse": "82294a70-bb40-4757-a6d2-4183e97c4da1",
+    "antelope": "0afa5540-2e21-40c9-affc-b20fbdd554ef",
+    "beaver": "3fdc1537-2810-4e8c-95df-26fb6617be3d",
+    "emu": "9c7c8b4b-d505-4588-837c-f1d88dfbaae9",
+    "bear": "0a09f7d7-2681-4a5f-8b74-31f034332887",
+    "caribou": "3e8e1ebb-710b-4f9f-9c39-a70f3dd2894a"
+  },
+  "allow_import_candidates": false
+}

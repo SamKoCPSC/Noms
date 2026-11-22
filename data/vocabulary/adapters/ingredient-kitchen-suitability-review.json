@@ -1,0 +1,820 @@
+{
+  "schema_version": 1,
+  "approved": true,
+  "reviewed_on": "2026-10-27",
+  "base_commit": "3b2af85bf9294d4ab12fab13f4736d210e481d25",
+  "base_seed_checksum": "3de52f891231718606912b69dd80eaf4dd304d86ac5ea9b9eb2051599618b483",
+  "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
+  "expected_output_checksum": "e1239f102a74622579d5c7ac99c0499930cc77c9b147991eec8574235409feb5",
+  "criterion": "User-directed disposition of all 24 remaining awkward-language candidates: retain natural kitchen ingredients, retire redundant selections and unsuitable feed, regulatory or industrial categories. Retirement hides suggestions while preserving UUIDs, definitions, mappings and existing recipe references. No automatic reassignment or identity merges.",
+  "research": {
+    "candidate_names": 24,
+    "scope": "Exactly the 24 remaining candidates in scripts/vocabulary/AWKWARD_LABELS.md; no broader dataset removal."
+  },
+  "additions": [],
+  "entry_reviews": {},
+  "label_renames": {
+    "10a962f4-2c13-4675-b569-59c74014f6b4": {
+      "before_label": "shiu my pastry case",
+      "label": "shumai wrappers",
+      "reason": "User explicitly retained the culinary wrapper under its conventional shumai name. Wrapper identity stays distinct from wonton and spring-roll wrappers."
+    },
+    "502ce9e7-ea99-4e46-b512-88e20721cb3e": {
+      "before_label": "liver based spreadable-textured specialities",
+      "label": "liver spread",
+      "reason": "Liver-based spreads are recognizable cooking ingredients. Use the natural broad name without inferring a particular liver species or formula."
+    },
+    "be9c9fbe-addb-4596-87a2-cfe9fb7237bc": {
+      "before_label": "nut meat",
+      "label": "peeled nuts",
+      "reason": "FoodOn annotation specifies seed skin removed, germ present. Peeled nuts is natural kitchen wording and keeps skin removal distinct from shell removal or blanching."
+    }
+  },
+  "alias_additions": {
+    "10a962f4-2c13-4675-b569-59c74014f6b4": {
+      "label": "shiu my pastry case",
+      "aliases": [
+        "shiu my pastry case",
+        "shumai wrapper",
+        "siu mai wrappers",
+        "siu mai wrapper"
+      ],
+      "note": "User explicitly retained the culinary wrapper under its conventional shumai name. Wrapper identity stays distinct from wonton and spring-roll wrappers. Retain the old preferred label."
+    },
+    "502ce9e7-ea99-4e46-b512-88e20721cb3e": {
+      "label": "liver based spreadable-textured specialities",
+      "aliases": [
+        "liver based spreadable-textured specialities"
+      ],
+      "note": "Liver-based spreads are recognizable cooking ingredients. Use the natural broad name without inferring a particular liver species or formula. Retain the old preferred label."
+    },
+    "be9c9fbe-addb-4596-87a2-cfe9fb7237bc": {
+      "label": "nut meat",
+      "aliases": [
+        "nut meat",
+        "peeled nut"
+      ],
+      "note": "FoodOn annotation specifies seed skin removed, germ present. Peeled nuts is natural kitchen wording and keeps skin removal distinct from shell removal or blanching. Retain the old preferred label."
+    }
+  },
+  "retirements": {
+    "2e0d9063-4905-499a-bcb9-e4fc784352ce": {
+      "before": {
+        "id": "2e0d9063-4905-499a-bcb9-e4fc784352ce",
+        "label": "meat based spreadable-textured specialities",
+        "aliases": [
+          "meat based spreadable textured specialities"
+        ],
+        "description": "The group includes any type of meat based spreadable-textured specialities. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. The eventual removal of not edible parts is unspecified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.[https://en.wikipedia.org/wiki/Paté] and [https://www.google.co.uk/search?tbm=isch&q=spreadable meat specialities]",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03542192",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: meat spread. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "99b46514-9186-420b-9158-ed411038177d"
+      ]
+    },
+    "c097324b-181e-443b-9c8f-56a8351c4d82": {
+      "before": {
+        "id": "c097324b-181e-443b-9c8f-56a8351c4d82",
+        "label": "brewers grains (exhausted)",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03305501",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Pinned source explicitly specifies cattle as consumer. This feed entry is unsuitable for recipe autocomplete; do not relabel it as food-grade spent brewing grains.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "b5433c8c-1ca3-4465-8495-e5843375495f": {
+      "before": {
+        "id": "b5433c8c-1ca3-4465-8495-e5843375495f",
+        "label": "confection (masticatory)",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03315431",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Ambiguous confectionery classification rather than a recognizable cooking ingredient. Existing chewy candy and chewing gum remain distinct; do not assign this broad entry to either.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "058daa6a-40b2-43f6-a241-7cbec8995622": {
+      "before": {
+        "id": "058daa6a-40b2-43f6-a241-7cbec8995622",
+        "label": "confection (quiescently frozen)",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03315012",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Manufacturing-process confectionery classification, not a useful ordinary ingredient selection. Do not equate all such products with ice pops or generic frozen desserts.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "874cd376-d9b3-4d3a-b38c-1cfa4cbe386b": {
+      "before": {
+        "id": "874cd376-d9b3-4d3a-b38c-1cfa4cbe386b",
+        "label": "dextrose containing crystallization water",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03316410",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: dextrose, dextrose monohydrate, dextrose anhydrous. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "d4f53447-36f1-414e-ba8e-cebaa81a9a02",
+        "875f4be0-63dd-4ca0-aa1d-d51596d67471",
+        "5f14f56e-f777-4c1a-97eb-4ab9351544f5"
+      ]
+    },
+    "5ba85daf-f438-40b7-acc6-fb31db43f17b": {
+      "before": {
+        "id": "5ba85daf-f438-40b7-acc6-fb31db43f17b",
+        "label": "butter (renovated)",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03302450",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Specialist reprocessing category, unsuitable as a separate ordinary kitchen ingredient. Do not silently equate its formulation with regular butter.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "090315e3-51a6-4c5d-87e2-6862c5b9a529": {
+      "before": {
+        "id": "090315e3-51a6-4c5d-87e2-6862c5b9a529",
+        "label": "cream (reactivated)",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03310909",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Unclear specialist processing category with no established kitchen identity; not proven equivalent to reconstituted or ordinary cream.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "b43fab3c-7d01-4156-94dc-fb0ed2f2ef71": {
+      "before": {
+        "id": "b43fab3c-7d01-4156-94dc-fb0ed2f2ef71",
+        "label": "honey (decharacterized)",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03301031",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Unclear industrial modification category, not a useful ingredient for ordinary recipes; do not equate it with filtered or regular honey.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "d677da2c-dc5f-4565-acda-52283d9731a6": {
+      "before": {
+        "id": "d677da2c-dc5f-4565-acda-52283d9731a6",
+        "label": "beef steak (fabricated)",
+        "aliases": [
+          "beef steaks (fabricated)"
+        ],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03317338",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Ambiguous processing/formation category; no distinct ordinary kitchen ingredient is established. Do not convert a potentially formed/cooked product to raw steak.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "4e60d2da-f92f-4d9f-ad71-8efa1e32e6d0": {
+      "before": {
+        "id": "4e60d2da-f92f-4d9f-ad71-8efa1e32e6d0",
+        "label": "veal steak (fabricated)",
+        "aliases": [
+          "veal steaks (fabricated)"
+        ],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03317630",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Ambiguous processing/formation category; no distinct ordinary kitchen ingredient is established. Do not convert a potentially formed/cooked product to raw veal steak.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "5c0120b9-9d1a-4e9e-9781-88ba99e780c4": {
+      "before": {
+        "id": "5c0120b9-9d1a-4e9e-9781-88ba99e780c4",
+        "label": "chicken thigh retorted in gravy",
+        "aliases": [
+          "chicken thighs (retorted in gravy)",
+          "chicken thigh (retorted in gravy)"
+        ],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03310223",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Industrial sterilization/process-specific prepared product, unsuitable as a separate ordinary kitchen ingredient. Do not substitute raw thigh or infer can/pouch packaging.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "87490f81-d750-4402-b01f-82c88232c66f": {
+      "before": {
+        "id": "87490f81-d750-4402-b01f-82c88232c66f",
+        "label": "retorted chicken thigh",
+        "aliases": [
+          "chicken thighs (retorted)",
+          "chicken thigh (retorted)"
+        ],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03310222",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Industrial sterilization/process-specific product, unsuitable as a separate ordinary kitchen ingredient. No reassignment to raw thigh.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "1b270a1d-b0f0-495b-9791-7df13d5c712c": {
+      "before": {
+        "id": "1b270a1d-b0f0-495b-9791-7df13d5c712c",
+        "label": "sweet potato (skin possible)",
+        "aliases": [
+          "sweet potatoes (skin possible)"
+        ],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03315198",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: sweet potato. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "bbbb0d00-b468-4f90-8eef-3831ee521e7a"
+      ]
+    },
+    "9b32bd6b-51da-4807-a87e-e42bbff5e357": {
+      "before": {
+        "id": "9b32bd6b-51da-4807-a87e-e42bbff5e357",
+        "label": "red variety sweet potato (skin possible)",
+        "aliases": [
+          "red variety sweet potatoes (skin possible)"
+        ],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03307126",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: red variety sweet potato. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "12358759-e9af-43c5-a2bb-bb54b1505331"
+      ]
+    },
+    "3a7c3da2-387e-47f5-baec-f335830742aa": {
+      "before": {
+        "id": "3a7c3da2-387e-47f5-baec-f335830742aa",
+        "label": "starch syrup (concentrated solid form)",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03315350",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Generic industrial starch-syrup-solids classification, not a useful ordinary kitchen ingredient with this unspecified identity. Do not infer corn origin, glucose formulation or maltodextrin.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "0f5fb571-4c28-4644-8cc3-e8be106aeb6a": {
+      "before": {
+        "id": "0f5fb571-4c28-4644-8cc3-e8be106aeb6a",
+        "label": "canned-tinned meat",
+        "aliases": [
+          "canned tinned meat"
+        ],
+        "description": "The group includes any type of Canned/tinned meat, i.e. a cooked meat products sealed into cans and characterised by a long shelf-life at room temperature. They can be possibly spiced, made of whole muscle cuts, ground meat or minced meat, salted and with a spreadable or sliceable consistency. The part consumed/analysed is by default the whole or a portion of it representing the observed heterogeneity. The eventual removal of not edible parts is unspecified. When relevant, information on the part consumed/analysed has to be reported with additional facet descriptors.[https://en.wikipedia.org/wiki/Potted_meat_food_product] and [https://www.google.co.uk/search?tbm=isch&q=Canned-tinned meat]",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03542207",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: canned meat. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "66ebf3c0-eba3-4565-abad-900515e0a292"
+      ]
+    },
+    "fc0d5011-323b-4fcf-b397-4e64102f3648": {
+      "before": {
+        "id": "fc0d5011-323b-4fcf-b397-4e64102f3648",
+        "label": "chicken thigh (debonned)",
+        "aliases": [
+          "chicken thighs (debonned)"
+        ],
+        "description": "A chicken thigh that has been debonned.",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_00003358",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: boneless chicken thigh. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "145bc35a-25aa-43a8-9a65-5e07c253fb8c"
+      ]
+    },
+    "7b4f9240-8907-42d6-8817-8fee14a42370": {
+      "before": {
+        "id": "7b4f9240-8907-42d6-8817-8fee14a42370",
+        "label": "chicken thigh (skinless, debonned)",
+        "aliases": [
+          "chicken thighs (skinless, debonned)"
+        ],
+        "description": "A chicken thigh that has been skinned and debonned.",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_00003359",
+            "relationship": "exact"
+          },
+          {
+            "source": "foodon",
+            "external_id": "FOODON_00004523",
+            "relationship": "related"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: boneless skinless chicken thigh. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "a4a39a9b-9592-43eb-8b09-33f9e92f6312"
+      ]
+    },
+    "853b54c3-1bc0-43f4-96d6-e3fd7f7e3097": {
+      "before": {
+        "id": "853b54c3-1bc0-43f4-96d6-e3fd7f7e3097",
+        "label": "lettuce head (anatomical)",
+        "aliases": [
+          "lettuce heads (anatomical)"
+        ],
+        "description": "A rosette of a lettuce plant (Lactuca sativa).",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_00003507",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "A more natural kitchen selection already exists: lettuce head. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "category": "covered_by_kitchen_entries",
+      "retained_alternatives": [
+        "ee045be3-9b90-4c4c-9bff-560c314e3170"
+      ]
+    },
+    "e15f39e8-16a3-40f1-895e-a80da8d8e583": {
+      "before": {
+        "id": "e15f39e8-16a3-40f1-895e-a80da8d8e583",
+        "label": "U.S. code of federal regulations, title 21 type",
+        "aliases": [],
+        "description": "Food and Drugs, title 21, Code of Federal Regulations. Original food classification in LanguaL.",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03401270",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Regulatory classification reference, not an ingredient.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    },
+    "850173cf-aa41-4c06-8d15-aecb61f1e1c3": {
+      "before": {
+        "id": "850173cf-aa41-4c06-8d15-aecb61f1e1c3",
+        "label": "corn for degermination",
+        "aliases": [],
+        "description": "",
+        "locale": "en",
+        "status": "active",
+        "source_mappings": [
+          {
+            "source": "foodon",
+            "external_id": "FOODON_03315799",
+            "relationship": "exact"
+          }
+        ],
+        "provenance": {
+          "origin": "imported",
+          "references": [
+            "foodon"
+          ]
+        }
+      },
+      "reason": "Industrial processing/use-purpose category rather than a kitchen ingredient.",
+      "category": "outside_kitchen_scope",
+      "retained_alternatives": []
+    }
+  },
+  "reviewed_names": {
+    "shiu my pastry case": {
+      "action": "reuse",
+      "canonical_id": "10a962f4-2c13-4675-b569-59c74014f6b4",
+      "note": "User explicitly retained the culinary wrapper under its conventional shumai name. Wrapper identity stays distinct from wonton and spring-roll wrappers.",
+      "related_ids": []
+    },
+    "liver based spreadable-textured specialities": {
+      "action": "reuse",
+      "canonical_id": "502ce9e7-ea99-4e46-b512-88e20721cb3e",
+      "note": "Liver-based spreads are recognizable cooking ingredients. Use the natural broad name without inferring a particular liver species or formula.",
+      "related_ids": []
+    },
+    "meat based spreadable-textured specialities": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: meat spread. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "99b46514-9186-420b-9158-ed411038177d"
+      ]
+    },
+    "brewers grains (exhausted)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Pinned source explicitly specifies cattle as consumer. This feed entry is unsuitable for recipe autocomplete; do not relabel it as food-grade spent brewing grains.",
+      "related_ids": []
+    },
+    "confection (masticatory)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Ambiguous confectionery classification rather than a recognizable cooking ingredient. Existing chewy candy and chewing gum remain distinct; do not assign this broad entry to either.",
+      "related_ids": []
+    },
+    "confection (quiescently frozen)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Manufacturing-process confectionery classification, not a useful ordinary ingredient selection. Do not equate all such products with ice pops or generic frozen desserts.",
+      "related_ids": []
+    },
+    "dextrose containing crystallization water": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: dextrose, dextrose monohydrate, dextrose anhydrous. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "d4f53447-36f1-414e-ba8e-cebaa81a9a02",
+        "875f4be0-63dd-4ca0-aa1d-d51596d67471",
+        "5f14f56e-f777-4c1a-97eb-4ab9351544f5"
+      ]
+    },
+    "butter (renovated)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Specialist reprocessing category, unsuitable as a separate ordinary kitchen ingredient. Do not silently equate its formulation with regular butter.",
+      "related_ids": []
+    },
+    "cream (reactivated)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Unclear specialist processing category with no established kitchen identity; not proven equivalent to reconstituted or ordinary cream.",
+      "related_ids": []
+    },
+    "honey (decharacterized)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Unclear industrial modification category, not a useful ingredient for ordinary recipes; do not equate it with filtered or regular honey.",
+      "related_ids": []
+    },
+    "beef steak (fabricated)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Ambiguous processing/formation category; no distinct ordinary kitchen ingredient is established. Do not convert a potentially formed/cooked product to raw steak.",
+      "related_ids": []
+    },
+    "veal steak (fabricated)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Ambiguous processing/formation category; no distinct ordinary kitchen ingredient is established. Do not convert a potentially formed/cooked product to raw veal steak.",
+      "related_ids": []
+    },
+    "chicken thigh retorted in gravy": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Industrial sterilization/process-specific prepared product, unsuitable as a separate ordinary kitchen ingredient. Do not substitute raw thigh or infer can/pouch packaging.",
+      "related_ids": []
+    },
+    "retorted chicken thigh": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Industrial sterilization/process-specific product, unsuitable as a separate ordinary kitchen ingredient. No reassignment to raw thigh.",
+      "related_ids": []
+    },
+    "sweet potato (skin possible)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: sweet potato. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "bbbb0d00-b468-4f90-8eef-3831ee521e7a"
+      ]
+    },
+    "red variety sweet potato (skin possible)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: red variety sweet potato. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "12358759-e9af-43c5-a2bb-bb54b1505331"
+      ]
+    },
+    "starch syrup (concentrated solid form)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Generic industrial starch-syrup-solids classification, not a useful ordinary kitchen ingredient with this unspecified identity. Do not infer corn origin, glucose formulation or maltodextrin.",
+      "related_ids": []
+    },
+    "nut meat": {
+      "action": "reuse",
+      "canonical_id": "be9c9fbe-addb-4596-87a2-cfe9fb7237bc",
+      "note": "FoodOn annotation specifies seed skin removed, germ present. Peeled nuts is natural kitchen wording and keeps skin removal distinct from shell removal or blanching.",
+      "related_ids": []
+    },
+    "canned-tinned meat": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: canned meat. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "66ebf3c0-eba3-4565-abad-900515e0a292"
+      ]
+    },
+    "chicken thigh (debonned)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: boneless chicken thigh. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "145bc35a-25aa-43a8-9a65-5e07c253fb8c"
+      ]
+    },
+    "chicken thigh (skinless, debonned)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: boneless skinless chicken thigh. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "a4a39a9b-9592-43eb-8b09-33f9e92f6312"
+      ]
+    },
+    "lettuce head (anatomical)": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. A more natural kitchen selection already exists: lettuce head. Remove the redundant/overtechnical selection; retain distinct definitions and do not automatically reassign existing recipes. Alternatives are navigation guidance, not an exact-equivalence claim.",
+      "related_ids": [
+        "ee045be3-9b90-4c4c-9bff-560c314e3170"
+      ]
+    },
+    "u.s. code of federal regulations, title 21 type": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Regulatory classification reference, not an ingredient.",
+      "related_ids": []
+    },
+    "corn for degermination": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Retired from active suggestions, review complete. Industrial processing/use-purpose category rather than a kitchen ingredient.",
+      "related_ids": []
+    }
+  },
+  "context_rows": {}
+}

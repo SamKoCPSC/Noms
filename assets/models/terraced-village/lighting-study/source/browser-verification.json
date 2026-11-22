@@ -1,0 +1,119 @@
+{
+  "views": [
+    {
+      "view": "arrival",
+      "mode": "before",
+      "eye": [
+        -30,
+        4.16094257219304,
+        45
+      ],
+      "target": [
+        -37.5,
+        2.6120935697500536,
+        30
+      ],
+      "aspect": 1.3333333333333333,
+      "shadows": false,
+      "triangles": 1024250,
+      "walking": false
+    },
+    {
+      "view": "arrival",
+      "mode": "after",
+      "eye": [
+        -30,
+        4.16094257219304,
+        45
+      ],
+      "target": [
+        -37.5,
+        2.6120935697500536,
+        30
+      ],
+      "aspect": 1.3333333333333333,
+      "shadows": false,
+      "triangles": 1089364,
+      "walking": false
+    },
+    {
+      "view": "path",
+      "mode": "before",
+      "eye": [
+        -38,
+        4.2,
+        53
+      ],
+      "target": [
+        -50,
+        3,
+        32
+      ],
+      "aspect": 1.3333333333333333,
+      "shadows": false,
+      "triangles": 1089364,
+      "walking": false
+    },
+    {
+      "view": "path",
+      "mode": "after",
+      "eye": [
+        -38,
+        4.2,
+        53
+      ],
+      "target": [
+        -50,
+        3,
+        32
+      ],
+      "aspect": 1.3333333333333333,
+      "shadows": false,
+      "triangles": 1089364,
+      "walking": false
+    },
+    {
+      "view": "wide",
+      "mode": "before",
+      "eye": [
+        -20.000000000000007,
+        24.000000000000004,
+        65
+      ],
+      "target": [
+        -48.00000000000001,
+        1.5000000000000002,
+        32
+      ],
+      "aspect": 1.3333333333333333,
+      "shadows": false,
+      "triangles": 1089364,
+      "walking": false
+    },
+    {
+      "view": "wide",
+      "mode": "after",
+      "eye": [
+        -20.000000000000007,
+        24.000000000000004,
+        65
+      ],
+      "target": [
+        -48.00000000000001,
+        1.5000000000000002,
+        32
+      ],
+      "aspect": 1.3333333333333333,
+      "shadows": false,
+      "triangles": 1089364,
+      "walking": false
+    }
+  ],
+  "identical_comparison_cameras": true,
+  "external_asset_requests": [],
+  "browser_errors": [],
+  "portrait_aspect_verified": true,
+  "walking_camera_advances": true,
+  "realtime_shadow_maps": false,
+  "android_content_url_tested": false
+}

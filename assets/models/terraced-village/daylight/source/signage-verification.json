@@ -1,0 +1,228 @@
+{
+  "sha256": "5191fe7f9e3abc9c60108558900834988cb191573c93aecb9b9701f70da39664",
+  "baseline_sha256": "e7b0e6989a203f4acd8e2ed7437bfb4666c50c1b05ac1ebc5170a1da645e35d4",
+  "replaced_meshes": 69,
+  "meshes": 69,
+  "triangles": 234496,
+  "street_positions_preserved": true,
+  "non_sign_source_meshes_preserved": true,
+  "sign_mounts": [
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "street",
+      "face_clearance": 0.030000000000000006,
+      "top_clearance": 0.08000000000000007
+    },
+    {
+      "kind": "road",
+      "rear_clearance": 0.045
+    },
+    {
+      "kind": "road",
+      "rear_clearance": 0.045
+    },
+    {
+      "kind": "road",
+      "rear_clearance": 0.045
+    },
+    {
+      "kind": "road",
+      "rear_clearance": 0.045
+    },
+    {
+      "kind": "welcome",
+      "rear_clearance": 0.03
+    }
+  ],
+  "street_destinations": [
+    {
+      "street": "Noms Lane",
+      "destination": "The Noms Nook",
+      "position": [
+        -47.35402997364433,
+        -0.4671830994036238,
+        48.55782868577871
+      ],
+      "yaw": 2.8686300301541534,
+      "route": 0
+    },
+    {
+      "street": "Recipe Row",
+      "destination": "Crumb & Cozy",
+      "position": [
+        -31.778155315816193,
+        -0.24119493154040847,
+        18.596883481851
+      ],
+      "yaw": -2.801058591556237,
+      "route": 1
+    },
+    {
+      "street": "Whisk Way",
+      "destination": "The Noms Pantry",
+      "position": [
+        -6.36965248493276,
+        0.23241450907529349,
+        -9.548203897403944
+      ],
+      "yaw": -3.023521648938155,
+      "route": 2
+    },
+    {
+      "street": "Pantry Place",
+      "destination": "Bites & Bytes",
+      "position": [
+        18.997739998932637,
+        0.3976995245454008,
+        -13.428247901110522
+      ],
+      "yaw": 1.7126933813996252,
+      "route": 3
+    },
+    {
+      "street": "Simmer Street",
+      "destination": "The Lunchroom Lab",
+      "position": [
+        50.50872974150899,
+        0.7551510400714032,
+        -36.173679163746435
+      ],
+      "yaw": -0.2905647763180775,
+      "route": 4
+    },
+    {
+      "street": "Supper Lane",
+      "destination": "Second Helpings",
+      "position": [
+        28.451874412381514,
+        -0.330272111089667,
+        40.97979079149209
+      ],
+      "yaw": 0.7825271433069313,
+      "route": 5
+    },
+    {
+      "street": "Sourdough Rise",
+      "destination": "Rise & Noms",
+      "position": [
+        -5.045017360501866,
+        -0.40427489588390436,
+        41.09723176797366
+      ],
+      "yaw": 1.7168381140454667,
+      "route": 6
+    },
+    {
+      "street": "Market Mews",
+      "destination": "Gather & Graze",
+      "position": [
+        3.3699044183629,
+        -0.19464960249271784,
+        25.549115689257757
+      ],
+      "yaw": 2.840006754116297,
+      "route": 7
+    },
+    {
+      "street": "Gathering Green",
+      "destination": "The Slow Simmer",
+      "position": [
+        10.98296042389603,
+        0.18214119111524218,
+        -11.15404717936541
+      ],
+      "yaw": -2.819842099193125,
+      "route": 8
+    },
+    {
+      "street": "Campfire Crescent",
+      "destination": "Campfire Crumbs",
+      "position": [
+        -8.177690224056688,
+        0.7528437234047115,
+        -43.56032069809241
+      ],
+      "yaw": 3.131385862804914,
+      "route": 9
+    },
+    {
+      "street": "Potluck Parade",
+      "destination": "The Noms Table",
+      "position": [
+        -18.605149501102275,
+        1.4081073889574458,
+        -74.01647877110256
+      ],
+      "yaw": 1.3034024398958755,
+      "route": 10
+    }
+  ],
+  "names": {
+    "kitchen": "Noms Test Kitchen",
+    "library": "The Noms Nook",
+    "bedroom": "Crumb & Cozy",
+    "supermarket": "The Noms Pantry",
+    "office": "Bites & Bytes",
+    "corporate-office": "The Lunchroom Lab",
+    "brick-kitchen": "Second Helpings",
+    "bakery": "Rise & Noms",
+    "farmers-market": "Gather & Graze",
+    "social-kitchen": "The Slow Simmer",
+    "riverside-campsite": "Campfire Crumbs",
+    "garden": "The Noms Table"
+  },
+  "destination_text_width": 2.35,
+  "arrow_inner_edge": 1.26,
+  "minimum_text_arrow_gap": 0.085,
+  "noticeboard_positions_preserved": true,
+  "direction_arrows_preserved": true
+}

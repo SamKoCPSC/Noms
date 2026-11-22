@@ -1,5 +1,11 @@
 # NOMS-012: Recipe Search — Implementation Plan
 
+> **Current-state review — 2026-11-03:** Search and PR #50 title suggestions are delivered. Anonymous full Search and production residuals remain NOMS-021.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — authenticated search baseline implemented
+
 **Issue:** [NOMS-012-recipe-search.md](../issues/NOMS-012-recipe-search.md)
 **Created:** 2026-06-10
 **Revised:** 2026-08-01

@@ -3109,6 +3109,9 @@ CREATE INDEX idx_variations_base ON recipe_variations(base_recipe_id);
 ```
 
 #### Meal Planner & Shopping Lists
+
+The current delivery plan is [NOMS-018](roadmap/implementation-plans/NOMS-018-pantry-meal-planner-grocery-list.md): its first slice delivers independent, private grocery lists that can be manual-only or copied from selected recipes. Kitchen profiles, meal planning, and offline synchronization are not prerequisites. The SQL below is the original illustrative design, not the checked-in runtime schema or the selected Slice 1 storage contract. The implemented inventory slice is [pantry inventory](roadmap/implementation-plans/NOMS-018-pantry-inventory.md): multiple kitchen profiles with explicit ingredients/equipment and optional authored amounts/units. It uses exact name/unit compatibility, superseding the earlier grams-only concept.
+
 Drag-and-drop planning that aggregates ingredients across multiple recipes into actionable lists.
 ```sql
 CREATE TABLE meal_plans (

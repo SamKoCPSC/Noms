@@ -478,6 +478,9 @@ fn make_503_response() -> Response<Body> {
 /// `/auth/logout`, `/dashboard`), allowing them to pass through without
 /// rate limiting.
 fn categorize_path(path: &str) -> Option<EndpointCategory> {
+    if path == "/auth/staging/session" {
+        return Some(EndpointCategory::Start);
+    }
     let segments: Vec<&str> = path.split('/').collect();
     // /auth/{provider}/{action} => ["", "auth", "{provider}", "{action}"]
     if segments.len() != 4 {
@@ -868,6 +871,10 @@ mod tests {
     #[test]
     fn test_categorize_path_start() {
         assert_eq!(
+            categorize_path("/auth/staging/session"),
+            Some(EndpointCategory::Start)
+        );
+        assert_eq!(
             categorize_path("/auth/google/start"),
             Some(EndpointCategory::Start)
         );
@@ -1074,7 +1081,7 @@ mod tests {
 
         async fn make_test_state_with_database(
             rate_limit: RateLimitState,
-        ) -> (pgtemp::PgTempDB, AppState) {
+        ) -> (crate::test_database::TestDatabase, AppState) {
             let (database, pool) = test_utils::setup_test_db().await;
             let (google_client, github_client) = build_oauth_clients("http://localhost:8080");
 

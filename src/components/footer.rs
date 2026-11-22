@@ -23,16 +23,16 @@ pub fn Footer() -> Element {
                         Link { to: Route::HowTo {}, "How to use Noms" }
                     }
                     div {
-                        strong { "Your kitchen" }
+                        strong { "Your library" }
                         Link { to: Route::Dashboard {}, "Dashboard" }
                         Link { to: Route::RecipeNew {}, "New recipe" }
                         Link { to: Route::CollectionList {}, "Collections" }
+                        Link { to: Route::Pantry {}, "Kitchen" }
                     }
                 }
             }
             div { class: "footer-bottom container",
                 p { "© 2026 Noms" }
-                p { "Built with care and Dioxus." }
             }
         }
     }

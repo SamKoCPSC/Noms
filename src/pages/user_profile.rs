@@ -192,6 +192,7 @@ pub fn UserProfile(username: String) -> Element {
 
 #[component]
 fn UserProfileContents(username: String) -> Element {
+    let mut mobile_section = use_signal(|| "recipes");
     let uname_profile = username.clone();
     let mut profile = use_resource(move || get_user_profile(uname_profile.clone()));
     let profile_pending = *profile.state().read() == UseResourceState::Pending;
@@ -283,7 +284,7 @@ fn UserProfileContents(username: String) -> Element {
     let collections = collection_pages.read().clone();
 
     rsx! {
-        div { class: "container profile-page user-profile",
+        div { class: "container profile-page user-profile", "data-mobile-profile": mobile_section(),
             // ── Profile Header ────────────────────────────────────────────
             header { class: "user-profile__passport",
                 div { class: "user-portrait",
@@ -330,7 +331,11 @@ fn UserProfileContents(username: String) -> Element {
             }
 
             // ── Public Collection Grid ───────────────────────────────────
-            details { class: "user-disclosure user-profile__section", open: true,
+            nav { class: "mobile-library-tabs", aria_label: "Public profile sections",
+                button { r#type: "button", aria_pressed: mobile_section() == "recipes", onclick: move |_| mobile_section.set("recipes"), "Recipes" }
+                button { r#type: "button", aria_pressed: mobile_section() == "collections", onclick: move |_| mobile_section.set("collections"), "Collections" }
+            }
+            details { class: "user-disclosure user-profile__section", open: true, "data-mobile-profile-section": "collections",
                 summary {
                     h2 { "Public collections" }
                     span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }
@@ -396,7 +401,7 @@ fn UserProfileContents(username: String) -> Element {
             }
 
             // ── Recipe Grid ───────────────────────────────────────────────
-            details { class: "user-disclosure user-profile__section", open: true,
+            details { class: "user-disclosure user-profile__section", open: true, "data-mobile-profile-section": "recipes",
                 summary {
                     h2 { "Public recipes" }
                     span { class: "user-disclosure__chevron", aria_hidden: "true", "⌄" }

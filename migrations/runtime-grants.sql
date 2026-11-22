@@ -84,3 +84,13 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"runtime_role";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO :"runtime_role";
+
+-- Maintained vocabulary is read-only to the app. The explicit seed command
+-- uses the schema/deployment role, never runtime credentials.
+REVOKE ALL ON vocabulary_entries, vocabulary_aliases, vocabulary_sources,
+    vocabulary_source_mappings, vocabulary_seed_runs FROM :"runtime_role";
+GRANT SELECT ON vocabulary_entries, vocabulary_aliases TO :"runtime_role";
+REVOKE ALL ON SEQUENCE vocabulary_seed_runs_id_seq FROM :"runtime_role";
+-- Trigger execution is automatic; runtime cannot call or replace its owner-only
+-- write capability. Fixed search_path and qualified relations protect definer SQL.
+REVOKE ALL ON FUNCTION maintain_ingredient_recipe_counts() FROM PUBLIC, :"runtime_role";

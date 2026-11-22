@@ -547,7 +547,7 @@ pub fn SettingsAccounts() -> Element {
             div { class: "container user-settings user-accounts",
             header { class: "user-page-heading",
                 p { class: "user-page-eyebrow", "Your account" }
-                h1 { id: "linked-accounts-title", tabindex: "-1", class: "brand-title", PageIcon { kind: PageIconKind::Settings } span { "Linked accounts" } }
+                h1 { id: "linked-accounts-title", tabindex: "-1", class: "brand-title", PageIcon { kind: PageIconKind::Accounts } span { "Linked accounts" } }
                 p { "Choose how you sign in to Noms." }
             }
             SettingsTabs {

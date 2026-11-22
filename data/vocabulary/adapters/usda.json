@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "reviewed_on": "2026-10-23",
+  "base_commit": "ab7ab53c32d48ff89f8fbd90833008f0ba292a73",
+  "license_url": "https://fdc.nal.usda.gov/api-guide/",
+  "archives": [
+    {
+      "key": "foundation",
+      "local_filename": "foundation-2026-04-30.zip",
+      "bytes": 3825741,
+      "data_type": "foundation_food",
+      "eligible_rows": 469,
+      "members": [
+        {
+          "name": "FoodData_Central_foundation_food_csv_2026-04-30/food.csv",
+          "bytes": 7229830,
+          "crc32": "2c1856ea"
+        },
+        {
+          "name": "FoodData_Central_foundation_food_csv_2026-04-30/food_category.csv",
+          "bytes": 997,
+          "crc32": "27c20a75"
+        },
+        {
+          "name": "FoodData_Central_foundation_food_csv_2026-04-30/foundation_food.csv",
+          "bytes": 17257,
+          "crc32": "63453c6c"
+        }
+      ],
+      "source": {
+        "id": "usda-foundation-2026-04-30",
+        "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2026-04-30.zip",
+        "version": "2026-04-30",
+        "checksum": "70457ee9d9342f43bda2010318c85f04210c689fdeb9cd2da4c513b0e8dbc655",
+        "license": "CC0-1.0",
+        "attribution": "US Department of Agriculture, Agricultural Research Service, FoodData Central. Public-domain food descriptions and identifiers; archive release and SHA-256 pin the reviewed records. No nutrient measurements are imported."
+      }
+    },
+    {
+      "key": "sr_legacy",
+      "local_filename": "sr-legacy-2018-04.zip",
+      "bytes": 6074592,
+      "data_type": "sr_legacy_food",
+      "eligible_rows": 7793,
+      "members": [
+        {
+          "name": "FoodData_Central_sr_legacy_food_csv_2018-04/food.csv",
+          "bytes": 793104,
+          "crc32": "ae0997e2"
+        },
+        {
+          "name": "FoodData_Central_sr_legacy_food_csv_2018-04/food_category.csv",
+          "bytes": 997,
+          "crc32": "27c20a75"
+        },
+        {
+          "name": "FoodData_Central_sr_legacy_food_csv_2018-04/sr_legacy_food.csv",
+          "bytes": 130404,
+          "crc32": "466534bb"
+        }
+      ],
+      "source": {
+        "id": "usda-sr-legacy-2018-04",
+        "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+        "version": "2018-04",
+        "checksum": "b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0",
+        "license": "CC0-1.0",
+        "attribution": "US Department of Agriculture, Agricultural Research Service, FoodData Central. Public-domain food descriptions and identifiers; archive release and SHA-256 pin the reviewed records. No nutrient measurements are imported."
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "harness": {
+    "lifecycle_cleanup": {
+      "queued": 2,
+      "remaining": 0,
+      "listeners": 0,
+      "attribute": false,
+      "offset": ""
+    },
+    "remount_without_duplicate_listeners": true,
+    "coalesced_resize_events": 1
+  },
+  "application": {
+    "editor_sections_focused": [
+      "Basics",
+      "Photos",
+      "Ingredients",
+      "Method",
+      "Equipment",
+      "Notes"
+    ],
+    "synthetic_keyboard_offset": 300,
+    "action_bar_repositioned": true,
+    "blur_resets_offset": true,
+    "desktop_ignores_keyboard_offset": true,
+    "bottom_tabs_hide_and_restore": true,
+    "visual_viewport_optional": true,
+    "handwritten_javascript_asset_requested": false,
+    "page_errors": []
+  },
+  "rust_unit_tests_passed": 3,
+  "client_server_build": true,
+  "physical_device_keyboard_tested": false,
+  "source_sha256": {
+    "src/utils/mobile_viewport.rs": "32f1bd334d707ca5b6160431c85eb5f4026519fd03e72c9f8ddca0cef14f1da4",
+    "src/utils/mobile_viewport/browser.rs": "06644ee2b60795259b45cb47e13a8b4fc70d54f65b2c339fa1bf99009f655753"
+  }
+}

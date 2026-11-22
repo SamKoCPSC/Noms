@@ -1,0 +1,19 @@
+{
+  "source": "models/european-arcade-supermarket/models/european-arcade-supermarket.blend",
+  "source_sha256": "e06b687cccc0f731fa483fd14277d5871be20a52a8295353aff794914d7a98e1",
+  "triangles": 387643,
+  "assemblies": 18,
+  "materials": 21,
+  "glb_bytes": 11349396,
+  "textures": 0,
+  "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
+  "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.00020162419122480698,
+  "quantization": "KHR_mesh_quantization",
+  "penguin_plushes": 1,
+  "plush_triangles": 2841,
+  "plush_source": "assets/models/about-penguin-plushes",
+  "base_glb_sha256": "e17fbb290f3b485edc20602a045bd514da362c660d1b3aa1b689bc069bdcfe3b",
+  "character_source": "assets/brand/penguini/3d/source/base.blend",
+  "character_source_sha256": "6569345476121564fb0bb34dd038805d7e4869aa719358b91e90049f4fde4fed"
+}

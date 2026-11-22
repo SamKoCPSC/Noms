@@ -1,11 +1,16 @@
 # NOMS-013: Marketing Pages & 3D Feasibility Experiment — Implementation Plan
 
+> **Current delivery — 2026-11-18:** The public About page uses a twelve-stop Three.js village with guided navigation, free exploration and reading fallback. Introduction has an animated kitchen with playback controls and poster fallback. The [village implementation record](NOMS-026-about-village-tour.md) and [Introduction delivery](../issues/NOMS-027-animated-introduction-kitchen.md) record scope and evidence. Earlier checkpoints and the isolated 3D experiment proposal preserve design history.
+
 **Created:** 2026-07-16
 **Revised:** 2026-09-04
-**Status:** In progress — traditional pages are merged; content evidence, icons, the full release gate, and the 3D experiment remain
+**Status:** ✅ Done — public pages and tour delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Depends on:** The current application shell, design tokens, authentication context, and canonical recipe/application routes
-**Coordination:** NOMS-012 may later replace the Home Explore CTA with a search-first CTA. NOMS-013 must use canonical application routes and must not duplicate product functionality inside marketing pages.
-**Approach:** Ship polished, conventional, server-rendered Home, About, and How-to pages using semantic HTML, responsive CSS, optimized screenshots, and original SVG illustrations. Do not put a 3D runtime or scene on production pages. After the complete traditional experience passes its release gate, conduct an isolated 3D feasibility experiment and record whether a separately scoped follow-up is justified.
+**Coordination:** The landing page now has public recipe-title suggestions and search (PR #50). NOMS-020 and NOMS-022 record the shared design and mobile baselines.
+**Current approach:** The delivered experience includes Introduction, How-to and the About village. The checkpoints below retain earlier acceptance criteria.
 
 ---
 

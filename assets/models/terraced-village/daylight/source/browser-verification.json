@@ -1,0 +1,21 @@
+{
+  "models": 12,
+  "all_stops_checked": true,
+  "walking_route_samples": 2211,
+  "camera_clear_of_model_bounds": true,
+  "eye_height_above_terrain": 4.6,
+  "continuous_segment_endpoints": true,
+  "playback_advances": true,
+  "responsive_aspect": true,
+  "unchanged_master_hashes": true,
+  "errors": [],
+  "layout_revision": 12,
+  "single_file_external_requests": null,
+  "next_navigation_checked": true,
+  "landscape_clearance_checked": true,
+  "shared_daylight": true,
+  "realtime_shadows": false,
+  "android_content_url_tested": false,
+  "sign_names_and_mounts_checked": true,
+  "clear_glass_checked": true
+}

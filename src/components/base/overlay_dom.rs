@@ -1,7 +1,48 @@
 //! Typed browser primitives. Listener ownership is RAII; no handwritten JS bridge.
 use super::overlay_logic::Rect;
+use std::{cell::Cell, rc::Rc};
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Element, Event, EventTarget, HtmlElement};
+
+/// Coalesce layout events and cancel pending callbacks when an overlay closes.
+pub(super) struct AnimationFrame {
+    window: web_sys::Window,
+    pending: Rc<Cell<Option<i32>>>,
+    callback: Closure<dyn FnMut(f64)>,
+}
+impl AnimationFrame {
+    pub fn new(mut callback: impl FnMut() + 'static) -> Self {
+        let pending = Rc::new(Cell::new(None));
+        let current = pending.clone();
+        Self {
+            window: web_sys::window().expect("browser window"),
+            pending,
+            callback: Closure::wrap(Box::new(move |_: f64| {
+                current.set(None);
+                callback();
+            }) as Box<dyn FnMut(f64)>),
+        }
+    }
+    pub fn request(&self) {
+        if self.pending.get().is_none() {
+            self.pending.set(
+                self.window
+                    .request_animation_frame(self.callback.as_ref().unchecked_ref())
+                    .ok(),
+            );
+        }
+    }
+    pub fn cancel(&self) {
+        if let Some(id) = self.pending.take() {
+            let _ = self.window.cancel_animation_frame(id);
+        }
+    }
+}
+impl Drop for AnimationFrame {
+    fn drop(&mut self) {
+        self.cancel();
+    }
+}
 
 pub(super) struct Listener {
     target: EventTarget,

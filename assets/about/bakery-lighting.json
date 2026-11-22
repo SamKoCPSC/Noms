@@ -1,0 +1,144 @@
+{
+  "model": "bakery",
+  "source": "assets/models/modern-baking-lab/models/modern-baking-lab.blend",
+  "source_kind": "master",
+  "source_sha256": "85c5265636123679305f7cc69b031b2b1fed75be08954cb045514aa080dee949",
+  "frame": 160,
+  "view_transform": "AgX",
+  "look": "AgX - Medium High Contrast",
+  "exposure": 0.15000000596046448,
+  "world_color": [
+    0.7599999904632568,
+    0.8199999928474426,
+    0.8799999952316284
+  ],
+  "world_strength": 0.30000001192092896,
+  "lights": [
+    {
+      "name": "Broad warm key",
+      "position": [
+        -5,
+        10,
+        7
+      ],
+      "rotation": [
+        0.710404634475708,
+        7.066605434147277e-8,
+        -0.6202495694160461
+      ],
+      "energy": 1400,
+      "size": 6,
+      "color": [
+        1,
+        0.9100000262260437,
+        0.8199999928474426
+      ]
+    },
+    {
+      "name": "Soft cool fill",
+      "position": [
+        7,
+        7,
+        2
+      ],
+      "rotation": [
+        0.8050110936164856,
+        -1.0627340429891774e-7,
+        1.292496681213379
+      ],
+      "energy": 1000,
+      "size": 5,
+      "color": [
+        0.8799999952316284,
+        0.9399999976158142,
+        1
+      ]
+    },
+    {
+      "name": "Roofless overhead softbox",
+      "position": [
+        0,
+        10,
+        -5
+      ],
+      "rotation": [
+        0.46364760398864746,
+        3.909664769707888e-8,
+        3.141592502593994
+      ],
+      "energy": 1200,
+      "size": 5,
+      "color": [
+        1,
+        0.9399999976158142,
+        0.8399999737739563
+      ]
+    }
+  ],
+  "reference_camera": {
+    "vp": [
+      0.11899880319833755,
+      -0.044544387608766556,
+      -0.0010070393327623606,
+      0,
+      1.926318438094654e-9,
+      0.14609478414058685,
+      -0.0009424154413864017,
+      0,
+      -0.08272409439086914,
+      -0.06407719850540161,
+      -0.00144862849265337,
+      0,
+      -0.03185063228011131,
+      -0.11842301487922668,
+      -0.960424542427063,
+      1
+    ],
+    "view": [
+      0.8210917711257935,
+      -0.26893675327301025,
+      0.5034693479537964,
+      0,
+      1.3291597156239732e-8,
+      0.8820473551750183,
+      0.4711606502532959,
+      0,
+      -0.5707962512969971,
+      -0.38686612248420715,
+      0.7242418527603149,
+      0,
+      -0.21976937353610992,
+      -0.7149789929389954,
+      -19.885684967041016,
+      1
+    ],
+    "eye": [
+      10,
+      10,
+      14
+    ],
+    "width": 1080,
+    "height": 945
+  },
+  "outward_winding_repairs": [
+    "Cinnamon spiral",
+    "Cinnamon spiral.001",
+    "Serving tongs"
+  ],
+  "triangles": 849989,
+  "atlases": 2,
+  "atlas_size": 2048,
+  "bake_samples": 128,
+  "animations": false,
+  "penguini": true,
+  "glb_bytes": 17415680,
+  "uncompressed_bytes": 61163632,
+  "display_texture_format": "PNG RGB8 sRGB, original resolution",
+  "geometry_compression": {
+    "extension": "EXT_meshopt_compression",
+    "position_bits": 16,
+    "normal_bits": 12,
+    "uv_bits": 16,
+    "triangles_removed": 0
+  }
+}

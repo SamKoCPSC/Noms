@@ -1,0 +1,1713 @@
+{
+  "schema_version": 1,
+  "approved": true,
+  "reviewed_on": "2026-10-25",
+  "base_commit": "998a69d06e2be4e7ab130bbf3ab8a81a68d00715",
+  "base_seed_checksum": "6e703364b9ab3b7476a0637b7d1063dcdf0096dfb26d6b7a42b740b39acfa821",
+  "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
+  "expected_output_checksum": "8a6c4f4054700d301dd293daa1de72f3e599723f631fe09eb8be45bee64515ab",
+  "criterion": "Grocery-store cooking materials, including defined retail mixtures. Keep meaningful fresh/dried, cube/granule/paste, grain/starch/nixtamalized/precooked, sodium and spirit/liqueur/style distinctions. Reuse published identities before adding a new one. Retail names support suggestions, not automatic recipe assignment, nutrition equivalence or inferred substitution.",
+  "research": {
+    "candidate_names": 81,
+    "basis": "User-requested grocery-store follow-up to the second sample, including named product-family gaps beyond that sample.",
+    "prior_corpus_sha256": "83823dd7e6ed33573317594d50ef18a5541cec9478e4ff6109397658eab6b32c",
+    "note": "The frozen 1,000-recipe studies and their source ambiguity decisions are not rewritten. Evidence is of grocery material availability; no complete store inventory or new population coverage estimate is claimed."
+  },
+  "additions": [
+    {
+      "id": "89668a57-fe84-5263-bd02-cffdf1605a70",
+      "label": "dried angel hair pasta",
+      "aliases": [
+        "angel hair",
+        "angel hair pasta",
+        "dry angel hair pasta",
+        "dried angel hair",
+        "dried capellini",
+        "capellini",
+        "capellini pasta"
+      ],
+      "description": "Shelf-stable dried fine-strand wheat pasta sold as angel hair or capellini. Distinct from fresh angel hair pasta in hydration and cooking time.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2bda8702-10a6-5e7d-b269-74f123257b57",
+      "label": "chicken bouillon paste",
+      "aliases": [
+        "chicken stock paste",
+        "chicken soup base paste",
+        "chicken bouillon base paste"
+      ],
+      "description": "Moist concentrated chicken-based paste for making stock or flavoring recipes. Distinct from dry bouillon granules, cubes and prepared liquid stock; fat and sodium levels are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5289ea87-c134-516b-a0ce-f9133ca6bea8",
+      "label": "vegetable bouillon cube",
+      "aliases": [
+        "vegetable bouillon cubes",
+        "vegetable stock cube",
+        "vegetable stock cubes",
+        "vegetable broth cube",
+        "vegetable broth cubes"
+      ],
+      "description": "Compressed dry vegetable-flavored stock seasoning in cube form, for reconstitution or cooking. Distinct from loose vegetable stock powder, moist paste and prepared vegetable stock; formula and sodium level are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d067f259-629b-5794-ba4e-13d2f79307a8",
+      "label": "vegetable bouillon paste",
+      "aliases": [
+        "vegetable stock paste",
+        "vegetable soup base paste",
+        "vegetable bouillon base paste"
+      ],
+      "description": "Moist concentrated vegetable-based paste for making stock or flavoring recipes. Distinct from cubes, dry vegetable stock powder and prepared liquid stock; exact vegetables and sodium level are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "97751c4b-fd79-5751-a4d0-a73b021a7a63",
+      "label": "shrimp bouillon cube",
+      "aliases": [
+        "shrimp bouillon cubes",
+        "shrimp stock cube",
+        "shrimp stock cubes",
+        "prawn bouillon cube"
+      ],
+      "description": "Dry shrimp-flavored bouillon seasoning compressed into cubes for cooking or reconstitution. Distinct from loose granules, plain powdered shrimp and prepared shrimp stock.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "27903cc3-9afb-55ad-acac-241cd2af75fc",
+      "label": "granulated shrimp bouillon",
+      "aliases": [
+        "shrimp bouillon granules",
+        "shrimp bouillon powder",
+        "powdered shrimp bouillon",
+        "prawn bouillon powder"
+      ],
+      "description": "Dry granular or powdered shrimp-flavored bouillon blend for cooking or reconstitution. Distinct from compressed cubes and plain ground dried shrimp; exact seasonings and sodium level are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9e4ad99d-aa7a-532a-ab3a-6d1285dacd0d",
+      "label": "tomato chicken bouillon cube",
+      "aliases": [
+        "tomato chicken bouillon cubes",
+        "tomato and chicken bouillon cube",
+        "tomato with chicken bouillon cube"
+      ],
+      "description": "Compressed dry bouillon seasoning combining tomato and chicken flavors. Distinct from plain chicken bouillon cubes, tomato powder and loose tomato-chicken granules.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4ab525ff-0089-58da-9177-115f48e7d15a",
+      "label": "granulated tomato chicken bouillon",
+      "aliases": [
+        "tomato chicken bouillon granules",
+        "tomato chicken bouillon powder",
+        "granulated tomato with chicken bouillon",
+        "tomato and chicken bouillon powder"
+      ],
+      "description": "Dry granular or powdered bouillon seasoning combining tomato and chicken flavors, for rice, soups and other cooking. Distinct from tomato-chicken cubes and plain tomato powder.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a27ad6e5-aa0d-52b9-9295-ed5b7a5ad86f",
+      "label": "mushroom bouillon paste",
+      "aliases": [
+        "mushroom stock paste",
+        "mushroom soup base paste",
+        "mushroom stock base paste"
+      ],
+      "description": "Moist concentrated mushroom-based cooking paste for making stock or flavoring sauces and soups. Distinct from plain dried mushroom powder and prepared mushroom stock; formula and sodium level are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0a865cac-50a6-5b18-8b94-70b340e072f4",
+      "label": "reduced-sodium granulated chicken bouillon",
+      "aliases": [
+        "reduced sodium chicken bouillon granules",
+        "reduced-sodium chicken bouillon powder",
+        "reduced sodium chicken stock powder"
+      ],
+      "description": "Dry granular or powdered chicken bouillon formulated with less sodium than its regular comparison product. The reduction percentage is unspecified; distinct from ordinary bouillon, absolute low-sodium claims and no-added-salt products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "82995299-f88c-5ee6-b4d5-73613d140abb",
+      "label": "whole-grain corn flour",
+      "aliases": [
+        "whole grain corn flour",
+        "whole-grain maize flour",
+        "whole grain maize flour"
+      ],
+      "description": "Fine flour milled from whole corn kernels, retaining bran, germ and endosperm; corn color is unspecified. Distinct from extracted cornstarch, coarser cornmeal, nixtamalized masa harina and precooked masarepa.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "edb009dd-7ebe-5d16-a572-ce62e683ea16",
+      "label": "white masarepa",
+      "aliases": [
+        "precooked white corn flour",
+        "pre-cooked white corn flour",
+        "precooked white cornmeal",
+        "pre-cooked white corn meal",
+        "white arepa flour"
+      ],
+      "description": "Precooked white corn flour or fine meal sold for arepas and similar cooking. Distinct from raw white corn flour, yellow masarepa, extracted cornstarch and nixtamalized masa harina.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4b79279a-347c-580a-9f80-a3c37329afaa",
+      "label": "instant polenta",
+      "aliases": [
+        "quick-cooking polenta",
+        "quick cooking polenta",
+        "quick-cook polenta",
+        "instant polenta cornmeal"
+      ],
+      "description": "Dry cornmeal product processed for quick polenta preparation. Distinct from traditional slow-cooking polenta meal and already cooked or ready-to-slice polenta.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "74357807-f7c4-5a4d-8f2c-48ef0e67b35d",
+      "label": "Calvados",
+      "aliases": [
+        "Calvados brandy"
+      ],
+      "description": "Normandy-style cider or perry brandy sold as Calvados, made by distilling fermented apple or pear cider and aging the spirit. Distinct from generic apple brandy, pear brandy, liqueurs and brandy flavoring; age and strength are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f92a9be9-4fab-5da6-b173-44177dd0549b",
+      "label": "grappa",
+      "aliases": [
+        "grappa brandy"
+      ],
+      "description": "Italian grape-pomace spirit sold as grappa. Grape variety and aging are unspecified; distinct from wine-distilled grape brandy, pisco, raw grape pomace and a specifically aged grappa.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "85cf8c6e-0ad0-5a0d-a6c6-1b08e8b4af95",
+      "label": "pisco",
+      "aliases": [
+        "pisco brandy"
+      ],
+      "description": "Grape-wine spirit sold as pisco for drinks and cooking. Country, grape variety and production style are unspecified; distinct from grape-pomace grappa and specifically named aged brandies.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "14de87d6-2b60-5c8f-9e5f-a7067fcef6eb",
+      "label": "slivovitz",
+      "aliases": [
+        "slivovice",
+        "slivovica",
+        "slivovitz plum brandy"
+      ],
+      "description": "Central or Eastern European plum-distilled fruit brandy sold as slivovitz. Age and strength are unspecified; distinct from sweet plum liqueur and other fruit spirits.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0dc37b26-d409-5036-9a36-f8172d7ec28a",
+      "label": "broccoli slaw mix",
+      "aliases": [
+        "undressed broccoli slaw",
+        "raw broccoli slaw mix"
+      ],
+      "description": "Raw undressed shredded vegetable mix based on broccoli stems, commonly including carrot or cabbage, sold for slaw and cooking. Distinct from dressed broccoli slaw and plain broccoli; exact vegetable proportions are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "bc6b79b1-26a3-5d9b-8eeb-872f26901bf8",
+      "label": "coleslaw mix",
+      "aliases": [
+        "shredded coleslaw mix",
+        "raw coleslaw mix",
+        "undressed coleslaw mix",
+        "cabbage slaw mix"
+      ],
+      "description": "Raw undressed shredded vegetable mixture based on cabbage, commonly with carrots, sold for preparing coleslaw or cooking. Distinct from coleslaw dressing and a finished dressed salad; exact proportions are unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6e08babb-33e9-5764-9700-a0e0bd0e7af5",
+      "label": "frozen peppers and onions",
+      "aliases": [
+        "frozen pepper and onion mix",
+        "frozen peppers and onions mix",
+        "frozen bell pepper and onion mix"
+      ],
+      "description": "Frozen mixture of cut sweet bell peppers and onions sold for cooking, without an added sauce. Pepper colors and vegetable proportions are unspecified; distinct from a single frozen vegetable or a sauced meal.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "61e3d78b-e032-58b4-806e-384913cb41e7",
+      "label": "frozen stir-fry vegetables",
+      "aliases": [
+        "frozen stir fry vegetables",
+        "frozen stir-fry vegetable mix",
+        "frozen stir fry vegetable mix"
+      ],
+      "description": "Unsauced frozen mixed vegetables sold for stir-frying, commonly combining vegetables such as broccoli, carrot, peppers and peas. Exact mixture is unspecified; distinct from a sauced stir-fry kit or finished dish.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f8dbc4c3-f8b0-5a83-aea9-8ec3e47466d9",
+      "label": "instant espresso powder",
+      "aliases": [
+        "espresso powder",
+        "soluble espresso powder"
+      ],
+      "description": "Dry soluble espresso-style coffee concentrate for baking or reconstitution. Distinct from ground roasted espresso beans and already brewed espresso.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "66827a70-a4af-5003-b714-cbb968b45e74",
+      "label": "harissa spice blend",
+      "aliases": [
+        "harissa seasoning",
+        "harissa spice",
+        "harissa powder",
+        "dry harissa seasoning"
+      ],
+      "description": "Dry North African-style chili and spice blend sold as harissa seasoning. Exact formula and salt level are unspecified; distinct from moist harissa paste and plain ground chili.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2b402b41-f4b4-5fb9-9d8d-ec475bccc5d9",
+      "label": "salt-free seasoning blend",
+      "aliases": [
+        "salt free seasoning",
+        "salt-free seasoning",
+        "salt free seasoning blend",
+        "salt-free all-purpose seasoning"
+      ],
+      "description": "Mixed herbs, spices or vegetables sold as a salt-free general-purpose cooking seasoning. Exact blend is unspecified; distinct from seasoned salt, salt substitutes and specifically named barbecue blends. No nutrient values are inferred.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "094e5d6f-8025-5b27-a5fe-1832ffcadd33",
+      "label": "whole-grain Dijon mustard",
+      "aliases": [
+        "whole grain Dijon mustard",
+        "wholegrain Dijon mustard",
+        "whole-grain dijon"
+      ],
+      "description": "Prepared Dijon-style mustard retaining visible whole or partly crushed mustard seeds. Distinct from smooth Dijon mustard and grainy mustard without a specified Dijon style.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0cf63910-8a88-57ea-9e6e-7b0a4f97daf9",
+      "label": "sweet Italian sausage",
+      "aliases": [
+        "sweet Italian sausages",
+        "sweet Italian pork sausage"
+      ],
+      "description": "Fresh uncooked Italian-style pork sausage sold as sweet Italian, with aromatic seasoning and without the hot-chili profile of hot Italian sausage. Casing or loose form is unspecified; distinct from cured salami and generic Italian sausage.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "98a23aff-bb78-576b-ad03-c9d23f8084ba",
+      "label": "hot Italian sausage",
+      "aliases": [
+        "hot Italian sausages",
+        "hot Italian pork sausage",
+        "spicy Italian sausage"
+      ],
+      "description": "Fresh uncooked Italian-style pork sausage with a hot-chili seasoning profile. Casing or loose form is unspecified; distinct from sweet Italian sausage and cured Italian salami.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a256615c-4d39-5e18-b275-30080c537c84",
+      "label": "spring mix",
+      "aliases": [
+        "spring salad mix",
+        "spring mix greens",
+        "baby leaf spring mix"
+      ],
+      "description": "Raw tender baby-leaf salad mixture sold as spring mix, combining young lettuces and other leafy greens without dressing. Exact leaves vary; distinct from a single lettuce, a mature cooking-greens mixture and a dressed salad kit.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "93bc174d-3bde-5524-97d2-7a9f1d2bb31d",
+      "label": "graham crackers",
+      "aliases": [
+        "graham cracker",
+        "graham cracker crumbs",
+        "crushed graham crackers",
+        "graham crumbs"
+      ],
+      "description": "Baked sweet graham-style wheat crackers used whole or crushed in dessert crusts and toppings. Exact sweetener and flavor are unspecified; distinct from raw graham flour, breadcrumbs and a prepared cracker crust.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    }
+  ],
+  "alias_additions": {
+    "f2ae6be0-1028-4348-baa7-afe03c2d943d": {
+      "label": "chicken bouillon mix",
+      "aliases": [
+        "granulated chicken bouillon",
+        "chicken bouillon granules",
+        "chicken bouillon powder",
+        "powdered chicken bouillon",
+        "chicken stock granules",
+        "chicken stock powder"
+      ],
+      "note": "The original FoodOn record explicitly annotates finely ground dehydrated dry broth/stock mix. Powder/granule retail names reuse this published dry-mix identity, distinct from cubes, moist paste and prepared stock.",
+      "public_evidence": [
+        "foodon-chicken-drymix",
+        "bouillon-granules"
+      ]
+    },
+    "a502fe13-8496-45a2-bfa5-6ef47a16e321": {
+      "label": "granulated beef bouillon",
+      "aliases": [
+        "beef bouillon granules",
+        "beef bouillon powder",
+        "powdered beef bouillon",
+        "beef stock granules",
+        "beef stock powder"
+      ],
+      "note": "Qualified dry/granulated names reuse the published granulated beef identity; cubes, paste and prepared stock stay separate.",
+      "public_evidence": [
+        "bouillon-granules"
+      ]
+    },
+    "730e0cac-49b3-424c-a720-38a31845d24f": {
+      "label": "beef bouillon cube",
+      "aliases": [
+        "beef bouillon cubes",
+        "beef stock cube",
+        "beef stock cubes",
+        "beef broth cube",
+        "beef broth cubes"
+      ],
+      "note": "Qualified cube and stock-cube names preserve the existing beef cube UUID.",
+      "public_evidence": [
+        "bouillon-cubes"
+      ]
+    },
+    "a635ab9e-f074-47bd-a23c-31774594b580": {
+      "label": "beef bouillon paste",
+      "aliases": [
+        "beef stock paste",
+        "beef soup base paste"
+      ],
+      "note": "Qualified stock/soup-base paste names follow the published beef bouillon paste label; no brand identity or source mapping is inferred.",
+      "public_evidence": []
+    },
+    "bfd55fe0-5f53-4cd7-9ce4-1b77bed2925c": {
+      "label": "chicken bouillon cube",
+      "aliases": [
+        "chicken bouillon cubes",
+        "chicken broth cubes",
+        "chicken stock cubes"
+      ],
+      "note": "Ordinary plural forms of names already owned by the published chicken cube identity.",
+      "public_evidence": [
+        "bouillon-cubes"
+      ]
+    },
+    "e00730e2-edac-5536-97a2-3ae09210ae00": {
+      "label": "vegetable stock powder",
+      "aliases": [
+        "vegetable bouillon powder",
+        "vegetable bouillon granules",
+        "powdered vegetable bouillon"
+      ],
+      "note": "Existing definition explicitly describes dry powdered/granular vegetable stock for reconstitution; preserve its UUID rather than duplicate it as bouillon.",
+      "public_evidence": [
+        "vegetable-cubes"
+      ]
+    },
+    "baa08f40-a3c3-4e08-b7a8-50aee86444e9": {
+      "label": "corn flour",
+      "aliases": [
+        "American corn flour",
+        "US corn flour"
+      ],
+      "note": "US retail corn flour is milled corn grain, distinct from the starch sold as cornflour in other dialects. Bare names are not merged across existing legacy UUIDs.",
+      "public_evidence": [
+        "corn-flours"
+      ]
+    },
+    "9c572dce-7e2b-441b-b16e-dcf921a51bd8": {
+      "label": "maize flour",
+      "aliases": [
+        "finely milled maize flour",
+        "fine maize flour"
+      ],
+      "note": "Existing maize-flour definition explicitly specifies fine milling; retain its published UUID without merging legacy corn-flour identities.",
+      "public_evidence": [
+        "corn-flours"
+      ]
+    },
+    "dd076388-dcba-4104-bbcb-9fc9aab35532": {
+      "label": "white corn flour",
+      "aliases": [
+        "white maize flour"
+      ],
+      "note": "Qualified white maize/corn grain flour naming only; precooked white masarepa remains a distinct ingredient.",
+      "public_evidence": [
+        "masarepa"
+      ]
+    },
+    "8b453608-4a45-4582-9322-e9da563fd066": {
+      "label": "yellow corn flour",
+      "aliases": [
+        "yellow maize flour"
+      ],
+      "note": "Qualified yellow maize/corn grain flour naming only; starch, whole-grain claims and precooked forms are not implied.",
+      "public_evidence": [
+        "corn-flours"
+      ]
+    },
+    "3556c548-0018-486c-ba67-d23c9db3f4eb": {
+      "label": "whole grain white corn flour",
+      "aliases": [
+        "whole-grain white corn flour",
+        "whole grain white maize flour"
+      ],
+      "note": "Explicit whole-grain white-corn flour naming preserves the published narrower identity.",
+      "public_evidence": [
+        "corn-flours"
+      ]
+    },
+    "7745993b-b14a-41bd-b55d-dd2e18c49927": {
+      "label": "yellow masarepa",
+      "aliases": [
+        "pre-cooked yellow corn flour",
+        "precooked yellow cornmeal",
+        "pre-cooked yellow corn meal",
+        "yellow arepa flour"
+      ],
+      "note": "Existing definition explicitly specifies precooked yellow corn flour for arepas; preserve its published UUID.",
+      "public_evidence": [
+        "masarepa"
+      ]
+    },
+    "27c34c10-fd08-4737-92af-1ffc2c9fbd56": {
+      "label": "masa harina",
+      "aliases": [
+        "masa flour",
+        "nixtamalised corn flour",
+        "nixtamalized maize flour",
+        "nixtamalised maize flour"
+      ],
+      "note": "Established flour name and regional spelling for dried nixtamalized maize flour. Do not treat ordinary corn flour, masarepa or fresh masa dough as equivalent.",
+      "public_evidence": [
+        "corn-flours"
+      ]
+    },
+    "66c9e923-4bfb-55a9-b363-6d01ad5536c6": {
+      "label": "kirsch",
+      "aliases": [
+        "dry cherry brandy",
+        "dry cherry eau-de-vie",
+        "cherry eau de vie"
+      ],
+      "note": "Existing kirsch definition explicitly describes dry cherry-distilled eau-de-vie. Sweet cherry brandy liqueur and bare cherry brandy remain unresolved.",
+      "public_evidence": []
+    },
+    "157f981d-05d0-5341-b21a-71ad97e31f20": {
+      "label": "apricot eau-de-vie",
+      "aliases": [
+        "apricot eau de vie",
+        "dry apricot brandy",
+        "apricot eau-de-vie brandy"
+      ],
+      "note": "Existing dry apricot spirit is retained; this naming review does not equate sweet apricot brandy liqueur or ambiguous bare apricot brandy.",
+      "public_evidence": []
+    },
+    "b7d95895-1b70-4aba-a210-e2508fda1b10": {
+      "label": "armagnac",
+      "aliases": [
+        "Armagnac brandy"
+      ],
+      "note": "Qualified name for the existing Armagnac identity, distinct from Calvados, Cognac and generic grape brandy.",
+      "public_evidence": []
+    },
+    "320d5f49-13c4-421c-9641-66d8ee3aa9de": {
+      "label": "cognac",
+      "aliases": [
+        "Cognac brandy"
+      ],
+      "note": "Qualified name for the existing Cognac identity, distinct from Calvados, Armagnac and generic grape brandy.",
+      "public_evidence": []
+    }
+  },
+  "entry_reviews": {
+    "89668a57-fe84-5263-bd02-cffdf1605a70": {
+      "observed_names": [
+        "angel hair",
+        "dried angel hair pasta"
+      ],
+      "rationale": "Retail angel-hair/capellini naming identifies dried wheat pasta for suggestions; explicit fresh angel hair retains its published UUID. Bare recipe wording is not automatically assigned a dried state.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "angel-hair"
+      ]
+    },
+    "2bda8702-10a6-5e7d-b269-74f123257b57": {
+      "observed_names": [
+        "chicken bouillon paste",
+        "chicken base"
+      ],
+      "rationale": "Moist concentrated chicken-based paste for making stock or flavoring recipes. Distinct from dry bouillon granules, cubes and prepared liquid stock; fat and sodium levels are unspecified.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "chicken-base"
+      ]
+    },
+    "5289ea87-c134-516b-a0ce-f9133ca6bea8": {
+      "observed_names": [
+        "vegetable bouillon cube"
+      ],
+      "rationale": "Retail vegetable-flavored stock cubes do not require a specific vegetable-protein base. The legacy vegetable protein bouillon cube identity is narrower and is preserved, without asserting an exact merge.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "vegetable-cubes"
+      ]
+    },
+    "d067f259-629b-5794-ba4e-13d2f79307a8": {
+      "observed_names": [
+        "vegetable bouillon paste"
+      ],
+      "rationale": "Moist concentrated vegetable-based paste for making stock or flavoring recipes. Distinct from cubes, dry vegetable stock powder and prepared liquid stock; exact vegetables and sodium level are unspecified.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "vegetable-base"
+      ]
+    },
+    "97751c4b-fd79-5751-a4d0-a73b021a7a63": {
+      "observed_names": [
+        "shrimp bouillon cube"
+      ],
+      "rationale": "Dry shrimp-flavored bouillon seasoning compressed into cubes for cooking or reconstitution. Distinct from loose granules, plain powdered shrimp and prepared shrimp stock.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "shrimp-cubes"
+      ]
+    },
+    "27903cc3-9afb-55ad-acac-241cd2af75fc": {
+      "observed_names": [
+        "granulated shrimp bouillon"
+      ],
+      "rationale": "Dry granular or powdered shrimp-flavored bouillon blend for cooking or reconstitution. Distinct from compressed cubes and plain ground dried shrimp; exact seasonings and sodium level are unspecified.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "shrimp-granules"
+      ]
+    },
+    "9e4ad99d-aa7a-532a-ab3a-6d1285dacd0d": {
+      "observed_names": [
+        "tomato chicken bouillon cube"
+      ],
+      "rationale": "Compressed dry bouillon seasoning combining tomato and chicken flavors. Distinct from plain chicken bouillon cubes, tomato powder and loose tomato-chicken granules.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "bouillon-cubes"
+      ]
+    },
+    "4ab525ff-0089-58da-9177-115f48e7d15a": {
+      "observed_names": [
+        "granulated tomato chicken bouillon"
+      ],
+      "rationale": "Dry granular or powdered bouillon seasoning combining tomato and chicken flavors, for rice, soups and other cooking. Distinct from tomato-chicken cubes and plain tomato powder.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "bouillon-granules"
+      ]
+    },
+    "a27ad6e5-aa0d-52b9-9295-ed5b7a5ad86f": {
+      "observed_names": [
+        "mushroom bouillon paste"
+      ],
+      "rationale": "Moist concentrated mushroom-based cooking paste for making stock or flavoring sauces and soups. Distinct from plain dried mushroom powder and prepared mushroom stock; formula and sodium level are unspecified.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "mushroom-base"
+      ]
+    },
+    "0a865cac-50a6-5b18-8b94-70b340e072f4": {
+      "observed_names": [
+        "reduced-sodium granulated chicken bouillon"
+      ],
+      "rationale": "Dry granular or powdered chicken bouillon formulated with less sodium than its regular comparison product. The reduction percentage is unspecified; distinct from ordinary bouillon, absolute low-sodium claims and no-added-salt products.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "reduced-sodium"
+      ]
+    },
+    "82995299-f88c-5ee6-b4d5-73613d140abb": {
+      "observed_names": [
+        "whole-grain corn flour"
+      ],
+      "rationale": "Fine flour milled from whole corn kernels, retaining bran, germ and endosperm; corn color is unspecified. Distinct from extracted cornstarch, coarser cornmeal, nixtamalized masa harina and precooked masarepa.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "corn-flours"
+      ]
+    },
+    "edb009dd-7ebe-5d16-a572-ce62e683ea16": {
+      "observed_names": [
+        "white masarepa"
+      ],
+      "rationale": "Precooked white corn flour or fine meal sold for arepas and similar cooking. Distinct from raw white corn flour, yellow masarepa, extracted cornstarch and nixtamalized masa harina.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "masarepa"
+      ]
+    },
+    "4b79279a-347c-580a-9f80-a3c37329afaa": {
+      "observed_names": [
+        "instant polenta"
+      ],
+      "rationale": "Dry cornmeal product processed for quick polenta preparation. Distinct from traditional slow-cooking polenta meal and already cooked or ready-to-slice polenta.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "instant-polenta"
+      ]
+    },
+    "74357807-f7c4-5a4d-8f2c-48ef0e67b35d": {
+      "observed_names": [
+        "Calvados"
+      ],
+      "rationale": "Normandy-style cider or perry brandy sold as Calvados, made by distilling fermented apple or pear cider and aging the spirit. Distinct from generic apple brandy, pear brandy, liqueurs and brandy flavoring; age and strength are unspecified.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "calvados"
+      ]
+    },
+    "f92a9be9-4fab-5da6-b173-44177dd0549b": {
+      "observed_names": [
+        "grappa"
+      ],
+      "rationale": "Italian grape-pomace spirit sold as grappa. Grape variety and aging are unspecified; distinct from wine-distilled grape brandy, pisco, raw grape pomace and a specifically aged grappa.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "grappa"
+      ]
+    },
+    "85cf8c6e-0ad0-5a0d-a6c6-1b08e8b4af95": {
+      "observed_names": [
+        "pisco"
+      ],
+      "rationale": "Grape-wine spirit sold as pisco for drinks and cooking. Country, grape variety and production style are unspecified; distinct from grape-pomace grappa and specifically named aged brandies.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "pisco"
+      ]
+    },
+    "14de87d6-2b60-5c8f-9e5f-a7067fcef6eb": {
+      "observed_names": [
+        "slivovitz"
+      ],
+      "rationale": "Central or Eastern European plum-distilled fruit brandy sold as slivovitz. Age and strength are unspecified; distinct from sweet plum liqueur and other fruit spirits.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "slivovitz"
+      ]
+    },
+    "0dc37b26-d409-5036-9a36-f8172d7ec28a": {
+      "observed_names": [
+        "broccoli slaw mix",
+        "broccoli slaw"
+      ],
+      "rationale": "Raw undressed shredded vegetable mix based on broccoli stems, commonly including carrot or cabbage, sold for slaw and cooking. Distinct from dressed broccoli slaw and plain broccoli; exact vegetable proportions are unspecified.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "broccoli-slaw"
+      ]
+    },
+    "bc6b79b1-26a3-5d9b-8eeb-872f26901bf8": {
+      "observed_names": [
+        "coleslaw mix"
+      ],
+      "rationale": "Raw undressed shredded vegetable mixture based on cabbage, commonly with carrots, sold for preparing coleslaw or cooking. Distinct from coleslaw dressing and a finished dressed salad; exact proportions are unspecified.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "coleslaw"
+      ]
+    },
+    "6e08babb-33e9-5764-9700-a0e0bd0e7af5": {
+      "observed_names": [
+        "frozen peppers and onions"
+      ],
+      "rationale": "Frozen mixture of cut sweet bell peppers and onions sold for cooking, without an added sauce. Pepper colors and vegetable proportions are unspecified; distinct from a single frozen vegetable or a sauced meal.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "pepper-onion"
+      ]
+    },
+    "61e3d78b-e032-58b4-806e-384913cb41e7": {
+      "observed_names": [
+        "frozen stir-fry vegetables"
+      ],
+      "rationale": "Unsauced frozen mixed vegetables sold for stir-frying, commonly combining vegetables such as broccoli, carrot, peppers and peas. Exact mixture is unspecified; distinct from a sauced stir-fry kit or finished dish.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "stir-fry"
+      ]
+    },
+    "f8dbc4c3-f8b0-5a83-aea9-8ec3e47466d9": {
+      "observed_names": [
+        "instant espresso powder"
+      ],
+      "rationale": "Dry soluble espresso-style coffee concentrate for baking or reconstitution. Distinct from ground roasted espresso beans and already brewed espresso.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "espresso"
+      ]
+    },
+    "66827a70-a4af-5003-b714-cbb968b45e74": {
+      "observed_names": [
+        "harissa spice blend"
+      ],
+      "rationale": "Dry North African-style chili and spice blend sold as harissa seasoning. Exact formula and salt level are unspecified; distinct from moist harissa paste and plain ground chili.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "harissa"
+      ]
+    },
+    "2b402b41-f4b4-5fb9-9d8d-ec475bccc5d9": {
+      "observed_names": [
+        "salt-free seasoning blend"
+      ],
+      "rationale": "Mixed herbs, spices or vegetables sold as a salt-free general-purpose cooking seasoning. Exact blend is unspecified; distinct from seasoned salt, salt substitutes and specifically named barbecue blends. No nutrient values are inferred.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "salt-free"
+      ]
+    },
+    "094e5d6f-8025-5b27-a5fe-1832ffcadd33": {
+      "observed_names": [
+        "whole-grain Dijon mustard"
+      ],
+      "rationale": "Prepared Dijon-style mustard retaining visible whole or partly crushed mustard seeds. Distinct from smooth Dijon mustard and grainy mustard without a specified Dijon style.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "dijon"
+      ]
+    },
+    "0cf63910-8a88-57ea-9e6e-7b0a4f97daf9": {
+      "observed_names": [
+        "sweet Italian sausage"
+      ],
+      "rationale": "Fresh uncooked Italian-style pork sausage sold as sweet Italian, with aromatic seasoning and without the hot-chili profile of hot Italian sausage. Casing or loose form is unspecified; distinct from cured salami and generic Italian sausage.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "sweet-sausage"
+      ]
+    },
+    "98a23aff-bb78-576b-ad03-c9d23f8084ba": {
+      "observed_names": [
+        "hot Italian sausage"
+      ],
+      "rationale": "Fresh uncooked Italian-style pork sausage with a hot-chili seasoning profile. Casing or loose form is unspecified; distinct from sweet Italian sausage and cured Italian salami.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "hot-sausage"
+      ]
+    },
+    "a256615c-4d39-5e18-b275-30080c537c84": {
+      "observed_names": [
+        "spring mix"
+      ],
+      "rationale": "Raw tender baby-leaf salad mixture sold as spring mix, combining young lettuces and other leafy greens without dressing. Exact leaves vary; distinct from a single lettuce, a mature cooking-greens mixture and a dressed salad kit.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "spring-mix"
+      ]
+    },
+    "93bc174d-3bde-5524-97d2-7a9f1d2bb31d": {
+      "observed_names": [
+        "graham crackers",
+        "graham cracker crumbs"
+      ],
+      "rationale": "Whole crackers and plain crumbs are the same cooking material under the existing physical-preparation policy. Retail plain crumbs reuse this identity; flavored crackers and premade crusts are not implied.",
+      "definition_basis": "Original generic cooking definition checked against retained retail/manufacturer evidence. Exact recipe, brand, nutrient content and substitution ratio are unspecified.",
+      "public_evidence": [
+        "graham"
+      ]
+    }
+  },
+  "reviewed_names": {
+    "angel hair": {
+      "action": "add",
+      "canonical_id": "89668a57-fe84-5263-bd02-cffdf1605a70",
+      "note": "Retail angel-hair/capellini naming identifies dried wheat pasta for suggestions; explicit fresh angel hair retains its published UUID. Bare recipe wording is not automatically assigned a dried state.",
+      "related_ids": []
+    },
+    "dried angel hair pasta": {
+      "action": "add",
+      "canonical_id": "89668a57-fe84-5263-bd02-cffdf1605a70",
+      "note": "Retail angel-hair/capellini naming identifies dried wheat pasta for suggestions; explicit fresh angel hair retains its published UUID. Bare recipe wording is not automatically assigned a dried state.",
+      "related_ids": []
+    },
+    "chicken bouillon paste": {
+      "action": "add",
+      "canonical_id": "2bda8702-10a6-5e7d-b269-74f123257b57",
+      "note": "Moist concentrated chicken-based paste for making stock or flavoring recipes. Distinct from dry bouillon granules, cubes and prepared liquid stock; fat and sodium levels are unspecified.",
+      "related_ids": []
+    },
+    "chicken base": {
+      "action": "hold",
+      "canonical_id": null,
+      "related_ids": [
+        "2bda8702-10a6-5e7d-b269-74f123257b57"
+      ],
+      "note": "A qualified retail form is now available. The bare recipe phrase still omits consequential physical form or dressing; do not assign a canonical ID or an unconditional alias without source context."
+    },
+    "vegetable bouillon cube": {
+      "action": "add",
+      "canonical_id": "5289ea87-c134-516b-a0ce-f9133ca6bea8",
+      "note": "Retail vegetable-flavored stock cubes do not require a specific vegetable-protein base. The legacy vegetable protein bouillon cube identity is narrower and is preserved, without asserting an exact merge.",
+      "related_ids": []
+    },
+    "vegetable bouillon paste": {
+      "action": "add",
+      "canonical_id": "d067f259-629b-5794-ba4e-13d2f79307a8",
+      "note": "Moist concentrated vegetable-based paste for making stock or flavoring recipes. Distinct from cubes, dry vegetable stock powder and prepared liquid stock; exact vegetables and sodium level are unspecified.",
+      "related_ids": []
+    },
+    "shrimp bouillon cube": {
+      "action": "add",
+      "canonical_id": "97751c4b-fd79-5751-a4d0-a73b021a7a63",
+      "note": "Dry shrimp-flavored bouillon seasoning compressed into cubes for cooking or reconstitution. Distinct from loose granules, plain powdered shrimp and prepared shrimp stock.",
+      "related_ids": []
+    },
+    "granulated shrimp bouillon": {
+      "action": "add",
+      "canonical_id": "27903cc3-9afb-55ad-acac-241cd2af75fc",
+      "note": "Dry granular or powdered shrimp-flavored bouillon blend for cooking or reconstitution. Distinct from compressed cubes and plain ground dried shrimp; exact seasonings and sodium level are unspecified.",
+      "related_ids": []
+    },
+    "tomato chicken bouillon cube": {
+      "action": "add",
+      "canonical_id": "9e4ad99d-aa7a-532a-ab3a-6d1285dacd0d",
+      "note": "Compressed dry bouillon seasoning combining tomato and chicken flavors. Distinct from plain chicken bouillon cubes, tomato powder and loose tomato-chicken granules.",
+      "related_ids": []
+    },
+    "granulated tomato chicken bouillon": {
+      "action": "add",
+      "canonical_id": "4ab525ff-0089-58da-9177-115f48e7d15a",
+      "note": "Dry granular or powdered bouillon seasoning combining tomato and chicken flavors, for rice, soups and other cooking. Distinct from tomato-chicken cubes and plain tomato powder.",
+      "related_ids": []
+    },
+    "mushroom bouillon paste": {
+      "action": "add",
+      "canonical_id": "a27ad6e5-aa0d-52b9-9295-ed5b7a5ad86f",
+      "note": "Moist concentrated mushroom-based cooking paste for making stock or flavoring sauces and soups. Distinct from plain dried mushroom powder and prepared mushroom stock; formula and sodium level are unspecified.",
+      "related_ids": []
+    },
+    "reduced-sodium granulated chicken bouillon": {
+      "action": "add",
+      "canonical_id": "0a865cac-50a6-5b18-8b94-70b340e072f4",
+      "note": "Dry granular or powdered chicken bouillon formulated with less sodium than its regular comparison product. The reduction percentage is unspecified; distinct from ordinary bouillon, absolute low-sodium claims and no-added-salt products.",
+      "related_ids": []
+    },
+    "whole-grain corn flour": {
+      "action": "add",
+      "canonical_id": "82995299-f88c-5ee6-b4d5-73613d140abb",
+      "note": "Fine flour milled from whole corn kernels, retaining bran, germ and endosperm; corn color is unspecified. Distinct from extracted cornstarch, coarser cornmeal, nixtamalized masa harina and precooked masarepa.",
+      "related_ids": []
+    },
+    "white masarepa": {
+      "action": "add",
+      "canonical_id": "edb009dd-7ebe-5d16-a572-ce62e683ea16",
+      "note": "Precooked white corn flour or fine meal sold for arepas and similar cooking. Distinct from raw white corn flour, yellow masarepa, extracted cornstarch and nixtamalized masa harina.",
+      "related_ids": []
+    },
+    "instant polenta": {
+      "action": "add",
+      "canonical_id": "4b79279a-347c-580a-9f80-a3c37329afaa",
+      "note": "Dry cornmeal product processed for quick polenta preparation. Distinct from traditional slow-cooking polenta meal and already cooked or ready-to-slice polenta.",
+      "related_ids": []
+    },
+    "calvados": {
+      "action": "add",
+      "canonical_id": "74357807-f7c4-5a4d-8f2c-48ef0e67b35d",
+      "note": "Normandy-style cider or perry brandy sold as Calvados, made by distilling fermented apple or pear cider and aging the spirit. Distinct from generic apple brandy, pear brandy, liqueurs and brandy flavoring; age and strength are unspecified.",
+      "related_ids": []
+    },
+    "grappa": {
+      "action": "add",
+      "canonical_id": "f92a9be9-4fab-5da6-b173-44177dd0549b",
+      "note": "Italian grape-pomace spirit sold as grappa. Grape variety and aging are unspecified; distinct from wine-distilled grape brandy, pisco, raw grape pomace and a specifically aged grappa.",
+      "related_ids": []
+    },
+    "pisco": {
+      "action": "add",
+      "canonical_id": "85cf8c6e-0ad0-5a0d-a6c6-1b08e8b4af95",
+      "note": "Grape-wine spirit sold as pisco for drinks and cooking. Country, grape variety and production style are unspecified; distinct from grape-pomace grappa and specifically named aged brandies.",
+      "related_ids": []
+    },
+    "slivovitz": {
+      "action": "add",
+      "canonical_id": "14de87d6-2b60-5c8f-9e5f-a7067fcef6eb",
+      "note": "Central or Eastern European plum-distilled fruit brandy sold as slivovitz. Age and strength are unspecified; distinct from sweet plum liqueur and other fruit spirits.",
+      "related_ids": []
+    },
+    "broccoli slaw mix": {
+      "action": "add",
+      "canonical_id": "0dc37b26-d409-5036-9a36-f8172d7ec28a",
+      "note": "Raw undressed shredded vegetable mix based on broccoli stems, commonly including carrot or cabbage, sold for slaw and cooking. Distinct from dressed broccoli slaw and plain broccoli; exact vegetable proportions are unspecified.",
+      "related_ids": []
+    },
+    "broccoli slaw": {
+      "action": "hold",
+      "canonical_id": null,
+      "related_ids": [
+        "0dc37b26-d409-5036-9a36-f8172d7ec28a"
+      ],
+      "note": "A qualified retail form is now available. The bare recipe phrase still omits consequential physical form or dressing; do not assign a canonical ID or an unconditional alias without source context."
+    },
+    "coleslaw mix": {
+      "action": "add",
+      "canonical_id": "bc6b79b1-26a3-5d9b-8eeb-872f26901bf8",
+      "note": "Raw undressed shredded vegetable mixture based on cabbage, commonly with carrots, sold for preparing coleslaw or cooking. Distinct from coleslaw dressing and a finished dressed salad; exact proportions are unspecified.",
+      "related_ids": []
+    },
+    "frozen peppers and onions": {
+      "action": "add",
+      "canonical_id": "6e08babb-33e9-5764-9700-a0e0bd0e7af5",
+      "note": "Frozen mixture of cut sweet bell peppers and onions sold for cooking, without an added sauce. Pepper colors and vegetable proportions are unspecified; distinct from a single frozen vegetable or a sauced meal.",
+      "related_ids": []
+    },
+    "frozen stir-fry vegetables": {
+      "action": "add",
+      "canonical_id": "61e3d78b-e032-58b4-806e-384913cb41e7",
+      "note": "Unsauced frozen mixed vegetables sold for stir-frying, commonly combining vegetables such as broccoli, carrot, peppers and peas. Exact mixture is unspecified; distinct from a sauced stir-fry kit or finished dish.",
+      "related_ids": []
+    },
+    "instant espresso powder": {
+      "action": "add",
+      "canonical_id": "f8dbc4c3-f8b0-5a83-aea9-8ec3e47466d9",
+      "note": "Dry soluble espresso-style coffee concentrate for baking or reconstitution. Distinct from ground roasted espresso beans and already brewed espresso.",
+      "related_ids": []
+    },
+    "harissa spice blend": {
+      "action": "add",
+      "canonical_id": "66827a70-a4af-5003-b714-cbb968b45e74",
+      "note": "Dry North African-style chili and spice blend sold as harissa seasoning. Exact formula and salt level are unspecified; distinct from moist harissa paste and plain ground chili.",
+      "related_ids": []
+    },
+    "salt-free seasoning blend": {
+      "action": "add",
+      "canonical_id": "2b402b41-f4b4-5fb9-9d8d-ec475bccc5d9",
+      "note": "Mixed herbs, spices or vegetables sold as a salt-free general-purpose cooking seasoning. Exact blend is unspecified; distinct from seasoned salt, salt substitutes and specifically named barbecue blends. No nutrient values are inferred.",
+      "related_ids": []
+    },
+    "whole-grain dijon mustard": {
+      "action": "add",
+      "canonical_id": "094e5d6f-8025-5b27-a5fe-1832ffcadd33",
+      "note": "Prepared Dijon-style mustard retaining visible whole or partly crushed mustard seeds. Distinct from smooth Dijon mustard and grainy mustard without a specified Dijon style.",
+      "related_ids": []
+    },
+    "sweet italian sausage": {
+      "action": "add",
+      "canonical_id": "0cf63910-8a88-57ea-9e6e-7b0a4f97daf9",
+      "note": "Fresh uncooked Italian-style pork sausage sold as sweet Italian, with aromatic seasoning and without the hot-chili profile of hot Italian sausage. Casing or loose form is unspecified; distinct from cured salami and generic Italian sausage.",
+      "related_ids": []
+    },
+    "hot italian sausage": {
+      "action": "add",
+      "canonical_id": "98a23aff-bb78-576b-ad03-c9d23f8084ba",
+      "note": "Fresh uncooked Italian-style pork sausage with a hot-chili seasoning profile. Casing or loose form is unspecified; distinct from sweet Italian sausage and cured Italian salami.",
+      "related_ids": []
+    },
+    "spring mix": {
+      "action": "add",
+      "canonical_id": "a256615c-4d39-5e18-b275-30080c537c84",
+      "note": "Raw tender baby-leaf salad mixture sold as spring mix, combining young lettuces and other leafy greens without dressing. Exact leaves vary; distinct from a single lettuce, a mature cooking-greens mixture and a dressed salad kit.",
+      "related_ids": []
+    },
+    "graham crackers": {
+      "action": "add",
+      "canonical_id": "93bc174d-3bde-5524-97d2-7a9f1d2bb31d",
+      "note": "Whole crackers and plain crumbs are the same cooking material under the existing physical-preparation policy. Retail plain crumbs reuse this identity; flavored crackers and premade crusts are not implied.",
+      "related_ids": []
+    },
+    "graham cracker crumbs": {
+      "action": "add",
+      "canonical_id": "93bc174d-3bde-5524-97d2-7a9f1d2bb31d",
+      "note": "Whole crackers and plain crumbs are the same cooking material under the existing physical-preparation policy. Retail plain crumbs reuse this identity; flavored crackers and premade crusts are not implied.",
+      "related_ids": []
+    },
+    "granulated chicken bouillon": {
+      "action": "reuse",
+      "canonical_id": "f2ae6be0-1028-4348-baa7-afe03c2d943d",
+      "note": "The original FoodOn record explicitly annotates finely ground dehydrated dry broth/stock mix. Powder/granule retail names reuse this published dry-mix identity, distinct from cubes, moist paste and prepared stock.",
+      "related_ids": []
+    },
+    "chicken bouillon granules": {
+      "action": "reuse",
+      "canonical_id": "f2ae6be0-1028-4348-baa7-afe03c2d943d",
+      "note": "The original FoodOn record explicitly annotates finely ground dehydrated dry broth/stock mix. Powder/granule retail names reuse this published dry-mix identity, distinct from cubes, moist paste and prepared stock.",
+      "related_ids": []
+    },
+    "chicken bouillon powder": {
+      "action": "reuse",
+      "canonical_id": "f2ae6be0-1028-4348-baa7-afe03c2d943d",
+      "note": "The original FoodOn record explicitly annotates finely ground dehydrated dry broth/stock mix. Powder/granule retail names reuse this published dry-mix identity, distinct from cubes, moist paste and prepared stock.",
+      "related_ids": []
+    },
+    "powdered chicken bouillon": {
+      "action": "reuse",
+      "canonical_id": "f2ae6be0-1028-4348-baa7-afe03c2d943d",
+      "note": "The original FoodOn record explicitly annotates finely ground dehydrated dry broth/stock mix. Powder/granule retail names reuse this published dry-mix identity, distinct from cubes, moist paste and prepared stock.",
+      "related_ids": []
+    },
+    "chicken stock granules": {
+      "action": "reuse",
+      "canonical_id": "f2ae6be0-1028-4348-baa7-afe03c2d943d",
+      "note": "The original FoodOn record explicitly annotates finely ground dehydrated dry broth/stock mix. Powder/granule retail names reuse this published dry-mix identity, distinct from cubes, moist paste and prepared stock.",
+      "related_ids": []
+    },
+    "chicken stock powder": {
+      "action": "reuse",
+      "canonical_id": "f2ae6be0-1028-4348-baa7-afe03c2d943d",
+      "note": "The original FoodOn record explicitly annotates finely ground dehydrated dry broth/stock mix. Powder/granule retail names reuse this published dry-mix identity, distinct from cubes, moist paste and prepared stock.",
+      "related_ids": []
+    },
+    "beef bouillon granules": {
+      "action": "reuse",
+      "canonical_id": "a502fe13-8496-45a2-bfa5-6ef47a16e321",
+      "note": "Qualified dry/granulated names reuse the published granulated beef identity; cubes, paste and prepared stock stay separate.",
+      "related_ids": []
+    },
+    "beef bouillon powder": {
+      "action": "reuse",
+      "canonical_id": "a502fe13-8496-45a2-bfa5-6ef47a16e321",
+      "note": "Qualified dry/granulated names reuse the published granulated beef identity; cubes, paste and prepared stock stay separate.",
+      "related_ids": []
+    },
+    "powdered beef bouillon": {
+      "action": "reuse",
+      "canonical_id": "a502fe13-8496-45a2-bfa5-6ef47a16e321",
+      "note": "Qualified dry/granulated names reuse the published granulated beef identity; cubes, paste and prepared stock stay separate.",
+      "related_ids": []
+    },
+    "beef stock granules": {
+      "action": "reuse",
+      "canonical_id": "a502fe13-8496-45a2-bfa5-6ef47a16e321",
+      "note": "Qualified dry/granulated names reuse the published granulated beef identity; cubes, paste and prepared stock stay separate.",
+      "related_ids": []
+    },
+    "beef stock powder": {
+      "action": "reuse",
+      "canonical_id": "a502fe13-8496-45a2-bfa5-6ef47a16e321",
+      "note": "Qualified dry/granulated names reuse the published granulated beef identity; cubes, paste and prepared stock stay separate.",
+      "related_ids": []
+    },
+    "beef bouillon cubes": {
+      "action": "reuse",
+      "canonical_id": "730e0cac-49b3-424c-a720-38a31845d24f",
+      "note": "Qualified cube and stock-cube names preserve the existing beef cube UUID.",
+      "related_ids": []
+    },
+    "beef stock cube": {
+      "action": "reuse",
+      "canonical_id": "730e0cac-49b3-424c-a720-38a31845d24f",
+      "note": "Qualified cube and stock-cube names preserve the existing beef cube UUID.",
+      "related_ids": []
+    },
+    "beef stock cubes": {
+      "action": "reuse",
+      "canonical_id": "730e0cac-49b3-424c-a720-38a31845d24f",
+      "note": "Qualified cube and stock-cube names preserve the existing beef cube UUID.",
+      "related_ids": []
+    },
+    "beef broth cube": {
+      "action": "reuse",
+      "canonical_id": "730e0cac-49b3-424c-a720-38a31845d24f",
+      "note": "Qualified cube and stock-cube names preserve the existing beef cube UUID.",
+      "related_ids": []
+    },
+    "beef broth cubes": {
+      "action": "reuse",
+      "canonical_id": "730e0cac-49b3-424c-a720-38a31845d24f",
+      "note": "Qualified cube and stock-cube names preserve the existing beef cube UUID.",
+      "related_ids": []
+    },
+    "beef stock paste": {
+      "action": "reuse",
+      "canonical_id": "a635ab9e-f074-47bd-a23c-31774594b580",
+      "note": "Qualified stock/soup-base paste names follow the published beef bouillon paste label; no brand identity or source mapping is inferred.",
+      "related_ids": []
+    },
+    "beef soup base paste": {
+      "action": "reuse",
+      "canonical_id": "a635ab9e-f074-47bd-a23c-31774594b580",
+      "note": "Qualified stock/soup-base paste names follow the published beef bouillon paste label; no brand identity or source mapping is inferred.",
+      "related_ids": []
+    },
+    "chicken bouillon cubes": {
+      "action": "reuse",
+      "canonical_id": "bfd55fe0-5f53-4cd7-9ce4-1b77bed2925c",
+      "note": "Ordinary plural forms of names already owned by the published chicken cube identity.",
+      "related_ids": []
+    },
+    "chicken broth cubes": {
+      "action": "reuse",
+      "canonical_id": "bfd55fe0-5f53-4cd7-9ce4-1b77bed2925c",
+      "note": "Ordinary plural forms of names already owned by the published chicken cube identity.",
+      "related_ids": []
+    },
+    "chicken stock cubes": {
+      "action": "reuse",
+      "canonical_id": "bfd55fe0-5f53-4cd7-9ce4-1b77bed2925c",
+      "note": "Ordinary plural forms of names already owned by the published chicken cube identity.",
+      "related_ids": []
+    },
+    "vegetable bouillon powder": {
+      "action": "reuse",
+      "canonical_id": "e00730e2-edac-5536-97a2-3ae09210ae00",
+      "note": "Existing definition explicitly describes dry powdered/granular vegetable stock for reconstitution; preserve its UUID rather than duplicate it as bouillon.",
+      "related_ids": []
+    },
+    "vegetable bouillon granules": {
+      "action": "reuse",
+      "canonical_id": "e00730e2-edac-5536-97a2-3ae09210ae00",
+      "note": "Existing definition explicitly describes dry powdered/granular vegetable stock for reconstitution; preserve its UUID rather than duplicate it as bouillon.",
+      "related_ids": []
+    },
+    "powdered vegetable bouillon": {
+      "action": "reuse",
+      "canonical_id": "e00730e2-edac-5536-97a2-3ae09210ae00",
+      "note": "Existing definition explicitly describes dry powdered/granular vegetable stock for reconstitution; preserve its UUID rather than duplicate it as bouillon.",
+      "related_ids": []
+    },
+    "american corn flour": {
+      "action": "reuse",
+      "canonical_id": "baa08f40-a3c3-4e08-b7a8-50aee86444e9",
+      "note": "US retail corn flour is milled corn grain, distinct from the starch sold as cornflour in other dialects. Bare names are not merged across existing legacy UUIDs.",
+      "related_ids": []
+    },
+    "us corn flour": {
+      "action": "reuse",
+      "canonical_id": "baa08f40-a3c3-4e08-b7a8-50aee86444e9",
+      "note": "US retail corn flour is milled corn grain, distinct from the starch sold as cornflour in other dialects. Bare names are not merged across existing legacy UUIDs.",
+      "related_ids": []
+    },
+    "finely milled maize flour": {
+      "action": "reuse",
+      "canonical_id": "9c572dce-7e2b-441b-b16e-dcf921a51bd8",
+      "note": "Existing maize-flour definition explicitly specifies fine milling; retain its published UUID without merging legacy corn-flour identities.",
+      "related_ids": []
+    },
+    "fine maize flour": {
+      "action": "reuse",
+      "canonical_id": "9c572dce-7e2b-441b-b16e-dcf921a51bd8",
+      "note": "Existing maize-flour definition explicitly specifies fine milling; retain its published UUID without merging legacy corn-flour identities.",
+      "related_ids": []
+    },
+    "white maize flour": {
+      "action": "reuse",
+      "canonical_id": "dd076388-dcba-4104-bbcb-9fc9aab35532",
+      "note": "Qualified white maize/corn grain flour naming only; precooked white masarepa remains a distinct ingredient.",
+      "related_ids": []
+    },
+    "yellow maize flour": {
+      "action": "reuse",
+      "canonical_id": "8b453608-4a45-4582-9322-e9da563fd066",
+      "note": "Qualified yellow maize/corn grain flour naming only; starch, whole-grain claims and precooked forms are not implied.",
+      "related_ids": []
+    },
+    "whole-grain white corn flour": {
+      "action": "reuse",
+      "canonical_id": "3556c548-0018-486c-ba67-d23c9db3f4eb",
+      "note": "Explicit whole-grain white-corn flour naming preserves the published narrower identity.",
+      "related_ids": []
+    },
+    "whole grain white maize flour": {
+      "action": "reuse",
+      "canonical_id": "3556c548-0018-486c-ba67-d23c9db3f4eb",
+      "note": "Explicit whole-grain white-corn flour naming preserves the published narrower identity.",
+      "related_ids": []
+    },
+    "pre-cooked yellow corn flour": {
+      "action": "reuse",
+      "canonical_id": "7745993b-b14a-41bd-b55d-dd2e18c49927",
+      "note": "Existing definition explicitly specifies precooked yellow corn flour for arepas; preserve its published UUID.",
+      "related_ids": []
+    },
+    "precooked yellow cornmeal": {
+      "action": "reuse",
+      "canonical_id": "7745993b-b14a-41bd-b55d-dd2e18c49927",
+      "note": "Existing definition explicitly specifies precooked yellow corn flour for arepas; preserve its published UUID.",
+      "related_ids": []
+    },
+    "pre-cooked yellow corn meal": {
+      "action": "reuse",
+      "canonical_id": "7745993b-b14a-41bd-b55d-dd2e18c49927",
+      "note": "Existing definition explicitly specifies precooked yellow corn flour for arepas; preserve its published UUID.",
+      "related_ids": []
+    },
+    "yellow arepa flour": {
+      "action": "reuse",
+      "canonical_id": "7745993b-b14a-41bd-b55d-dd2e18c49927",
+      "note": "Existing definition explicitly specifies precooked yellow corn flour for arepas; preserve its published UUID.",
+      "related_ids": []
+    },
+    "masa flour": {
+      "action": "reuse",
+      "canonical_id": "27c34c10-fd08-4737-92af-1ffc2c9fbd56",
+      "note": "Established flour name and regional spelling for dried nixtamalized maize flour. Do not treat ordinary corn flour, masarepa or fresh masa dough as equivalent.",
+      "related_ids": []
+    },
+    "nixtamalised corn flour": {
+      "action": "reuse",
+      "canonical_id": "27c34c10-fd08-4737-92af-1ffc2c9fbd56",
+      "note": "Established flour name and regional spelling for dried nixtamalized maize flour. Do not treat ordinary corn flour, masarepa or fresh masa dough as equivalent.",
+      "related_ids": []
+    },
+    "nixtamalized maize flour": {
+      "action": "reuse",
+      "canonical_id": "27c34c10-fd08-4737-92af-1ffc2c9fbd56",
+      "note": "Established flour name and regional spelling for dried nixtamalized maize flour. Do not treat ordinary corn flour, masarepa or fresh masa dough as equivalent.",
+      "related_ids": []
+    },
+    "nixtamalised maize flour": {
+      "action": "reuse",
+      "canonical_id": "27c34c10-fd08-4737-92af-1ffc2c9fbd56",
+      "note": "Established flour name and regional spelling for dried nixtamalized maize flour. Do not treat ordinary corn flour, masarepa or fresh masa dough as equivalent.",
+      "related_ids": []
+    },
+    "dry cherry brandy": {
+      "action": "reuse",
+      "canonical_id": "66c9e923-4bfb-55a9-b363-6d01ad5536c6",
+      "note": "Existing kirsch definition explicitly describes dry cherry-distilled eau-de-vie. Sweet cherry brandy liqueur and bare cherry brandy remain unresolved.",
+      "related_ids": []
+    },
+    "dry cherry eau-de-vie": {
+      "action": "reuse",
+      "canonical_id": "66c9e923-4bfb-55a9-b363-6d01ad5536c6",
+      "note": "Existing kirsch definition explicitly describes dry cherry-distilled eau-de-vie. Sweet cherry brandy liqueur and bare cherry brandy remain unresolved.",
+      "related_ids": []
+    },
+    "cherry eau de vie": {
+      "action": "reuse",
+      "canonical_id": "66c9e923-4bfb-55a9-b363-6d01ad5536c6",
+      "note": "Existing kirsch definition explicitly describes dry cherry-distilled eau-de-vie. Sweet cherry brandy liqueur and bare cherry brandy remain unresolved.",
+      "related_ids": []
+    },
+    "apricot eau de vie": {
+      "action": "reuse",
+      "canonical_id": "157f981d-05d0-5341-b21a-71ad97e31f20",
+      "note": "Existing dry apricot spirit is retained; this naming review does not equate sweet apricot brandy liqueur or ambiguous bare apricot brandy.",
+      "related_ids": []
+    },
+    "dry apricot brandy": {
+      "action": "reuse",
+      "canonical_id": "157f981d-05d0-5341-b21a-71ad97e31f20",
+      "note": "Existing dry apricot spirit is retained; this naming review does not equate sweet apricot brandy liqueur or ambiguous bare apricot brandy.",
+      "related_ids": []
+    },
+    "apricot eau-de-vie brandy": {
+      "action": "reuse",
+      "canonical_id": "157f981d-05d0-5341-b21a-71ad97e31f20",
+      "note": "Existing dry apricot spirit is retained; this naming review does not equate sweet apricot brandy liqueur or ambiguous bare apricot brandy.",
+      "related_ids": []
+    },
+    "armagnac brandy": {
+      "action": "reuse",
+      "canonical_id": "b7d95895-1b70-4aba-a210-e2508fda1b10",
+      "note": "Qualified name for the existing Armagnac identity, distinct from Calvados, Cognac and generic grape brandy.",
+      "related_ids": []
+    },
+    "cognac brandy": {
+      "action": "reuse",
+      "canonical_id": "320d5f49-13c4-421c-9641-66d8ee3aa9de",
+      "note": "Qualified name for the existing Cognac identity, distinct from Calvados, Armagnac and generic grape brandy.",
+      "related_ids": []
+    }
+  },
+  "public_evidence": {
+    "angel-hair": {
+      "url": "https://www.barilla.com/en-us/products/pasta/classic-blue-box/angel-hair",
+      "final_url": "https://www.barilla.com/en-us/products/pasta/classic-blue-box/angel-hair",
+      "sha256": "174aed1e1b408b81d546e9798c9a96638e82a53b888ba24fa19c4ad837962bbd",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "bouillon-granules": {
+      "url": "https://www.knorr.com/us/en/products/granulated-bouillon.html",
+      "final_url": "https://www.knorr.com/us/en/products/granulated-bouillon.html",
+      "sha256": "e6af61eacf0410996f83e81cbb612774d04ebc5ba0200a5e2b876fd51707f62e",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "bouillon-cubes": {
+      "url": "https://www.knorr.com/us/en/products/bouillon-cubes.html",
+      "final_url": "https://www.knorr.com/us/en/products/bouillon-cubes.html",
+      "sha256": "105a227f1d68301343b1b1f4ce676061b229356876e9e92bfe384f657574cfc3",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "vegetable-cubes": {
+      "url": "https://www.knorr.com/us/en/p/vegetable-bouillon-cubes.html/00048001711778",
+      "final_url": "https://www.knorr.com/us/en/p/vegetable-bouillon-cubes.html/00048001711778",
+      "sha256": "2df5f826a8947b9f8b043ea12885ddb9742bc31f2e85d481a5bd3eaa6d02c880",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "shrimp-cubes": {
+      "url": "https://www.knorr.com/us/en/p/shrimp-bouillon-cubes.html/00048001219830",
+      "final_url": "https://www.knorr.com/us/en/p/shrimp-bouillon-cubes.html/00048001219830",
+      "sha256": "eda1e6601e33d6ffb5856bcc366c971f84b23634c28e9c234cd08ee230cf157c",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "reduced-sodium": {
+      "url": "https://www.knorr.com/us/en/p/granulated-reduced-sodium-chicken-bouillon.html/00048001212749",
+      "final_url": "https://www.knorr.com/us/en/p/granulated-reduced-sodium-chicken-bouillon.html/00048001212749",
+      "sha256": "484d7cdcb7c2e357274db07f70c17449da73ac94600530f63fda96ba10710cea",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "mushroom-base": {
+      "url": "https://shop.betterthanbouillon.com/products/mushroom-base",
+      "final_url": "https://shop.betterthanbouillon.com/products/mushroom-base",
+      "sha256": "6564b84a9a096d165f03c10c972cbc5005fecd024996a22eab39b77dce7788d4",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "corn-flours": {
+      "url": "https://bobs-ebooks.cld.bz/Bob-s-Red-Mill-Product-List-2024/Flours-and-Meals/",
+      "final_url": "https://bobs-ebooks.cld.bz/Bob-s-Red-Mill-Product-List-2024/Flours-and-Meals/",
+      "sha256": "273cfe92a259cf552f4faeac63f9bd2b62a72b8d9911d83993604ad510da413e",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "masarepa": {
+      "url": "https://www.goya.com/en/products/masarepa-pre-cooked-white-corn-meal/",
+      "final_url": "https://www.goya.com/en/products/masarepa-pre-cooked-white-corn-meal/",
+      "sha256": "945d7f8c0917bebf435f89a6bf537804161e42abfce5eb81ba3954b1576f0e09",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "instant-polenta": {
+      "url": "https://www.delallo.com/delallo-instant-polenta-9-2-oz/",
+      "final_url": "https://www.delallo.com/delallo-instant-polenta-9-2-oz/",
+      "sha256": "e076745d46f3bdb8fb276f765043db63967991a0a616b76e49ea1c5add8539fd",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "calvados": {
+      "url": "https://drinkcalvados.com/en/faq/",
+      "final_url": "https://drinkcalvados.com/en/faq/",
+      "sha256": "29126ebbcb40fb2d792141291a43134fc59e18221cfe684ad34485a33f1b5dd8",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "grappa": {
+      "url": "https://www.grappanonino.it/en/grappa-en/optima/",
+      "final_url": "https://www.grappanonino.it/en/grappa-en/optima/",
+      "sha256": "146f1c03179f4a4ad94cf8ac3aef4a4c2421d0b0f717d48e97567c6ecc0a9d79",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "pisco": {
+      "url": "https://www.destilerialacaravedo.com/porton/",
+      "final_url": "https://www.destilerialacaravedo.com/porton/",
+      "sha256": "3f7fbe662a5a5c08decffe23894729d1659ef047fff7c1782016f9df33f4aa29",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "slivovitz": {
+      "url": "https://rjelinek.us/produkt/slivovitz-kosher-5yr-50-075l/",
+      "final_url": "https://rjelinek.us/produkt/slivovitz-kosher-5yr-50-075l/",
+      "sha256": "bba443eda965b3dc9a4de353a6908b2f7c2df5c98932d11d54c3a9e05de67ae7",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "broccoli-slaw": {
+      "url": "https://www.taylorfarms.com/products/broccoli-slaw/",
+      "final_url": "https://www.taylorfarms.com/products/broccoli-slaw/",
+      "sha256": "51d29a799a9cf7c59824369afe88a5f81375dcde2af276a58b89772cdbe82d9e",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "coleslaw": {
+      "url": "https://dolefreshvegetables.com/produce/classic-coleslaw",
+      "final_url": "https://dolefreshvegetables.com/produce/classic-coleslaw",
+      "sha256": "783aa5be2ea002b753e65e829919c6d8f1b5402bd3ab0ecb29339efaa6fba3f1",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "spring-mix": {
+      "url": "https://www.taylorfarms.com/products/spring-mix/",
+      "final_url": "https://www.taylorfarms.com/products/spring-mix/",
+      "sha256": "9bfc41234e89998a748fc918a7c97a9c04c5a3db0adc1147d55addc20f3736bc",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "pepper-onion": {
+      "url": "https://www.birdseye.com/meal-starters/veggie-blends/tri-colored-pepper-onion-medley",
+      "final_url": "https://www.birdseye.com/meal-starters/veggie-blends/tri-colored-pepper-onion-medley",
+      "sha256": "27770c8aa5b35e653c550f44985f9fff9ac5c61739271474759b61e7242cb74c",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "stir-fry": {
+      "url": "https://www.birdseye.com/meal-starters/veggie-blends/deluxe-stir-fry",
+      "final_url": "https://www.birdseye.com/meal-starters/veggie-blends/deluxe-stir-fry",
+      "sha256": "9c8c3f1a524a2882e46b53b520fe8414fce8eff55633e64df1e1dac6c29c4532",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "espresso": {
+      "url": "https://shop.kingarthurbaking.com/items/espresso-powder",
+      "final_url": "https://shop.kingarthurbaking.com/items/espresso-powder",
+      "sha256": "064acc18b014a7bf569b2adc3df874fd0f7e5151dadbe02a8a33b7f34ddc1362",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "harissa": {
+      "url": "https://www.webstaurantstore.com/mccormick-19-5-oz-harissa-seasoning/102MC7844.html",
+      "final_url": "https://www.webstaurantstore.com/mccormick-19-5-oz-harissa-seasoning/102MC7844.html",
+      "sha256": "e5f1bb5804385dc4e11c2d4a5ebfa824784586da3cf840f12941a2bcbeb60ae5",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "salt-free": {
+      "url": "https://www.mccormick.com/products/lawrys-salt-free-all-purpose-recipe-blend-seasoning-13-oz",
+      "final_url": "https://www.mccormick.com/products/lawrys-salt-free-all-purpose-recipe-blend-seasoning-13-oz",
+      "sha256": "1df3f92fc55bfd64d2bf24a6893599eec2130423665d00a770011568ff6258ca",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "dijon": {
+      "url": "https://www.albertsons.com/shop/pd/maille-old-style-whole-grain-dijon-mustard-7-3-oz/105050214",
+      "final_url": "https://www.albertsons.com/shop/pd/maille-old-style-whole-grain-dijon-mustard-7-3-oz/105050214",
+      "sha256": "21714397526f9845a50e66657999cde5084fa548f10b53f21c6e7b74ecada773",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "sweet-sausage": {
+      "url": "https://www.johnsonvillemarketplace.com/products/johnsonville-sweet-italian-sausage",
+      "final_url": "https://www.johnsonvillemarketplace.com/products/johnsonville-sweet-italian-sausage",
+      "sha256": "a3f83f4537c2bb1d8a8926602d5bdd863bdb30e667201c732271f1b888b39d31",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "hot-sausage": {
+      "url": "https://johnsonville.ca/products/hot-italian-sausage/",
+      "final_url": "https://johnsonville.ca/products/hot-italian-sausage/",
+      "sha256": "67c37c2530b2203332bf0b4ceb5a78e0bcec3f40dba65b12b0fb1a975085767a",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "graham": {
+      "url": "https://smartlabel.mondelez.info/044000002183-0001-en-US/index.html",
+      "final_url": "https://smartlabel.mondelez.info/044000002183-0001-en-US/index.html",
+      "sha256": "523d7d73e0cd434da64543666711a70d235dc84739d43d1c8062aad0b49b5a4f",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "shrimp-granules": {
+      "url": "https://www.heb.com/product-detail/knorr-granulated-shrimp-bouillon/2224331",
+      "final_url": "https://www.heb.com/product-detail/knorr-granulated-shrimp-bouillon/2224331",
+      "sha256": "d02032286070b4dd9d8fbd985a7bdca8af8edf52b89ff177db3bfcb2c8a9c43d",
+      "capture_kind": "raw_http",
+      "captured_on": "2026-10-25"
+    },
+    "vegetable-base": {
+      "url": "https://www.betterthanbouillon.com/products/seasoned-vegetable-base/",
+      "sha256": "174c39e7fa595e3870c58485b29e427d28402e21e70275df0c6a27bf5837853a",
+      "capture_kind": "web_tool_batch",
+      "captured_on": "2026-10-25",
+      "note": "Hash covers the retained multi-page web extraction. Direct HTTP returned 406; successful web extraction verifies this page. Brand is an example of the generic material, not an alias."
+    },
+    "chicken-base": {
+      "url": "https://www.betterthanbouillon.com/products/roasted-chicken-base/",
+      "sha256": "174c39e7fa595e3870c58485b29e427d28402e21e70275df0c6a27bf5837853a",
+      "capture_kind": "web_tool_batch",
+      "captured_on": "2026-10-25",
+      "note": "Hash covers the retained multi-page web extraction. Direct HTTP returned 406; successful web extraction verifies this page. Brand is an example of the generic material, not an alias."
+    },
+    "foodon-chicken-drymix": {
+      "url": "https://purl.obolibrary.org/obo/FOODON_03304936",
+      "sha256": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+      "capture_kind": "pinned_source_snapshot",
+      "captured_on": "2026-10-25",
+      "note": "Existing FoodOn import snapshot: chicken bouillon mix has annotations specifying finely ground, heat-treated dry broth/stock mix, dehydrated. Reuse this published dry-mix UUID for powder/granule naming; no new source mapping is added."
+    }
+  },
+  "context_rows": {}
+}

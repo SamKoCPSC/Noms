@@ -1,6 +1,10 @@
 # NOMS-002: Initial Project Setup — Repository, Workspace & Infrastructure
 
-**Status:** 🟡 In Progress
+> **Current-state review — 2026-11-03:** Repository, infrastructure/deployment configuration and isolated tooling are implemented. This is not a new inspection of external production services.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — setup baseline delivered
 **Phase:** Pre-work
 **Created:** 2026-05-09
 

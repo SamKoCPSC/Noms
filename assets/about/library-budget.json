@@ -1,0 +1,19 @@
+{
+  "source": "models/university-library/models/university-library.blend",
+  "source_sha256": "eb5ed51a7c14041b142a4b4444f8cff98a992f0768ee5530fb5bf5d1d278fd73",
+  "triangles": 377149,
+  "assemblies": 14,
+  "materials": 18,
+  "glb_bytes": 11534216,
+  "textures": 0,
+  "geometry": "Coplanar dissolution and bounded mesh simplification; masters unchanged",
+  "shading": "Linear material colors and evaluated normals; runtime matte lighting and dynamic shadows",
+  "position_quantum": 0.00016253972622880204,
+  "quantization": "KHR_mesh_quantization",
+  "penguin_plushes": 1,
+  "plush_triangles": 2841,
+  "plush_source": "assets/models/about-penguin-plushes",
+  "base_glb_sha256": "94064e38a13914539971d027572f87a9bef21c998a49ae1d98fa6336cf4391f1",
+  "character_source": "assets/brand/penguini/3d/source/base.blend",
+  "character_source_sha256": "6569345476121564fb0bb34dd038805d7e4869aa719358b91e90049f4fde4fed"
+}

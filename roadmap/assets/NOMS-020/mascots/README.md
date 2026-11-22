@@ -1,6 +1,10 @@
 # Mascot explorations
 
-Status: exploratory; no mascot selected. These concepts do not replace the selected F2 logo or approve mascot placement in the UI.
+These six concepts remain historical explorations. On 2026-11-03, the user
+selected Chef Penguini, a penguin in a chef hat and terracotta apron, from a later
+concept sheet. The approved [mascot assets and animations](../../../../assets/brand/penguini/README.md)
+are now maintained with the brand assets. UI placement remains a separate task;
+the mascot does not replace the book logo.
 
 [Six-mascot concept sheet](mascot-explorations-v1.png), generated 2026-09-17 using the image-generation tool.
 

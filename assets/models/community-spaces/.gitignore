@@ -1,0 +1,6 @@
+# Rebuild caches, Blender backups and generated download bundles.
+__pycache__/
+*.pyc
+*.blend[0-9]*
+*.log
+/dist/

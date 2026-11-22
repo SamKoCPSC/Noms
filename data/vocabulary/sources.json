@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "foodon",
+      "url": "https://raw.githubusercontent.com/FoodOntology/foodon/cd73540243a84bcd511a500d9a497d12d7dc02f6/foodon.owl",
+      "version": "2026-09-20 (cd73540243a84bcd511a500d9a497d12d7dc02f6)",
+      "checksum": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+      "license": "CC-BY-4.0",
+      "attribution": "FoodOn contributors, FoodOn food ontology, https://foodon.org/. Selected term annotations and definition sources are retained in the extraction catalog; review those notices before reusing upstream wording."
+    },
+    {
+      "id": "wikidata-2026-10-23",
+      "url": "https://www.wikidata.org/wiki/Wikidata:Data_access",
+      "version": "2026-10-23T11:28:09.390884+00:00 (per-entity revisions; not an atomic global dump)",
+      "checksum": "be250244b4a83b641e3a7f0f38402032b1de88a3e8ca9b63414f7dc45408f85d",
+      "license": "CC0-1.0",
+      "attribution": "Wikidata contributors; structured entity data under CC0. English text and selected ranked statements retained at the listed entity revisions; Wikipedia article text is not imported."
+    },
+    {
+      "id": "usda-foundation-2026-04-30",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2026-04-30.zip",
+      "version": "2026-04-30",
+      "checksum": "70457ee9d9342f43bda2010318c85f04210c689fdeb9cd2da4c513b0e8dbc655",
+      "license": "CC0-1.0",
+      "attribution": "US Department of Agriculture, Agricultural Research Service, FoodData Central. Public-domain food descriptions and identifiers; archive release and SHA-256 pin the reviewed records. No nutrient measurements are imported."
+    },
+    {
+      "id": "usda-sr-legacy-2018-04",
+      "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+      "version": "2018-04",
+      "checksum": "b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0",
+      "license": "CC0-1.0",
+      "attribution": "US Department of Agriculture, Agricultural Research Service, FoodData Central. Public-domain food descriptions and identifiers; archive release and SHA-256 pin the reviewed records. No nutrient measurements are imported."
+    }
+  ]
+}

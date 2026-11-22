@@ -1,0 +1,23 @@
+{
+  "source": "User attachment",
+  "restored_on": "2026-11-15",
+  "original_filename": "sams-corner-cocoon-be49fe55331e4bfd8113406253d0d8cd.blend",
+  "attachment_sha256": "1f97b7b32ef46d39406c3e9ae228989ae8b85928d2fb4ddf97d3268e7be2d092",
+  "attachment_bytes": 9070929,
+  "extraction": "None; byte-for-byte copy",
+  "file": "models/sams-corner-cocoon.blend",
+  "sha256": "1f97b7b32ef46d39406c3e9ae228989ae8b85928d2fb4ddf97d3268e7be2d092",
+  "bytes": 9070929,
+  "revision": 18,
+  "review_page": "https://chatgpt.com/space/page_dbc8487deee88191aa97de7c374084b6",
+  "matches_budget": "assets/about/bedroom-budget.json",
+  "master_unchanged": true,
+  "validation": {
+    "blender_version": "4.3.2",
+    "opens_successfully": true,
+    "objects": 3600,
+    "materials": 147,
+    "saved_frame": 1,
+    "auto_execution_disabled": true
+  }
+}

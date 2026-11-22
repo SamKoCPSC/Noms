@@ -1,0 +1,902 @@
+[
+  {
+    "number": 1,
+    "ingredient": "chickpea",
+    "status": "E",
+    "source_id": "FOODON_03306811",
+    "source_label": "chickpea",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03306811",
+    "reason": "Edible chickpea seed."
+  },
+  {
+    "number": 2,
+    "ingredient": "gochujang",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No gochujang term or synonym confirmed."
+  },
+  {
+    "number": 3,
+    "ingredient": "garlic",
+    "status": "E",
+    "source_id": "FOODON_00003582",
+    "source_label": "garlic bulb",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003582",
+    "reason": "Garlic bulb as culinary ingredient."
+  },
+  {
+    "number": 4,
+    "ingredient": "garlic powder",
+    "status": "E",
+    "source_id": "FOODON_03301844",
+    "source_label": "garlic powder",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03301844",
+    "reason": "Garlic powder, not garlic salt."
+  },
+  {
+    "number": 5,
+    "ingredient": "garlic paste",
+    "status": "E",
+    "source_id": "FOODON_03305217",
+    "source_label": "garlic paste",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03305217",
+    "reason": "Garlic paste."
+  },
+  {
+    "number": 6,
+    "ingredient": "chili pepper",
+    "status": "E",
+    "source_id": "FOODON_00003744",
+    "source_label": "chili pepper",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003744",
+    "reason": "Chili pepper ingredient."
+  },
+  {
+    "number": 7,
+    "ingredient": "tomato",
+    "status": "E",
+    "source_id": "FOODON_03301453",
+    "source_label": "tomato",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03301453",
+    "reason": "Tomato ingredient."
+  },
+  {
+    "number": 8,
+    "ingredient": "olive oil",
+    "status": "E",
+    "source_id": "FOODON_03301826",
+    "source_label": "olive oil",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03301826",
+    "reason": "General olive oil."
+  },
+  {
+    "number": 9,
+    "ingredient": "soy sauce",
+    "status": "E",
+    "source_id": "FOODON_03544111",
+    "source_label": "41110 - soy sauce (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03544111",
+    "reason": "FoodEx2 food category for soy sauce; not a clean display label."
+  },
+  {
+    "number": 10,
+    "ingredient": "salt",
+    "status": "E",
+    "source_id": "FOODON_00002250",
+    "source_label": "sodium chloride food material",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00002250",
+    "reason": "Sodium chloride food material; culinary salt."
+  },
+  {
+    "number": 11,
+    "ingredient": "tahini",
+    "status": "E",
+    "source_id": "FOODON_00003855",
+    "source_label": "tahini",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003855",
+    "reason": "Sesame paste used as tahini."
+  },
+  {
+    "number": 12,
+    "ingredient": "sumac",
+    "status": "E",
+    "source_id": "FOODON_03541395",
+    "source_label": "13950 - sumac fruit (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03541395",
+    "reason": "FoodEx2 explicitly identifies the Rhus coriaria fruit spice, compatible with culinary sumac; whole versus ground presentation alone does not create a different ingredient identity here."
+  },
+  {
+    "number": 13,
+    "ingredient": "rice vinegar",
+    "status": "E",
+    "source_id": "FOODON_03307370",
+    "source_label": "rice wine vinegar",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03307370",
+    "reason": "Rice wine vinegar is vinegar, not rice wine."
+  },
+  {
+    "number": 14,
+    "ingredient": "smoked paprika",
+    "status": "R",
+    "source_id": "FOODON_03301223",
+    "source_label": "paprika (ground)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03301223",
+    "reason": "Ground paprika does not establish smoked paprika."
+  },
+  {
+    "number": 15,
+    "ingredient": "black sesame seeds",
+    "status": "E",
+    "source_id": "FOODON_00004782",
+    "source_label": "black sesame seed",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00004782",
+    "reason": "Black sesame seed."
+  },
+  {
+    "number": 16,
+    "ingredient": "doenjang",
+    "status": "R",
+    "source_id": "FOODON_03310005",
+    "source_label": "soybean paste (fermented)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03310005",
+    "reason": "Fermented soybean paste is broader than Korean doenjang."
+  },
+  {
+    "number": 17,
+    "ingredient": "gochugaru",
+    "status": "R",
+    "source_id": "FOODON_03302030",
+    "source_label": "chili powder",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03302030",
+    "reason": "Generic chili powder does not establish Korean gochugaru."
+  },
+  {
+    "number": 18,
+    "ingredient": "perilla leaf",
+    "status": "R",
+    "source_id": "FOODON_03412919",
+    "source_label": "perilla plant",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03412919",
+    "reason": "Perilla plant is not the edible leaf ingredient."
+  },
+  {
+    "number": 19,
+    "ingredient": "saeujeot",
+    "status": "R",
+    "source_id": "FOODON_03309823",
+    "source_label": "shrimp paste",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03309823",
+    "reason": "Generic shrimp paste does not preserve salted small shrimp identity."
+  },
+  {
+    "number": 20,
+    "ingredient": "cheonggukjang",
+    "status": "R",
+    "source_id": "FOODON_00001078",
+    "source_label": "fermented soybean food product",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00001078",
+    "reason": "Fermented soybean food product is broader than cheonggukjang."
+  },
+  {
+    "number": 21,
+    "ingredient": "white miso",
+    "status": "R",
+    "source_id": "FOODON_00003208",
+    "source_label": "miso",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003208",
+    "reason": "Miso exists but no white-miso-specific term confirmed."
+  },
+  {
+    "number": 22,
+    "ingredient": "kombu",
+    "status": "E",
+    "source_id": "FOODON_03317000",
+    "source_label": "konbu (dried)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03317000",
+    "reason": "Dried konbu is the culinary kombu ingredient."
+  },
+  {
+    "number": 23,
+    "ingredient": "katsuobushi",
+    "status": "R",
+    "source_id": "FOODON_03311594",
+    "source_label": "bonito dried",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03311594",
+    "reason": "Dried bonito alone does not establish smoked fermented skipjack katsuobushi."
+  },
+  {
+    "number": 24,
+    "ingredient": "shio koji",
+    "status": "R",
+    "source_id": "FOODON_03311656",
+    "source_label": "koji",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03311656",
+    "reason": "Koji is a component, not the salt-rice seasoning shio koji."
+  },
+  {
+    "number": 25,
+    "ingredient": "umeboshi",
+    "status": "R",
+    "source_id": "FOODON_03541493",
+    "source_label": "14930 - japanese apricots (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03541493",
+    "reason": "Japanese apricot fruit exists, but salt-pickled umeboshi is not confirmed."
+  },
+  {
+    "number": 26,
+    "ingredient": "doubanjiang",
+    "status": "R",
+    "source_id": "FOODON_03310005",
+    "source_label": "soybean paste (fermented)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03310005",
+    "reason": "Generic fermented soybean paste is not specific broad-bean chili doubanjiang."
+  },
+  {
+    "number": 27,
+    "ingredient": "douchi",
+    "status": "R",
+    "source_id": "FOODON_00001078",
+    "source_label": "fermented soybean food product",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00001078",
+    "reason": "Fermented soybean food category does not establish salted black soybean douchi."
+  },
+  {
+    "number": 28,
+    "ingredient": "Shaoxing wine",
+    "status": "R",
+    "source_id": "FOODON_03307312",
+    "source_label": "rice wine",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03307312",
+    "reason": "Rice wine is broader than Shaoxing wine."
+  },
+  {
+    "number": 29,
+    "ingredient": "Sichuan pepper",
+    "status": "E",
+    "source_id": "FOODON_00003470",
+    "source_label": "sichuan pepper",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003470",
+    "reason": "Sichuan pepper food ingredient."
+  },
+  {
+    "number": 30,
+    "ingredient": "Chinese black vinegar",
+    "status": "R",
+    "source_id": "FOODON_03307370",
+    "source_label": "rice wine vinegar",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03307370",
+    "reason": "Rice wine vinegar does not establish Chinese black grain vinegar."
+  },
+  {
+    "number": 31,
+    "ingredient": "galangal",
+    "status": "E",
+    "source_id": "FOODON_03541357",
+    "source_label": "13570 - greater galangal roots (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03541357",
+    "reason": "FoodEx2 greater galangal rhizome category matches the scoped ingredient."
+  },
+  {
+    "number": 32,
+    "ingredient": "makrut lime leaf",
+    "status": "E",
+    "source_id": "FOODON_03540903",
+    "source_label": "09030 - kaffir lime leaves (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03540903",
+    "reason": "FoodEx2 kaffir lime leaves matches makrut lime leaf."
+  },
+  {
+    "number": 33,
+    "ingredient": "lemongrass",
+    "status": "E",
+    "source_id": "FOODON_00003340",
+    "source_label": "lemongrass stalk",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003340",
+    "reason": "Lemongrass stalk, rather than leaf or essential oil."
+  },
+  {
+    "number": 34,
+    "ingredient": "culantro",
+    "status": "E",
+    "source_id": "FOODON_03540838",
+    "source_label": "08380 - culantro leaves (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03540838",
+    "reason": "FoodEx2 culantro leaves; not cilantro."
+  },
+  {
+    "number": 35,
+    "ingredient": "padaek",
+    "status": "R",
+    "source_id": "FOODON_03542615",
+    "source_label": "26150 - fermented fish (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03542615",
+    "reason": "Fermented fish is a broad category; no Lao padaek-specific term confirmed."
+  },
+  {
+    "number": 36,
+    "ingredient": "belacan",
+    "status": "R",
+    "source_id": "FOODON_03309823",
+    "source_label": "shrimp paste",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03309823",
+    "reason": "Belacan is a synonym of a broader shrimp-paste term shared with bagoong alamang."
+  },
+  {
+    "number": 37,
+    "ingredient": "candlenut",
+    "status": "E",
+    "source_id": "FOODON_03541316",
+    "source_label": "13160 - candlenut seeds (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03541316",
+    "reason": "FoodEx2 candlenut seeds as spice."
+  },
+  {
+    "number": 38,
+    "ingredient": "tempeh",
+    "status": "E",
+    "source_id": "FOODON_03304999",
+    "source_label": "tempeh",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03304999",
+    "reason": "Tempeh culinary product."
+  },
+  {
+    "number": 39,
+    "ingredient": "buah keluak",
+    "status": "R",
+    "source_id": "FOODON_00004311",
+    "source_label": "pangium edule plant",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00004311",
+    "reason": "Pangium edule plant exists, but processed seed ingredient is not confirmed."
+  },
+  {
+    "number": 40,
+    "ingredient": "torch ginger flower",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No torch ginger flower or equivalent food material confirmed."
+  },
+  {
+    "number": 41,
+    "ingredient": "bagoong alamang",
+    "status": "R",
+    "source_id": "FOODON_03309823",
+    "source_label": "shrimp paste",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03309823",
+    "reason": "Bagoong alamang is a synonym of generic shrimp paste, also containing belacan."
+  },
+  {
+    "number": 42,
+    "ingredient": "calamansi",
+    "status": "E",
+    "source_id": "FOODON_03541458",
+    "source_label": "14580 - calamondins (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03541458",
+    "reason": "FoodEx2 calamondin fruit category includes calamansi."
+  },
+  {
+    "number": 43,
+    "ingredient": "annatto seed",
+    "status": "E",
+    "source_id": "FOODON_03000015",
+    "source_label": "annatto seed",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03000015",
+    "reason": "Annatto seed, distinct from seasoning paste."
+  },
+  {
+    "number": 44,
+    "ingredient": "banana ketchup",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No banana ketchup term confirmed."
+  },
+  {
+    "number": 45,
+    "ingredient": "pili nut",
+    "status": "E",
+    "source_id": "FOODON_00003722",
+    "source_label": "pili nut",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003722",
+    "reason": "Pili nut edible kernel."
+  },
+  {
+    "number": 46,
+    "ingredient": "asafoetida",
+    "status": "E",
+    "source_id": "FOODON_00002936",
+    "source_label": "asafoetida",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00002936",
+    "reason": "Asafoetida culinary resin."
+  },
+  {
+    "number": 47,
+    "ingredient": "ajwain",
+    "status": "E",
+    "source_id": "FOODON_03541377",
+    "source_label": "13770 - ajowan fruit (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03541377",
+    "reason": "FoodEx2 ajowan fruit includes carom seeds; culinary seed naming is accepted."
+  },
+  {
+    "number": 48,
+    "ingredient": "amchur",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No dried unripe mango powder term confirmed."
+  },
+  {
+    "number": 49,
+    "ingredient": "kokum",
+    "status": "R",
+    "source_id": "FOODON_03412803",
+    "source_label": "garcinia plant",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03412803",
+    "reason": "Garcinia plant is too broad and not the dried kokum rind."
+  },
+  {
+    "number": 50,
+    "ingredient": "goraka",
+    "status": "R",
+    "source_id": "FOODON_03412780",
+    "source_label": "sweet garcinia plant",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03412780",
+    "reason": "Plant-level goraka synonym does not establish dried culinary rind."
+  },
+  {
+    "number": 51,
+    "ingredient": "dried lime",
+    "status": "R",
+    "source_id": "FOODON_00003661",
+    "source_label": "lime",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003661",
+    "reason": "Fresh/general lime does not establish the dried lime ingredient."
+  },
+  {
+    "number": 52,
+    "ingredient": "barberry",
+    "status": "R",
+    "source_id": "FOODON_03412492",
+    "source_label": "barberry plant",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03412492",
+    "reason": "Barberry plant exists, but culinary fruit is not confirmed; bark is a wrong part."
+  },
+  {
+    "number": 53,
+    "ingredient": "blue fenugreek",
+    "status": "R",
+    "source_id": "FOODON_03415082",
+    "source_label": "blue fenugreek plant",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03415082",
+    "reason": "Blue fenugreek plant exists, not a distinct culinary spice product."
+  },
+  {
+    "number": 54,
+    "ingredient": "tklapi",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No Georgian tklapi food term confirmed."
+  },
+  {
+    "number": 55,
+    "ingredient": "kashk",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No scoped Iranian dairy kashk term confirmed."
+  },
+  {
+    "number": 56,
+    "ingredient": "bulgur",
+    "status": "E",
+    "source_id": "FOODON_00003143",
+    "source_label": "bulgur",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003143",
+    "reason": "Bulgur food."
+  },
+  {
+    "number": 57,
+    "ingredient": "freekeh",
+    "status": "E",
+    "source_id": "FOODON_00004577",
+    "source_label": "freekeh (raw)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00004577",
+    "reason": "Uncooked freekeh grain ingredient exists."
+  },
+  {
+    "number": 58,
+    "ingredient": "pomegranate molasses",
+    "status": "R",
+    "source_id": "FOODON_03543248",
+    "source_label": "32480 - juice concentrate, pomegranate (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03543248",
+    "reason": "Pomegranate juice concentrate is related but not explicitly molasses."
+  },
+  {
+    "number": 59,
+    "ingredient": "mahlab",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No mahlab/mahleb or mahaleb kernel spice term confirmed."
+  },
+  {
+    "number": 60,
+    "ingredient": "Aleppo pepper",
+    "status": "R",
+    "source_id": "FOODON_00003744",
+    "source_label": "chili pepper",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003744",
+    "reason": "Generic chili pepper does not establish the Aleppo culinary type."
+  },
+  {
+    "number": 61,
+    "ingredient": "harissa",
+    "status": "E",
+    "source_id": "FOODON_00002484",
+    "source_label": "harissa chili paste",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00002484",
+    "reason": "Harissa chili paste."
+  },
+  {
+    "number": 62,
+    "ingredient": "preserved lemon",
+    "status": "E",
+    "source_id": "FOODON_03316981",
+    "source_label": "salt-preserved lemon (sliced, bottled)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03316981",
+    "reason": "Salt-preserved lemon; sliced and bottled presentation is compatible."
+  },
+  {
+    "number": 63,
+    "ingredient": "ras el hanout",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No ras el hanout blend term confirmed."
+  },
+  {
+    "number": 64,
+    "ingredient": "smen",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No smen fermented butter term confirmed."
+  },
+  {
+    "number": 65,
+    "ingredient": "bsissa",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No bsissa cereal-pulse mixture confirmed."
+  },
+  {
+    "number": 66,
+    "ingredient": "teff",
+    "status": "E",
+    "source_id": "FOODON_03000255",
+    "source_label": "teff kernel",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03000255",
+    "reason": "Teff grain kernel, rather than only the plant."
+  },
+  {
+    "number": 67,
+    "ingredient": "berbere",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No berbere blend term confirmed."
+  },
+  {
+    "number": 68,
+    "ingredient": "mitmita",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No mitmita blend term confirmed."
+  },
+  {
+    "number": 69,
+    "ingredient": "niter kibbeh",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No niter kibbeh spiced butter term confirmed."
+  },
+  {
+    "number": 70,
+    "ingredient": "korarima",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No korarima-specific spice term confirmed; other cardamom is not equivalent."
+  },
+  {
+    "number": 71,
+    "ingredient": "egusi",
+    "status": "E",
+    "source_id": "FOODON_00003899",
+    "source_label": "egusi seed",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003899",
+    "reason": "Egusi seed ingredient."
+  },
+  {
+    "number": 72,
+    "ingredient": "iru",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No Yoruba fermented locust bean iru term confirmed."
+  },
+  {
+    "number": 73,
+    "ingredient": "ogiri",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No ogiri fermented oilseed condiment term confirmed."
+  },
+  {
+    "number": 74,
+    "ingredient": "grains of paradise",
+    "status": "E",
+    "source_id": "FOODON_03305445",
+    "source_label": "grains of paradise",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03305445",
+    "reason": "Grains of paradise spice."
+  },
+  {
+    "number": 75,
+    "ingredient": "fonio",
+    "status": "E",
+    "source_id": "FOODON_03540027",
+    "source_label": "00270 - white fonio grain (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03540027",
+    "reason": "White fonio grain provides a usable fonio ingredient record."
+  },
+  {
+    "number": 76,
+    "ingredient": "baobab fruit powder",
+    "status": "E",
+    "source_id": "FOODON_00005549",
+    "source_label": "baobab powder",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00005549",
+    "reason": "Baobab powder, not merely the tree."
+  },
+  {
+    "number": 77,
+    "ingredient": "mopane worm",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No mopane worm food or matching organism confirmed in the snapshot."
+  },
+  {
+    "number": 78,
+    "ingredient": "amaranth leaf",
+    "status": "E",
+    "source_id": "FOODON_03000026",
+    "source_label": "amaranth leaf",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03000026",
+    "reason": "Amaranth leaf, distinct from grain."
+  },
+  {
+    "number": 79,
+    "ingredient": "moringa leaf",
+    "status": "E",
+    "source_id": "FOODON_00005327",
+    "source_label": "moringa leaf",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00005327",
+    "reason": "Moringa leaf, distinct from oil or powder."
+  },
+  {
+    "number": 80,
+    "ingredient": "Bambara groundnut",
+    "status": "E",
+    "source_id": "FOODON_00002775",
+    "source_label": "bambara groundnut",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00002775",
+    "reason": "Bambara groundnut seed, not peanut."
+  },
+  {
+    "number": 81,
+    "ingredient": "masa harina",
+    "status": "R",
+    "source_id": "FOODON_00002529",
+    "source_label": "masa",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00002529",
+    "reason": "Masa definition combines wet dough and flour; cannot uniquely identify dry masa harina."
+  },
+  {
+    "number": 82,
+    "ingredient": "epazote",
+    "status": "E",
+    "source_id": "FOODON_03540909",
+    "source_label": "09090 - epazote (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03540909",
+    "reason": "FoodEx2 culinary epazote herb."
+  },
+  {
+    "number": 83,
+    "ingredient": "huitlacoche",
+    "status": "E",
+    "source_id": "FOODON_03540785",
+    "source_label": "07850 - corn smuts (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03540785",
+    "reason": "FoodEx2 edible corn smut fungal food category."
+  },
+  {
+    "number": 84,
+    "ingredient": "achiote paste",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No achiote seasoning paste term confirmed; annatto seed is not equivalent."
+  },
+  {
+    "number": 85,
+    "ingredient": "chipotle pepper",
+    "status": "E",
+    "source_id": "FOODON_00002563",
+    "source_label": "chipotle",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00002563",
+    "reason": "Chipotle smoke-dried chili."
+  },
+  {
+    "number": 86,
+    "ingredient": "aji amarillo",
+    "status": "R",
+    "source_id": "FOODON_03540653",
+    "source_label": "06530 - capsicum baccatum (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03540653",
+    "reason": "Capsicum baccatum food group also includes lemon drop and Bishop's Crown; not cultivar-specific aji amarillo."
+  },
+  {
+    "number": 87,
+    "ingredient": "huacatay",
+    "status": "R",
+    "source_id": "FOODON_03414999",
+    "source_label": "marigold plant (Tagetes)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03414999",
+    "reason": "Tagetes genus plant term does not identify the culinary huacatay herb."
+  },
+  {
+    "number": 88,
+    "ingredient": "chuño",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No freeze-dried potato chuno term confirmed."
+  },
+  {
+    "number": 89,
+    "ingredient": "rocoto pepper",
+    "status": "E",
+    "source_id": "FOODON_03540656",
+    "source_label": "06560 - rocoto capsicum (efsa foodex2)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03540656",
+    "reason": "FoodEx2 rocoto capsicum fruit category."
+  },
+  {
+    "number": 90,
+    "ingredient": "tucupi",
+    "status": "N",
+    "source_id": null,
+    "source_label": null,
+    "url": null,
+    "reason": "No processed yellow cassava tucupi liquid confirmed."
+  },
+  {
+    "number": 91,
+    "ingredient": "saffron",
+    "status": "E",
+    "source_id": "FOODON_00003441",
+    "source_label": "saffron thread",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003441",
+    "reason": "Culinary saffron stigma/thread."
+  },
+  {
+    "number": 92,
+    "ingredient": "caper",
+    "status": "E",
+    "source_id": "FOODON_00003493",
+    "source_label": "caper",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003493",
+    "reason": "Edible caper flower bud, not caper berry."
+  },
+  {
+    "number": 93,
+    "ingredient": "caraway seed",
+    "status": "E",
+    "source_id": "FOODON_00003023",
+    "source_label": "caraway seed (dried)",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003023",
+    "reason": "Caraway seed spice."
+  },
+  {
+    "number": 94,
+    "ingredient": "rye flour",
+    "status": "E",
+    "source_id": "FOODON_03302492",
+    "source_label": "rye flour",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03302492",
+    "reason": "Rye flour, not whole grain."
+  },
+  {
+    "number": 95,
+    "ingredient": "lingonberry",
+    "status": "E",
+    "source_id": "FOODON_00003542",
+    "source_label": "lingonberry",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003542",
+    "reason": "Lingonberry edible fruit."
+  },
+  {
+    "number": 96,
+    "ingredient": "ackee",
+    "status": "R",
+    "source_id": "FOODON_00003489",
+    "source_label": "akee",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003489",
+    "reason": "Whole ackee fruit does not distinguish the prepared edible aril from hazardous parts."
+  },
+  {
+    "number": 97,
+    "ingredient": "allspice",
+    "status": "E",
+    "source_id": "FOODON_00002667",
+    "source_label": "allspice",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00002667",
+    "reason": "Allspice berry spice, not sweet pepper also called pimento."
+  },
+  {
+    "number": 98,
+    "ingredient": "Scotch bonnet pepper",
+    "status": "R",
+    "source_id": "FOODON_03412555",
+    "source_label": "habanero pepper plant",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03412555",
+    "reason": "Habanero plant carries Scotch bonnet synonym but is not a specific pepper food record; scotch bonnet mushroom rejected."
+  },
+  {
+    "number": 99,
+    "ingredient": "taro",
+    "status": "E",
+    "source_id": "FOODON_00003752",
+    "source_label": "taro root",
+    "url": "http://purl.obolibrary.org/obo/FOODON_00003752",
+    "reason": "Taro corm/root ingredient, distinct from leaves."
+  },
+  {
+    "number": 100,
+    "ingredient": "coconut milk",
+    "status": "E",
+    "source_id": "FOODON_03303084",
+    "source_label": "coconut milk",
+    "url": "http://purl.obolibrary.org/obo/FOODON_03303084",
+    "reason": "Coconut milk, distinct from water or cream."
+  }
+]

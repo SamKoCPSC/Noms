@@ -913,7 +913,7 @@ mod tests {
         let user = crate::db::insert_user(
             pool,
             &format!("uploader_{u}"),
-            "Upload Test User",
+            &format!("Upload Test User {u}"),
             &format!("upload{u}@example.com"),
             None,
         )

@@ -24,6 +24,56 @@ if grep -q 'Expired test exception' "$test_root/expired.out"; then
     exit 1
 fi
 
+# An inactive-driver exception must stop applying if that driver becomes
+# reachable, and a failed dependency query must not silently allow the audit.
+mock_bin="$test_root/bin"
+mkdir -p "$mock_bin"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$mock_bin/cargo-audit"
+cat > "$mock_bin/cargo" <<'MOCK_CARGO'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1:${2:-}" in
+    audit:--version) echo 'cargo-audit 0.22.2' ;;
+    audit:*) printf '%s\n' "$*" > "$NOMS_TEST_AUDIT_CALLS" ;;
+    tree:*)
+        case "$NOMS_TEST_TREE_MODE" in
+            inactive) printf '%s\n' 'noms v0.1.0' 'sqlx-postgres v0.8.6' ;;
+            active) printf '%s\n' 'noms v0.1.0' 'libsqlite3-sys v0.30.1' ;;
+            failed) exit 42 ;;
+            empty) : ;;
+            *) exit 2 ;;
+        esac
+        ;;
+    *) exit 2 ;;
+esac
+MOCK_CARGO
+chmod +x "$mock_bin/cargo" "$mock_bin/cargo-audit"
+sqlite_allowlist="$test_root/sqlite-allowlist.txt"
+printf '%s\n' 'RUSTSEC-2026-0459|2026-11-30|Test-only inactive driver.' > "$sqlite_allowlist"
+audit_calls="$test_root/audit-calls.txt"
+PATH="$mock_bin:$PATH" NOMS_TEST_TREE_MODE=inactive NOMS_TEST_AUDIT_CALLS="$audit_calls" \
+    NOMS_AUDIT_ALLOWLIST_FILE="$sqlite_allowlist" \
+    "$repo_root/scripts/security-audit.sh" --today 2026-11-12
+grep -q '^audit --ignore RUSTSEC-2026-0459$' "$audit_calls"
+for tree_mode in active failed empty; do
+    rm -f "$audit_calls"
+    if PATH="$mock_bin:$PATH" NOMS_TEST_TREE_MODE="$tree_mode" NOMS_TEST_AUDIT_CALLS="$audit_calls" \
+        NOMS_AUDIT_ALLOWLIST_FILE="$sqlite_allowlist" \
+        "$repo_root/scripts/security-audit.sh" --today 2026-11-12 \
+        >"$test_root/sqlite-$tree_mode.out" 2>&1; then
+        echo "unsafe or unknown SQLite reachability must reject the exception: $tree_mode" >&2
+        exit 1
+    fi
+    if [ -f "$audit_calls" ]; then
+        echo "invalid SQLite exceptions must stop before invoking the auditor" >&2
+        exit 1
+    fi
+done
+# Syntax/expiry-only validation does not need Cargo or an active toolchain.
+PATH="$mock_bin:$PATH" NOMS_TEST_TREE_MODE=failed NOMS_TEST_AUDIT_CALLS="$audit_calls" \
+    NOMS_AUDIT_ALLOWLIST_FILE="$sqlite_allowlist" \
+    "$repo_root/scripts/security-audit.sh" --validate-only --today 2026-11-12
+
 fixture_repo="$test_root/fixture-repo"
 mkdir -p "$fixture_repo"
 git -C "$fixture_repo" init --quiet
@@ -66,6 +116,23 @@ if grep -Fq "$project_secret_fixture" "$test_root/project-secret.out"; then
     exit 1
 fi
 
+# The staging login credential must be detected independently of other keys.
+git -C "$fixture_repo" rm --quiet --cached production.env
+printf 'NOMS_STAGING_LOGIN_SECRET=%s\n' "$project_secret_fixture" > "$fixture_repo/staging.env"
+git -C "$fixture_repo" add staging.env
+if NOMS_SECRET_SCAN_ROOT="$fixture_repo" "$repo_root/scripts/check-tracked-secrets.sh" \
+    >"$test_root/staging-secret.out" 2>&1; then
+    echo "staging login credentials must fail validation" >&2
+    exit 1
+fi
+grep -q 'staging.env' "$test_root/staging-secret.out"
+if grep -Fq "$project_secret_fixture" "$test_root/staging-secret.out"; then
+    echo "staging credential scan must not print discovered values" >&2
+    exit 1
+fi
+printf '%s\n' 'NOMS_STAGING_LOGIN_SECRET=$STAGING_SECRET' > "$fixture_repo/staging.env"
+NOMS_SECRET_SCAN_ROOT="$fixture_repo" "$repo_root/scripts/check-tracked-secrets.sh"
+
 "$repo_root/scripts/check-deployment-artifacts.sh"
 deployment_fixture="$test_root/deployment-fixture"
 mkdir -p "$deployment_fixture"
@@ -77,5 +144,22 @@ if NOMS_DEPLOYMENT_ROOT="$deployment_fixture" \
     exit 1
 fi
 grep -q 'Dockerfile' "$test_root/deployment.out"
+
+# Native builder selection must not hide a moving image tag from validation.
+mkdir -p "$deployment_fixture/tools"
+mv "$deployment_fixture/Dockerfile" "$deployment_fixture/tools/Dockerfile"
+printf '%s\n' 'FROM --platform=$BUILDPLATFORM golang:latest AS builder' \
+    > "$deployment_fixture/tools/Dockerfile"
+if NOMS_DEPLOYMENT_ROOT="$deployment_fixture" \
+    "$repo_root/scripts/check-deployment-artifacts.sh" \
+    >"$test_root/platform-deployment.out" 2>&1; then
+    echo "moving native builder tags must fail deployment validation" >&2
+    exit 1
+fi
+grep -q 'unpinned container base' "$test_root/platform-deployment.out"
+printf '%s\n' 'FROM --platform=$BUILDPLATFORM golang:1.25.3-bookworm@sha256:4f43b271f9673eb7bd0cb3a49cc17b08d8d6ee110277e26dbacc93c43a5a7793 AS builder' \
+    > "$deployment_fixture/tools/Dockerfile"
+NOMS_DEPLOYMENT_ROOT="$deployment_fixture" \
+    "$repo_root/scripts/check-deployment-artifacts.sh"
 
 echo "security policy script tests passed"

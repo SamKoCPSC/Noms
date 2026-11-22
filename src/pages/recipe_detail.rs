@@ -606,9 +606,11 @@ mod layout_tests {
         set_event_converter(Box::new(SerializedHtmlEventConverter));
         let mut dom = VirtualDom::new(|| {
             let ingredients = vec![crate::types::RecipeIngredient {
+                vocabulary_id: None,
                 amount: "2".into(),
                 unit: "cups".into(),
                 name: "water".into(),
+                ..Default::default()
             }];
             rsx! {
                 super::RecipeScaler { ingredients: ingredients.clone() }
@@ -653,13 +655,13 @@ mod layout_tests {
                     .unwrap()
             })
             .collect::<Vec<_>>();
-        assert_eq!(control_ids.len(), 6, "{html}");
+        assert_eq!(control_ids.len(), 8, "{html}");
         assert_eq!(
             control_ids
                 .iter()
                 .collect::<std::collections::HashSet<_>>()
                 .len(),
-            6
+            8
         );
         for id in control_ids {
             assert!(html.contains(&format!("for=\"{id}\"")), "{html}");
@@ -1385,20 +1387,6 @@ fn RecipeScaler(
     let scaled_cook = calculator.read().scaled_cook_time();
     let show_scaled = (current_multiplier - 1.0).abs() > 0.001;
 
-    // Pre-compute display strings for scaled ingredients (rsx! can't handle multi-arg format strings)
-    let scaled_ingredient_display: Vec<String> = scaled_ingredients
-        .iter()
-        .map(|ing| {
-            if !ing.unit.is_empty() {
-                format!("- {} {} {}", ing.amount, ing.unit, ing.name)
-            } else if !ing.amount.is_empty() {
-                format!("- {} {}", ing.amount, ing.name)
-            } else {
-                format!("- {}", ing.name)
-            }
-        })
-        .collect();
-
     // Pre-computed option labels for target ingredient select
     let option_labels: Vec<String> = refs
         .iter()
@@ -1410,6 +1398,28 @@ fn RecipeScaler(
 
     rsx! {
         div { class: "recipe-scaler",
+            div { class: "mobile-only mobile-scaling",
+                div { class: "mobile-scaling-heading",
+                    if let Some(base) = servings.filter(|value| *value > 0) {
+                        span { "Servings" }
+                        div { class: "mobile-servings-stepper", role: "group", aria_label: "Scale servings",
+                            button { r#type: "button", class: "touch-target", aria_label: "Decrease servings", disabled: scaled_servings.unwrap_or(base) <= 1,
+                                onclick: move |_| { let desired = (calculator.read().scaled_servings().unwrap_or(base) - 1).max(1); calculator.with_mut(|value| value.set_multiplier(f64::from(desired) / f64::from(base))); }, "−" }
+                            strong { aria_live: "polite", "{scaled_servings.unwrap_or(base)}" }
+                            button { r#type: "button", class: "touch-target", aria_label: "Increase servings", disabled: scaled_servings.unwrap_or(base) >= 100,
+                                onclick: move |_| { let desired = (calculator.read().scaled_servings().unwrap_or(base) + 1).min(100); calculator.with_mut(|value| value.set_multiplier(f64::from(desired) / f64::from(base))); }, "+" }
+                        }
+                    } else { span { "Ingredients · ×{current_multiplier:.1}" } }
+                }
+                p { class: "recipe-editor__hint", "Adjustments are for this cooking session; the saved recipe stays the same." }
+                ul { class: "recipe-detail__list",
+                    for (index, ingredient) in scaled_ingredients.iter().enumerate() {
+                        li { class: "recipe-detail__list-item",
+                            super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: RecipeIngredient { amount: ingredient.amount.clone(), unit: ingredient.unit.clone(), name: ingredient.name.clone(), ..ingredients[index].clone() }, multiplier: current_multiplier, control_id: "{scaler_id}-check-{index}" }
+                        }
+                    }
+                }
+            }
             // Toggle button
             button {
                 class: "recipe-scaler__toggle",
@@ -1561,12 +1571,12 @@ fn RecipeScaler(
                                 display: "flex",
                                 flex_direction: "column",
                                 gap: "var(--space-xs)",
-                                for text in &scaled_ingredient_display {
+                                for (index, ingredient) in scaled_ingredients.iter().enumerate() {
                                     li {
                                         padding: "var(--space-xs) var(--space-sm)",
                                         font_size: "14px",
                                         color: "var(--text-primary)",
-                                        "{text}"
+                                        super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: RecipeIngredient { amount: ingredient.amount.clone(), unit: ingredient.unit.clone(), name: ingredient.name.clone(), ..ingredients[index].clone() }, multiplier: current_multiplier, checkable: false }
                                     }
                                 }
                             }
@@ -2555,6 +2565,7 @@ fn RecipeDetailContents(id: String) -> Element {
                     let _ = event.data.set_focus(true).await;
                 }
             },
+            MobileRecipeReader { recipe_id: recipe.id.to_string(), title: recipe.title.clone(), ingredients: recipe.ingredients.clone(), steps: recipe.instructions.clone() }
             RecipeAlbumPhoto { images: recipe.images.clone(), title: recipe.title.clone() }
             // ── CARD: Header + Overview (all in one card) ────────────────
             Card {
@@ -2580,6 +2591,7 @@ fn RecipeDetailContents(id: String) -> Element {
                                         recipe_title: recipe.title.clone(),
                                     }
                                 }
+                                super::recipe_json_controls::RecipeJsonExport { recipe_id: recipe.id.to_string() }
                                 ActionMenu {
                                   Link {
                                     to: crate::Route::RecipeVersionGraph { id: recipe.id.to_string() },
@@ -2766,16 +2778,14 @@ fn RecipeDetailContents(id: String) -> Element {
                 Card {
                     div { class: "recipe-detail__ingredients-section",
                         h2 { class: "recipe-detail__section-title", "Ingredients" }
+                        super::recipe_pantry::RecipePantryCheck {
+                            recipe_id: recipe.id,
+                            ingredients: recipe.ingredients.clone(),
+                        }
                         ul { class: "recipe-detail__list",
                             for ing in &recipe.ingredients {
                                 li { class: "recipe-detail__list-item",
-                                    if !ing.amount.is_empty() && !ing.unit.is_empty() {
-                                        "- {ing.amount} {ing.unit} {ing.name}"
-                                    } else if !ing.amount.is_empty() {
-                                        "- {ing.amount} {ing.name}"
-                                    } else {
-                                        "- {ing.name}"
-                                    }
+                                    super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: ing.clone() }
                                 }
                             }
                         }
@@ -3338,13 +3348,7 @@ fn RecipeVersionDetailContents(id: String, version_number: i32) -> Element {
                         ul { class: "recipe-detail__list",
                             for ingredient in &editor.ingredients {
                                 li { class: "recipe-detail__list-item",
-                                    if !ingredient.amount.is_empty() && !ingredient.unit.is_empty() {
-                                        "- {ingredient.amount} {ingredient.unit} {ingredient.name}"
-                                    } else if !ingredient.amount.is_empty() {
-                                        "- {ingredient.amount} {ingredient.name}"
-                                    } else {
-                                        "- {ingredient.name}"
-                                    }
+                                    super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: ingredient.clone() }
                                 }
                             }
                         }
@@ -3511,4 +3515,63 @@ fn RecipeVersionDetailContents(id: String, version_number: i32) -> Element {
             }
         }
     }
+}
+
+/// Session-only cooking presentation, driven by the current published content.
+#[component]
+fn MobileRecipeReader(
+    recipe_id: String,
+    title: String,
+    ingredients: Vec<RecipeIngredient>,
+    steps: Vec<RecipeStep>,
+) -> Element {
+    let mut open = use_signal(|| false);
+    let mut current = use_signal(|| 0usize);
+    let auth = crate::auth::context::use_auth();
+    let mut flat = Vec::new();
+    flatten_cooking_steps(&steps, &mut flat);
+    let count = flat.len();
+    rsx! {
+        div { class: "mobile-recipe-bar",
+            if auth.is_authenticated { AddToCollectionDropdown { recipe_id: recipe_id.clone(), recipe_title: title.clone() } }
+            else { Link { to: crate::Route::Login {}, class: "btn btn-secondary touch-target", "Sign in to collect" } }
+            if count > 0 { button { r#type: "button", class: "btn btn-primary touch-target", onclick: move |_| { current.set(0); open.set(true); }, "Start cooking" } }
+        }
+        if open() && count > 0 {
+            SharedModal { aria_labelledby: "mobile-cooking-title", focus_selector: "#mobile-cooking-close", on_dismiss: move |_| open.set(false),
+                section { class: "mobile-cooking", onclick: move |event| event.stop_propagation(),
+                    header { class: "mobile-cooking-header", h2 { id: "mobile-cooking-title", "{title}" } button { id: "mobile-cooking-close", r#type: "button", class: "btn btn-secondary touch-target", onclick: move |_| open.set(false), "Close" } }
+                    p { class: "mobile-cooking-progress", aria_live: "polite", "STEP {current() + 1} OF {count}" }
+                    div { class: "mobile-cooking-step", "{flat[current().min(count - 1)].text}" }
+                    if !flat[current().min(count - 1)].photos.is_empty() {
+                        div { class: "mobile-cooking-photos", for image in &flat[current().min(count - 1)].photos { MobileCookingPhoto { image: image.clone() } } }
+                    }
+                    details { class: "neumo-card", summary { "Ingredients · original quantities" }
+                        for ingredient in &ingredients { super::recipe_ingredient_editor::RecipeIngredientLine { ingredient: ingredient.clone() } }
+                    }
+                    div { class: "mobile-recipe-bar",
+                        button { r#type: "button", class: "btn btn-secondary touch-target", disabled: current() == 0, onclick: move |_| { let index = current(); current.set(index.saturating_sub(1)); }, "Previous" }
+                        if current() + 1 < count { button { r#type: "button", class: "btn btn-primary touch-target", onclick: move |_| { let index = current(); current.set((index + 1).min(count - 1)); }, "Next step" } }
+                        else { button { r#type: "button", class: "btn btn-primary touch-target", onclick: move |_| open.set(false), "Finish cooking" } }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn flatten_cooking_steps(steps: &[RecipeStep], output: &mut Vec<RecipeStep>) {
+    for step in steps {
+        output.push(step.clone());
+        flatten_cooking_steps(&step.sub_steps, output);
+    }
+}
+
+#[component]
+fn MobileCookingPhoto(image: crate::types::RecipeImage) -> Element {
+    let mut failed = use_signal(|| false);
+    if failed() {
+        return rsx! { p { "Photo unavailable for this step." } };
+    }
+    rsx! { EditedRecipeImage { image, alt: "Photo for this cooking step", on_error: move |_| failed.set(true) } }
 }

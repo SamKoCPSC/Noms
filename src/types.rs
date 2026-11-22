@@ -178,12 +178,63 @@ impl RecipeImage {
     }
 }
 
+// Shared authoring limits; server validation applies the same bounds.
+pub const MAX_INGREDIENT_AMOUNT_CHARS: usize = 64;
+pub const MAX_INGREDIENT_UNIT_CHARS: usize = 64;
+pub const MAX_INGREDIENT_NAME_CHARS: usize = 500;
+pub const MAX_INGREDIENT_MODIFIER_CHARS: usize = 500;
+pub const MAX_INGREDIENT_SUBSTITUTES: usize = 10;
+
 /// A single ingredient in a recipe.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct RecipeIngredient {
+    /// Optional suggestion identity. Authored names remain authoritative.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vocabulary_id: Option<Uuid>,
     pub amount: String,
     pub unit: String,
     pub name: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text_before: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub text_after: String,
+    /// Authored alternatives, each with independent quantities and wording.
+    /// Editors and validation permit one level of alternatives only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub substitutes: Vec<RecipeIngredient>,
+}
+
+impl RecipeIngredient {
+    pub fn label(&self) -> String {
+        let mut label = [&self.text_before, &self.name]
+            .into_iter()
+            .map(|part| part.trim())
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let after = self.text_after.trim();
+        if !after.is_empty() {
+            if !label.is_empty() && !after.starts_with([',', ';', ':', '.', ')']) {
+                label.push(' ');
+            }
+            label.push_str(after);
+        }
+        label
+    }
+
+    pub fn display_line(&self, amount: &str) -> String {
+        let mut line = [amount.trim(), self.unit.trim(), &self.label()]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+        if self.optional {
+            line.push_str(" (optional)");
+        }
+        line
+    }
 }
 
 /// A single step in a recipe (supports nested sub-steps).
@@ -358,8 +409,62 @@ impl Default for RecipeEditorState {
     }
 }
 
+/// Private recovery metadata, separate from recipe content and exports.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ImportedRecipeImage {
+    pub id: Uuid,
+    pub image: RecipeImage,
+    pub step_path: Vec<usize>,
+    pub step_text: Option<String>,
+    pub position: usize,
+    pub status: ImportImageStatus,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ImportImageStatus {
+    Missing,
+    Unavailable,
+    NotReusable,
+    UnsafeUrl,
+    PlacementChanged,
+}
+impl ImportImageStatus {
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::Missing => "This image no longer exists in Noms storage.",
+            Self::Unavailable => "Couldn't access this image. It may be temporarily unavailable.",
+            Self::NotReusable => {
+                "This image is unavailable or you don't have permission to reuse it."
+            }
+            Self::UnsafeUrl => "This image URL isn't supported for reuse.",
+            Self::PlacementChanged => {
+                "The original step has changed. Add this image manually to the desired step."
+            }
+        }
+    }
+}
+impl ImportedRecipeImage {
+    pub fn placement(&self) -> String {
+        if self.step_path.is_empty() {
+            format!("Recipe image {}", self.position + 1)
+        } else {
+            format!(
+                "Step {} photo {}",
+                self.step_path
+                    .iter()
+                    .map(|n| (n + 1).to_string())
+                    .collect::<Vec<_>>()
+                    .join("."),
+                self.position + 1
+            )
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecipeDraftView {
+    #[serde(default)]
+    pub import_images: Vec<ImportedRecipeImage>,
     pub id: Uuid,
     pub recipe_id: Option<Uuid>,
     pub base_version_number: Option<i32>,
@@ -1754,5 +1859,58 @@ mod tests {
             serde_json::from_value(serde_json::to_value(&page).unwrap()).unwrap();
 
         assert_eq!(restored, page);
+    }
+}
+
+#[cfg(test)]
+mod ingredient_vocabulary_tests {
+    use super::*;
+    #[test]
+    fn ingredient_options_preserve_independent_quantities_and_authored_wording() {
+        let ingredient = RecipeIngredient {
+            name: "chickpeas".into(),
+            amount: "2".into(),
+            unit: "cans".into(),
+            text_before: "Acme".into(),
+            text_after: ", drained and rinsed".into(),
+            optional: true,
+            substitutes: vec![RecipeIngredient {
+                name: "white beans".into(),
+                amount: "400".into(),
+                unit: "g".into(),
+                text_before: "cooked".into(),
+                text_after: "and cooled".into(),
+                optional: true,
+                vocabulary_id: Some(Uuid::new_v4()),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        assert_eq!(
+            ingredient.display_line(&ingredient.amount),
+            "2 cans Acme chickpeas, drained and rinsed (optional)"
+        );
+        assert_eq!(
+            ingredient.substitutes[0].display_line("800"),
+            "800 g cooked white beans and cooled (optional)"
+        );
+        let restored: RecipeIngredient =
+            serde_json::from_value(serde_json::to_value(&ingredient).unwrap()).unwrap();
+        assert_eq!(restored, ingredient);
+        assert_eq!(ingredient.name, "chickpeas");
+    }
+
+    #[test]
+    fn ingredient_vocabulary_reference_is_optional_and_lossless() {
+        let old = serde_json::json!({"amount":"1","unit":"cup","name":"grandma's spice mix"});
+        let mut ingredient: RecipeIngredient = serde_json::from_value(old.clone()).unwrap();
+        assert_eq!(ingredient.vocabulary_id, None);
+        assert_eq!(serde_json::to_value(&ingredient).unwrap(), old);
+        ingredient.vocabulary_id = Some(Uuid::new_v4());
+        let new = serde_json::to_value(&ingredient).unwrap();
+        assert_eq!(
+            serde_json::from_value::<RecipeIngredient>(new).unwrap(),
+            ingredient
+        );
     }
 }

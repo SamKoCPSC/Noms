@@ -1,0 +1,207 @@
+{
+  "model": "farmers-market",
+  "source": "assets/models/community-spaces/models/farmers-market.blend",
+  "source_kind": "master",
+  "source_sha256": "a22d8f4fcbecafdb0956de2c506c5dbc66808281c017bccf8e0bc1424a064e84",
+  "frame": 160,
+  "view_transform": "AgX",
+  "look": "AgX - Medium High Contrast",
+  "exposure": 0.15000000596046448,
+  "world_color": [
+    0.7599999904632568,
+    0.8199999928474426,
+    0.8799999952316284
+  ],
+  "world_strength": 0.30000001192092896,
+  "lights": [
+    {
+      "name": "Broad warm key",
+      "position": [
+        -5,
+        10,
+        7
+      ],
+      "rotation": [
+        0.710404634475708,
+        7.066605434147277e-8,
+        -0.6202495694160461
+      ],
+      "energy": 1400,
+      "size": 6,
+      "color": [
+        1,
+        0.9100000262260437,
+        0.8199999928474426
+      ]
+    },
+    {
+      "name": "Soft cool fill",
+      "position": [
+        7,
+        7,
+        2
+      ],
+      "rotation": [
+        0.8050110936164856,
+        -1.0627340429891774e-7,
+        1.292496681213379
+      ],
+      "energy": 1000,
+      "size": 5,
+      "color": [
+        0.8799999952316284,
+        0.9399999976158142,
+        1
+      ]
+    },
+    {
+      "name": "Roofless overhead softbox",
+      "position": [
+        0,
+        10,
+        -5
+      ],
+      "rotation": [
+        0.46364760398864746,
+        3.909664769707888e-8,
+        3.141592502593994
+      ],
+      "energy": 1200,
+      "size": 5,
+      "color": [
+        1,
+        0.9399999976158142,
+        0.8399999737739563
+      ]
+    }
+  ],
+  "reference_camera": {
+    "vp": [
+      0.09318661689758301,
+      -0.035720862448215485,
+      -0.0008945166482590139,
+      0,
+      1.2584573383378483e-8,
+      0.10597186535596848,
+      -0.001073419931344688,
+      0,
+      -0.058241646736860275,
+      -0.057153355330228806,
+      -0.0014312266139313579,
+      0,
+      7.041474248126178e-8,
+      -0.10597163438796997,
+      -0.9544006586074829,
+      1
+    ],
+    "view": [
+      0.8479982614517212,
+      -0.28442737460136414,
+      0.44721361994743347,
+      0,
+      1.145196222296363e-7,
+      0.843800961971283,
+      0.5366563200950623,
+      0,
+      -0.5299990177154541,
+      -0.45508357882499695,
+      0.7155417799949646,
+      0,
+      6.407742034753028e-7,
+      -0.8437991142272949,
+      -22.897335052490234,
+      1
+    ],
+    "eye": [
+      10,
+      13,
+      16
+    ],
+    "width": 1080,
+    "height": 945
+  },
+  "front_facing_relief_repairs": [
+    "MARKET BITES scalloped awning edge",
+    "MARKET BITES scalloped awning edge.001",
+    "MARKET BITES scalloped awning edge.002",
+    "MARKET BITES scalloped awning edge.003",
+    "MARKET BITES scalloped awning edge.004",
+    "MARKET BITES scalloped awning edge.005",
+    "MARKET BITES scalloped awning edge.006",
+    "MARKET BITES scalloped awning edge.007",
+    "MARKET BITES scalloped awning edge.008",
+    "MARKET BITES scalloped awning edge.009",
+    "MARKET BITES scalloped awning edge.010",
+    "MARKET BITES scalloped awning edge.011",
+    "Picnic table 3 coffee cup coffee",
+    "Picnic table 3 second coffee cup coffee",
+    "Canvas festival pennant",
+    "Canvas festival pennant.001",
+    "Canvas festival pennant.002",
+    "Canvas festival pennant.003",
+    "Canvas festival pennant.004",
+    "Canvas festival pennant.005",
+    "Canvas festival pennant.006",
+    "Canvas festival pennant.007",
+    "Canvas festival pennant.008",
+    "Canvas festival pennant.009",
+    "Canvas festival pennant.010",
+    "Canvas festival pennant.011",
+    "Canvas festival pennant.012",
+    "Canvas festival pennant.013",
+    "Canvas festival pennant.014",
+    "Canvas festival pennant.015",
+    "Canvas festival pennant.016",
+    "Canvas festival pennant.017",
+    "Canvas festival pennant.018",
+    "Canvas festival pennant.019",
+    "Canvas festival pennant.020",
+    "Canvas festival pennant.021",
+    "Canvas festival pennant.022",
+    "Canvas festival pennant.023",
+    "Canvas festival pennant.024",
+    "Canvas festival pennant.025",
+    "Canvas festival pennant.026",
+    "Canvas festival pennant.027",
+    "Canvas festival pennant.028",
+    "Canvas festival pennant.029",
+    "Canvas festival pennant.030",
+    "Canvas festival pennant.031",
+    "Canvas festival pennant.032",
+    "Canvas festival pennant.033",
+    "Canvas festival pennant.034",
+    "Canvas festival pennant.035",
+    "Canvas festival pennant.036",
+    "Canvas festival pennant.037",
+    "Canvas festival pennant.038",
+    "Canvas festival pennant.039",
+    "Canvas festival pennant.040",
+    "Canvas festival pennant.041",
+    "Canvas festival pennant.042",
+    "Canvas festival pennant.043",
+    "Canvas festival pennant.044",
+    "Canvas festival pennant.045"
+  ],
+  "outward_winding_repairs": [
+    "Apron hanging tie.R • tour",
+    "Apron hanging tie.L • tour",
+    "Apron hanging tie.R • tour.001",
+    "Apron hanging tie.L • tour.001"
+  ],
+  "triangles": 786584,
+  "atlases": 2,
+  "atlas_size": 2048,
+  "bake_samples": 128,
+  "animations": false,
+  "penguini": true,
+  "glb_bytes": 19372924,
+  "uncompressed_bytes": 62384568,
+  "display_texture_format": "PNG RGB8 sRGB, original resolution",
+  "geometry_compression": {
+    "extension": "EXT_meshopt_compression",
+    "position_bits": 16,
+    "normal_bits": 12,
+    "uv_bits": 16,
+    "triangles_removed": 0
+  }
+}

@@ -1,0 +1,1488 @@
+{
+  "schema_version": 1,
+  "dimension": "ingredient",
+  "entries": [
+    {
+      "id": "686f2847-4f4b-4e0b-ae8f-c493e2e94bcb",
+      "label": "chickpea",
+      "locale": "en",
+      "aliases": [
+        "garbanzo bean",
+        "garbanzo",
+        "chick pea"
+      ],
+      "description": "The edible seed of the chickpea plant.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a6483249-cd58-43f3-b4f5-5cbc0e393745",
+      "label": "gochujang",
+      "locale": "en",
+      "aliases": [],
+      "description": "A Korean fermented chili paste; distinct from other chili pastes.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9e257b68-7c43-41b4-a331-c42f559beda1",
+      "label": "garlic",
+      "locale": "en",
+      "aliases": [],
+      "description": "Garlic used as an ingredient; distinct from garlic powder and garlic paste.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "090daaac-dfca-41c8-b9c7-e7cd0d414f43",
+      "label": "garlic powder",
+      "locale": "en",
+      "aliases": [
+        "powdered garlic"
+      ],
+      "description": "Dried garlic ground into powder; distinct from garlic salt.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "cb6506d0-12fc-424d-97b5-b7fc6d291687",
+      "label": "garlic paste",
+      "locale": "en",
+      "aliases": [],
+      "description": "Garlic processed into a paste; distinct from whole garlic and garlic powder.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b940ee2d-3277-4160-9f09-346458e3e104",
+      "label": "chili pepper",
+      "locale": "en",
+      "aliases": [
+        "chilli pepper",
+        "chile pepper"
+      ],
+      "description": "A chili pepper used as an ingredient; distinct from chili dishes, powders, and blends.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1c29f668-5bfa-4600-8e17-0133f91b68de",
+      "label": "tomato",
+      "locale": "en",
+      "aliases": [],
+      "description": "Tomato used as an ingredient; distinct from tomato paste and tomato sauce.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "47359146-a677-400e-b6b5-c106520355e7",
+      "label": "olive oil",
+      "locale": "en",
+      "aliases": [],
+      "description": "Oil extracted from olives; a general entry without a specified grade.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "42f9281f-bd16-4212-998f-0370128f6e07",
+      "label": "soy sauce",
+      "locale": "en",
+      "aliases": [
+        "soya sauce"
+      ],
+      "description": "Soy sauce used as a seasoning; distinct from tamari and other substitute sauces.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "090e6228-0da4-4920-b48d-3a2fb09c4a92",
+      "label": "salt",
+      "locale": "en",
+      "aliases": [],
+      "description": "Edible salt used for seasoning; a general entry without a specified variety.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "dea12fbf-c0e9-44ad-968e-0e8a438ec8fa",
+      "label": "tahini",
+      "locale": "en",
+      "aliases": [
+        "tahina"
+      ],
+      "description": "A paste made from sesame seeds; distinct from whole sesame seeds and sesame oil.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e82dd25f-0dfe-42cb-a8c7-6077f00537d7",
+      "label": "sumac",
+      "locale": "en",
+      "aliases": [],
+      "description": "Ground dried sumac fruit used as a tart seasoning; distinct from sumac spice blends.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "984aeedb-d887-406b-9dc3-f7ad851905a4",
+      "label": "rice vinegar",
+      "locale": "en",
+      "aliases": [
+        "rice wine vinegar"
+      ],
+      "description": "Vinegar made from fermented rice; distinct from rice wine and seasoned rice vinegar.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "45bc7fb5-6e37-4edb-badf-918b5c8ea5f7",
+      "label": "smoked paprika",
+      "locale": "en",
+      "aliases": [
+        "smoked pimenton"
+      ],
+      "description": "Paprika made from smoked dried peppers; distinct from unsmoked paprika.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "cbb5bb76-927b-4bee-9761-1eeecb6289cd",
+      "label": "black sesame seeds",
+      "locale": "en",
+      "aliases": [
+        "black sesame"
+      ],
+      "description": "Black sesame seeds used whole or toasted; distinct from sesame oil and sesame paste.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3a5e2d1a-568c-481b-a8a6-2985dce2d901",
+      "label": "doenjang",
+      "locale": "en",
+      "aliases": [
+        "Korean soybean paste"
+      ],
+      "description": "Korean fermented soybean paste, distinct from miso.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2c6bada1-ca0d-40fb-9668-f3f722f562ed",
+      "label": "gochugaru",
+      "locale": "en",
+      "aliases": [
+        "Korean chili flakes"
+      ],
+      "description": "Korean dried red chili flakes or powder.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f0167f19-be00-4876-9c15-b3ae35dd8fda",
+      "label": "perilla leaf",
+      "locale": "en",
+      "aliases": [
+        "kkaennip",
+        "perilla leaves"
+      ],
+      "description": "Edible perilla leaves used in Korean and other cuisines; distinct from perilla seed and oil.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "44c966e1-7876-4162-b5cf-465a6fd39ec3",
+      "label": "saeujeot",
+      "locale": "en",
+      "aliases": [
+        "saeujeot salted shrimp"
+      ],
+      "description": "Korean salted fermented small shrimp condiment.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "65af547b-4b32-491c-874b-8af2a39c7653",
+      "label": "cheonggukjang",
+      "locale": "en",
+      "aliases": [
+        "chungkukjang"
+      ],
+      "description": "Korean rapidly fermented soybean paste.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "0a7f6978-a10c-415d-b322-73afcfd0e122",
+      "label": "white miso",
+      "locale": "en",
+      "aliases": [
+        "shiro miso"
+      ],
+      "description": "A light Japanese miso paste; distinct from the broader miso category.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "feb4a7c0-79a0-4a0e-8443-27fbe0def3ca",
+      "label": "kombu",
+      "locale": "en",
+      "aliases": [
+        "konbu"
+      ],
+      "description": "Edible kelp sold as kombu for stocks and other dishes.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c7779987-cdf8-43a3-a590-5933db0144e3",
+      "label": "katsuobushi",
+      "locale": "en",
+      "aliases": [
+        "bonito flakes"
+      ],
+      "description": "Dried smoked fermented skipjack tuna used as a seasoning.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2947f8d1-fe85-4c19-82f6-1f7c16340611",
+      "label": "shio koji",
+      "locale": "en",
+      "aliases": [
+        "shio-koji"
+      ],
+      "description": "A salt, rice koji, and water fermentation used as a seasoning.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "830372c1-a460-4bfb-a296-de7fe8485f4e",
+      "label": "umeboshi",
+      "locale": "en",
+      "aliases": [],
+      "description": "Japanese salt-pickled ume fruit.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ab889f59-7478-4a6f-b41a-7f86edb11a99",
+      "label": "doubanjiang",
+      "locale": "en",
+      "aliases": [
+        "toban djan"
+      ],
+      "description": "Fermented broad-bean chili paste; distinct from generic bean paste.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5beb3af7-0cbd-469a-a9aa-84614ce356b2",
+      "label": "douchi",
+      "locale": "en",
+      "aliases": [
+        "fermented black soybeans"
+      ],
+      "description": "Chinese salted fermented black soybeans.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4219d969-e654-4d43-bf01-0254bcde496a",
+      "label": "Shaoxing wine",
+      "locale": "en",
+      "aliases": [
+        "Shaoxing rice wine"
+      ],
+      "description": "Chinese rice wine used in cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c761993e-774c-44a8-b8b9-c9ca3acb5153",
+      "label": "Sichuan pepper",
+      "locale": "en",
+      "aliases": [
+        "Szechuan pepper"
+      ],
+      "description": "Aromatic Zanthoxylum husks used as a spice, not black pepper.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "24aff122-6a33-46b1-9a7c-f0ca2162e497",
+      "label": "Chinese black vinegar",
+      "locale": "en",
+      "aliases": [
+        "Chinese black rice vinegar"
+      ],
+      "description": "Dark Chinese grain vinegar used as a condiment.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9ddb1486-d3dd-4a2e-9254-fbf5f180c1cd",
+      "label": "galangal",
+      "locale": "en",
+      "aliases": [
+        "greater galangal"
+      ],
+      "description": "The culinary rhizome of greater galangal, distinct from ginger.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8f4baf3d-6b84-4661-9b7c-4b6e21fd68eb",
+      "label": "makrut lime leaf",
+      "locale": "en",
+      "aliases": [
+        "kaffir lime leaf"
+      ],
+      "description": "Aromatic leaves of makrut lime, distinct from its fruit.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a08214d9-7023-4b49-8684-f9e98f6edf59",
+      "label": "lemongrass",
+      "locale": "en",
+      "aliases": [
+        "lemon grass"
+      ],
+      "description": "Culinary lemongrass stalks, not essential oil.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "be295ca5-20d9-4a91-a8ab-a08315ca83b9",
+      "label": "culantro",
+      "locale": "en",
+      "aliases": [
+        "sawtooth coriander",
+        "recao"
+      ],
+      "description": "Leaves of Eryngium foetidum, distinct from cilantro.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8c95b124-718b-48b9-9807-4028dbf6e61c",
+      "label": "padaek",
+      "locale": "en",
+      "aliases": [
+        "padek",
+        "pa daek"
+      ],
+      "description": "Lao fermented fish condiment, distinct from clear fish sauce.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "adb32cd9-d2bc-4b44-85df-0586cc78bd6d",
+      "label": "belacan",
+      "locale": "en",
+      "aliases": [
+        "belachan"
+      ],
+      "description": "Malaysian fermented shrimp paste, commonly sold as a block.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1222f8ec-b845-444e-80a6-507100c5e02e",
+      "label": "candlenut",
+      "locale": "en",
+      "aliases": [
+        "candle nut",
+        "kemiri"
+      ],
+      "description": "The culinary candlenut kernel, normally cooked before consumption.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3ecc32bd-292a-4dbf-82ee-0a621c0a35b0",
+      "label": "tempeh",
+      "locale": "en",
+      "aliases": [
+        "tempe"
+      ],
+      "description": "A fermented soybean food used as an ingredient.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "005eea8b-e644-4fc3-8b74-027c825862e0",
+      "label": "buah keluak",
+      "locale": "en",
+      "aliases": [
+        "keluak",
+        "kluwek"
+      ],
+      "description": "Processed Pangium edule seed used in Peranakan and Indonesian cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a0d22ccd-ed87-4aa3-8f89-0811304b8e98",
+      "label": "torch ginger flower",
+      "locale": "en",
+      "aliases": [
+        "bunga kantan"
+      ],
+      "description": "The edible flower bud of torch ginger.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2105155e-5310-4ecf-91a4-2a5f4b17fa56",
+      "label": "bagoong alamang",
+      "locale": "en",
+      "aliases": [
+        "Filipino fermented shrimp paste"
+      ],
+      "description": "Filipino fermented shrimp condiment, distinct from belacan.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a86d25ae-a2d5-4085-a96e-71fd714b6cc2",
+      "label": "calamansi",
+      "locale": "en",
+      "aliases": [
+        "calamondin",
+        "kalamansi"
+      ],
+      "description": "The small citrus fruit or its culinary juice; not generic lime.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "25a28f42-0548-4ca1-9a9d-2a05a668517d",
+      "label": "annatto seed",
+      "locale": "en",
+      "aliases": [
+        "achiote seed",
+        "annatto seeds"
+      ],
+      "description": "Bixa orellana seeds used for color and flavor; distinct from achiote paste.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4c6dc81c-c401-4b02-b01d-792a14544cc0",
+      "label": "banana ketchup",
+      "locale": "en",
+      "aliases": [
+        "banana catsup"
+      ],
+      "description": "A banana-based condiment used in Filipino cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3324a5ff-1c10-4628-9c2a-edebc3da77d7",
+      "label": "pili nut",
+      "locale": "en",
+      "aliases": [
+        "pili nuts"
+      ],
+      "description": "The edible kernel of Canarium ovatum.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e6992fa3-02dd-4c85-8e4d-93c5a6c9554e",
+      "label": "asafoetida",
+      "locale": "en",
+      "aliases": [
+        "asafetida",
+        "hing"
+      ],
+      "description": "The pungent culinary resin spice; blends may contain additional ingredients.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c9bf3756-175f-4fca-9159-0b03016eba9d",
+      "label": "ajwain",
+      "locale": "en",
+      "aliases": [
+        "ajowan",
+        "carom seed"
+      ],
+      "description": "The spice seed of Trachyspermum ammi.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "16437fb4-9b6d-4d65-abdc-640a8565c97f",
+      "label": "amchur",
+      "locale": "en",
+      "aliases": [
+        "amchoor",
+        "dried mango powder"
+      ],
+      "description": "Powder made from dried unripe mango, distinct from fresh mango.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "711d4e4b-4dbd-4c2c-8063-aad0b31d82c3",
+      "label": "kokum",
+      "locale": "en",
+      "aliases": [
+        "Garcinia indica rind"
+      ],
+      "description": "The sour dried rind of Garcinia indica used in western Indian cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "deffc1df-d27a-413f-b350-0a81833fdcc2",
+      "label": "goraka",
+      "locale": "en",
+      "aliases": [
+        "Garcinia gummi-gutta rind",
+        "goraka rind"
+      ],
+      "description": "Dried Garcinia gummi-gutta fruit rind used in Sri Lankan cooking; distinct from kokum.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e3cfeb2e-c61e-4d0f-ac05-61763351a44c",
+      "label": "dried lime",
+      "locale": "en",
+      "aliases": [
+        "loomi",
+        "black lime"
+      ],
+      "description": "Whole dried lime used as a sour seasoning.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "720a47b3-c780-4cb6-8ecf-0e9eb7559b20",
+      "label": "barberry",
+      "locale": "en",
+      "aliases": [
+        "zereshk"
+      ],
+      "description": "Culinary barberry fruit, commonly dried.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f7d0e2c7-41d0-4141-8d68-773c866524c6",
+      "label": "blue fenugreek",
+      "locale": "en",
+      "aliases": [
+        "utskho suneli"
+      ],
+      "description": "The spice made from Trigonella caerulea, distinct from ordinary fenugreek.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c9f207f5-03d9-4017-8415-c23a64823472",
+      "label": "tklapi",
+      "locale": "en",
+      "aliases": [],
+      "description": "Georgian sour fruit leather used as a cooking ingredient.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "121cf8cb-bffb-4f01-af0e-97dd3b3eb507",
+      "label": "kashk",
+      "locale": "en",
+      "aliases": [
+        "Persian kashk"
+      ],
+      "description": "The Iranian fermented dairy ingredient, distinct from grain-based foods also called kashk.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4b264aa4-561a-4178-9cb7-01f3fd119b0b",
+      "label": "bulgur",
+      "locale": "en",
+      "aliases": [
+        "bulghur",
+        "burghul"
+      ],
+      "description": "Parboiled cracked wheat used as a grain ingredient.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "03f5c898-e2f1-4cb9-9dfb-a2a1ef7d531f",
+      "label": "freekeh",
+      "locale": "en",
+      "aliases": [
+        "frikeh"
+      ],
+      "description": "Roasted green wheat used as a grain ingredient.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "3ce7350d-ff75-4495-8e1a-bc158f7cef62",
+      "label": "pomegranate molasses",
+      "locale": "en",
+      "aliases": [
+        "pomegranate syrup concentrate"
+      ],
+      "description": "Concentrated tart pomegranate syrup used in savory cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b5095c0d-b9fc-44f5-ab17-5299eda2bf9f",
+      "label": "mahlab",
+      "locale": "en",
+      "aliases": [
+        "mahleb",
+        "mahlep"
+      ],
+      "description": "A spice made from the kernels of Prunus mahaleb cherries.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8015d5fb-d05b-4957-b73a-a3af56688088",
+      "label": "Aleppo pepper",
+      "locale": "en",
+      "aliases": [
+        "Halaby pepper"
+      ],
+      "description": "Dried flakes of the Aleppo pepper culinary type.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9042f141-b9db-4016-9d59-89675da4a181",
+      "label": "harissa",
+      "locale": "en",
+      "aliases": [
+        "harissa paste"
+      ],
+      "description": "A North African chili paste used as a condiment or ingredient.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "1d04609f-089d-4511-911f-cdfbd3871abe",
+      "label": "preserved lemon",
+      "locale": "en",
+      "aliases": [
+        "salt-preserved lemon"
+      ],
+      "description": "Lemon cured in salt or brine, distinct from fresh lemon.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c0769e59-5b1d-4ea1-92f3-be0ef6431eab",
+      "label": "ras el hanout",
+      "locale": "en",
+      "aliases": [
+        "ras al hanout"
+      ],
+      "description": "A North African spice blend whose exact composition varies.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "673b2e07-3f81-48e6-bf69-4be34b338970",
+      "label": "smen",
+      "locale": "en",
+      "aliases": [],
+      "description": "North African aged fermented butter, distinct from ordinary clarified butter.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "42b461ed-1589-49c1-a250-63b4d6556059",
+      "label": "bsissa",
+      "locale": "en",
+      "aliases": [
+        "bssisa"
+      ],
+      "description": "A North African roasted cereal and pulse mixture, distinct from generic flour.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9bbcd5fd-19cc-426d-ba90-b62fc3e578ae",
+      "label": "teff",
+      "locale": "en",
+      "aliases": [
+        "tef"
+      ],
+      "description": "The grain of Eragrostis tef used in Ethiopian and Eritrean cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f4360289-278f-4604-b9a0-3dbae52f0ad6",
+      "label": "berbere",
+      "locale": "en",
+      "aliases": [
+        "berbere spice blend"
+      ],
+      "description": "An Ethiopian and Eritrean chili-based spice blend.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5ec1efad-5eed-4c79-a29c-3ec164194f65",
+      "label": "mitmita",
+      "locale": "en",
+      "aliases": [],
+      "description": "A hot Ethiopian spice blend, distinct from berbere.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "033ea407-15ce-4bcf-acb5-c959d9390465",
+      "label": "niter kibbeh",
+      "locale": "en",
+      "aliases": [
+        "niter qibe",
+        "nitir qibe"
+      ],
+      "description": "Ethiopian spiced clarified butter, distinct from plain ghee.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "17f3a6c6-c4a5-44c9-af54-f58c54a87604",
+      "label": "korarima",
+      "locale": "en",
+      "aliases": [
+        "Ethiopian cardamom"
+      ],
+      "description": "Aframomum corrorima spice, distinct from green cardamom.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "dc13ff20-fc84-44ee-a2b7-fd129c98e05b",
+      "label": "egusi",
+      "locale": "en",
+      "aliases": [
+        "egusi seed"
+      ],
+      "description": "Culinary melon seeds used as a thickener, not generic pumpkin seeds.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b9b2cea7-294e-4514-ba3d-3cce61a1c3ec",
+      "label": "iru",
+      "locale": "en",
+      "aliases": [
+        "locust bean condiment"
+      ],
+      "description": "A Yoruba fermented African locust bean condiment.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "af7e36b4-a1c4-4764-8f1b-99ad532f4fc0",
+      "label": "ogiri",
+      "locale": "en",
+      "aliases": [],
+      "description": "A Nigerian fermented oilseed condiment, distinct from locust-bean-based iru.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "730d6833-d1a8-4236-acc3-843bad189887",
+      "label": "grains of paradise",
+      "locale": "en",
+      "aliases": [
+        "melegueta pepper"
+      ],
+      "description": "Aframomum melegueta seeds used as a spice.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "5367312c-4765-48e1-b14b-41f6bc385468",
+      "label": "fonio",
+      "locale": "en",
+      "aliases": [],
+      "description": "A West African cereal grain, distinct from millet as a broad category.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "139def79-424c-46c4-aacf-c8607c6178cd",
+      "label": "baobab fruit powder",
+      "locale": "en",
+      "aliases": [
+        "baobab powder"
+      ],
+      "description": "Powder from the edible dried baobab fruit pulp.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "7bdaf8aa-50c7-4adc-bd5c-274ffdd05bcf",
+      "label": "mopane worm",
+      "locale": "en",
+      "aliases": [
+        "mopani worm"
+      ],
+      "description": "The edible caterpillar commonly dried for southern African cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "d81b6211-7f16-475a-bd39-3d2c80cba6fd",
+      "label": "amaranth leaf",
+      "locale": "en",
+      "aliases": [
+        "amaranth greens"
+      ],
+      "description": "Edible amaranth leaves used as a leafy vegetable, distinct from amaranth grain.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "603d7cec-44f8-4a83-b288-ffdaa85fbe38",
+      "label": "moringa leaf",
+      "locale": "en",
+      "aliases": [
+        "moringa leaves"
+      ],
+      "description": "Edible moringa leaves, distinct from moringa seed oil.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "411c67d9-fd58-4fa8-8804-e5aacaeaa015",
+      "label": "Bambara groundnut",
+      "locale": "en",
+      "aliases": [
+        "Bambara bean"
+      ],
+      "description": "The edible seed of Vigna subterranea, distinct from peanut.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "27c34c10-fd08-4737-92af-1ffc2c9fbd56",
+      "label": "masa harina",
+      "locale": "en",
+      "aliases": [
+        "nixtamalized corn flour"
+      ],
+      "description": "Dried nixtamalized maize flour, distinct from ordinary cornmeal.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "697c6aea-d923-4fe0-8dc3-4dd119b83f58",
+      "label": "epazote",
+      "locale": "en",
+      "aliases": [],
+      "description": "The culinary herb Dysphania ambrosioides.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "bc9ab501-c595-4e15-9ef4-e8f442a4980c",
+      "label": "huitlacoche",
+      "locale": "en",
+      "aliases": [
+        "cuitlacoche",
+        "corn smut"
+      ],
+      "description": "Edible Ustilago maydis galls on maize used as an ingredient.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "e9f15d6f-2f72-49f4-8dec-4223fbc4ac12",
+      "label": "achiote paste",
+      "locale": "en",
+      "aliases": [
+        "recado rojo"
+      ],
+      "description": "A seasoning paste based on annatto and other ingredients; distinct from annatto seed.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8417c4ea-f01e-4c0f-a9f9-aa1f94643110",
+      "label": "chipotle pepper",
+      "locale": "en",
+      "aliases": [
+        "chipotle"
+      ],
+      "description": "A smoke-dried ripe jalapeno pepper, distinct from canned chipotle in adobo.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "144e00ec-06eb-4004-baa8-fdbfca00f73c",
+      "label": "aji amarillo",
+      "locale": "en",
+      "aliases": [
+        "ají amarillo"
+      ],
+      "description": "The yellow-orange Peruvian chili pepper culinary type.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "52eb7706-5305-4063-86de-ecdf015dc39f",
+      "label": "huacatay",
+      "locale": "en",
+      "aliases": [
+        "Peruvian black mint"
+      ],
+      "description": "The culinary herb Tagetes minuta, distinct from ordinary mint.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "558f302a-55c1-4664-ae31-375151652c6a",
+      "label": "chuño",
+      "locale": "en",
+      "aliases": [
+        "chuno"
+      ],
+      "description": "Traditional freeze-dried potato, distinct from potato starch.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "10a2bad8-f96a-40e8-8ceb-6f99b656081b",
+      "label": "rocoto pepper",
+      "locale": "en",
+      "aliases": [
+        "rocoto"
+      ],
+      "description": "The Capsicum pubescens chili pepper used in Andean cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "14b01ff2-b064-45bd-873f-a172a53cd7df",
+      "label": "tucupi",
+      "locale": "en",
+      "aliases": [],
+      "description": "A processed fermented yellow cassava liquid used in Amazonian cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "2e12ec9c-1436-4e68-9756-d43eb7e8c3c8",
+      "label": "saffron",
+      "locale": "en",
+      "aliases": [],
+      "description": "The dried stigmas of Crocus sativus used as a spice.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4c8a0655-faa1-43e5-bde4-b6ac3176c3d3",
+      "label": "caper",
+      "locale": "en",
+      "aliases": [
+        "capers"
+      ],
+      "description": "Preserved Capparis flower buds, distinct from caper berries.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "bd4c815d-9619-4b73-ad56-7867e2222c9e",
+      "label": "caraway seed",
+      "locale": "en",
+      "aliases": [
+        "caraway"
+      ],
+      "description": "The culinary spice seed of Carum carvi.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9c423f9f-9c2d-4b5f-b53d-cd32bb1ef367",
+      "label": "rye flour",
+      "locale": "en",
+      "aliases": [],
+      "description": "Flour milled from rye grain, distinct from whole rye grain.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "efa6a1dc-185e-40ee-83de-43c2134b8a4f",
+      "label": "lingonberry",
+      "locale": "en",
+      "aliases": [
+        "cowberry"
+      ],
+      "description": "The edible fruit of Vaccinium vitis-idaea.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "9582a662-4b2a-4f8b-90ac-36c539c7f006",
+      "label": "ackee",
+      "locale": "en",
+      "aliases": [],
+      "description": "The prepared edible aril of ackee fruit used in Caribbean cooking.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "67858c66-1cfa-4cab-8bfc-4cb1c28d58f2",
+      "label": "allspice",
+      "locale": "en",
+      "aliases": [
+        "pimento",
+        "Jamaica pepper"
+      ],
+      "description": "The dried berry of Pimenta dioica, distinct from mixed spice.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "6aaad4b8-9edb-472b-be87-e6f041d00269",
+      "label": "Scotch bonnet pepper",
+      "locale": "en",
+      "aliases": [
+        "Scotch bonnet"
+      ],
+      "description": "The Scotch bonnet chili pepper culinary type.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "ff25c95e-e585-4f5c-9f16-b64909014aae",
+      "label": "taro",
+      "locale": "en",
+      "aliases": [
+        "taro root"
+      ],
+      "description": "The edible taro corm, distinct from taro leaves.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "463e1b6b-4d83-4044-9b8f-5f164d1e73c0",
+      "label": "coconut milk",
+      "locale": "en",
+      "aliases": [],
+      "description": "Coconut flesh extract used in cooking, distinct from coconut water and cream.",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    }
+  ]
+}

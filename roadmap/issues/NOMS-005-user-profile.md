@@ -1,6 +1,10 @@
 # NOMS-005: User Profile & Account Management
 
-**Status:** ⚪ Backlog  
+> **Current-state review — 2026-11-03:** Profile/avatar editing, linked accounts, logout/account deletion and the account hub are implemented. PR #53 adds database-unique display names; PR #49 adds Accounts artwork.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — profile/account baseline implemented
 **Phase:** Phase 1 (core user experience)  
 **Depends on:** NOMS-004 (OAuth authentication)
 

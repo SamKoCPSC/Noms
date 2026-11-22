@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "source_checksum": "d8a0111adfd8c40dbcf7ed8ad041a1e6f67b5074bf30b677b9ad3c6e4a3f5c1a",
+  "policy_checksum": "721c87a6e13d84e5da34b742a6679ee62411cc196cc9b600625e791f0ee562b3",
+  "benchmark_checksum": "d627c1ee7eb09904e8e1a1b17e313b1da3d919067e9001abf468a7b65c69cb72",
+  "discovery_records": 25455,
+  "detailed_records": 2312,
+  "instance_records_outside_detailed_capture": 23143,
+  "english_labels": 2058,
+  "missing_english_labels": 254,
+  "missing_english_descriptions": 505,
+  "dispositions": {
+    "hold_for_review": 1896,
+    "exclude_from_kitchen_seed": 167,
+    "recommended_candidate": 249
+  },
+  "shortlist_families": {
+    "cookware": 37,
+    "kitchen_supplies": 13,
+    "preparation_tools": 106,
+    "bakeware": 20,
+    "bar_tools": 10,
+    "appliances": 54,
+    "measuring_tools": 6,
+    "storage": 3
+  },
+  "shortlist_tiers": {
+    "specialist": 94,
+    "scope_review": 13,
+    "core": 142
+  },
+  "renamed_shortlist_labels": 42,
+  "shortlist_missing_descriptions": 15,
+  "duplicate_primary_name_groups": 29,
+  "shared_label_or_alias_groups": 122,
+  "coverage_by_reference": {
+    "noms-common-kitchen": {
+      "shortlisted_name_match": 111,
+      "no_name_match_in_capture": 29,
+      "unreviewed_or_excluded_name_match": 1
+    },
+    "prism": {
+      "shortlisted_name_match": 17,
+      "no_name_match_in_capture": 4
+    },
+    "wikibooks": {
+      "no_name_match_in_capture": 38,
+      "shortlisted_name_match": 76,
+      "unreviewed_or_excluded_name_match": 13
+    }
+  },
+  "coverage_match_basis": {
+    "noms-common-kitchen": {
+      "source_name_or_alias": 107,
+      "none": 29,
+      "proposed_label_only": 5
+    },
+    "prism": {
+      "source_name_or_alias": 16,
+      "none": 4,
+      "proposed_label_only": 1
+    },
+    "wikibooks": {
+      "none": 38,
+      "source_name_or_alias": 88,
+      "proposed_label_only": 1
+    }
+  },
+  "limitations": [
+    "Bounded hierarchy discovery, not all Wikidata equipment.",
+    "Per-entity revisions, not an atomic global dump.",
+    "Policy-assisted triage and an explicitly curated shortlist, not semantic certification of every record.",
+    "Lexical benchmark matches are not identity approvals; no match does not prove absence from Wikidata.",
+    "Upstream aliases are research evidence only; none approved for import.",
+    "No production seed, API, schema, recipe or historical data changes."
+  ]
+}

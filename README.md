@@ -13,17 +13,27 @@ Noms is a full-stack recipe management and sharing platform that combines person
 
 - **Version history** — Track how a recipe evolves over time with full history of changes
 - **Fork model** — Iterate on other user recipes while tracking attribution
-- **URL import** — Import recipe data from other websites
+- **Recipe import and export** — Paste recipe-page clipboard content into an editable private draft, import/export Noms JSON/ZIP, or export offline HTML recipes and cookbooks. Direct URL/Schema.org integration remains planned.
 - **Collections** — Organize recipes in folders
-- **Community interactions** — Public profiles, shareable links, likes, and comments
+- **Kitchen workspace** — Manage separate pantries and grocery lists in one place. Track ingredient amounts and availability, find owned and collected recipes with all required ingredients available while distinguishing missing optional ingredients, check individual recipes against a selected pantry, or build independent shopping lists from accessible recipes and manual items with serving-aware quantities and recipe context. Generate only missing pantry ingredients, with optional ingredients included by default and a toggle to exclude them. Put selected purchased ingredients into a pantry, restocking existing names while preserving their quantities, and choose whether to keep or remove the selected grocery rows. Optional ingredient-name suggestions support pantry and grocery entry alongside custom names and household supplies.
+- **Discovery and sharing** — Public profiles, recipe/collection visibility, shareable links, public Explore and full Search. Signed-out visitors can search public recipes, collections and cooks; signed-in viewers can also search their own private/unlisted content. Likes and comment threads remain future work.
 - **Built-in calculator** — Easily scale recipes to specific proportions
+- **Precise unit suggestions** — Compact local weight and volume autocomplete in recipes, pantries and grocery lists. Enter or closing a nonblank query confirms the first match unless another option was selected. APIs standardize recognized aliases and require a supported unit; blank units are invalid. Whole portions must be entered as measured quantities. See [unit suggestions](docs/ingredient-unit-autocomplete.md).
 - **Public informational pages** — Server-rendered Home, About, and task-oriented How-to pages
 
 Built with **Rust** and **Dioxus**, Noms compiles to a single codebase that runs on the web, desktop, and mobile.
 
 ## Roadmap Status
 
-**NOMS-013 — Marketing Pages & 3D Feasibility Experiment:** In progress. The conventional Home, About, and How-to implementation is merged. Editorial approval, visual/asset documentation, the custom icon family, the complete production release gate, and the isolated 3D feasibility experiment remain outstanding. See the [NOMS-013 implementation plan](roadmap/implementation-plans/NOMS-013-marketing-pages-3d-experience.md) for checkpoint-level evidence and remaining work.
+The [roadmap board](roadmap/README.md) and
+[2026-11-03 current-state review](roadmap/reviews/2026-11-03-current-state.md)
+separate merged baselines from partial features and release acceptance.
+Core authoring, media, collections, search, Kitchen and responsive layouts are
+implemented. Optional/substitute-aware Kitchen checks, missing-only shopping
+lists and specific production/acceptance follow-ups remain. The About page now
+contains a five-scene Rust tour; its earlier no-production-3D plan is historical.
+Desktop/mobile build features exist, but native packaging and PWA/offline
+delivery are not claimed as completed releases.
 
 ## Local Development Setup
 
@@ -41,11 +51,20 @@ installed in the development image used by `just up`. Install them on the host
 only if you also want to run standalone commands such as `just check`,
 `just migrate`, or `just dev`.
 
+MinIO and its `mc` client are also built from pinned official source versions
+in that image because the former public MinIO container images are unavailable.
+The first build downloads Go modules and compiles these tools; subsequent
+builds can reuse Docker's cached layers. No MinIO registry login is needed.
+Go tools compile on the Docker builder's native architecture and cross-compile
+for the runtime image, avoiding emulated Go/GCC builds on Apple Silicon.
+
 For host-side Rust checks, add the WASM compilation target:
 
 ```bash
 rustup target add wasm32-unknown-unknown
 ```
+
+For managed Codex cloud sessions, use the [Codex cloud development guide](docker/codex-cloud/README.md), including headless browser checks and screenshots. The normal local and production workflows remain unchanged.
 
 ### 2. Configure Environment Variables for Standalone Commands
 
@@ -232,6 +251,27 @@ after each successful image publication. For a rollback, select a published
 GHCR packages initially default to private: the `noms` package must be made
 public for Railway's Free plan to pull it. Credentials are injected by Railway
 at runtime, never passed as Docker build arguments.
+
+The release image includes the maintained vocabulary and its seed executable.
+Database preparation applies extensions, schema and runtime grants, then invokes
+`seed-vocabulary --if-changed` with deployment credentials before the server starts.
+The application still receives only its restricted runtime database URL.
+
+Repository-backed Railway services use the configured pre-deploy command:
+`/usr/local/app/entrypoint.sh --prepare-database`. For image-backed services, set
+that command under **Settings → Deploy → Pre-deploy Command** to gate rollout on
+database preparation. Startup also performs preparation as a fallback when no
+hook is configured. A subsequent unchanged check skips the ingredient scan and
+all seed writes; schema/grant preparation remains idempotent.
+
+The fingerprint covers parsed ingredient and source JSON and is compared with
+the latest committed `vocabulary_seed_runs` receipt while holding the seed-writer
+lock. Whitespace/key-order changes do not trigger loading. Changed inputs load
+transactionally; failures and dry runs never advance the receipt. Concurrent
+deployments serialize, and rolling back to an older vocabulary is checked against
+the latest load rather than any historical receipt. Omitted existing IDs still
+fail; retirement must be explicit. For manual database-drift checks or repairs,
+run the seed command without `--if-changed` using deployment credentials.
 
 The PostgreSQL service continues using the repository source with root directory
 `/docker/postgres` and config file `/docker/postgres/railway.json`. App HTTP

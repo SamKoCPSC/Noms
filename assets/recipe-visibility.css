@@ -1,0 +1,49 @@
+.recipe-visibility {
+    display: grid;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+
+.recipe-visibility__label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.recipe-visibility__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-md);
+    border: 0;
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 20px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.recipe-visibility__trigger svg { flex-shrink: 0; transition: transform 120ms ease; }
+.recipe-visibility__trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+.recipe-visibility__trigger:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+.recipe-visibility__description { color: var(--text-secondary); font-size: .8rem; line-height: 1.5; }
+
+.ingredient-autocomplete__list.recipe-visibility__menu {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    font-size: 14px;
+}
+
+.recipe-visibility__option { justify-content: space-between; gap: var(--space-sm); }
+.recipe-visibility__check { flex-shrink: 0; width: 18px; color: var(--accent-ink); font-size: 16px; font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+    .recipe-visibility__trigger svg { transition: none; }
+}

@@ -1,0 +1,1280 @@
+{
+  "schema_version": 1,
+  "approved": true,
+  "reviewed_on": "2026-10-25",
+  "base_commit": "f1ed36568801bfe1b77af10ffcc163246031954b",
+  "base_seed_checksum": "bb4171b4892450ac5e61103f4cc61219b8c9e432fbd16388d35b95a0b2717e46",
+  "base_sources_checksum": "1cb1ba876c7623c323889671bf87396e592fc1e2517b2a24a62fb8be623f181c",
+  "expected_output_checksum": "373d0b7b4c19f6c8e664655d1ebafedbae97e8028503cca63733c62e9609dd80",
+  "criterion": "Keep distinct defined cooking materials, varieties, parts, processing states and formulations when normal substitution would likely require recipe adjustments or materially affect the result. Preserve preparation wording and ambiguous source meaning. No inferred nutrient equivalence or automatic recipe assignment.",
+  "research": {
+    "corpus_sha256": "749fabbd4f04ee6178b31261aed4e77711b040d8e0f5b589795f4a47154429c0",
+    "review_sha256": "f41d059e0034e6dbcba2275a85a9a9a6211fc1b1e1f4bcb71063abf65143d1d6",
+    "recipes": 1000,
+    "ingredient_lines": 10768,
+    "candidate_names": 53,
+    "note": "Follow-up of all 19 prior holds, two specific-form gaps and explicitly reviewed common names. Bare names remain unspecified; context rows never become automatic recipe UUID assignments. Qualified pepper choices are explicit candidate names, not a resolution of all possible bare-pepper meanings."
+  },
+  "additions": [
+    {
+      "id": "58863397-ba10-47db-a10c-f17d66d0f9cd",
+      "label": "fat choy (black moss)",
+      "aliases": [
+        "fat choy",
+        "fat choi",
+        "black moss",
+        "edible black moss"
+      ],
+      "description": "Edible hair-like Nostoc flagelliforme material used as fat choy/black moss in Chinese cooking, commonly sold dried. Distinct from Irish moss, seaweed and other botanical mosses.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a361910f-00b8-4a15-bca0-88dbd5dfe0ee",
+      "label": "daylily flower buds",
+      "aliases": [
+        "daylily buds",
+        "daylily flower bud",
+        "lily buds (daylily)"
+      ],
+      "description": "Culinary flower buds of daylilies (Hemerocallis); species and fresh/dried state are unspecified. Distinct from Lilium lily bulbs and from an explicitly dried bud product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a22d3c95-203a-409a-9da8-04e12e2b3fc7",
+      "label": "dried daylily buds",
+      "aliases": [
+        "dried lily buds",
+        "dried daylily flowers",
+        "dried golden needles",
+        "golden needles"
+      ],
+      "description": "Daylily flower buds processed by drying for cooking; distinct from fresh/unspecified buds and from lily bulbs. Exact species is unspecified.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "8579dad7-cfd9-4e3c-aa47-f7904e2bd969",
+      "label": "dried roselle calyces",
+      "aliases": [
+        "dried roselle",
+        "dried roselle calyx",
+        "dried hibiscus calyces",
+        "dried Caribbean sorrel",
+        "dried sorrel (Caribbean roselle)"
+      ],
+      "description": "Roselle (Hibiscus sabdariffa) calyces preserved by drying, used in infusions and cooking. Distinct from dried ground roselle, roselle leaves and Rumex sorrel leaves.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4b8a8815-66a8-4a70-823d-2c7436124900",
+      "label": "roselle jam",
+      "aliases": [
+        "hibiscus jam",
+        "Caribbean sorrel jam",
+        "sorrel jam (Caribbean)"
+      ],
+      "description": "Sweet preserve made from roselle/hibiscus calyces, called sorrel jam in Caribbean cooking. Exact spice and sugar formulation varies; distinct from Rumex-leaf preparations.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "440f0135-563e-4658-a21d-1fc9ef4cc785",
+      "label": "Colombian aliños sauce",
+      "aliases": [
+        "Colombian alinos sauce",
+        "aliños Colombianos",
+        "alinos Colombianos",
+        "alinos sauce (Colombian)",
+        "aliños sauce (Colombian)"
+      ],
+      "description": "Colombian vegetable-and-spice seasoning paste/sauce used to marinate or flavor food; commonly includes peppers, onion/scallion and garlic. Recipes vary. Distinct from dry seasoning and unrelated regional aliños.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "b5f7c306-f71b-4647-88e1-0ee899fbcd26",
+      "label": "som moo pork sausage",
+      "aliases": [
+        "som moo",
+        "Lao fermented pork sausage",
+        "Lao sour pork sausage",
+        "sour pork sausage (Lao)"
+      ],
+      "description": "Lao-style sour fermented pork-and-pork-skin sausage called som moo, used as a cooking component. Distinct from fresh pork sausage and other regional cured sausages; exact seasoning and fermentation vary.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4f55d4d0-98a9-4afa-a300-c40b8deb3be2",
+      "label": "pectin",
+      "aliases": [
+        "food-grade pectin",
+        "food grade pectin"
+      ],
+      "description": "Food-grade pectin used as a gelling ingredient; physical form and sugar/calcium-dependent formulation are unspecified. A generic reference does not establish interchangeability of liquid, powdered or low-sugar products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "a6e502e2-e088-40f8-bfbf-80d99e690b8c",
+      "label": "powdered pectin",
+      "aliases": [
+        "pectin powder",
+        "dry pectin",
+        "powdered fruit pectin"
+      ],
+      "description": "Food-grade pectin supplied as a dry powder for gelling. Exact sugar/calcium formulation is unspecified; distinct from liquid pectin and from a recipe-specific instant or low-sugar product.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "79b1a87c-70b9-47f5-b870-2142b9125030",
+      "label": "tuna packed in olive oil",
+      "aliases": [
+        "tuna in olive oil",
+        "olive-oil-packed tuna",
+        "olive oil packed tuna"
+      ],
+      "description": "Prepared tuna preserved/packed in olive oil for use as an ingredient. Can/jar packaging, tuna species and solid/chunk/flake presentation are unspecified; distinct from fresh tuna and tuna in brine or other oils.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "4dcdb742-9eba-4641-a201-3e08fa48f753",
+      "label": "ground coriander seed",
+      "aliases": [
+        "ground coriander",
+        "coriander powder",
+        "coriander seed powder",
+        "ground coriander seeds",
+        "powdered coriander seed"
+      ],
+      "description": "Coriander seed ground into spice powder; distinct from whole seeds and coriander leaves. Grinding changes measurement and flavor release; no roasting or seasoning is inferred.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "c392cff7-36e3-4669-a7c9-8047dcbde7b7",
+      "label": "golden raisins",
+      "aliases": [
+        "golden raisin",
+        "golden dried grapes"
+      ],
+      "description": "Light golden-colored dried grapes sold as golden raisins; seed status and exact drying process are unspecified. Distinct from an explicitly seedless golden-raisin product and from dried Ribes currants.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "f41dec0b-70b1-4dff-a4bd-7de97c7ee8db",
+      "label": "red vermouth",
+      "aliases": [
+        "rosso vermouth",
+        "vermouth rosso"
+      ],
+      "description": "Red/rosso-style aromatized fortified wine used in drinks and cooking; exact sweetness and botanical formula are unspecified. Distinct from an entry defined only as sweet vermouth, which need not be red.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "26ed20c3-3ef3-49d6-bbaf-62a057ece5a0",
+      "label": "pul biber",
+      "aliases": [
+        "Turkish chili flakes",
+        "Turkish chilli flakes",
+        "Turkish red pepper flakes"
+      ],
+      "description": "Turkish-style crushed red chili flakes sold as pul biber; heat, pepper variety and oil/salt additions are unspecified. Do not identify the unqualified term specifically as Urfa or Aleppo pepper.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "27c73e55-4699-42f7-b440-ef63c42af7af",
+      "label": "sweet pickled piquanté peppers",
+      "aliases": [
+        "sweet pickled piquante peppers",
+        "pickled piquanté peppers",
+        "pickled piquante peppers"
+      ],
+      "description": "Piquanté-type peppers preserved in a sweet vinegar pickle. Heat and exact formulation are unspecified; distinct from fresh peppers, generic sweet pickled bell peppers and cheese-stuffed pepper products.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    },
+    {
+      "id": "772c2073-59a9-462a-aa25-8a3b5db6bb19",
+      "label": "imitation vanilla flavouring",
+      "aliases": [
+        "imitation vanilla flavoring",
+        "artificial vanilla flavouring",
+        "artificial vanilla flavoring",
+        "imitation vanilla extract"
+      ],
+      "description": "Vanilla-flavored baking ingredient made with imitation/artificial flavoring rather than an extract of vanilla pods. Color, alcohol level and concentration are unspecified; distinct from vanilla extract.",
+      "locale": "en",
+      "status": "active",
+      "source_mappings": [],
+      "provenance": {
+        "origin": "curated",
+        "references": []
+      }
+    }
+  ],
+  "alias_additions": {
+    "54392737-8f94-4b69-abea-cf40a6b28629": {
+      "label": "mustard (dijon)",
+      "aliases": [
+        "Dijon mustard"
+      ],
+      "note": "Same named Dijon mustard; move the existing qualifier into ordinary word order without dropping it."
+    },
+    "ed9f2980-7de7-4d77-9953-0eff080702a3": {
+      "label": "bean sprout",
+      "aliases": [
+        "beansprout",
+        "beansprouts"
+      ],
+      "note": "Compounded spellings of the same generic bean-sprout ingredient; no mung/soy species is inferred."
+    },
+    "09224eae-cff2-4d1a-8d65-67b689d7827a": {
+      "label": "jalapeno pepper",
+      "aliases": [
+        "jalapeño pepper",
+        "jalapeño peppers",
+        "jalapeno chile",
+        "jalapeno chiles",
+        "jalapeno chili",
+        "jalapeno chilies",
+        "jalapeno chillies"
+      ],
+      "note": "English chili/chile spellings preserve the jalapeño type; no dried/smoked chipotle is inferred."
+    },
+    "c5a30ddf-b3c6-4082-9c04-7bb0bf12757c": {
+      "label": "red onion",
+      "aliases": [
+        "purple onion",
+        "purple onions"
+      ],
+      "note": "Common cooking names for the red/purple bulb-onion type; no scallion, shallot or specific cultivar is inferred."
+    },
+    "0a09c2b8-0c1e-4b5b-bab8-fed6d17b91cc": {
+      "label": "chicken breast (skinless, boneless)",
+      "aliases": [
+        "boneless skinless chicken breast",
+        "boneless skinless chicken breasts",
+        "skinless boneless chicken breast",
+        "skinless boneless chicken breasts",
+        "boneless, skinless chicken breast",
+        "boneless, skinless chicken breasts"
+      ],
+      "note": "Word order and plurals preserve both skinless and boneless attributes and the breast cut."
+    },
+    "a4a39a9b-9592-43eb-8b09-33f9e92f6312": {
+      "label": "chicken thigh (skinless, boneless)",
+      "aliases": [
+        "boneless skinless chicken thigh",
+        "boneless skinless chicken thighs",
+        "skinless boneless chicken thigh",
+        "skinless boneless chicken thighs",
+        "boneless chicken skinless thigh"
+      ],
+      "note": "All aliases retain species, thigh cut, skinless and boneless attributes."
+    },
+    "a808458f-3c7f-416a-a447-99064d6fc7dd": {
+      "label": "cinnamon stick",
+      "aliases": [
+        "cinnamon sticks"
+      ],
+      "note": "Plural of the existing stick form; not ground cinnamon."
+    },
+    "000112b2-5bc2-4e08-be79-6eabdca6decf": {
+      "label": "cider vinegar",
+      "aliases": [
+        "apple cider vinegar"
+      ],
+      "note": "FDA vinegar naming guidance identifies cider/apple vinegar; this does not alias other fruit or wine vinegars."
+    },
+    "66a31c26-7594-4e89-8e17-8076b2778255": {
+      "label": "clove ground",
+      "aliases": [
+        "ground cloves",
+        "ground clove",
+        "clove powder"
+      ],
+      "note": "Ordinary word order and plural preserve the ground clove-spice form; no whole cloves or garlic are inferred."
+    },
+    "c35b68eb-b78a-468d-a5ff-010346a9930b": {
+      "label": "sardine",
+      "aliases": [
+        "sardines"
+      ],
+      "note": "Plural of the generic sardine identity, with preservation and species specificity unchanged."
+    },
+    "5f8653c9-5a5b-4960-a56b-8778d4bc462e": {
+      "label": "clam",
+      "aliases": [
+        "clams"
+      ],
+      "note": "Plural of the existing clam ingredient, with no new preservation state inferred."
+    },
+    "0ca551cd-dbe4-4f0e-a12c-634158095940": {
+      "label": "tomatillo",
+      "aliases": [
+        "tomatillos"
+      ],
+      "note": "Plural of the same tomatillo fruit, not tomatoes."
+    },
+    "c769df9e-eda6-4a64-a434-6079ab35a43e": {
+      "label": "pine nut",
+      "aliases": [
+        "pinenut",
+        "pinenuts"
+      ],
+      "note": "Compounded spellings of pine nut; no different nut species is substituted."
+    },
+    "f774ce18-342e-4e87-aa48-3746c024a030": {
+      "label": "rutabaga",
+      "aliases": [
+        "swede"
+      ],
+      "note": "Established English cooking names for rutabaga; no white turnip equivalence is inferred."
+    },
+    "17053382-41c5-4546-ac34-d8cc7d118066": {
+      "label": "mustard powder",
+      "aliases": [
+        "dry mustard",
+        "ground mustard"
+      ],
+      "note": "Established cooking names for dry ground mustard powder, distinct from whole seeds and prepared mustard."
+    },
+    "d5a6a9bd-02f4-4d2e-9d8c-476ae075338f": {
+      "label": "crabmeat (lump)",
+      "aliases": [
+        "lump crab meat",
+        "lump crabmeat"
+      ],
+      "note": "Word order retains the lump presentation of crab meat; no other grade or species is inferred."
+    },
+    "76675e84-40d0-4f74-be38-925a7ce3da9d": {
+      "label": "macaroni elbow",
+      "aliases": [
+        "elbow macaroni"
+      ],
+      "note": "Ordinary name for the existing elbow-shaped macaroni."
+    },
+    "fa09f9d7-f000-40e9-8bde-4a1f9a1de8a7": {
+      "label": "peanut butter (creamy)",
+      "aliases": [
+        "creamy peanut butter"
+      ],
+      "note": "Word order preserves the creamy product type; no crunchy or reduced-fat equivalence is inferred."
+    },
+    "26a83e8a-7441-4f62-a822-5295521406ab": {
+      "label": "mints, dry",
+      "aliases": [
+        "dried mint",
+        "dry mint"
+      ],
+      "note": "Existing definition explicitly covers dry Mentha herbs; no fresh leaf or particular mint species is inferred."
+    },
+    "5ce7986d-6768-4721-8c60-9ce73db723ba": {
+      "label": "yogurt (nonfat)",
+      "aliases": [
+        "nonfat yogurt",
+        "non-fat yogurt",
+        "fat-free yogurt",
+        "fat free yogurt",
+        "nonfat yoghurt",
+        "non-fat yoghurt",
+        "fat-free yoghurt",
+        "fat free yoghurt"
+      ],
+      "note": "Common fat-free/nonfat names retain the existing formulation; no full-fat, sweetening or strained-yogurt equivalence is inferred."
+    },
+    "0f696a28-f5be-4e7f-8ab2-57e8c3ad5b34": {
+      "label": "egg white",
+      "aliases": [
+        "egg whites"
+      ],
+      "note": "Plural of the same egg component; no yolk or pasteurization claim is added."
+    },
+    "85b6b4fa-a594-4a67-a8ba-d45f3c49d3d6": {
+      "label": "chicken drumstick",
+      "aliases": [
+        "chicken drumsticks"
+      ],
+      "note": "Plural preserves the chicken species and drumstick cut; unqualified drumstick is not added."
+    },
+    "fcb02a1a-31d9-4f51-9ad8-e65ae31b994e": {
+      "label": "chicken liver",
+      "aliases": [
+        "chicken livers"
+      ],
+      "note": "Plural preserves the chicken organ identity."
+    },
+    "67858c66-1cfa-4cab-8bfc-4cb1c28d58f2": {
+      "label": "allspice",
+      "aliases": [
+        "allspice berries",
+        "whole allspice"
+      ],
+      "note": "The existing curated definition explicitly describes the dried Pimenta dioica berry; no ground or mixed-spice identity is substituted."
+    },
+    "2c1616fd-25a1-447b-9f7b-d0af6d9a2d93": {
+      "label": "black pepper",
+      "aliases": [
+        "pepper (black)",
+        "pepper, black"
+      ],
+      "note": "Qualified word order offers an explicit material choice for a general prefix search. The black/bell qualifier is retained; the bare ambiguous term is not an exact alias."
+    },
+    "83b39b4e-0b58-4214-a66a-214b19a5d292": {
+      "label": "red bell pepper",
+      "aliases": [
+        "red pepper (bell)",
+        "red pepper, bell"
+      ],
+      "note": "Qualified word order offers an explicit material choice for a general prefix search. The black/bell qualifier is retained; the bare ambiguous term is not an exact alias."
+    }
+  },
+  "reviewed_names": {
+    "black moss": {
+      "action": "add",
+      "canonical_id": "58863397-ba10-47db-a10c-f17d66d0f9cd",
+      "note": "Hong Kong government identifies culinary hair/black moss as Nostoc flagelliforme; the captured Chinese ingredient list supports this food use. No seaweed identity is inferred.",
+      "related_ids": []
+    },
+    "lily buds": {
+      "action": "context",
+      "canonical_id": "a361910f-00b8-4a15-bca0-88dbd5dfe0ee",
+      "note": "Culinary Chinese list uses the established daylily-bud ingredient. A generic bud identity preserves the unspecified preservation state; no dried state or Lilium bulb is assigned.",
+      "related_ids": []
+    },
+    "dried sorrel": {
+      "action": "context",
+      "canonical_id": "8579dad7-cfd9-4e3c-aa47-f7904e2bd969",
+      "note": "The linked Dominica Gourmet recipe explicitly identifies its sorrel as roselle and calls for dried sorrel. This resolves this recipe only; bare sorrel is not an unconditional roselle alias.",
+      "related_ids": [
+        "ebce2e8c-a453-4c96-b283-6a2a10f08d29"
+      ]
+    },
+    "sorrel jam": {
+      "action": "context",
+      "canonical_id": "4b8a8815-66a8-4a70-823d-2c7436124900",
+      "note": "The original recipe explicitly makes the preserve from roselle. Provider geography is not used to infer the plant; sugar/spice proportions are not promoted to a universal product formula.",
+      "related_ids": [
+        "ebce2e8c-a453-4c96-b283-6a2a10f08d29",
+        "6bcbdf30-ea79-4d37-9c14-a0fe11e9d0eb"
+      ]
+    },
+    "alinos sauce": {
+      "action": "context",
+      "canonical_id": "440f0135-563e-4658-a21d-1fc9ef4cc785",
+      "note": "The original Colombian breaded-steak recipe and its linked aliños preparation establish the wet Colombian seasoning paste. No unconditional global aliños alias or exact household formula is inferred.",
+      "related_ids": [
+        "86dda666-d053-4cad-ab11-c115a06c1642"
+      ]
+    },
+    "sour pork sausage": {
+      "action": "context",
+      "canonical_id": "b5f7c306-f71b-4647-88e1-0ee899fbcd26",
+      "note": "The source author explicitly identifies the sausage in this Naem Khao recipe as som moo. Other regional sour pork sausages are not merged into that identity.",
+      "related_ids": [
+        "47bbaf61-3829-4927-8a52-78d099af4513"
+      ]
+    },
+    "pectin": {
+      "action": "add",
+      "canonical_id": "4f55d4d0-98a9-4afa-a300-c40b8deb3be2",
+      "note": "Represent the explicitly unspecified food-grade gelling material without forcing the liquid form. Powdered and liquid options remain separate; the recipe still supplies no usable form-specific substitution rule.",
+      "related_ids": [
+        "194bf57f-e292-4892-8e7f-2b2fcebc0974"
+      ]
+    },
+    "tuna packed in olive oil": {
+      "action": "add",
+      "canonical_id": "79b1a87c-70b9-47f5-b870-2142b9125030",
+      "note": "Maker references demonstrate canned and jarred olive-oil tuna. The generic packing-medium identity preserves the stated material without forcing the existing solid-pack canned subtype.",
+      "related_ids": [
+        "33ce93ca-9238-4a48-94c8-1803615f1636"
+      ]
+    },
+    "ground coriander": {
+      "action": "add",
+      "canonical_id": "4dcdb742-9eba-4641-a201-3e08fa48f753",
+      "note": "Use a dedicated ground-seed identity rather than the broader whole-or-processed seed entry. The seed/leaf and whole/ground distinctions remain explicit.",
+      "related_ids": []
+    },
+    "coriander powder": {
+      "action": "add",
+      "canonical_id": "4dcdb742-9eba-4641-a201-3e08fa48f753",
+      "note": "Use a dedicated ground-seed identity rather than the broader whole-or-processed seed entry. The seed/leaf and whole/ground distinctions remain explicit.",
+      "related_ids": []
+    },
+    "golden raisins": {
+      "action": "add",
+      "canonical_id": "c392cff7-36e3-4669-a7c9-8047dcbde7b7",
+      "note": "The source names golden raisins without asserting seedlessness. A generic named raisin type avoids forcing the narrower seedless identity. Unqualified light raisins remain unresolved.",
+      "related_ids": []
+    },
+    "red vermouth": {
+      "action": "add",
+      "canonical_id": "f41dec0b-70b1-4dff-a4bd-7de97c7ee8db",
+      "note": "Preserve the stated red/rosso style without inferring a particular sweetness level or brand. The maker reference is a red sweet example, not proof that all red products have one formula.",
+      "related_ids": [
+        "76d5f344-f729-4f2a-bdf4-1187da467e45"
+      ]
+    },
+    "pul biber": {
+      "action": "add",
+      "canonical_id": "26ed20c3-3ef3-49d6-bbaf-62a057ece5a0",
+      "note": "The original Turkish recipe calls for pul biber. Represent that general flaked-condiment type while retaining the existing specific Urfa and Aleppo identities separately.",
+      "related_ids": [
+        "01bc7aa0-37e1-44c0-afe6-5ba968f2521c"
+      ]
+    },
+    "dijon mustard": {
+      "action": "reuse",
+      "canonical_id": "54392737-8f94-4b69-abea-cf40a6b28629",
+      "note": "Same named Dijon mustard; move the existing qualifier into ordinary word order without dropping it.",
+      "related_ids": []
+    },
+    "beansprouts": {
+      "action": "reuse",
+      "canonical_id": "ed9f2980-7de7-4d77-9953-0eff080702a3",
+      "note": "Compounded spellings of the same generic bean-sprout ingredient; no mung/soy species is inferred.",
+      "related_ids": []
+    },
+    "jalapeno chilies": {
+      "action": "reuse",
+      "canonical_id": "09224eae-cff2-4d1a-8d65-67b689d7827a",
+      "note": "English chili/chile spellings preserve the jalapeño type; no dried/smoked chipotle is inferred.",
+      "related_ids": []
+    },
+    "purple onion": {
+      "action": "reuse",
+      "canonical_id": "c5a30ddf-b3c6-4082-9c04-7bb0bf12757c",
+      "note": "Common cooking names for the red/purple bulb-onion type; no scallion, shallot or specific cultivar is inferred.",
+      "related_ids": []
+    },
+    "boneless skinless chicken breasts": {
+      "action": "reuse",
+      "canonical_id": "0a09c2b8-0c1e-4b5b-bab8-fed6d17b91cc",
+      "note": "Word order and plurals preserve both skinless and boneless attributes and the breast cut.",
+      "related_ids": []
+    },
+    "boneless, skinless chicken breast": {
+      "action": "reuse",
+      "canonical_id": "0a09c2b8-0c1e-4b5b-bab8-fed6d17b91cc",
+      "note": "Word order and plurals preserve both skinless and boneless attributes and the breast cut.",
+      "related_ids": []
+    },
+    "boneless chicken skinless thigh": {
+      "action": "reuse",
+      "canonical_id": "a4a39a9b-9592-43eb-8b09-33f9e92f6312",
+      "note": "All aliases retain species, thigh cut, skinless and boneless attributes.",
+      "related_ids": []
+    },
+    "cinnamon sticks": {
+      "action": "reuse",
+      "canonical_id": "a808458f-3c7f-416a-a447-99064d6fc7dd",
+      "note": "Plural of the existing stick form; not ground cinnamon.",
+      "related_ids": []
+    },
+    "apple cider vinegar": {
+      "action": "reuse",
+      "canonical_id": "000112b2-5bc2-4e08-be79-6eabdca6decf",
+      "note": "FDA vinegar naming guidance identifies cider/apple vinegar; this does not alias other fruit or wine vinegars.",
+      "related_ids": []
+    },
+    "ground cloves": {
+      "action": "reuse",
+      "canonical_id": "66a31c26-7594-4e89-8e17-8076b2778255",
+      "note": "Ordinary word order and plural preserve the ground clove-spice form; no whole cloves or garlic are inferred.",
+      "related_ids": []
+    },
+    "ground clove": {
+      "action": "reuse",
+      "canonical_id": "66a31c26-7594-4e89-8e17-8076b2778255",
+      "note": "Ordinary word order and plural preserve the ground clove-spice form; no whole cloves or garlic are inferred.",
+      "related_ids": []
+    },
+    "sardines": {
+      "action": "reuse",
+      "canonical_id": "c35b68eb-b78a-468d-a5ff-010346a9930b",
+      "note": "Plural of the generic sardine identity, with preservation and species specificity unchanged.",
+      "related_ids": []
+    },
+    "clams": {
+      "action": "reuse",
+      "canonical_id": "5f8653c9-5a5b-4960-a56b-8778d4bc462e",
+      "note": "Plural of the existing clam ingredient, with no new preservation state inferred.",
+      "related_ids": []
+    },
+    "tomatillos": {
+      "action": "reuse",
+      "canonical_id": "0ca551cd-dbe4-4f0e-a12c-634158095940",
+      "note": "Plural of the same tomatillo fruit, not tomatoes.",
+      "related_ids": []
+    },
+    "pinenuts": {
+      "action": "reuse",
+      "canonical_id": "c769df9e-eda6-4a64-a434-6079ab35a43e",
+      "note": "Compounded spellings of pine nut; no different nut species is substituted.",
+      "related_ids": []
+    },
+    "swede": {
+      "action": "reuse",
+      "canonical_id": "f774ce18-342e-4e87-aa48-3746c024a030",
+      "note": "Established English cooking names for rutabaga; no white turnip equivalence is inferred.",
+      "related_ids": []
+    },
+    "dry mustard": {
+      "action": "reuse",
+      "canonical_id": "17053382-41c5-4546-ac34-d8cc7d118066",
+      "note": "Established cooking names for dry ground mustard powder, distinct from whole seeds and prepared mustard.",
+      "related_ids": []
+    },
+    "ground mustard": {
+      "action": "reuse",
+      "canonical_id": "17053382-41c5-4546-ac34-d8cc7d118066",
+      "note": "Established cooking names for dry ground mustard powder, distinct from whole seeds and prepared mustard.",
+      "related_ids": []
+    },
+    "lump crab meat": {
+      "action": "reuse",
+      "canonical_id": "d5a6a9bd-02f4-4d2e-9d8c-476ae075338f",
+      "note": "Word order retains the lump presentation of crab meat; no other grade or species is inferred.",
+      "related_ids": []
+    },
+    "elbow macaroni": {
+      "action": "reuse",
+      "canonical_id": "76675e84-40d0-4f74-be38-925a7ce3da9d",
+      "note": "Ordinary name for the existing elbow-shaped macaroni.",
+      "related_ids": []
+    },
+    "creamy peanut butter": {
+      "action": "reuse",
+      "canonical_id": "fa09f9d7-f000-40e9-8bde-4a1f9a1de8a7",
+      "note": "Word order preserves the creamy product type; no crunchy or reduced-fat equivalence is inferred.",
+      "related_ids": []
+    },
+    "dried mint": {
+      "action": "reuse",
+      "canonical_id": "26a83e8a-7441-4f62-a822-5295521406ab",
+      "note": "Existing definition explicitly covers dry Mentha herbs; no fresh leaf or particular mint species is inferred.",
+      "related_ids": []
+    },
+    "nonfat yogurt": {
+      "action": "reuse",
+      "canonical_id": "5ce7986d-6768-4721-8c60-9ce73db723ba",
+      "note": "Common fat-free/nonfat names retain the existing formulation; no full-fat, sweetening or strained-yogurt equivalence is inferred.",
+      "related_ids": []
+    },
+    "fat free yogurt": {
+      "action": "reuse",
+      "canonical_id": "5ce7986d-6768-4721-8c60-9ce73db723ba",
+      "note": "Common fat-free/nonfat names retain the existing formulation; no full-fat, sweetening or strained-yogurt equivalence is inferred.",
+      "related_ids": []
+    },
+    "egg whites": {
+      "action": "reuse",
+      "canonical_id": "0f696a28-f5be-4e7f-8ab2-57e8c3ad5b34",
+      "note": "Plural of the same egg component; no yolk or pasteurization claim is added.",
+      "related_ids": []
+    },
+    "chicken drumsticks": {
+      "action": "reuse",
+      "canonical_id": "85b6b4fa-a594-4a67-a8ba-d45f3c49d3d6",
+      "note": "Plural preserves the chicken species and drumstick cut; unqualified drumstick is not added.",
+      "related_ids": []
+    },
+    "chicken livers": {
+      "action": "reuse",
+      "canonical_id": "fcb02a1a-31d9-4f51-9ad8-e65ae31b994e",
+      "note": "Plural preserves the chicken organ identity.",
+      "related_ids": []
+    },
+    "allspice berries": {
+      "action": "reuse",
+      "canonical_id": "67858c66-1cfa-4cab-8bfc-4cb1c28d58f2",
+      "note": "The existing curated definition explicitly describes the dried Pimenta dioica berry; no ground or mixed-spice identity is substituted.",
+      "related_ids": []
+    },
+    "whole allspice": {
+      "action": "reuse",
+      "canonical_id": "67858c66-1cfa-4cab-8bfc-4cb1c28d58f2",
+      "note": "The existing curated definition explicitly describes the dried Pimenta dioica berry; no ground or mixed-spice identity is substituted.",
+      "related_ids": []
+    },
+    "almond essence": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Regional essence wording can denote extract, imitation flavoring or a mixture; the ingredient name alone does not resolve formulation.",
+      "related_ids": [
+        "b3291408-332f-4ee3-8f93-77340fb24196"
+      ]
+    },
+    "vanilla essence": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Regional essence wording can denote extract, imitation flavoring or a mixture; the ingredient name alone does not resolve formulation.",
+      "related_ids": [
+        "772c2073-59a9-462a-aa25-8a3b5db6bb19",
+        "b5e231db-8318-4c3b-a27f-fee8a936967a"
+      ]
+    },
+    "ground red pepper": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Source does not consistently identify cayenne/hot chili versus a sweet ground pepper. Existing related hot red-pepper powder cannot establish every occurrence.",
+      "related_ids": [
+        "a4e09818-67c8-470f-9b23-cad6f4f05e22"
+      ]
+    },
+    "light raisins": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "The original Afghanaid recipe also says light raisins; it does not establish golden versus sultana/white type or seed state. Preserve this uncertainty rather than force the new golden-raisin identity.",
+      "related_ids": [
+        "f4405f6c-fd9c-449c-b85a-8a7b4f5f77c8"
+      ]
+    },
+    "polenta": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Bare polenta may mean dry polenta cornmeal or cooked/set polenta. Both defined forms are now represented; source state remains unresolved.",
+      "related_ids": [
+        "00bbe0a9-94c2-4a1e-b534-c4c4f31c00f1"
+      ]
+    },
+    "salmon sashimi": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Raw salmon prepared for eating uncooked is not equivalent to a generic salmon fillet; species, processing and source product need clarification.",
+      "related_ids": [
+        "8bb4557e-96f6-40f5-895f-f3bb3f274f46"
+      ]
+    },
+    "sicilian olives": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Regional wording does not identify cultivar or curing style; no particular Castelvetrano, Nocellara or other identity is inferred.",
+      "related_ids": [
+        "912ac8c7-b61f-4302-ba0e-473241848968"
+      ]
+    },
+    "sweet peppadew peppers": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "A generic sweet-pickled piquanté material is now represented using maker evidence. The original named brand spans mild/hot formulations; no exact brand equivalence or unconditional Peppadew alias is approved.",
+      "related_ids": [
+        "27c73e55-4699-42f7-b440-ef63c42af7af",
+        "f3a86d05-9d4c-4b22-a61c-9f4e17c05230"
+      ]
+    },
+    "zapallo squash": {
+      "action": "hold",
+      "canonical_id": null,
+      "note": "Regional squash name covers multiple species/varieties; resolve this recipe material before creating a specific identity.",
+      "related_ids": [
+        "36f238dd-078a-410b-8021-f108f7bd549b"
+      ]
+    },
+    "pepper": {
+      "action": "reuse",
+      "canonical_id": "2c1616fd-25a1-447b-9f7b-d0af6d9a2d93",
+      "note": "Offer the already reviewed material as a qualified prefix candidate; no unconditional bare-name alias, automatic source disambiguation or recipe assignment is introduced.",
+      "related_ids": []
+    },
+    "red pepper": {
+      "action": "reuse",
+      "canonical_id": "83b39b4e-0b58-4214-a66a-214b19a5d292",
+      "note": "Offer the already reviewed material as a qualified prefix candidate; no unconditional bare-name alias, automatic source disambiguation or recipe assignment is introduced.",
+      "related_ids": []
+    }
+  },
+  "entry_reviews": {
+    "58863397-ba10-47db-a10c-f17d66d0f9cd": {
+      "rationale": "Edible hair-like Nostoc flagelliforme material used as fat choy/black moss in Chinese cooking, commonly sold dried. Distinct from Irish moss, seaweed and other botanical mosses.",
+      "observed_names": [
+        "black moss"
+      ],
+      "public_evidence": [
+        "black_moss"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "a361910f-00b8-4a15-bca0-88dbd5dfe0ee": {
+      "rationale": "Culinary flower buds of daylilies (Hemerocallis); species and fresh/dried state are unspecified. Distinct from Lilium lily bulbs and from an explicitly dried bud product.",
+      "observed_names": [
+        "lily buds"
+      ],
+      "public_evidence": [
+        "daylily",
+        "daylily_taxon",
+        "daylily_cooking"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "a22d3c95-203a-409a-9da8-04e12e2b3fc7": {
+      "rationale": "Daylily flower buds processed by drying for cooking; distinct from fresh/unspecified buds and from lily bulbs. Exact species is unspecified.",
+      "observed_names": [
+        "lily buds"
+      ],
+      "public_evidence": [
+        "daylily",
+        "daylily_taxon",
+        "daylily_cooking"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "8579dad7-cfd9-4e3c-aa47-f7904e2bd969": {
+      "rationale": "Roselle (Hibiscus sabdariffa) calyces preserved by drying, used in infusions and cooking. Distinct from dried ground roselle, roselle leaves and Rumex sorrel leaves.",
+      "observed_names": [
+        "dried sorrel"
+      ],
+      "public_evidence": [
+        "roselle",
+        "sorrel_jam"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "4b8a8815-66a8-4a70-823d-2c7436124900": {
+      "rationale": "Sweet preserve made from roselle/hibiscus calyces, called sorrel jam in Caribbean cooking. Exact spice and sugar formulation varies; distinct from Rumex-leaf preparations.",
+      "observed_names": [
+        "sorrel jam"
+      ],
+      "public_evidence": [
+        "roselle",
+        "sorrel_jam"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "440f0135-563e-4658-a21d-1fc9ef4cc785": {
+      "rationale": "Colombian vegetable-and-spice seasoning paste/sauce used to marinate or flavor food; commonly includes peppers, onion/scallion and garlic. Recipes vary. Distinct from dry seasoning and unrelated regional aliños.",
+      "observed_names": [
+        "alinos sauce"
+      ],
+      "public_evidence": [
+        "alinos",
+        "breaded_steak"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "b5f7c306-f71b-4647-88e1-0ee899fbcd26": {
+      "rationale": "Lao-style sour fermented pork-and-pork-skin sausage called som moo, used as a cooking component. Distinct from fresh pork sausage and other regional cured sausages; exact seasoning and fermentation vary.",
+      "observed_names": [
+        "sour pork sausage"
+      ],
+      "public_evidence": [
+        "som_moo",
+        "som_moo_recipe"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "4f55d4d0-98a9-4afa-a300-c40b8deb3be2": {
+      "rationale": "Food-grade pectin used as a gelling ingredient; physical form and sugar/calcium-dependent formulation are unspecified. A generic reference does not establish interchangeability of liquid, powdered or low-sugar products.",
+      "observed_names": [
+        "pectin"
+      ],
+      "public_evidence": [
+        "pectin"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "a6e502e2-e088-40f8-bfbf-80d99e690b8c": {
+      "rationale": "Food-grade pectin supplied as a dry powder for gelling. Exact sugar/calcium formulation is unspecified; distinct from liquid pectin and from a recipe-specific instant or low-sugar product.",
+      "observed_names": [
+        "pectin"
+      ],
+      "public_evidence": [
+        "pectin"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "79b1a87c-70b9-47f5-b870-2142b9125030": {
+      "rationale": "Prepared tuna preserved/packed in olive oil for use as an ingredient. Can/jar packaging, tuna species and solid/chunk/flake presentation are unspecified; distinct from fresh tuna and tuna in brine or other oils.",
+      "observed_names": [
+        "tuna packed in olive oil"
+      ],
+      "public_evidence": [
+        "oil_tuna",
+        "jar_tuna"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "4dcdb742-9eba-4641-a201-3e08fa48f753": {
+      "rationale": "Coriander seed ground into spice powder; distinct from whole seeds and coriander leaves. Grinding changes measurement and flavor release; no roasting or seasoning is inferred.",
+      "observed_names": [
+        "ground coriander",
+        "coriander powder"
+      ],
+      "public_evidence": [
+        "coriander"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "c392cff7-36e3-4669-a7c9-8047dcbde7b7": {
+      "rationale": "Light golden-colored dried grapes sold as golden raisins; seed status and exact drying process are unspecified. Distinct from an explicitly seedless golden-raisin product and from dried Ribes currants.",
+      "observed_names": [
+        "golden raisins"
+      ],
+      "public_evidence": [
+        "golden_raisins"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient.",
+      "prior_related_ids": [
+        "64a97400-c949-439a-ab1e-c9290a8fbb89"
+      ]
+    },
+    "f41dec0b-70b1-4dff-a4bd-7de97c7ee8db": {
+      "rationale": "Red/rosso-style aromatized fortified wine used in drinks and cooking; exact sweetness and botanical formula are unspecified. Distinct from an entry defined only as sweet vermouth, which need not be red.",
+      "observed_names": [
+        "red vermouth"
+      ],
+      "public_evidence": [
+        "red_vermouth"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "26ed20c3-3ef3-49d6-bbaf-62a057ece5a0": {
+      "rationale": "Turkish-style crushed red chili flakes sold as pul biber; heat, pepper variety and oil/salt additions are unspecified. Do not identify the unqualified term specifically as Urfa or Aleppo pepper.",
+      "observed_names": [
+        "pul biber"
+      ],
+      "public_evidence": [
+        "pul_biber"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "27c73e55-4699-42f7-b440-ef63c42af7af": {
+      "rationale": "Piquanté-type peppers preserved in a sweet vinegar pickle. Heat and exact formulation are unspecified; distinct from fresh peppers, generic sweet pickled bell peppers and cheese-stuffed pepper products.",
+      "observed_names": [
+        "sweet peppadew peppers"
+      ],
+      "public_evidence": [
+        "pepper_product",
+        "pepper_recipe"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    },
+    "772c2073-59a9-462a-aa25-8a3b5db6bb19": {
+      "rationale": "Vanilla-flavored baking ingredient made with imitation/artificial flavoring rather than an extract of vanilla pods. Color, alcohol level and concentration are unspecified; distinct from vanilla extract.",
+      "observed_names": [
+        "vanilla essence"
+      ],
+      "public_evidence": [
+        "imitation_vanilla"
+      ],
+      "observation_scope": "Named material or explicit alternative form reviewed for this query family; observations do not automatically assign an ID to a source ingredient."
+    }
+  },
+  "context_rows": {
+    "yummly:26101:13": {
+      "status": "covered",
+      "canonical_ids": [
+        "a361910f-00b8-4a15-bca0-88dbd5dfe0ee"
+      ],
+      "note": "Culinary Chinese list uses the established daylily-bud ingredient. A generic bud identity preserves the unspecified preservation state; no dried state or Lilium bulb is assigned."
+    },
+    "mealdb:53559:1": {
+      "status": "covered",
+      "canonical_ids": [
+        "8579dad7-cfd9-4e3c-aa47-f7904e2bd969"
+      ],
+      "note": "The linked Dominica Gourmet recipe explicitly identifies its sorrel as roselle and calls for dried sorrel. This resolves this recipe only; bare sorrel is not an unconditional roselle alias."
+    },
+    "mealdb:53559:11": {
+      "status": "covered",
+      "canonical_ids": [
+        "4b8a8815-66a8-4a70-823d-2c7436124900"
+      ],
+      "note": "The original recipe explicitly makes the preserve from roselle. Provider geography is not used to infer the plant; sugar/spice proportions are not promoted to a universal product formula."
+    },
+    "mealdb:53533:2": {
+      "status": "covered",
+      "canonical_ids": [
+        "440f0135-563e-4658-a21d-1fc9ef4cc785"
+      ],
+      "note": "The original Colombian breaded-steak recipe and its linked aliños preparation establish the wet Colombian seasoning paste. No unconditional global aliños alias or exact household formula is inferred."
+    },
+    "mealdb:53427:4": {
+      "status": "covered",
+      "canonical_ids": [
+        "b5f7c306-f71b-4647-88e1-0ee899fbcd26"
+      ],
+      "note": "The source author explicitly identifies the sausage in this Naem Khao recipe as som moo. Other regional sour pork sausages are not merged into that identity."
+    }
+  },
+  "public_evidence": {
+    "black_moss": {
+      "url": "https://www.info.gov.hk/gia/general/200701/31/P200701310112.htm",
+      "sha256": "1b04574f4624f5d088711e3b166e0d525d033ecdbf0de470e7edf761a95536e8",
+      "bytes": 6081,
+      "captured_on": "2026-10-25"
+    },
+    "daylily": {
+      "url": "https://www.cfs.gov.hk/english/whatsnew/whatsnew_fst/whatsnew_fst_daylily_and_colchicine",
+      "sha256": "58b284652b5640a99cd50c436cb126fe6e6d7c6efc474a1cf3f91dfc1b6cf1ee",
+      "bytes": 2841,
+      "captured_on": "2026-10-25"
+    },
+    "roselle": {
+      "url": "https://gardeningsolutions.ifas.ufl.edu/plants/edibles/vegetables/roselle/",
+      "sha256": "4ade57ac234218277a9ee01cee586cbb8bef533c228f44431892fb0524f82fad",
+      "bytes": 109962,
+      "captured_on": "2026-10-25"
+    },
+    "sorrel_jam": {
+      "url": "https://dominicagourmet.com/baked-brie-with-sorrel-jam/",
+      "sha256": "2a8a142822b17a7d3e62e6b62b5ec8b6820e0f17cbab8b9550aaa20e3b12ba65",
+      "bytes": 171456,
+      "captured_on": "2026-10-25"
+    },
+    "alinos": {
+      "url": "https://www.mycolombianrecipes.com/seasoning-paste-alinos/",
+      "sha256": "3e8424de15e7dea6ade222c11089167aaa65269c9f80ea0d924905b9d25b9463",
+      "bytes": 452716,
+      "captured_on": "2026-10-25"
+    },
+    "breaded_steak": {
+      "url": "https://www.mycolombianrecipes.com/breaded-steak-lomo-de-res-apanado/",
+      "sha256": "2ccacb69cbc623b249be2792ffbfb6c562ed21516cd4378813a8babbfe3cb529",
+      "bytes": 466359,
+      "captured_on": "2026-10-25"
+    },
+    "som_moo_recipe": {
+      "url": "https://cookingwithlane.com/naem-khao-crispy-coconut-rice-salad/",
+      "sha256": "702b2fbff2ed1797bfdd120f92dd9981eeeccb12bb8e9d6b1dd5ac6bafbb6fdb",
+      "bytes": 176629,
+      "captured_on": "2026-10-25"
+    },
+    "som_moo": {
+      "url": "https://cookingwithlane.com/laos-fermented-sour-pork-sausage-som-moo/",
+      "sha256": "8684db907a4d07a3757be5f1018a9a8de3e1be29e55af72de7e54a665a9f16f3",
+      "bytes": 161540,
+      "captured_on": "2026-10-25"
+    },
+    "pectin": {
+      "url": "https://nchfp.uga.edu/how/make-jam-jelly/jellied-product-ingredients/",
+      "sha256": "76c05c834e0bd742cfe63834b40b7092d8ab8a8bb7fab72cb67f457755d01078",
+      "bytes": 85442,
+      "captured_on": "2026-10-25"
+    },
+    "coriander": {
+      "url": "https://www.mccormick.com/products/mccormick-culinary-ground-coriander-14-oz",
+      "sha256": "ccffe21e7680b12701f276971b1407a418d96e14754a38b5ad717bbffa576844",
+      "bytes": 1310889,
+      "captured_on": "2026-10-25"
+    },
+    "light_raisins": {
+      "url": "https://www.afghanaid.org.uk/haft-mewa-recipe",
+      "sha256": "4fc8d1c168f5c1168e538def8ca1ab02f69f9dcb5ce6080c8501c8cce904a448",
+      "bytes": 69627,
+      "captured_on": "2026-10-25"
+    },
+    "almond_recipe": {
+      "url": "https://www.bbcgoodfood.com/recipes/polish-doughnuts",
+      "sha256": "8a43c0f5a9baacf13f80161dc74f0d38041fed041f4672bd8e65c767013dd95e",
+      "bytes": 563508,
+      "captured_on": "2026-10-25"
+    },
+    "pul_biber": {
+      "url": "https://www.bbcgoodfood.com/recipes/adana-kebab",
+      "sha256": "c8f30d489725e5a355b7be43c8712284b859d0bf3e6727699bb42c8457351801",
+      "bytes": 558567,
+      "captured_on": "2026-10-25"
+    },
+    "pepper_product": {
+      "url": "https://www.peppadew.com/products/mild-whole-260g/",
+      "sha256": "bb8da593a9547854f5bd1cbd3cd2ae13af1fe3c7e20c83f9a1692aa37ce08f42",
+      "bytes": 138668,
+      "captured_on": "2026-10-25"
+    },
+    "pepper_recipe": {
+      "url": "https://www.bbcgoodfood.com/recipes/hot-cumin-lamb-wrap-crunchy-slaw-spicy-mayo",
+      "sha256": "6b152e42c5efc79f26f43f17fb60359507e3ac2c2a781b26dcea06bf8be38811",
+      "bytes": 555530,
+      "captured_on": "2026-10-25"
+    },
+    "daylily_taxon": {
+      "url": "https://plants.ces.ncsu.edu/plants/hemerocallis/",
+      "sha256": "94fb808c7aed2f30357e02b47d39a97fbcc0c480fa7577eba61cd2d3846db650",
+      "bytes": 103513,
+      "captured_on": "2026-10-25"
+    },
+    "imitation_vanilla": {
+      "url": "https://www.mccormick.com/products/mccormick-culinary-imitation-vanilla-flavor-16-fl-oz",
+      "sha256": "a0c54a8e02b6eefa12944e2a306a18d8e4fb7c9edd295e24864304885c4c17e5",
+      "bytes": 1336274,
+      "captured_on": "2026-10-25"
+    },
+    "red_vermouth": {
+      "url": "https://www.martini.com/products/martini-rosso/",
+      "sha256": "2c4293c42777941942f13f664a391d57a171f7b69d294478f208d29dafc1bd07",
+      "bytes": 148398,
+      "captured_on": "2026-10-25"
+    },
+    "oil_tuna": {
+      "url": "https://riomare.co.uk/product/all-tuna/tuna-in-olive-oil/",
+      "sha256": "5ace5c4da02fe9bf422fdb93c97e477e31e3f3ca9f47c4029b73a3a636b56dc8",
+      "bytes": 72423,
+      "captured_on": "2026-10-25"
+    },
+    "jar_tuna": {
+      "url": "https://www.riomare.com.mt/product/light-tuna-fillets-in-olive-oil/",
+      "sha256": "cf18ab93bf0f8281b684f07ad3041a3456417ab8714f86d3a8f8480071416165",
+      "bytes": 108777,
+      "captured_on": "2026-10-25"
+    },
+    "cider_vinegar": {
+      "url": "https://www.fda.gov/regulatory-information/search-fda-guidance-documents/cpg-sec-525825-vinegar-definitions-adulteration-vinegar-eels",
+      "sha256": "27880e5c609f1c216c0b4c14240f3db781573b9361369d54c0858664eb6b2fb0",
+      "bytes": 39451,
+      "captured_on": "2026-10-25"
+    },
+    "dry_mustard": {
+      "url": "https://www.mccormick.com/blogs/how-to/about-ground-mustard-uses-pairings-and-recipes",
+      "sha256": "7a4830b5e0e4e7e71e5fc3e378cc63873865e527aad255db15a1418f3352e6f0",
+      "bytes": 864240,
+      "captured_on": "2026-10-25"
+    },
+    "golden_raisins": {
+      "url": "https://www.sunmaid.com/products/golden-raisins/",
+      "sha256": "6dce803ca638bbcf89f48a38e3b913ff35d06a93c20f607fb1e299f733db2c63",
+      "bytes": 92783,
+      "captured_on": "2026-10-25"
+    },
+    "daylily_cooking": {
+      "url": "https://thewoksoflife.com/chinese-ingredients-glossary/chinese-dried-preserved-ingredients/",
+      "sha256": "e780a56cd2ef770709929e3727aa5db72e63b791cd68e88956d3b92eb7d334d1",
+      "bytes": 613930,
+      "captured_on": "2026-10-25"
+    }
+  },
+  "source_limits": {
+    "zapallo": {
+      "url": "https://www.allrecipes.com/recipe/145272/chilean-style-sopaipillas/",
+      "error": "HTTP Error 402: Payment Required"
+    }
+  },
+  "reserved_aliases": [
+    {
+      "name": "swedes",
+      "proposed_target": "f774ce18-342e-4e87-aa48-3746c024a030",
+      "existing_owner": "29e7d8a6-4a14-46ca-a67b-64f130d3bfe4",
+      "reason": "Existing normalized name is reserved for its current UUID; no shadow or merge."
+    }
+  ],
+  "held_aliases": [
+    {
+      "name": "apple vinegar",
+      "reason": "The normalized name already belongs to another preserved legacy UUID; do not shadow or merge it."
+    },
+    {
+      "name": "sorrel",
+      "reason": "Can mean roselle or Rumex leaves."
+    },
+    {
+      "name": "lily buds",
+      "reason": "Only the scoped culinary context resolves daylily buds; it does not establish drying."
+    },
+    {
+      "name": "ground red pepper",
+      "reason": "Hot versus sweet spice is not established by the Yummly fields."
+    },
+    {
+      "name": "Peppadew",
+      "reason": "A brand spans multiple products and formulations."
+    },
+    {
+      "name": "vanilla essence",
+      "reason": "Regional name does not establish natural extract versus imitation flavoring."
+    },
+    {
+      "name": "pepper",
+      "reason": "Ambiguous alone; only qualified alternatives are added for explicit selection."
+    },
+    {
+      "name": "red pepper",
+      "reason": "Ambiguous alone; only qualified alternatives are added for explicit selection."
+    }
+  ]
+}

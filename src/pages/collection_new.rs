@@ -16,6 +16,16 @@ use crate::Route;
 
 const UNCONFIRMED_COLLECTION_CREATION_MESSAGE: &str = "We couldn't confirm whether your collection was created. Your entries are kept here. Check Collections in another tab before starting a new collection to avoid duplicates.";
 
+fn collection_creation_failure(problem: &ServerFnError) -> (String, bool) {
+    if crate::api::collection::is_name_conflict(problem) {
+        return (crate::api::collection::COLLECTION_NAME_TAKEN.into(), false);
+    }
+    if let Some(feedback) = crate::auth::account_binding::account_error_feedback(problem) {
+        return (feedback.into(), false);
+    }
+    (UNCONFIRMED_COLLECTION_CREATION_MESSAGE.into(), true)
+}
+
 fn collection_creation_submit_blocked(saving: bool, unconfirmed: bool, created: bool) -> bool {
     saving || unconfirmed || created
 }
@@ -97,15 +107,9 @@ pub fn CollectionNew(parent: Option<uuid::Uuid>) -> Element {
                     });
                 }
                 Err(problem) => {
-                    if let Some(feedback) =
-                        crate::auth::account_binding::account_error_feedback(&problem)
-                    {
-                        // This explicit account rejection occurs before writes.
-                        error.set(Some(feedback.to_string()));
-                    } else {
-                        creation_unconfirmed.set(true);
-                        error.set(Some(UNCONFIRMED_COLLECTION_CREATION_MESSAGE.to_string()));
-                    }
+                    let (feedback, unconfirmed) = collection_creation_failure(&problem);
+                    creation_unconfirmed.set(unconfirmed);
+                    error.set(Some(feedback));
                     saving.set(false);
                 }
             }
@@ -186,6 +190,26 @@ mod tests {
     use crate::Route;
     use dioxus::router::components::HistoryProvider;
     use dioxus_core::NoOpMutations;
+
+    #[test]
+    fn confirmed_name_collision_allows_renaming_but_unknown_creation_stays_blocked() {
+        let conflict = ServerFnError::new(crate::api::collection::COLLECTION_NAME_TAKEN);
+        let (message, unconfirmed) = collection_creation_failure(&conflict);
+        assert_eq!(message, crate::api::collection::COLLECTION_NAME_TAKEN);
+        assert!(!collection_creation_submit_blocked(
+            false,
+            unconfirmed,
+            false
+        ));
+        let (message, unconfirmed) =
+            collection_creation_failure(&ServerFnError::new("Request timed out"));
+        assert_eq!(message, UNCONFIRMED_COLLECTION_CREATION_MESSAGE);
+        assert!(collection_creation_submit_blocked(
+            false,
+            unconfirmed,
+            false
+        ));
+    }
 
     const PARENT_ID: &str = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -323,7 +347,7 @@ mod tests {
         assert!(component.contains("let mut creation_unconfirmed"));
         assert!(component.contains("submit_disabled: collection_creation_submit_blocked(false, creation_unconfirmed(), created_collection().is_some())"));
         assert!(component.contains("if collection_creation_submit_blocked(saving(), creation_unconfirmed(), created_collection().is_some())"));
-        assert!(component.contains("creation_unconfirmed.set(true)"));
+        assert!(component.contains("creation_unconfirmed.set(unconfirmed)"));
         assert!(component.contains("new_tab: true"));
         assert!(component.contains("Check Collections"));
         assert!(!component.contains("problem.to_string()"));

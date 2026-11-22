@@ -1,6 +1,10 @@
 # NOMS-009: Image Uploads
 
-**Status:** ✅ Phase 1 Complete | ⏳ Phase 2 Planned  
+> **Current-state review — 2026-11-03:** Uploads and editing for recipe/step/avatar/cover images, typed metadata and durable media references are implemented. Old URL-string and no-upload descriptions are superseded; release storage/device checks remain separate.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — upload/editing baseline implemented
 **Phase:** Phase 2 (media)  
 **Depends on:** NOMS-008 (Recipe CRUD)
 

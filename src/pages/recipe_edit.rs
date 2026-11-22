@@ -8,22 +8,25 @@ use dioxus::prelude::*;
 
 use crate::api::recipe::{
     create_edit_draft, discard_recipe_draft, get_recipe_draft_api, publish_recipe_draft,
-    save_recipe_draft,
 };
 #[allow(unused_imports)]
 use crate::api::upload::upload_image;
 use crate::components::base::{
     Button, ButtonVariant, Card, ImageEditorModal, ImageUpload, LoadingSpinner, PageHeader,
-    UploadOutcome,
+    RecipeVisibilityField, UploadOutcome,
 };
 use crate::components::AuthRequired;
-use crate::pages::draft_save::{draft_save_button_state, recipe_write_feedback, RecipeWriteAction};
+use crate::pages::draft_merge_review::DraftConflictReview;
+use crate::pages::draft_save::{
+    draft_save_button_state, recipe_write_feedback, save_editor_draft, use_draft_sync,
+    RecipeWriteAction,
+};
 use crate::pages::recipe_editor_form::{
     apply_step_photo_edit, build_step_tree, can_indent_step, flatten_steps,
     format_step_photo_file_size, reorder_step_photo_within_step, reset_step_photo_input,
     step_photo_display_name, step_photo_editor_edit, RecipeEditorContents,
-    RecipeEditorInput as Input, StepForm, StepPhotoEditButton, StepPhotoPreview,
-    StepPhotoUploadFeedback,
+    RecipeEditorInput as Input, RecipeTimingFields, StepForm, StepPhotoEditButton,
+    StepPhotoPreview, StepPhotoUploadFeedback,
 };
 use crate::types::{
     RecipeEditorState, RecipeEquipment, RecipeImage, RecipeImageEdit, RecipeIngredient,
@@ -145,11 +148,13 @@ pub fn RecipeDraftEdit(id: String) -> Element {
 }
 
 fn recipe_editor(id: String, id_is_draft: bool) -> Element {
+    crate::components::ingredient_vocabulary::use_editor_vocabulary();
     let form_account = crate::auth::account_binding::use_form_account();
     let navigator = use_navigator();
     // ── Form signals ─────────────────────────────────────────────────────
     let mut title = use_signal(String::new);
     let mut active_editor_section = use_signal(|| "basics");
+    let mut publication_review_open = use_signal(|| false);
     let mut description = use_signal(String::new);
     let mut commentary = use_signal(String::new);
     let mut prep_time = use_signal(String::new);
@@ -163,6 +168,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     // CP5: image management signals
     let mut images = use_signal(Vec::<RecipeImage>::new);
+    let mut import_images = use_signal(Vec::<crate::types::ImportedRecipeImage>::new);
+    let mut reviewing_image = use_signal(|| false);
     let mut upload_now = use_signal(|| false);
     let busy = use_signal(|| false);
     let pending_image_count = use_signal(|| 0usize);
@@ -204,7 +211,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let mut is_discarding = use_signal(|| false);
     let mut draft_id = use_signal(|| Option::<String>::None);
     let mut draft_recipe_id = use_signal(|| Option::<uuid::Uuid>::None);
-    let mut draft_revision = use_signal(|| 0i64);
+    let draft_sync = use_draft_sync();
+    let mut gallery_generation = use_signal(|| 0u64);
     let mut last_saved_editor = use_signal(|| Option::<RecipeEditorState>::None);
     let mut autosave_generation = use_signal(|| 0u64);
     let mut forked_from_title = use_signal(|| Option::<String>::None);
@@ -224,9 +232,10 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             match loaded {
                 Ok(draft) => {
                     let editor = draft.editor.clone();
+                    import_images.set(draft.import_images.clone());
                     draft_id.set(Some(draft.id.to_string()));
                     draft_recipe_id.set(draft.recipe_id);
-                    draft_revision.set(draft.revision);
+                    draft_sync.acknowledge(&draft);
                     forked_from_title.set(draft.forked_from_title.clone());
                     forked_from_recipe_id.set(draft.forked_from_recipe_id.map(|id| id.to_string()));
                     fork_message.set(draft.fork_message.clone());
@@ -285,10 +294,21 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             visibility(),
             tags_input(),
         );
-        if is_loading()
+        if draft_sync.conflicted()
+            || is_loading()
             || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
             || last_saved_editor().as_ref() == Some(&editor)
         {
+            return;
+        }
+        if editor
+            .ingredients
+            .iter()
+            .flat_map(|row| std::iter::once(row).chain(row.substitutes.iter()))
+            .any(|row| noms::units::canonicalize(&row.unit).is_err())
+        {
+            let next_generation = *autosave_generation.peek() + 1;
+            autosave_generation.set(next_generation);
             return;
         }
         #[allow(unused_variables)]
@@ -300,47 +320,28 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         // effect before the debounce could elapse.
         let generation = *autosave_generation.peek() + 1;
         autosave_generation.set(generation);
-        #[allow(unused_variables)]
-        let expected_revision = draft_revision();
+        // Keep acknowledgments as an effect dependency, but read the revision
+        // at dispatch so the debounce uses our latest confirmed save.
+        let _ = draft_sync.revision();
         #[cfg(target_arch = "wasm32")]
         spawn(async move {
             gloo_timers::future::TimeoutFuture::new(2_000).await;
             if autosave_generation() != generation
+                || draft_sync.conflicted()
                 || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
             {
                 return;
             }
-            let first_save = save_recipe_draft(
+            let save_result = save_editor_draft(
                 form_account(),
-                current_draft_id.clone(),
-                expected_revision,
+                current_draft_id,
+                draft_sync,
                 editor.clone(),
+                || autosave_generation() == generation,
             )
             .await;
-            let save_result = match first_save {
-                Ok(saved) => Ok(saved),
-                Err(_) if autosave_generation() == generation => {
-                    // A previous in-flight autosave may have advanced the
-                    // revision. Refresh and retry only for the newest editor
-                    // generation so stale content can never win.
-                    match get_recipe_draft_api(form_account(), current_draft_id.clone()).await {
-                        Ok(current) => {
-                            save_recipe_draft(
-                                form_account(),
-                                current_draft_id,
-                                current.revision,
-                                editor.clone(),
-                            )
-                            .await
-                        }
-                        Err(error) => Err(error),
-                    }
-                }
-                Err(error) => Err(error),
-            };
             match save_result {
-                Ok(saved) if autosave_generation() == generation => {
-                    draft_revision.set(saved.revision);
+                Ok(_) if autosave_generation() == generation => {
                     last_saved_editor.set(Some(editor));
                     draft_save_error.set(None);
                 }
@@ -359,11 +360,20 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     let on_save_draft = move |_| {
         #[cfg(target_arch = "wasm32")]
         {
-            if is_loading()
+            if draft_sync.reviewing()
+                || is_loading()
                 || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
                 || busy()
                 || step_photo_upload_count() > 0
             {
+                return;
+            }
+            if ingredients()
+                .iter()
+                .flat_map(|row| std::iter::once(row).chain(row.substitutes.iter()))
+                .any(|row| noms::units::canonicalize(&row.unit).is_err())
+            {
+                form_error.set(Some(noms::units::INVALID_UNIT.into()));
                 return;
             }
             if draft_id().is_none() {
@@ -390,7 +400,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     // ── Step photo upload handler ────────────────────────────────────────
     #[allow(unused_variables)]
     let step_photo_controls_locked = move || {
-        editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+        draft_sync.reviewing()
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
             || busy()
             || step_photo_upload_count() > 0
     };
@@ -564,7 +575,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     // ── Submit handler (two-phase: upload images → save recipe) ────────
     let on_submit = move |_| {
-        if is_loading()
+        if draft_sync.conflicted()
+            || draft_sync.reviewing()
+            || is_loading()
             || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
             || step_photo_upload_count() > 0
         {
@@ -581,12 +594,33 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         }
 
         let ings = ingredients();
+        if ings
+            .iter()
+            .flat_map(|row| std::iter::once(row).chain(row.substitutes.iter()))
+            .any(|row| noms::units::canonicalize(&row.unit).is_err())
+        {
+            form_error.set(Some(noms::units::INVALID_UNIT.into()));
+            return;
+        }
         if ings.is_empty() {
             form_error.set(Some("Add at least one ingredient".to_string()));
             return;
         }
         if ings.iter().all(|i| i.name.trim().is_empty()) {
             form_error.set(Some("At least one ingredient must have a name".to_string()));
+            return;
+        }
+        if ings.iter().any(|ingredient| {
+            ingredient
+                .substitutes
+                .iter()
+                .any(|substitute| substitute.name.trim().is_empty())
+                || (!ingredient.substitutes.is_empty() && ingredient.name.trim().is_empty())
+        }) {
+            form_error.set(Some(
+                "Give each ingredient and substitute a name, or remove the empty substitute."
+                    .into(),
+            ));
             return;
         }
 
@@ -669,22 +703,16 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
             };
             autosave_generation.set(autosave_generation() + 1);
             if draft_save_after_upload() {
-                let current = get_recipe_draft_api(form_account(), current_draft_id.clone()).await;
-                let save_result = match current {
-                    Ok(current) => {
-                        save_recipe_draft(
-                            form_account(),
-                            current_draft_id,
-                            current.revision,
-                            editor.clone(),
-                        )
-                        .await
-                    }
-                    Err(error) => Err(error),
-                };
+                let save_result = save_editor_draft(
+                    form_account(),
+                    current_draft_id,
+                    draft_sync,
+                    editor.clone(),
+                    || true,
+                )
+                .await;
                 match save_result {
-                    Ok(saved) => {
-                        draft_revision.set(saved.revision);
+                    Ok(_) => {
                         last_saved_editor.set(Some(editor));
                         draft_save_error.set(None);
                         if let Some(destination) = draft_save_destination() {
@@ -706,32 +734,14 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                 return;
             }
             let publish_result = async {
-                // Refresh the revision in case an autosave completed immediately
-                // before the publish click, then save the exact submitted state.
-                let current =
-                    get_recipe_draft_api(form_account(), current_draft_id.clone()).await?;
-                let first_save = save_recipe_draft(
+                save_editor_draft(
                     form_account(),
                     current_draft_id.clone(),
-                    current.revision,
-                    editor.clone(),
+                    draft_sync,
+                    editor,
+                    || true,
                 )
-                .await;
-                let saved = match first_save {
-                    Ok(saved) => saved,
-                    Err(_) => {
-                        let refreshed =
-                            get_recipe_draft_api(form_account(), current_draft_id.clone()).await?;
-                        save_recipe_draft(
-                            form_account(),
-                            current_draft_id.clone(),
-                            refreshed.revision,
-                            editor,
-                        )
-                        .await?
-                    }
-                };
-                draft_revision.set(saved.revision);
+                .await?;
                 draft_save_error.set(None);
                 publish_recipe_draft(form_account(), current_draft_id, None).await
             }
@@ -762,7 +772,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     // ── Cancel handler ──────────────────────────────────────────────────
     let on_cancel = move |_| {
-        if is_loading()
+        if draft_sync.reviewing()
+            || is_loading()
             || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
             || busy()
             || step_photo_upload_count() > 0
@@ -786,7 +797,8 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
     let id_for_discard = id.clone();
     let on_discard = move |_| {
-        if is_loading()
+        if draft_sync.reviewing()
+            || is_loading()
             || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
             || busy()
             || step_photo_upload_count() > 0
@@ -827,9 +839,11 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
     // ── Ingredient helpers ──────────────────────────────────────────────
     let on_add_ingredient = move |_| {
         ingredients.write().push(RecipeIngredient {
+            vocabulary_id: None,
             amount: String::new(),
             unit: String::new(),
             name: String::new(),
+            ..Default::default()
         });
     };
 
@@ -911,13 +925,188 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
         pending_image_count() > 0 || last_saved_editor().as_ref() != Some(&current_editor),
     );
 
+    let read_merge_editor = move |_| {
+        editor_state(
+            title(),
+            description(),
+            commentary(),
+            prep_time(),
+            cook_time(),
+            servings(),
+            ingredients(),
+            steps(),
+            equipment(),
+            images(),
+            visibility(),
+            tags_input(),
+        )
+    };
+    let on_merged = move |saved: crate::types::RecipeDraftView| {
+        let editor = saved.editor;
+        last_saved_editor.set(Some(editor.clone()));
+        title.set(editor.title);
+        description.set(editor.description.unwrap_or_default());
+        commentary.set(editor.commentary.unwrap_or_default());
+        prep_time.set(
+            editor
+                .prep_time_minutes
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+        );
+        cook_time.set(
+            editor
+                .cook_time_minutes
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+        );
+        servings.set(
+            editor
+                .servings
+                .map(|value| value.to_string())
+                .unwrap_or_default(),
+        );
+        ingredients.set(editor.ingredients);
+        steps.set(flatten_steps(&editor.instructions));
+        equipment.set(editor.equipment);
+        images.set(editor.images);
+        tags_input.set(editor.tags.join(", "));
+        visibility.set(editor.visibility);
+        gallery_generation.set(gallery_generation() + 1);
+        autosave_generation.set(autosave_generation() + 1);
+        import_images.set(saved.import_images);
+        pending_deletes.set(Vec::new());
+        draft_save_error.set(None);
+        form_error.set(None);
+    };
+
+    let review_enabled = last_saved_editor().as_ref() == Some(&current_editor)
+        && !editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+        && !busy()
+        && pending_image_count() == 0
+        && step_photo_upload_count() == 0;
+    let on_review_image = move |(image_id, omit): (uuid::Uuid, bool)| {
+        // Check live signals as well as rendered state to guard queued clicks.
+        let latest = editor_state(
+            title(),
+            description(),
+            commentary(),
+            prep_time(),
+            cook_time(),
+            servings(),
+            ingredients(),
+            steps(),
+            equipment(),
+            images(),
+            visibility(),
+            tags_input(),
+        );
+        if draft_sync.conflicted()
+            || last_saved_editor().as_ref() != Some(&latest)
+            || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
+            || busy()
+            || pending_image_count() > 0
+            || step_photo_upload_count() > 0
+            || reviewing_image()
+        {
+            return;
+        }
+        let Some(id) = draft_id() else {
+            return;
+        };
+        let revision = draft_sync.revision();
+        reviewing_image.set(true);
+        is_manually_saving.set(true);
+        autosave_generation.set(autosave_generation() + 1);
+        draft_save_error.set(None);
+        spawn(async move {
+            let external = if omit {
+                Ok(vec![])
+            } else {
+                crate::api::recipe::imported_image_external_url(
+                    form_account(),
+                    id.clone(),
+                    image_id,
+                )
+                .await
+            };
+            let result = match external {
+                Ok(urls) => {
+                    let available =
+                        crate::pages::recipe_json_controls::check_linked_images(urls).await;
+                    crate::api::recipe::resolve_imported_image(
+                        form_account(),
+                        id,
+                        revision,
+                        image_id,
+                        omit,
+                        available,
+                    )
+                    .await
+                }
+                Err(error) => Err(error),
+            };
+            match result {
+                Ok(draft) => {
+                    images.set(draft.editor.images.clone());
+                    steps.set(flatten_steps(&draft.editor.instructions));
+                    draft_sync.acknowledge(&draft);
+                    last_saved_editor.set(Some(draft.editor));
+                    import_images.set(draft.import_images);
+                }
+                Err(error) => {
+                    draft_save_error.set(Some(format!("Could not review imported image: {error}")))
+                }
+            }
+            reviewing_image.set(false);
+            is_manually_saving.set(false);
+        });
+    };
+
     // ── Render: form ────────────────────────────────────────────────────
     rsx! {
         AuthRequired {
-            div { class: "container recipe-editor",
+            if draft_sync.conflicted() {
+                if let Some(id) = draft_id() {
+                    DraftConflictReview {
+                        account: form_account(), draft_id: id, sync: draft_sync,
+                        read_local: read_merge_editor,
+                        ready: move |_| !(is_loading() || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0 || step_editor_modal_url().is_some() || publication_review_open()) && pending_image_count() == 0,
+                        blocked: is_loading() || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0 || step_editor_modal_url().is_some() || publication_review_open(), pending_photos: pending_image_count(),
+                        on_upload_pending: move |_| {
+                        if is_loading() || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || draft_sync.reviewing() { return; }
+                        is_manually_saving.set(true);
+                        draft_save_after_upload.set(true);
+                        draft_save_destination.set(None);
+                        upload_now.set(true);
+                        },
+                        on_merged,
+                    }
+                }
+            }
+            if publication_review_open() {
+                crate::pages::recipe_editor_form::PublicationReview {
+                    title: title(), ingredient_count: ingredients().iter().filter(|item| !item.name.trim().is_empty()).count(),
+                    step_count: steps().iter().filter(|step| !step.text.trim().is_empty()).count(), visibility: visibility(),
+                    preserve_visibility: !id_is_draft,
+                    oncancel: move |_| publication_review_open.set(false),
+                    onconfirm: move |event| {
+                        publication_review_open.set(false);
+                        if title().trim().is_empty() { active_editor_section.set("basics"); }
+                        else if ingredients().iter().all(|item| item.name.trim().is_empty()) { active_editor_section.set("ingredients"); }
+                        else if steps().iter().all(|step| step.text.trim().is_empty()) { active_editor_section.set("method"); }
+                        let mut submit = on_submit;
+                        submit(event);
+                    },
+                }
+            }
+            // HTML inert is enabled by presence, including inert="false" after hydration.
+            div { class: "container recipe-editor", inert: reviewing_image().then_some(""),
                 PageHeader {
                     icon: Some(PageIconKind::Editor),
                     title: if id_is_draft { "Edit Draft" } else { "Edit Recipe Draft" },
+                }
+                crate::pages::recipe_json_controls::ImportedImageReview {
+                    images: import_images(), enabled: review_enabled, pending: reviewing_image(), on_resolve: on_review_image,
                 }
                 if let Some(source_title) = forked_from_title() {
                     div {
@@ -948,28 +1137,35 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         margin_top: "var(--space-md)",
                         Button {
                             variant: ButtonVariant::Secondary,
-                            disabled: !draft_save_state.is_actionable()
+                            disabled: draft_sync.conflicted() || !draft_save_state.is_actionable()
                                 || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding())
                                 || busy()
                                 || step_photo_upload_count() > 0,
                             onclick: on_save_draft,
-                            "{draft_save_state.label()}"
+                            span { class: "desktop-editor-label", "{draft_save_state.label()}" }
+                            span { class: "mobile-only", if draft_save_state.is_actionable() { "Save" } else { "{draft_save_state.label()}" } }
                         }
                         Button {
                             variant: ButtonVariant::Primary,
-                            disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
-                            onclick: on_submit,
+                            disabled: draft_sync.conflicted() || editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
+                            onclick: move |event| {
+                                if draft_sync.conflicted() || draft_sync.reviewing() { return; }
+                                if crate::components::mobile::is_mobile_layout() { publication_review_open.set(true); }
+                                else { let mut submit = on_submit; submit(event); }
+                            },
                             if step_photo_upload_count() > 0 || (is_saving() && busy()) {
                                 "Uploading images..."
                             } else if is_saving() {
                                 "Publishing..."
                             } else {
-                                "Publish Changes"
+                                span { class: "desktop-publish-label", "Publish Changes" }
+                                span { class: "mobile-only", "Review" }
                             }
                         }
                         Button {
                             variant: ButtonVariant::Ghost,
                             disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
+                            id: "recipe-editor-exit",
                             onclick: on_cancel,
                             "Cancel"
                         }
@@ -977,7 +1173,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             variant: ButtonVariant::Danger,
                             disabled: editor_write_in_progress(is_saving(), is_manually_saving(), is_discarding()) || busy() || step_photo_upload_count() > 0,
                             onclick: on_discard,
-                            if is_discarding() { "Discarding..." } else { "Discard Draft" }
+                            if is_discarding() { "Discarding..." } else { span { class: "desktop-editor-label", "Discard Draft" } span { class: "mobile-only", "Discard" } }
                         }
                     }
                 div { class: "recipe-editor__layout",
@@ -1047,66 +1243,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         }
                     }
 
-                    // Time & servings row
-                    div {
-                        display: "grid",
-                        grid_template_columns: "1fr 1fr 1fr",
-                        gap: "var(--space-sm)",
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Prep Time (min)"
-                            }
-                            Input {
-                            accessible_name: "Prep time in minutes",
-                                value: prep_time().clone(),
-                                placeholder: "0",
-                                input_type: "number",
-                                oninput: move |v| prep_time.set(v),
-                            }
-                        }
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Cook Time (min)"
-                            }
-                            Input {
-                            accessible_name: "Cook time in minutes",
-                                value: cook_time().clone(),
-                                placeholder: "0",
-                                input_type: "number",
-                                oninput: move |v| cook_time.set(v),
-                            }
-                        }
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-xs)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Servings"
-                            }
-                            Input {
-                            accessible_name: "Servings",
-                                value: servings().clone(),
-                                placeholder: "4",
-                                input_type: "number",
-                                oninput: move |v| servings.set(v),
-                            }
-                        }
-                    }
+                    RecipeTimingFields { prep_time, cook_time, servings }
 
                     // ── Tags ────────────────────────────────────────────
                     div {
@@ -1134,33 +1271,10 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
                     // Visibility is chosen here only for first publication.
                     if draft_allows_initial_visibility(draft_recipe_id()) {
-                        div {
-                            display: "flex",
-                            flex_direction: "column",
-                            gap: "var(--space-sm)",
-                            label {
-                                font_size: "14px",
-                                font_weight: "600",
-                                color: "var(--text-secondary)",
-                                "Visibility when published"
-                            }
-                            select {
-                                aria_label: "Visibility when published",
-                                class: "neumo-inset input",
-                                padding: "var(--space-sm) var(--space-md)",
-                                font_family: "var(--font-body)",
-                                font_size: "14px",
-                                color: "var(--text-primary)",
-                                border_radius: "var(--radius-md)",
-                                width: "100%",
-                                value: visibility().clone(),
-                                onchange: move |evt| {
-                                    visibility.set(evt.value());
-                                },
-                                option { value: "private", "Private — only you can see this recipe" }
-                                option { value: "unlisted", "Unlisted — anyone with the link can view" }
-                                option { value: "public", "Public — appears in Explore and search" }
-                            }
+                        RecipeVisibilityField {
+                            id: "recipe-edit-visibility",
+                            visibility: visibility(),
+                            onchange: move |value| visibility.set(value),
                         }
                     }
 
@@ -1181,6 +1295,7 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
 
                         // Persisted and newly selected images render together.
                         ImageUpload {
+                            key: "gallery-{gallery_generation()}",
                             form_account,
                             images,
                             upload_now,
@@ -1209,55 +1324,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                         flex_direction: "column",
                         gap: "var(--space-sm)",
 
-                        for (idx, _ing) in ingredients().iter().enumerate() {
-                            div {
-                                key: "{idx}",
-                                class: "recipe-editor__ingredient-row",
-                                display: "flex",
-                                gap: "var(--space-sm)",
-                                align_items: "center",
-                                // Amount
-                                div {
-                                    style: "width: 70px; flex-shrink: 0;",
-                                    Input {
-                            accessible_name: "Ingredient {idx + 1} amount",
-                                        value: ingredients()[idx].amount.clone(),
-                                        placeholder: "Amt",
-                                        oninput: move |v| {
-                                            ingredients.write()[idx].amount = v;
-                                        },
-                                    }
-                                }
-                                // Unit
-                                div {
-                                    style: "width: 80px; flex-shrink: 0;",
-                                    Input {
-                            accessible_name: "Ingredient {idx + 1} unit",
-                                        value: ingredients()[idx].unit.clone(),
-                                        placeholder: "Unit",
-                                        oninput: move |v| {
-                                            ingredients.write()[idx].unit = v;
-                                        },
-                                    }
-                                }
-                                // Name
-                                Input {
-                            accessible_name: "Ingredient {idx + 1} name",
-                                    value: ingredients()[idx].name.clone(),
-                                    placeholder: "Ingredient name",
-                                    oninput: move |v| {
-                                        ingredients.write()[idx].name = v;
-                                    },
-                                }
-                                // Remove
-                                Button {
-                                    variant: ButtonVariant::Ghost,
-                                    onclick: move |_| {
-                                        ingredients.write().remove(idx);
-                                    },
-                                    span { aria_hidden: "true", "✕" }
-                                        span { class: "sr-only", "Remove item" }
-                                }
+                        for idx in 0..ingredients.read().len() {
+                            super::recipe_ingredient_editor::RecipeIngredientEditor {
+                                key: "{idx}", ingredients, index: idx,
                             }
                         }
 
@@ -1556,8 +1625,9 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                                 display: "flex",
                                 gap: "var(--space-sm)",
                                 align_items: "center",
-                                Input {
-                            accessible_name: "Equipment {idx + 1} name",
+                                crate::components::equipment_autocomplete::EquipmentAutocomplete {
+                                    id: "recipe-equipment-{idx}",
+                                    accessible_name: "Equipment {idx + 1} name",
                                     value: equipment()[idx].name.clone(),
                                     placeholder: "e.g. mixing bowl",
                                     oninput: move |v| {
@@ -1622,14 +1692,14 @@ fn recipe_editor(id: String, id_is_draft: bool) -> Element {
                             color: "var(--error-ink)", font_size: "14px", "{err}"
                         }
                     }
-                    if let Some(err) = draft_save_error() {
+                    if let Some(err) = draft_save_error().filter(|message| !draft_sync.conflicted() || message != crate::api::recipe::DRAFT_CHANGED) {
                         div {
                             role: "alert", padding: "var(--space-sm) var(--space-md)",
                             background_color: "var(--error-bg)", border_radius: "var(--radius-md)",
                             color: "var(--error-ink)", font_size: "14px", "{err}"
                         }
                     }
-                    if let Some(err) = form_error() {
+                    if let Some(err) = form_error().filter(|message| !draft_sync.conflicted() || message != crate::api::recipe::DRAFT_CHANGED) {
                         div {
                             role: "alert",
                             padding: "var(--space-sm) var(--space-md)",

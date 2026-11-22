@@ -1,0 +1,4441 @@
+[
+  {
+    "number": 1,
+    "ingredient": "chickpea",
+    "canonical_id": "686f2847-4f4b-4e0b-ae8f-c493e2e94bcb",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Edible chickpea seeds; dry/raw or plain cooked presentations preserve the scoped seed identity.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "2644282",
+        "url": "https://fdc.nal.usda.gov/food-details/2644282/nutrients",
+        "description": "Chickpeas, (garbanzo beans, bengal gram), dry",
+        "data_type": "foundation_food",
+        "publication_date": "2023-10-26",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Edible chickpea seeds; dry/raw or plain cooked presentations preserve the scoped seed identity."
+      },
+      {
+        "status": "E",
+        "source_id": "173756",
+        "url": "https://fdc.nal.usda.gov/food-details/173756/nutrients",
+        "description": "Chickpeas (garbanzo beans, bengal gram), mature seeds, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Edible chickpea seeds; dry/raw or plain cooked presentations preserve the scoped seed identity."
+      },
+      {
+        "status": "E",
+        "source_id": "2707416",
+        "url": "https://fdc.nal.usda.gov/food-details/2707416/nutrients",
+        "description": "Chickpeas, from dried, no added fat",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Edible chickpea seeds; dry/raw or plain cooked presentations preserve the scoped seed identity."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "chickpea",
+        "garbanzo bean",
+        "garbanzo",
+        "chick pea",
+        "chickpeas"
+      ],
+      "branded": [
+        "chickpea",
+        "garbanzo bean",
+        "garbanzo",
+        "chick pea",
+        "chickpeas"
+      ]
+    }
+  },
+  {
+    "number": 2,
+    "ingredient": "gochujang",
+    "canonical_id": "a6483249-cd58-43f3-b4f5-5cbc0e393745",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Explicit gochujang fermented chile paste concentrate with rice, soybean and chile; reject gochujang-flavored meals and diluted cooking sauces.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "1108244",
+        "url": "https://fdc.nal.usda.gov/food-details/1108244/nutrients",
+        "description": "GOCHUJANG FERMENTED CHILE PASTE CONCENTRATED",
+        "data_type": "branded_food",
+        "publication_date": "2020-11-13",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Explicit gochujang fermented chile paste concentrate with rice, soybean and chile; reject gochujang-flavored meals and diluted cooking sauces.",
+        "brand_owner": "MILKimchi Inc",
+        "brand_name": "",
+        "ingredients": "GLUTINOUS RICE POWDER, SALT, NON-GMO SOYBEAN FLOUR, MALT SYRUP, CHILE FLAKE POWDER.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "gochujang",
+        "red pepper paste",
+        "hot pepper paste",
+        "kochujang"
+      ],
+      "branded": [
+        "gochujang",
+        "red pepper paste",
+        "hot pepper paste",
+        "kochujang"
+      ]
+    }
+  },
+  {
+    "number": 3,
+    "ingredient": "garlic",
+    "canonical_id": "9e257b68-7c43-41b4-a331-c42f559beda1",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Raw garlic food, distinct from powder or paste.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "1104647",
+        "url": "https://fdc.nal.usda.gov/food-details/1104647/nutrients",
+        "description": "Garlic, raw",
+        "data_type": "foundation_food",
+        "publication_date": "2020-10-30",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Raw garlic food, distinct from powder or paste."
+      },
+      {
+        "status": "E",
+        "source_id": "169230",
+        "url": "https://fdc.nal.usda.gov/food-details/169230/nutrients",
+        "description": "Garlic, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw garlic food, distinct from powder or paste."
+      },
+      {
+        "status": "E",
+        "source_id": "2709786",
+        "url": "https://fdc.nal.usda.gov/food-details/2709786/nutrients",
+        "description": "Garlic, raw",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Raw garlic food, distinct from powder or paste."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "garlic"
+      ],
+      "branded": [
+        "garlic"
+      ]
+    }
+  },
+  {
+    "number": 4,
+    "ingredient": "garlic powder",
+    "canonical_id": "090daaac-dfca-41c8-b9c7-e7cd0d414f43",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Explicit garlic powder spice.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "171325",
+        "url": "https://fdc.nal.usda.gov/food-details/171325/nutrients",
+        "description": "Spices, garlic powder",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Explicit garlic powder spice."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "garlic powder",
+        "powdered garlic"
+      ],
+      "branded": [
+        "garlic powder",
+        "powdered garlic"
+      ]
+    }
+  },
+  {
+    "number": 5,
+    "ingredient": "garlic paste",
+    "canonical_id": "cb6506d0-12fc-424d-97b5-b7fc6d291687",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Raw garlic does not establish the required paste form.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "169230",
+        "url": "https://fdc.nal.usda.gov/food-details/169230/nutrients",
+        "description": "Garlic, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw garlic does not establish the required paste form."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Garlic-and-salt paste product; the required paste is the product itself.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "1889044",
+        "url": "https://fdc.nal.usda.gov/food-details/1889044/nutrients",
+        "description": "GARLIC PASTE",
+        "data_type": "branded_food",
+        "publication_date": "2021-07-29",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Garlic-and-salt paste product; the required paste is the product itself.",
+        "brand_owner": "Niagara Conservation Corp.",
+        "brand_name": "PASTA DE AJO",
+        "ingredients": "GARLIC AND SALT.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "garlic paste"
+      ],
+      "branded": [
+        "garlic paste"
+      ]
+    }
+  },
+  {
+    "number": 6,
+    "ingredient": "chili pepper",
+    "canonical_id": "b940ee2d-3277-4160-9f09-346458e3e104",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Edible hot chili pepper food; no narrower cultivar or dried form is required by this general entry.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "170106",
+        "url": "https://fdc.nal.usda.gov/food-details/170106/nutrients",
+        "description": "Peppers, hot chili, red, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Edible hot chili pepper food; no narrower cultivar or dried form is required by this general entry."
+      },
+      {
+        "status": "E",
+        "source_id": "2709798",
+        "url": "https://fdc.nal.usda.gov/food-details/2709798/nutrients",
+        "description": "Peppers, hot, raw",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Edible hot chili pepper food; no narrower cultivar or dried form is required by this general entry."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "chili pepper",
+        "chilli pepper",
+        "chile pepper",
+        "pepper",
+        "hot chili",
+        "peppers, hot"
+      ],
+      "branded": [
+        "chili pepper",
+        "chilli pepper",
+        "chile pepper",
+        "hot chili"
+      ]
+    }
+  },
+  {
+    "number": 7,
+    "ingredient": "tomato",
+    "canonical_id": "1c29f668-5bfa-4600-8e17-0133f91b68de",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Edible tomato food, not sauce or paste.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "321360",
+        "url": "https://fdc.nal.usda.gov/food-details/321360/nutrients",
+        "description": "Tomatoes, grape, raw",
+        "data_type": "foundation_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Edible tomato food, not sauce or paste."
+      },
+      {
+        "status": "E",
+        "source_id": "170457",
+        "url": "https://fdc.nal.usda.gov/food-details/170457/nutrients",
+        "description": "Tomatoes, red, ripe, raw, year round average",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Edible tomato food, not sauce or paste."
+      },
+      {
+        "status": "E",
+        "source_id": "2709719",
+        "url": "https://fdc.nal.usda.gov/food-details/2709719/nutrients",
+        "description": "Tomatoes, raw",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Edible tomato food, not sauce or paste."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "tomato",
+        "tomatoes",
+        "tomatoes, red"
+      ],
+      "branded": [
+        "tomato",
+        "tomatoes"
+      ]
+    }
+  },
+  {
+    "number": 8,
+    "ingredient": "olive oil",
+    "canonical_id": "47359146-a677-400e-b6b5-c106520355e7",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Olive oil; this entry does not require a particular grade.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "748608",
+        "url": "https://fdc.nal.usda.gov/food-details/748608/nutrients",
+        "description": "Oil, olive, extra virgin",
+        "data_type": "foundation_food",
+        "publication_date": "2019-12-16",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Olive oil; this entry does not require a particular grade."
+      },
+      {
+        "status": "E",
+        "source_id": "171413",
+        "url": "https://fdc.nal.usda.gov/food-details/171413/nutrients",
+        "description": "Oil, olive, salad or cooking",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Olive oil; this entry does not require a particular grade."
+      },
+      {
+        "status": "E",
+        "source_id": "2710186",
+        "url": "https://fdc.nal.usda.gov/food-details/2710186/nutrients",
+        "description": "Olive oil",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Olive oil; this entry does not require a particular grade."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "olive oil",
+        "oil, olive"
+      ],
+      "branded": [
+        "olive oil",
+        "oil, olive"
+      ]
+    }
+  },
+  {
+    "number": 9,
+    "ingredient": "soy sauce",
+    "canonical_id": "42f9281f-bd16-4212-998f-0370128f6e07",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Soy-and-wheat shoyu or generic soy sauce, not tamari.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "174277",
+        "url": "https://fdc.nal.usda.gov/food-details/174277/nutrients",
+        "description": "Soy sauce made from soy and wheat (shoyu)",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Soy-and-wheat shoyu or generic soy sauce, not tamari."
+      },
+      {
+        "status": "E",
+        "source_id": "2707442",
+        "url": "https://fdc.nal.usda.gov/food-details/2707442/nutrients",
+        "description": "Soy sauce",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Soy-and-wheat shoyu or generic soy sauce, not tamari."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "soy sauce",
+        "soya sauce"
+      ],
+      "branded": [
+        "soy sauce",
+        "soya sauce"
+      ]
+    }
+  },
+  {
+    "number": 10,
+    "ingredient": "salt",
+    "canonical_id": "090e6228-0da4-4920-b48d-3a2fb09c4a92",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Table salt; iodized presentation is compatible with the general seasoning entry.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "746775",
+        "url": "https://fdc.nal.usda.gov/food-details/746775/nutrients",
+        "description": "Salt, table, iodized",
+        "data_type": "foundation_food",
+        "publication_date": "2019-12-16",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Table salt; iodized presentation is compatible with the general seasoning entry."
+      },
+      {
+        "status": "E",
+        "source_id": "173468",
+        "url": "https://fdc.nal.usda.gov/food-details/173468/nutrients",
+        "description": "Salt, table",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Table salt; iodized presentation is compatible with the general seasoning entry."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "salt",
+        "salt, table"
+      ],
+      "branded": [
+        "salt"
+      ]
+    }
+  },
+  {
+    "number": 11,
+    "ingredient": "tahini",
+    "canonical_id": "dea12fbf-c0e9-44ad-968e-0e8a438ec8fa",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Sesame butter/tahini food paste, not seed or oil.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "2262073",
+        "url": "https://fdc.nal.usda.gov/food-details/2262073/nutrients",
+        "description": "Sesame butter, creamy",
+        "data_type": "foundation_food",
+        "publication_date": "2022-04-28",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Sesame butter/tahini food paste, not seed or oil."
+      },
+      {
+        "status": "E",
+        "source_id": "168604",
+        "url": "https://fdc.nal.usda.gov/food-details/168604/nutrients",
+        "description": "Seeds, sesame butter, tahini, type of kernels unspecified",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Sesame butter/tahini food paste, not seed or oil."
+      },
+      {
+        "status": "E",
+        "source_id": "2707587",
+        "url": "https://fdc.nal.usda.gov/food-details/2707587/nutrients",
+        "description": "Tahini",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Sesame butter/tahini food paste, not seed or oil."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "tahini",
+        "tahina",
+        "sesame butter"
+      ],
+      "branded": [
+        "tahini",
+        "tahina",
+        "sesame butter"
+      ]
+    }
+  },
+  {
+    "number": 12,
+    "ingredient": "sumac",
+    "canonical_id": "e82dd25f-0dfe-42cb-a8c7-6077f00537d7",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Ground sumac contains added salt. With no proportion or unsalted record confirmed, retain as a related seasoning product rather than accepting the scoped sumac spice unchanged.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2630657",
+        "url": "https://fdc.nal.usda.gov/food-details/2630657/nutrients",
+        "description": "GROUND SUMAC",
+        "data_type": "branded_food",
+        "publication_date": "2023-08-31",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Ground sumac contains added salt. With no proportion or unsalted record confirmed, retain as a related seasoning product rather than accepting the scoped sumac spice unchanged.",
+        "brand_owner": "Frontier Cooperative Herbs",
+        "brand_name": "FRONTIER CO-OP",
+        "ingredients": "SUMAC (SUMAC BERRIES, SALT).",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "sumac",
+        "sumak"
+      ],
+      "branded": [
+        "sumac",
+        "sumak"
+      ]
+    }
+  },
+  {
+    "number": 13,
+    "ingredient": "rice vinegar",
+    "canonical_id": "984aeedb-d887-406b-9dc3-f7ad851905a4",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic vinegar does not identify rice substrate or exclude seasoned rice vinegar.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "2709351",
+        "url": "https://fdc.nal.usda.gov/food-details/2709351/nutrients",
+        "description": "Vinegar",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Generic vinegar does not identify rice substrate or exclude seasoned rice vinegar."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Rice vinegar diluted only with water, not seasoned rice vinegar.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2576812",
+        "url": "https://fdc.nal.usda.gov/food-details/2576812/nutrients",
+        "description": "RICE VINEGAR",
+        "data_type": "branded_food",
+        "publication_date": "2023-06-29",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Rice vinegar diluted only with water, not seasoned rice vinegar.",
+        "brand_owner": "Kikkoman Sales USA, Inc.",
+        "brand_name": "KIKKOMAN",
+        "ingredients": "RICE VINEGAR, WATER. DILUTED WITH WATER TO 4.2% ACIDITY (42 GRAIN).",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "rice vinegar",
+        "rice wine vinegar",
+        "vinegar, rice",
+        "vinegar"
+      ],
+      "branded": [
+        "rice vinegar",
+        "rice wine vinegar",
+        "vinegar, rice"
+      ]
+    }
+  },
+  {
+    "number": 14,
+    "ingredient": "smoked paprika",
+    "canonical_id": "45bc7fb5-6e37-4edb-badf-918b5c8ea5f7",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Paprika without a smoking specification does not establish smoked paprika.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "171329",
+        "url": "https://fdc.nal.usda.gov/food-details/171329/nutrients",
+        "description": "Spices, paprika",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Paprika without a smoking specification does not establish smoked paprika."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Ingredients explicitly state organic smoked paprika.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2060565",
+        "url": "https://fdc.nal.usda.gov/food-details/2060565/nutrients",
+        "description": "SMOKED PAPRIKA",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Ingredients explicitly state organic smoked paprika.",
+        "brand_owner": "Frontier Cooperative Herbs",
+        "brand_name": "SIMPLY ORGANIC",
+        "ingredients": "ORGANIC SMOKED PAPRIKA",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "smoked paprika",
+        "smoked pimenton",
+        "paprika"
+      ],
+      "branded": [
+        "smoked paprika",
+        "smoked pimenton"
+      ]
+    }
+  },
+  {
+    "number": 15,
+    "ingredient": "black sesame seeds",
+    "canonical_id": "cbb5bb76-927b-4bee-9761-1eeecb6289cd",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic sesame seeds do not establish the black-seed type.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "170150",
+        "url": "https://fdc.nal.usda.gov/food-details/170150/nutrients",
+        "description": "Seeds, sesame seeds, whole, dried",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic sesame seeds do not establish the black-seed type."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Ingredients explicitly state organic black sesame seeds.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2138385",
+        "url": "https://fdc.nal.usda.gov/food-details/2138385/nutrients",
+        "description": "BLACK SESAME SEEDS",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Ingredients explicitly state organic black sesame seeds.",
+        "brand_owner": "Foods Alive Inc.",
+        "brand_name": "FOODS ALIVE",
+        "ingredients": "ORGANIC BLACK SESAME SEEDS.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "black sesame seeds",
+        "black sesame",
+        "sesame",
+        "sesame seeds"
+      ],
+      "branded": [
+        "black sesame seeds",
+        "black sesame"
+      ]
+    }
+  },
+  {
+    "number": 16,
+    "ingredient": "doenjang",
+    "canonical_id": "3a5e2d1a-568c-481b-a8a6-2985dce2d901",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Miso is a related fermented soybean paste, not Korean doenjang.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "172442",
+        "url": "https://fdc.nal.usda.gov/food-details/172442/nutrients",
+        "description": "Miso",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Miso is a related fermented soybean paste, not Korean doenjang."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Named Doen Jang soybean seasoning paste with soybean, salt and fermentation starter; not generic miso.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2040094",
+        "url": "https://fdc.nal.usda.gov/food-details/2040094/nutrients",
+        "description": "SEMPIO, DOEN JANG SEASONING PASTE",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named Doen Jang soybean seasoning paste with soybean, salt and fermentation starter; not generic miso.",
+        "brand_owner": "SEMPIO FOODS COMPANY",
+        "brand_name": "SEMPIO",
+        "ingredients": "SOYBEAN, SALT, DISTILLED ALCOHOL (DERIVED FROM AGRICULTURAL PRODUCTS), KOJI-STARTER, WATER.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "doenjang",
+        "Korean soybean paste",
+        "doen-jang",
+        "soybean paste",
+        "soy bean paste",
+        "doen jang",
+        "daenjang",
+        "dwenjang",
+        "miso"
+      ],
+      "branded": [
+        "doenjang",
+        "Korean soybean paste",
+        "doen-jang",
+        "soybean paste",
+        "soy bean paste",
+        "doen jang",
+        "daenjang",
+        "dwenjang"
+      ]
+    }
+  },
+  {
+    "number": 17,
+    "ingredient": "gochugaru",
+    "canonical_id": "2c6bada1-ca0d-40fb-9668-f3f722f562ed",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Raw hot chili pepper does not establish processed Korean gochugaru.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "170106",
+        "url": "https://fdc.nal.usda.gov/food-details/170106/nutrients",
+        "description": "Peppers, hot chili, red, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw hot chili pepper does not establish processed Korean gochugaru."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Named Korean gochugaru chile flakes; dried red chile flakes are the product, not an ingredient-list mention.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2084510",
+        "url": "https://fdc.nal.usda.gov/food-details/2084510/nutrients",
+        "description": "MOTHER IN LAW'S, GOCHUGARU KOREAN CHILE FLAKES",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named Korean gochugaru chile flakes; dried red chile flakes are the product, not an ingredient-list mention.",
+        "brand_owner": "MILKimchi Inc",
+        "brand_name": "MOTHER IN LAW'S",
+        "ingredients": "A BLEND OF DRIED RED CHILE FLAKES.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "gochugaru",
+        "Korean chili flakes",
+        "gochu garu",
+        "korean chili powder",
+        "korean red pepper",
+        "hot chili"
+      ],
+      "branded": [
+        "gochugaru",
+        "Korean chili flakes",
+        "gochu garu",
+        "korean chili powder",
+        "korean red pepper"
+      ]
+    }
+  },
+  {
+    "number": 18,
+    "ingredient": "perilla leaf",
+    "canonical_id": "f0167f19-be00-4876-9c15-b3ae35dd8fda",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Red shiso leaves are sold with dried plum, sugar and seasonings; this mixture does not establish a standalone perilla-leaf ingredient.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2628317",
+        "url": "https://fdc.nal.usda.gov/food-details/2628317/nutrients",
+        "description": "MISHIMA, RED SHISO LEAVES WITH DRIED PLUM",
+        "data_type": "branded_food",
+        "publication_date": "2023-08-31",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Red shiso leaves are sold with dried plum, sugar and seasonings; this mixture does not establish a standalone perilla-leaf ingredient.",
+        "brand_owner": "Mishima Foods USA Inc.",
+        "brand_name": "MISHIMA",
+        "ingredients": "BEEFSTEAK PLANT (RED SHISO LEAVES WITH DREID PLUM), DRIED PLUM, SUGAR, SALT, MONOSODIUM GLUTAMATE, MALIC ACIDS & KELP EXTRACT.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "perilla leaf",
+        "kkaennip",
+        "perilla leaves",
+        "perilla",
+        "shiso"
+      ],
+      "branded": [
+        "perilla leaf",
+        "kkaennip",
+        "perilla leaves",
+        "perilla",
+        "shiso"
+      ]
+    }
+  },
+  {
+    "number": 19,
+    "ingredient": "saeujeot",
+    "canonical_id": "44c966e1-7876-4162-b5cf-465a6fd39ec3",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Generic finely ground fermented shrimp sauce does not establish Korean saeujeot whole/small salted shrimp preparation.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2024889",
+        "url": "https://fdc.nal.usda.gov/food-details/2024889/nutrients",
+        "description": "SHRIMP SAUCE (FINELY GROUND)",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Generic finely ground fermented shrimp sauce does not establish Korean saeujeot whole/small salted shrimp preparation.",
+        "brand_owner": "Lee Kum Kee Co. Ltd.",
+        "brand_name": "LEE KUM KEE",
+        "ingredients": "SHRIMP(FERMENTED), SALT",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "saeujeot",
+        "saeujeot salted shrimp",
+        "salted shrimp",
+        "shrimp sauce",
+        "saeu",
+        "sae woo",
+        "salted fermented shrimp",
+        "salted shrimps",
+        "salted baby shrimp",
+        "salted tiny shrimp"
+      ],
+      "branded": [
+        "saeujeot",
+        "saeujeot salted shrimp",
+        "salted shrimp",
+        "shrimp sauce",
+        "saeu",
+        "sae woo",
+        "salted fermented shrimp",
+        "salted shrimps",
+        "salted baby shrimp",
+        "salted tiny shrimp"
+      ]
+    }
+  },
+  {
+    "number": 20,
+    "ingredient": "cheonggukjang",
+    "canonical_id": "65af547b-4b32-491c-874b-8af2a39c7653",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Miso does not establish Korean rapidly fermented cheonggukjang.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "172442",
+        "url": "https://fdc.nal.usda.gov/food-details/172442/nutrients",
+        "description": "Miso",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Miso does not establish Korean rapidly fermented cheonggukjang."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "cheonggukjang",
+        "chungkukjang",
+        "chung gook jang",
+        "chonggukjang",
+        "chungkookjang",
+        "miso",
+        "cheong guk jang",
+        "chung kook jang"
+      ],
+      "branded": [
+        "cheonggukjang",
+        "chungkukjang",
+        "chung gook jang",
+        "chonggukjang",
+        "chungkookjang",
+        "cheong guk jang",
+        "chung kook jang"
+      ]
+    }
+  },
+  {
+    "number": 21,
+    "ingredient": "white miso",
+    "canonical_id": "0a7f6978-a10c-415d-b322-73afcfd0e122",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic miso does not establish the required white/light miso type.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "172442",
+        "url": "https://fdc.nal.usda.gov/food-details/172442/nutrients",
+        "description": "Miso",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic miso does not establish the required white/light miso type."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Explicit sweet white miso paste with rice koji, soybeans, salt and water; not a soup or miso blend.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2551468",
+        "url": "https://fdc.nal.usda.gov/food-details/2551468/nutrients",
+        "description": "ORGANIC SWEET WHITE MISO",
+        "data_type": "branded_food",
+        "publication_date": "2023-05-25",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Explicit sweet white miso paste with rice koji, soybeans, salt and water; not a soup or miso blend.",
+        "brand_owner": "",
+        "brand_name": "MISO MASTER",
+        "ingredients": "ORGANIC HANDMADE RICE KOJI (ORGANIC RICE, KOJI SPORES [ASPERGILLUS ORYZAE]), ORGANIC WHOLE SOYBEANS, SUN DRIED SEA SALT, BLUE RIDGE MTN WELL WATER",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "white miso",
+        "shiro miso",
+        "miso"
+      ],
+      "branded": [
+        "white miso",
+        "shiro miso",
+        "miso"
+      ]
+    }
+  },
+  {
+    "number": 22,
+    "ingredient": "kombu",
+    "canonical_id": "feb4a7c0-79a0-4a0e-8443-27fbe0def3ca",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic raw kelp does not unambiguously identify kombu species or preparation.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "168457",
+        "url": "https://fdc.nal.usda.gov/food-details/168457/nutrients",
+        "description": "Seaweed, kelp, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic raw kelp does not unambiguously identify kombu species or preparation."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Kombu product explicitly identifies Laminaria japonica seaweed.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "1862743",
+        "url": "https://fdc.nal.usda.gov/food-details/1862743/nutrients",
+        "description": "PACIFIC KOMBU",
+        "data_type": "branded_food",
+        "publication_date": "2021-07-29",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Kombu product explicitly identifies Laminaria japonica seaweed.",
+        "brand_owner": "Great Eastern Sun Trading Co.",
+        "brand_name": "EMERALD COVE",
+        "ingredients": "KOMBU (LAMINARIA JAPONICA) SEAWEED.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "kombu",
+        "konbu",
+        "seaweed",
+        "kelp"
+      ],
+      "branded": [
+        "kombu",
+        "konbu",
+        "kelp"
+      ]
+    }
+  },
+  {
+    "number": 23,
+    "ingredient": "katsuobushi",
+    "canonical_id": "c7779987-cdf8-43a3-a590-5933db0144e3",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Bonito flakes identify dried Katsuwonus pelamis, but the record does not confirm the benchmark-required smoking and fermentation; retain as related pending production evidence.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2025412",
+        "url": "https://fdc.nal.usda.gov/food-details/2025412/nutrients",
+        "description": "BONITO FLAKES",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Bonito flakes identify dried Katsuwonus pelamis, but the record does not confirm the benchmark-required smoking and fermentation; retain as related pending production evidence.",
+        "brand_owner": "Eden Foods, Inc.",
+        "brand_name": "EDEN",
+        "ingredients": "DRIED BONITO. KATSUWONUS PELAMIS. ",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "katsuobushi",
+        "bonito flakes",
+        "bonito"
+      ],
+      "branded": [
+        "katsuobushi",
+        "bonito flakes",
+        "bonito"
+      ]
+    }
+  },
+  {
+    "number": 24,
+    "ingredient": "shio koji",
+    "canonical_id": "2947f8d1-fe85-4c19-82f6-1f7c16340611",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Creamy koji sauce consists of koji-cultured rice, water and salt, preserving the scoped shio-koji seasoning identity.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2027677",
+        "url": "https://fdc.nal.usda.gov/food-details/2027677/nutrients",
+        "description": "CREAMY KOJI SAUCE",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Creamy koji sauce consists of koji-cultured rice, water and salt, preserving the scoped shio-koji seasoning identity.",
+        "brand_owner": "Miyako Oriental Foods, Inc.",
+        "brand_name": "COLD MOUNTAIN",
+        "ingredients": "KOJI CULTURED RICE, FILTERED WATER AND SALT",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "shio koji",
+        "shio-koji",
+        "koji"
+      ],
+      "branded": [
+        "shio koji",
+        "shio-koji",
+        "koji"
+      ]
+    }
+  },
+  {
+    "number": 25,
+    "ingredient": "umeboshi",
+    "canonical_id": "830372c1-a460-4bfb-a296-de7fe8485f4e",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Explicit umeboshi pickled Japanese plums with shiso and sea salt.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2675009",
+        "url": "https://fdc.nal.usda.gov/food-details/2675009/nutrients",
+        "description": "UMEBOSHI PICKLED PLUMS",
+        "data_type": "branded_food",
+        "publication_date": "2023-11-16",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Explicit umeboshi pickled Japanese plums with shiso and sea salt.",
+        "brand_owner": "Great Eastern Sun Trading Co.",
+        "brand_name": "EMPEROR'S KITCHEN",
+        "ingredients": "UMEBOSHI (JAPANESE PLUM), SHISO (PERILLA LEAVES), SEA SALT.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "umeboshi",
+        "plum",
+        "pickled plum"
+      ],
+      "branded": [
+        "umeboshi",
+        "pickled plum"
+      ]
+    }
+  },
+  {
+    "number": 26,
+    "ingredient": "doubanjiang",
+    "canonical_id": "ab889f59-7478-4a6f-b41a-7f86edb11a99",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Formosa chili bean sauce lists soybeans, not fermented broad beans. Another chili-bean record lacks ingredients, and the broad-bean mention occurs inside ramen, so no scoped product is accepted.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2603243",
+        "url": "https://fdc.nal.usda.gov/food-details/2603243/nutrients",
+        "description": "FORMOSA CHILI BEAN SAUCE, FORMOSA CHILI BEAN",
+        "data_type": "branded_food",
+        "publication_date": "2023-07-13",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Formosa chili bean sauce lists soybeans, not fermented broad beans. Another chili-bean record lacks ingredients, and the broad-bean mention occurs inside ramen, so no scoped product is accepted.",
+        "brand_owner": "Mandarin Soy Sauce Inc",
+        "brand_name": "WAN JA SHAN",
+        "ingredients": "WATER, SUCROSE, CHILI PEPPER, SALT, RICE VINEGAR, STARCH, NON-GMO SOYBEANS, YEAST EXTRACT, CHILI EXTRACT.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "doubanjiang",
+        "toban djan",
+        "bean paste",
+        "chili bean paste",
+        "chilli bean paste",
+        "broad bean paste",
+        "chili bean sauce",
+        "chilli bean sauce",
+        "broad bean",
+        "dou ban",
+        "toban",
+        "dou ban jiang",
+        "broadbean paste"
+      ],
+      "branded": [
+        "doubanjiang",
+        "toban djan",
+        "chili bean paste",
+        "chilli bean paste",
+        "broad bean paste",
+        "chili bean sauce",
+        "chilli bean sauce",
+        "broad bean",
+        "dou ban",
+        "toban",
+        "dou ban jiang",
+        "broadbean paste"
+      ]
+    }
+  },
+  {
+    "number": 27,
+    "ingredient": "douchi",
+    "canonical_id": "5beb3af7-0cbd-469a-a9aa-84614ce356b2",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Unfermented mature soybeans do not establish salted fermented black soybeans.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "174270",
+        "url": "https://fdc.nal.usda.gov/food-details/174270/nutrients",
+        "description": "Soybeans, mature seeds, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Unfermented mature soybeans do not establish salted fermented black soybeans."
+      }
+    ],
+    "branded_status": "R",
+    "branded_reason": "Spiced salted black beans do not explicitly establish fermented black soybeans; black-bean sauces and ingredient-list mentions are insufficient.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2041303",
+        "url": "https://fdc.nal.usda.gov/food-details/2041303/nutrients",
+        "description": "SALTED BLACK BEAN SPICED",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Spiced salted black beans do not explicitly establish fermented black soybeans; black-bean sauces and ingredient-list mentions are insufficient.",
+        "brand_owner": "Koon Chun Hing Kee Soy & Sauce",
+        "brand_name": "KOON CHUN",
+        "ingredients": "BLACK BEAN, GINGER, SALT, ORANGE PEEL, SPICES & SOY SAUCE (WATER, SOYA BEAN, SALT WHEAT FLOUR (CEREALS CONTAINING GLUTEN)).",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "douchi",
+        "fermented black soybeans",
+        "soybeans",
+        "black bean sauce",
+        "salted black bean",
+        "fermented black beans",
+        "fermented black bean",
+        "salted black beans",
+        "black soybean",
+        "fermented soybean",
+        "fermented black soya",
+        "black beans salted"
+      ],
+      "branded": [
+        "douchi",
+        "fermented black soybeans",
+        "black bean sauce",
+        "salted black bean",
+        "fermented black beans",
+        "fermented black bean",
+        "salted black beans",
+        "black soybean",
+        "fermented soybean",
+        "fermented black soya",
+        "black beans salted"
+      ]
+    }
+  },
+  {
+    "number": 28,
+    "ingredient": "Shaoxing wine",
+    "canonical_id": "4219d969-e654-4d43-bf01-0254bcde496a",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Shaohsing rice cooking wine; added cooking salt does not change this scoped cooking-wine identity.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2440010",
+        "url": "https://fdc.nal.usda.gov/food-details/2440010/nutrients",
+        "description": "SHAOHSING RICE COOKING WINE",
+        "data_type": "branded_food",
+        "publication_date": "2022-12-22",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Shaohsing rice cooking wine; added cooking salt does not change this scoped cooking-wine identity.",
+        "brand_owner": "Golden International Corp.",
+        "brand_name": "GOLDEN INTERNATIONAL CORP",
+        "ingredients": "WATER, RICE, WHEAT, SALT, CARAMEL",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "Shaoxing wine",
+        "Shaoxing rice wine",
+        "rice wine",
+        "shaohsing",
+        "shao hsing",
+        "shaoxing"
+      ],
+      "branded": [
+        "Shaoxing wine",
+        "Shaoxing rice wine",
+        "shaohsing",
+        "shao hsing",
+        "shaoxing"
+      ]
+    }
+  },
+  {
+    "number": 29,
+    "ingredient": "Sichuan pepper",
+    "canonical_id": "c761993e-774c-44a8-b8b9-c9ca3acb5153",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Prickly ash infused oil is not the scoped Zanthoxylum husk spice; other hits are mixed sauces/meals.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2626697",
+        "url": "https://fdc.nal.usda.gov/food-details/2626697/nutrients",
+        "description": "WU FENG 1883 LI HONG, PRICKLY ASH OIL",
+        "data_type": "branded_food",
+        "publication_date": "2023-08-31",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Prickly ash infused oil is not the scoped Zanthoxylum husk spice; other hits are mixed sauces/meals.",
+        "brand_owner": "",
+        "brand_name": "WU FENG 1883 LI HONG",
+        "ingredients": "RAPESEED OIL, PRICKLY ASH.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "Sichuan pepper",
+        "Szechuan pepper",
+        "pepper",
+        "sichuan",
+        "szechuan",
+        "szechwan",
+        "prickly ash"
+      ],
+      "branded": [
+        "Sichuan pepper",
+        "Szechuan pepper",
+        "sichuan",
+        "szechuan",
+        "szechwan",
+        "prickly ash"
+      ]
+    }
+  },
+  {
+    "number": 30,
+    "ingredient": "Chinese black vinegar",
+    "canonical_id": "24aff122-6a33-46b1-9a7c-f0ca2162e497",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic vinegar does not identify dark Chinese grain vinegar.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "2709351",
+        "url": "https://fdc.nal.usda.gov/food-details/2709351/nutrients",
+        "description": "Vinegar",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Generic vinegar does not identify dark Chinese grain vinegar."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Chinkiang grain vinegar explicitly lists glutinous rice and bran; not a mixed black-vinegar-flavored sauce.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2436644",
+        "url": "https://fdc.nal.usda.gov/food-details/2436644/nutrients",
+        "description": "CHINKIANG VINEGAR",
+        "data_type": "branded_food",
+        "publication_date": "2022-12-22",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Chinkiang grain vinegar explicitly lists glutinous rice and bran; not a mixed black-vinegar-flavored sauce.",
+        "brand_owner": "Rhee Bros. Inc.",
+        "brand_name": "EMPEROR",
+        "ingredients": "WATER, GLUTINOUS RICE, BRAN, SALT, SUGAR",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "Chinese black vinegar",
+        "Chinese black rice vinegar",
+        "vinegar",
+        "black vinegar",
+        "chinkiang",
+        "zhenjiang"
+      ],
+      "branded": [
+        "Chinese black vinegar",
+        "Chinese black rice vinegar",
+        "black vinegar",
+        "chinkiang",
+        "zhenjiang"
+      ]
+    }
+  },
+  {
+    "number": 31,
+    "ingredient": "galangal",
+    "canonical_id": "9ddb1486-d3dd-4a2e-9254-fbf5f180c1cd",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Generic galangal powder does not confirm greater-galangal species or rhizome part; avoid silently accepting a different galangal.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "399808",
+        "url": "https://fdc.nal.usda.gov/food-details/399808/nutrients",
+        "description": "BUTTERFLY, GALANGAL POWDER",
+        "data_type": "branded_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Generic galangal powder does not confirm greater-galangal species or rhizome part; avoid silently accepting a different galangal.",
+        "brand_owner": "BUTTERFLY",
+        "brand_name": "",
+        "ingredients": "GALANGAL",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "galangal",
+        "greater galangal",
+        "galanga"
+      ],
+      "branded": [
+        "galangal",
+        "greater galangal",
+        "galanga"
+      ]
+    }
+  },
+  {
+    "number": 32,
+    "ingredient": "makrut lime leaf",
+    "canonical_id": "8f4baf3d-6b84-4661-9b7c-4b6e21fd68eb",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Kaffir lime leaves occur in a mixed curry sauce; a mention does not establish a standalone leaf record.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2110541",
+        "url": "https://fdc.nal.usda.gov/food-details/2110541/nutrients",
+        "description": "THAI GREEN CURRY COMBINES COCONUT ZESTY KAFFIR LIME LEAVES AND HINTS OF SWEET BASIL SIMMER SAUCE, THAI GREEN CURRY",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Kaffir lime leaves occur in a mixed curry sauce; a mention does not establish a standalone leaf record.",
+        "brand_owner": "Glasser Bows, Inc.",
+        "brand_name": "TIGER TIGER",
+        "ingredients": "COCONUT MILK, BAMBOO SHOOT, GREEN CURRY PASTE, BABY CORN, FISH SAUCE (ANCHOVY EXTRACT, SALT, SUGAR), SUGAR, SWEET BASIL LEAVES, RED CHILI, MODIFIED CORN STARCH, KAFFIR LIME LEAVES, SALT, SPICES (CUMIN, CORIANDER), XANTHAN GUM AS STABILIZER.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "makrut lime leaf",
+        "kaffir lime leaf",
+        "lime leaves",
+        "lime leaf",
+        "makrut",
+        "kaffir",
+        "limeleaves"
+      ],
+      "branded": [
+        "makrut lime leaf",
+        "kaffir lime leaf",
+        "lime leaf",
+        "lime leaves",
+        "makrut",
+        "kaffir",
+        "limeleaves"
+      ]
+    }
+  },
+  {
+    "number": 33,
+    "ingredient": "lemongrass",
+    "canonical_id": "a08214d9-7023-4b49-8684-f9e98f6edf59",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Raw culinary lemon grass food (USDA label also says citronella), not essential oil; edible lemongrass is the reviewed interpretation of this food record.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "168573",
+        "url": "https://fdc.nal.usda.gov/food-details/168573/nutrients",
+        "description": "Lemon grass (citronella), raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw culinary lemon grass food (USDA label also says citronella), not essential oil; edible lemongrass is the reviewed interpretation of this food record."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "lemongrass",
+        "lemon grass"
+      ],
+      "branded": [
+        "lemongrass",
+        "lemon grass"
+      ]
+    }
+  },
+  {
+    "number": 34,
+    "ingredient": "culantro",
+    "canonical_id": "be295ca5-20d9-4a91-a8ab-a08315ca83b9",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Culantro cooking base includes peppers, onions, oil and other ingredients; not a standalone leaf ingredient.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "1868971",
+        "url": "https://fdc.nal.usda.gov/food-details/1868971/nutrients",
+        "description": "CULANTRO COOKING BASE",
+        "data_type": "branded_food",
+        "publication_date": "2021-07-29",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Culantro cooking base includes peppers, onions, oil and other ingredients; not a standalone leaf ingredient.",
+        "brand_owner": "Goya Foods, Inc. ",
+        "brand_name": "GOYA",
+        "ingredients": "WATER, CULANTRO, GREEN PEPPERS, DEHYDRATED ONIONS, MODIFIED FOOD STARCH, SOYBEAN OIL, SALT, GRANULATED GARLIC, MONOSODIUM GLUTAMATE, CITRIC ACID AND OREGANO.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "culantro",
+        "sawtooth coriander",
+        "recao",
+        "coriander",
+        "ngo gai",
+        "eryngium"
+      ],
+      "branded": [
+        "culantro",
+        "sawtooth coriander",
+        "recao",
+        "ngo gai",
+        "eryngium"
+      ]
+    }
+  },
+  {
+    "number": 35,
+    "ingredient": "padaek",
+    "canonical_id": "8c95b124-718b-48b9-9807-4028dbf6e61c",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Clear/general fish sauce does not establish Lao padaek fermented fish condiment.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "2706457",
+        "url": "https://fdc.nal.usda.gov/food-details/2706457/nutrients",
+        "description": "Fish sauce",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Clear/general fish sauce does not establish Lao padaek fermented fish condiment."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "padaek",
+        "padek",
+        "pa daek",
+        "fish sauce",
+        "pla ra",
+        "fermented fish"
+      ],
+      "branded": [
+        "padaek",
+        "padek",
+        "pa daek",
+        "pla ra",
+        "fermented fish"
+      ]
+    }
+  },
+  {
+    "number": 36,
+    "ingredient": "belacan",
+    "canonical_id": "adb32cd9-d2bc-4b44-85df-0586cc78bd6d",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Named BLACHEN dried shrimp paste (a belacan/belachan spelling variant), consisting of shrimp and salt. This named dried preparation supports belacan without treating generic shrimp sauce or Filipino bagoong as equivalent.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2032323",
+        "url": "https://fdc.nal.usda.gov/food-details/2032323/nutrients",
+        "description": "NORTH SOUTH, BLACHEN DRIED SHRIMP PASTE",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named BLACHEN dried shrimp paste (a belacan/belachan spelling variant), consisting of shrimp and salt. This named dried preparation supports belacan without treating generic shrimp sauce or Filipino bagoong as equivalent.",
+        "brand_owner": "First Indo American Corp.",
+        "brand_name": "NORTH SOUTH",
+        "ingredients": "65% SHRIMPS, 35% SALT.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "belacan",
+        "belachan",
+        "shrimp paste",
+        "trassi",
+        "terasi",
+        "blachan",
+        "blacan",
+        "shrimp sauce",
+        "blachen"
+      ],
+      "branded": [
+        "belacan",
+        "belachan",
+        "shrimp paste",
+        "trassi",
+        "terasi",
+        "blachan",
+        "blacan",
+        "shrimp sauce",
+        "blachen"
+      ]
+    }
+  },
+  {
+    "number": 37,
+    "ingredient": "candlenut",
+    "canonical_id": "1222f8ec-b845-444e-80a6-507100c5e02e",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "candlenut",
+        "candle nut",
+        "kemiri",
+        "candlenuts",
+        "kukui",
+        "Aleurites moluccanus",
+        "candle nuts",
+        "candle-nuts"
+      ],
+      "branded": [
+        "candlenut",
+        "candle nut",
+        "kemiri",
+        "candlenuts",
+        "kukui",
+        "Aleurites moluccanus",
+        "candle nuts",
+        "candle-nuts"
+      ]
+    }
+  },
+  {
+    "number": 38,
+    "ingredient": "tempeh",
+    "canonical_id": "3ecc32bd-292a-4dbf-82ee-0a621c0a35b0",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Tempeh as a standalone fermented soybean food.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "174272",
+        "url": "https://fdc.nal.usda.gov/food-details/174272/nutrients",
+        "description": "Tempeh",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Tempeh as a standalone fermented soybean food."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "tempeh",
+        "tempe"
+      ],
+      "branded": [
+        "tempeh",
+        "tempe"
+      ]
+    }
+  },
+  {
+    "number": 39,
+    "ingredient": "buah keluak",
+    "canonical_id": "005eea8b-e644-4fc3-8b74-027c825862e0",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "buah keluak",
+        "keluak",
+        "kluwek",
+        "pangium"
+      ],
+      "branded": [
+        "buah keluak",
+        "keluak",
+        "kluwek",
+        "pangium"
+      ]
+    }
+  },
+  {
+    "number": 40,
+    "ingredient": "torch ginger flower",
+    "canonical_id": "a0d22ccd-ed87-4aa3-8f89-0811304b8e98",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "torch ginger flower",
+        "bunga kantan",
+        "torch ginger",
+        "ginger flower",
+        "Etlingera elatior",
+        "kecombrang",
+        "honje",
+        "ginger bud"
+      ],
+      "branded": [
+        "torch ginger flower",
+        "bunga kantan",
+        "torch ginger",
+        "ginger flower",
+        "Etlingera elatior",
+        "kecombrang",
+        "honje",
+        "ginger bud"
+      ]
+    }
+  },
+  {
+    "number": 41,
+    "ingredient": "bagoong alamang",
+    "canonical_id": "2105155e-5310-4ecf-91a4-2a5f4b17fa56",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Named Filipino bagoong alamang salted shrimp fry condiment; the regional name establishes the preparation, not a generic shrimp paste synonym.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2032276",
+        "url": "https://fdc.nal.usda.gov/food-details/2032276/nutrients",
+        "description": "BAGOONG ALAMANG SALTED SHRIMP FRY",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named Filipino bagoong alamang salted shrimp fry condiment; the regional name establishes the preparation, not a generic shrimp paste synonym.",
+        "brand_owner": "Fortune Commercial Corp",
+        "brand_name": "PAMANA",
+        "ingredients": "SHRIMP FRY, SALT FD&C RED #3 (ERYTHROSINE).",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "bagoong alamang",
+        "Filipino fermented shrimp paste",
+        "shrimp paste",
+        "bagoong",
+        "shrimp sauce"
+      ],
+      "branded": [
+        "bagoong alamang",
+        "Filipino fermented shrimp paste",
+        "bagoong",
+        "shrimp paste",
+        "shrimp sauce"
+      ]
+    }
+  },
+  {
+    "number": 42,
+    "ingredient": "calamansi",
+    "canonical_id": "a86d25ae-a2d5-4085-a96e-71fd714b6cc2",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "100% pure calamansi juice/puree, compatible with the scope allowing fruit or culinary juice; not a sweetened nectar.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "799617",
+        "url": "https://fdc.nal.usda.gov/food-details/799617/nutrients",
+        "description": "100% PURE CALAMANSI JUICE",
+        "data_type": "branded_food",
+        "publication_date": "2020-04-01",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "100% pure calamansi juice/puree, compatible with the scope allowing fruit or culinary juice; not a sweetened nectar.",
+        "brand_owner": "Sun Tropics, Inc.",
+        "brand_name": "",
+        "ingredients": "CALAMANSI PUREE.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "calamansi",
+        "calamondin",
+        "kalamansi"
+      ],
+      "branded": [
+        "calamansi",
+        "calamondin",
+        "kalamansi"
+      ]
+    }
+  },
+  {
+    "number": 43,
+    "ingredient": "annatto seed",
+    "canonical_id": "25a28f42-0548-4ca1-9a9d-2a05a668517d",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Dry sazon containing annatto is a seasoning blend, not annatto seed.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "172242",
+        "url": "https://fdc.nal.usda.gov/food-details/172242/nutrients",
+        "description": "Seasoning mix, dry, sazon, coriander & annatto",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Dry sazon containing annatto is a seasoning blend, not annatto seed."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Standalone annatto seed, confirmed by ingredients.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2655209",
+        "url": "https://fdc.nal.usda.gov/food-details/2655209/nutrients",
+        "description": "ANNATTO SEED",
+        "data_type": "branded_food",
+        "publication_date": "2023-10-26",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Standalone annatto seed, confirmed by ingredients.",
+        "brand_owner": "Tampico Spice Co., Inc.",
+        "brand_name": "TAMPICO",
+        "ingredients": "ANNATTO SEED.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "annatto seed",
+        "achiote seed",
+        "annatto seeds",
+        "annatto",
+        "achiote"
+      ],
+      "branded": [
+        "annatto seed",
+        "achiote seed",
+        "annatto seeds",
+        "annatto",
+        "achiote"
+      ]
+    }
+  },
+  {
+    "number": 44,
+    "ingredient": "banana ketchup",
+    "canonical_id": "4c6dc81c-c401-4b02-b01d-792a14544cc0",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Explicit banana ketchup condiment; a named preparation may contain its normal recipe ingredients.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2613005",
+        "url": "https://fdc.nal.usda.gov/food-details/2613005/nutrients",
+        "description": "BANANA KETCHUP, BANANA",
+        "data_type": "branded_food",
+        "publication_date": "2023-07-13",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Explicit banana ketchup condiment; a named preparation may contain its normal recipe ingredients.",
+        "brand_owner": "Origin Almond",
+        "brand_name": "FILA MANILA",
+        "ingredients": "BANANA PUREE* (BANANAS, CITRIC ACID AND/OR ASCORBIC ACID), WATER, WHITE VINEGAR, SUGAR, KOSHER SALT, CORN STARCH, AVOCADO OIL, ANNATTO (FOR COLOR), GARLIC POWDER, ONION POWDER, RED BEET POWDER (FOR COLOR), GROUND GINGER, & ALLSPICE.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "banana ketchup",
+        "banana catsup",
+        "banana sauce"
+      ],
+      "branded": [
+        "banana ketchup",
+        "banana catsup",
+        "banana sauce"
+      ]
+    }
+  },
+  {
+    "number": 45,
+    "ingredient": "pili nut",
+    "canonical_id": "3324a5ff-1c10-4628-9c2a-edebc3da77d7",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Pilinuts is the USDA spelling of the edible pili nut kernel.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "170590",
+        "url": "https://fdc.nal.usda.gov/food-details/170590/nutrients",
+        "description": "Nuts, pilinuts, dried",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Pilinuts is the USDA spelling of the edible pili nut kernel."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "pili nut",
+        "pili nuts",
+        "pili",
+        "pilinuts"
+      ],
+      "branded": [
+        "pili nut",
+        "pili nuts",
+        "pili"
+      ]
+    }
+  },
+  {
+    "number": 46,
+    "ingredient": "asafoetida",
+    "canonical_id": "e6992fa3-02dd-4c85-8e4d-93c5a6c9554e",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "Hing hits are li-hing plum-flavored snacks, not the asafoetida resin spice; no scoped product confirmed.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "asafoetida",
+        "asafetida",
+        "hing"
+      ],
+      "branded": [
+        "asafoetida",
+        "asafetida",
+        "hing"
+      ]
+    }
+  },
+  {
+    "number": 47,
+    "ingredient": "ajwain",
+    "canonical_id": "c9bf3756-175f-4fca-9159-0b03016eba9d",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Whole ajwain seed product, confirmed by ingredients.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "1126916",
+        "url": "https://fdc.nal.usda.gov/food-details/1126916/nutrients",
+        "description": "AJWAIN SEED WHOLE ORGANIC SPICES",
+        "data_type": "branded_food",
+        "publication_date": "2020-11-13",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Whole ajwain seed product, confirmed by ingredients.",
+        "brand_owner": "PRIDE OF INDIA",
+        "brand_name": "",
+        "ingredients": "AJWAIN SEED WHOLE",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "ajwain",
+        "ajowan",
+        "carom seed",
+        "carom"
+      ],
+      "branded": [
+        "ajwain",
+        "ajowan",
+        "carom seed",
+        "carom"
+      ]
+    }
+  },
+  {
+    "number": 48,
+    "ingredient": "amchur",
+    "canonical_id": "16437fb4-9b6d-4d65-abdc-640a8565c97f",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Raw mango does not establish dried unripe mango powder.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "169910",
+        "url": "https://fdc.nal.usda.gov/food-details/169910/nutrients",
+        "description": "Mangos, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw mango does not establish dried unripe mango powder."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Explicit amchur dry mango powder product; the culinary name identifies the scoped sour powder.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2428551",
+        "url": "https://fdc.nal.usda.gov/food-details/2428551/nutrients",
+        "description": "AMCHUR POWDER (MANGO POWDER)",
+        "data_type": "branded_food",
+        "publication_date": "2022-12-22",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Explicit amchur dry mango powder product; the culinary name identifies the scoped sour powder.",
+        "brand_owner": "Deep Foods Inc.",
+        "brand_name": "DEEP",
+        "ingredients": "DRY MANGO",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "amchur",
+        "amchoor",
+        "dried mango powder",
+        "mango",
+        "dry mango"
+      ],
+      "branded": [
+        "amchur",
+        "amchoor",
+        "dried mango powder",
+        "dry mango"
+      ]
+    }
+  },
+  {
+    "number": 49,
+    "ingredient": "kokum",
+    "canonical_id": "711d4e4b-4dbd-4c2c-8063-aad0b31d82c3",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "kokum",
+        "Garcinia indica rind",
+        "garcinia",
+        "kokaum",
+        "kokam"
+      ],
+      "branded": [
+        "kokum",
+        "Garcinia indica rind",
+        "kokaum",
+        "kokam"
+      ]
+    }
+  },
+  {
+    "number": 50,
+    "ingredient": "goraka",
+    "canonical_id": "deffc1df-d27a-413f-b350-0a81833fdcc2",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Garcinia cambogia appears in a multi-ingredient wellness tea, not as the scoped dried culinary rind.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2386349",
+        "url": "https://fdc.nal.usda.gov/food-details/2386349/nutrients",
+        "description": "YERBA MATE, ORANGE, GARCINIA CAMBOGIA SLIM CARE OOLONG TEA WITH SUPERFOODS SINGLE SERVE CUPS, YERBA MATE, ORANGE, GARCINIA CAMBOGIA",
+        "data_type": "branded_food",
+        "publication_date": "2022-12-22",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Garcinia cambogia appears in a multi-ingredient wellness tea, not as the scoped dried culinary rind.",
+        "brand_owner": "WR Group, Inc ",
+        "brand_name": "BAREORGANICS",
+        "ingredients": "PROPRIETARY BLEND: ORGANIC OOLONG TEA LEAVES, ORGANIC GARCINIA CAMBOGIA POWDER, ORGANIC ORANGE PEEL POWDER, ORGANIC YERBA MATE POWDER, ORGANIC ROSE HIP EXTRACT POWDER, BACILLUS COAGULANS, ORGANIC MORINGA LEAF POWDER.\"",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "goraka",
+        "Garcinia gummi-gutta rind",
+        "goraka rind",
+        "garcinia",
+        "gambooge",
+        "gummi-gutta",
+        "cambogia",
+        "gamboge",
+        "Malabar tamarind",
+        "kudampuli",
+        "garcinia gummi gutta"
+      ],
+      "branded": [
+        "goraka",
+        "Garcinia gummi-gutta rind",
+        "goraka rind",
+        "gambooge",
+        "gummi-gutta",
+        "cambogia",
+        "gamboge",
+        "Malabar tamarind",
+        "kudampuli",
+        "garcinia gummi gutta"
+      ]
+    }
+  },
+  {
+    "number": 51,
+    "ingredient": "dried lime",
+    "canonical_id": "e3cfeb2e-c61e-4d0f-ac05-61763351a44c",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Raw limes do not establish whole dried lime seasoning.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "168155",
+        "url": "https://fdc.nal.usda.gov/food-details/168155/nutrients",
+        "description": "Limes, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw limes do not establish whole dried lime seasoning."
+      }
+    ],
+    "branded_status": "R",
+    "branded_reason": "Sweetened dried lemon slices are not whole dried lime seasoning.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2507191",
+        "url": "https://fdc.nal.usda.gov/food-details/2507191/nutrients",
+        "description": "PREMIUM DRIED LEMON SLICES",
+        "data_type": "branded_food",
+        "publication_date": "2023-03-16",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Sweetened dried lemon slices are not whole dried lime seasoning.",
+        "brand_owner": "Ktm Services, Inc.",
+        "brand_name": "KTM",
+        "ingredients": "INGREDIENTS: LEMON, SUGAR, CITRIC ACID, SULFUR DIOXIDE (AS A PRESERVATIVE); FD&C: YELLOW 5.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "dried lime",
+        "loomi",
+        "black lime",
+        "lime",
+        "dried lemon",
+        "limoo"
+      ],
+      "branded": [
+        "dried lime",
+        "loomi",
+        "black lime",
+        "dried lemon",
+        "limoo"
+      ]
+    }
+  },
+  {
+    "number": 52,
+    "ingredient": "barberry",
+    "canonical_id": "720a47b3-c780-4cb6-8ecf-0e9eb7559b20",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "barberry",
+        "zereshk",
+        "barberries",
+        "barberrie"
+      ],
+      "branded": [
+        "barberry",
+        "zereshk",
+        "barberries",
+        "barberrie"
+      ]
+    }
+  },
+  {
+    "number": 53,
+    "ingredient": "blue fenugreek",
+    "canonical_id": "f7d0e2c7-41d0-4141-8d68-773c866524c6",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Ordinary fenugreek seed does not establish Trigonella caerulea blue fenugreek.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "171324",
+        "url": "https://fdc.nal.usda.gov/food-details/171324/nutrients",
+        "description": "Spices, fenugreek seed",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Ordinary fenugreek seed does not establish Trigonella caerulea blue fenugreek."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "blue fenugreek",
+        "utskho suneli",
+        "fenugreek",
+        "utskho",
+        "Georgian fenugreek",
+        "Trigonella caerulea"
+      ],
+      "branded": [
+        "blue fenugreek",
+        "utskho suneli",
+        "utskho",
+        "Georgian fenugreek",
+        "Trigonella caerulea"
+      ]
+    }
+  },
+  {
+    "number": 54,
+    "ingredient": "tklapi",
+    "canonical_id": "c9f207f5-03d9-4017-8415-c23a64823472",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Generic snack fruit leather does not establish Georgian sour tklapi used in cooking.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "167541",
+        "url": "https://fdc.nal.usda.gov/food-details/167541/nutrients",
+        "description": "Snacks, fruit leather, rolls",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic snack fruit leather does not establish Georgian sour tklapi used in cooking."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "tklapi",
+        "fruit leather",
+        "sour plum leather",
+        "sour fruit leather"
+      ],
+      "branded": [
+        "tklapi",
+        "sour plum leather",
+        "sour fruit leather"
+      ]
+    }
+  },
+  {
+    "number": 55,
+    "ingredient": "kashk",
+    "canonical_id": "121cf8cb-bffb-4f01-af0e-97dd3b3eb507",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Dried acid whey does not establish the fermented Iranian dairy ingredient kashk.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "171281",
+        "url": "https://fdc.nal.usda.gov/food-details/171281/nutrients",
+        "description": "Whey, acid, dried",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Dried acid whey does not establish the fermented Iranian dairy ingredient kashk."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "kashk",
+        "Persian kashk",
+        "whey",
+        "kishk",
+        "kashke",
+        "keshk",
+        "kishik",
+        "liquid kashk",
+        "dried kashk"
+      ],
+      "branded": [
+        "kashk",
+        "Persian kashk",
+        "kishk",
+        "kashke",
+        "keshk",
+        "kishik",
+        "liquid kashk",
+        "dried kashk"
+      ]
+    }
+  },
+  {
+    "number": 56,
+    "ingredient": "bulgur",
+    "canonical_id": "4b264aa4-561a-4178-9cb7-01f3fd119b0b",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Dry bulgur, with a compatible plain cooked FNDDS presentation.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "2710820",
+        "url": "https://fdc.nal.usda.gov/food-details/2710820/nutrients",
+        "description": "Bulgur, dry, raw",
+        "data_type": "foundation_food",
+        "publication_date": "2024-10-31",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Dry bulgur, with a compatible plain cooked FNDDS presentation."
+      },
+      {
+        "status": "E",
+        "source_id": "170688",
+        "url": "https://fdc.nal.usda.gov/food-details/170688/nutrients",
+        "description": "Bulgur, dry",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Dry bulgur, with a compatible plain cooked FNDDS presentation."
+      },
+      {
+        "status": "E",
+        "source_id": "2708438",
+        "url": "https://fdc.nal.usda.gov/food-details/2708438/nutrients",
+        "description": "Bulgur, no added fat",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Dry bulgur, with a compatible plain cooked FNDDS presentation."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "bulgur",
+        "bulghur",
+        "burghul"
+      ],
+      "branded": [
+        "bulgur",
+        "bulghur",
+        "burghul"
+      ]
+    }
+  },
+  {
+    "number": 57,
+    "ingredient": "freekeh",
+    "canonical_id": "03f5c898-e2f1-4cb9-9dfb-a2a1ef7d531f",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Unspecified mature durum wheat does not establish roasted green wheat freekeh.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "169721",
+        "url": "https://fdc.nal.usda.gov/food-details/169721/nutrients",
+        "description": "Wheat, durum",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Unspecified mature durum wheat does not establish roasted green wheat freekeh."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Standalone cracked freekeh grain; not a prepared freekeh meal or flour.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2020470",
+        "url": "https://fdc.nal.usda.gov/food-details/2020470/nutrients",
+        "description": "CRACKED FREEKEH",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Standalone cracked freekeh grain; not a prepared freekeh meal or flour.",
+        "brand_owner": "Global Juices and Fruits, LLC",
+        "brand_name": "NATURE'S EARTHLY CHOICE",
+        "ingredients": "FREEKEH",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "freekeh",
+        "frikeh",
+        "wheat",
+        "freekah",
+        "farik",
+        "roasted green wheat"
+      ],
+      "branded": [
+        "freekeh",
+        "frikeh",
+        "freekah",
+        "farik",
+        "roasted green wheat"
+      ]
+    }
+  },
+  {
+    "number": 58,
+    "ingredient": "pomegranate molasses",
+    "canonical_id": "3ce7350d-ff75-4495-8e1a-bc158f7cef62",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Bottled pomegranate juice is not concentrated tart pomegranate molasses.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "167787",
+        "url": "https://fdc.nal.usda.gov/food-details/167787/nutrients",
+        "description": "Pomegranate juice, bottled",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Bottled pomegranate juice is not concentrated tart pomegranate molasses."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Named pomegranate molasses made from pomegranate juice, sugar, water and citric acid; not an artificially flavored cocktail syrup.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2532231",
+        "url": "https://fdc.nal.usda.gov/food-details/2532231/nutrients",
+        "description": "SULTAN POMEGRANATE MOLASSES",
+        "data_type": "branded_food",
+        "publication_date": "2023-04-27",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named pomegranate molasses made from pomegranate juice, sugar, water and citric acid; not an artificially flavored cocktail syrup.",
+        "brand_owner": "",
+        "brand_name": "SULTAN",
+        "ingredients": "POMEGRANATE JUICE, SUGAR, WATER, CITRIC ACID",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "pomegranate molasses",
+        "pomegranate syrup concentrate",
+        "pomegranate",
+        "pomegranate syrup",
+        "pomegranate concentrate"
+      ],
+      "branded": [
+        "pomegranate molasses",
+        "pomegranate syrup concentrate",
+        "pomegranate syrup",
+        "pomegranate concentrate"
+      ]
+    }
+  },
+  {
+    "number": 59,
+    "ingredient": "mahlab",
+    "canonical_id": "b5095c0d-b9fc-44f5-ab17-5299eda2bf9f",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "mahlab",
+        "mahleb",
+        "mahlep",
+        "cherry",
+        "mahale",
+        "mahlepi",
+        "mahaleb",
+        "sour cherry kernels"
+      ],
+      "branded": [
+        "mahlab",
+        "mahleb",
+        "mahlep",
+        "mahale",
+        "mahlepi",
+        "mahaleb",
+        "sour cherry kernels"
+      ]
+    }
+  },
+  {
+    "number": 60,
+    "ingredient": "Aleppo pepper",
+    "canonical_id": "8015d5fb-d05b-4957-b73a-a3af56688088",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Dried pasilla chili is a different culinary pepper type from Aleppo flakes.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "168579",
+        "url": "https://fdc.nal.usda.gov/food-details/168579/nutrients",
+        "description": "Peppers, pasilla, dried",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Dried pasilla chili is a different culinary pepper type from Aleppo flakes."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Standalone Aleppo pepper spice, confirmed by ingredients.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "512762",
+        "url": "https://fdc.nal.usda.gov/food-details/512762/nutrients",
+        "description": "ALEPPO PEPPER",
+        "data_type": "branded_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Standalone Aleppo pepper spice, confirmed by ingredients.",
+        "brand_owner": "Morton Bassett Inc.",
+        "brand_name": "",
+        "ingredients": "ALEPPO PEPPER.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "Aleppo pepper",
+        "Halaby pepper",
+        "pepper",
+        "aleppo",
+        "halaby"
+      ],
+      "branded": [
+        "Aleppo pepper",
+        "Halaby pepper",
+        "aleppo",
+        "halaby"
+      ]
+    }
+  },
+  {
+    "number": 61,
+    "ingredient": "harissa",
+    "canonical_id": "9042f141-b9db-4016-9d59-89675da4a181",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Explicit North African harissa red-pepper paste; not a dry harissa rub or a meal containing harissa.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2304490",
+        "url": "https://fdc.nal.usda.gov/food-details/2304490/nutrients",
+        "description": "HARISSA HOT RED PEPPER PASTE, HARISSA",
+        "data_type": "branded_food",
+        "publication_date": "2022-05-23",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Explicit North African harissa red-pepper paste; not a dry harissa rub or a meal containing harissa.",
+        "brand_owner": "SilvaStar USA Corp",
+        "brand_name": "ASILA",
+        "ingredients": "RED PEPPERS, GARLIC, CORIANDER,SALT, CARAWAY, CITRIC ACID.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "harissa",
+        "harissa paste"
+      ],
+      "branded": [
+        "harissa",
+        "harissa paste"
+      ]
+    }
+  },
+  {
+    "number": 62,
+    "ingredient": "preserved lemon",
+    "canonical_id": "1d04609f-089d-4511-911f-cdfbd3871abe",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Fresh lemon does not establish salt/brine-preserved lemon.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "167746",
+        "url": "https://fdc.nal.usda.gov/food-details/167746/nutrients",
+        "description": "Lemons, raw, without peel",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Fresh lemon does not establish salt/brine-preserved lemon."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Preserved lemon product with lemon, water and salt; not a spread or a dish containing it.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2076581",
+        "url": "https://fdc.nal.usda.gov/food-details/2076581/nutrients",
+        "description": "PRESERVED LEMON",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Preserved lemon product with lemon, water and salt; not a spread or a dish containing it.",
+        "brand_owner": "Mr. Beverages Old Time Cocktail Mixes",
+        "brand_name": "MEDITERRANEAN GOURMET",
+        "ingredients": "LEMON, WATER & SALT",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "preserved lemon",
+        "salt-preserved lemon",
+        "lemon",
+        "pickled lemon",
+        "salted lemon"
+      ],
+      "branded": [
+        "preserved lemon",
+        "salt-preserved lemon",
+        "pickled lemon",
+        "salted lemon"
+      ]
+    }
+  },
+  {
+    "number": 63,
+    "ingredient": "ras el hanout",
+    "canonical_id": "c0769e59-5b1d-4ea1-92f3-be0ef6431eab",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Named ras el hanout spice blend; a blend qualifies here because the benchmark ingredient is that named blend.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2273152",
+        "url": "https://fdc.nal.usda.gov/food-details/2273152/nutrients",
+        "description": "RAS EL HANOUT",
+        "data_type": "branded_food",
+        "publication_date": "2022-05-23",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named ras el hanout spice blend; a blend qualifies here because the benchmark ingredient is that named blend.",
+        "brand_owner": "Morton Bassett Inc.",
+        "brand_name": "MORTON & BASSETT",
+        "ingredients": "CORIANDER, PAPRIKA, CUMIN, CARDAMOM, CINNAMON, BLACK PEPPER, RED PEPPER, TURMERIC, GINGER, NUTMEG, CLOVE, ALLSPICE.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "ras el hanout",
+        "ras al hanout",
+        "spice",
+        "hanout"
+      ],
+      "branded": [
+        "ras el hanout",
+        "ras al hanout",
+        "hanout"
+      ]
+    }
+  },
+  {
+    "number": 64,
+    "ingredient": "smen",
+    "canonical_id": "673b2e07-3f81-48e6-bf69-4be34b338970",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Ordinary salted butter does not establish aged fermented smen.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "173410",
+        "url": "https://fdc.nal.usda.gov/food-details/173410/nutrients",
+        "description": "Butter, salted",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Ordinary salted butter does not establish aged fermented smen."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "smen",
+        "butter",
+        "fermented butter"
+      ],
+      "branded": [
+        "smen",
+        "fermented butter"
+      ]
+    }
+  },
+  {
+    "number": 65,
+    "ingredient": "bsissa",
+    "canonical_id": "42b461ed-1589-49c1-a250-63b4d6556059",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "bsissa",
+        "bssisa",
+        "grain",
+        "bessisa",
+        "bsisa",
+        "roasted cereal mix"
+      ],
+      "branded": [
+        "bsissa",
+        "bssisa",
+        "bessisa",
+        "bsisa",
+        "roasted cereal mix"
+      ]
+    }
+  },
+  {
+    "number": 66,
+    "ingredient": "teff",
+    "canonical_id": "9bbcd5fd-19cc-426d-ba90-b62fc3e578ae",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Uncooked teff grain.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "169747",
+        "url": "https://fdc.nal.usda.gov/food-details/169747/nutrients",
+        "description": "Teff, uncooked",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Uncooked teff grain."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "teff",
+        "tef"
+      ],
+      "branded": [
+        "teff",
+        "tef"
+      ]
+    }
+  },
+  {
+    "number": 67,
+    "ingredient": "berbere",
+    "canonical_id": "f4360289-278f-4604-b9a0-3dbae52f0ad6",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Named berbere spice seasoning; not a berbere-flavored meal.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2626237",
+        "url": "https://fdc.nal.usda.gov/food-details/2626237/nutrients",
+        "description": "BERBERE ORGANIC SEASONING, BERBERE",
+        "data_type": "branded_food",
+        "publication_date": "2023-08-31",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named berbere spice seasoning; not a berbere-flavored meal.",
+        "brand_owner": "Frontier Cooperative Herbs",
+        "brand_name": "FRONTIER CO-OP",
+        "ingredients": "ORGANIC PAPRIKA, SEA SALT, ORGANIC CAYENNE, ORGANIC FENUGREEK, ORGANIC CORIANDER, ORGANIC CUMIN, ORGANIC BLACK PEPPER, ORGANIC CARDAMOM, ORGANIC CINNAMON, ORGANIC CLOVES, ORGANIC GINGER, ORGANIC TURMERIC.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "berbere",
+        "berbere spice blend",
+        "spice",
+        "berebere"
+      ],
+      "branded": [
+        "berbere",
+        "berbere spice blend",
+        "berebere"
+      ]
+    }
+  },
+  {
+    "number": 68,
+    "ingredient": "mitmita",
+    "canonical_id": "5ec1efad-5eed-4c79-a29c-3ec164194f65",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "mitmita",
+        "spice"
+      ],
+      "branded": [
+        "mitmita"
+      ]
+    }
+  },
+  {
+    "number": 69,
+    "ingredient": "niter kibbeh",
+    "canonical_id": "033ea407-15ce-4bcf-acb5-c959d9390465",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Anhydrous butter oil does not establish Ethiopian spiced niter kibbeh.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "173412",
+        "url": "https://fdc.nal.usda.gov/food-details/173412/nutrients",
+        "description": "Butter oil, anhydrous",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Anhydrous butter oil does not establish Ethiopian spiced niter kibbeh."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Named niter kibbeh ghee with butter and spices; not plain ghee or unrelated kibbeh croquettes. The unexpected brand-owner metadata requires caution before import.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2174118",
+        "url": "https://fdc.nal.usda.gov/food-details/2174118/nutrients",
+        "description": "ORGANIC NITER KIBBEH GHEE, NITER KIBBEH",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named niter kibbeh ghee with butter and spices; not plain ghee or unrelated kibbeh croquettes. The unexpected brand-owner metadata requires caution before import.",
+        "brand_owner": "Pabst Brewing Company",
+        "brand_name": "PURE INDIAN FOODS",
+        "ingredients": "GRASSFED ORGANIC BUTTER (MADE FROM NON-HOMOGENIZED WHOLE MILK FROM GRASSFED COWS), ORGANIC CARDAMOM, ORGANIC CINNAMON, ORGANIC CORIANDER, ORGANIC CUMIN, ORGANIC TURMERIC, ORGANIC NUTMEG.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "niter kibbeh",
+        "niter qibe",
+        "nitir qibe",
+        "butter",
+        "niter",
+        "nitir",
+        "kibbeh",
+        "qibe"
+      ],
+      "branded": [
+        "niter kibbeh",
+        "niter qibe",
+        "nitir qibe",
+        "niter",
+        "nitir",
+        "kibbeh",
+        "qibe"
+      ]
+    }
+  },
+  {
+    "number": 70,
+    "ingredient": "korarima",
+    "canonical_id": "17f3a6c6-c4a5-44c9-af54-f58c54a87604",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Unspecified cardamom does not establish Aframomum corrorima.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "170919",
+        "url": "https://fdc.nal.usda.gov/food-details/170919/nutrients",
+        "description": "Spices, cardamom",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Unspecified cardamom does not establish Aframomum corrorima."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "korarima",
+        "Ethiopian cardamom",
+        "cardamom",
+        "korerima",
+        "ethiopian cardamom",
+        "false cardamom",
+        "Aframomum corrorima"
+      ],
+      "branded": [
+        "korarima",
+        "Ethiopian cardamom",
+        "korerima",
+        "ethiopian cardamom",
+        "false cardamom",
+        "Aframomum corrorima"
+      ]
+    }
+  },
+  {
+    "number": 71,
+    "ingredient": "egusi",
+    "canonical_id": "dc13ff20-fc84-44ee-a2b7-fd129c98e05b",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic watermelon kernels do not unambiguously identify the culinary egusi type.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "169407",
+        "url": "https://fdc.nal.usda.gov/food-details/169407/nutrients",
+        "description": "Seeds, watermelon seed kernels, dried",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic watermelon kernels do not unambiguously identify the culinary egusi type."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Milled egusi melon seeds as a standalone ingredient; grinding preserves the scoped seed identity.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2114492",
+        "url": "https://fdc.nal.usda.gov/food-details/2114492/nutrients",
+        "description": "MILLED EGUSI",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Milled egusi melon seeds as a standalone ingredient; grinding preserves the scoped seed identity.",
+        "brand_owner": "Praise Export Serv. Ltd.",
+        "brand_name": "PRAISE",
+        "ingredients": "MELON SEEDS",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "egusi",
+        "egusi seed",
+        "melon seed"
+      ],
+      "branded": [
+        "egusi",
+        "egusi seed",
+        "melon seed"
+      ]
+    }
+  },
+  {
+    "number": 72,
+    "ingredient": "iru",
+    "canonical_id": "b9b2cea7-294e-4514-ba3d-3cce61a1c3ec",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "iru",
+        "locust bean condiment",
+        "locust",
+        "dawadawa",
+        "locust bean",
+        "soumbala",
+        "sumbala"
+      ],
+      "branded": [
+        "iru",
+        "locust bean condiment",
+        "dawadawa",
+        "locust bean",
+        "soumbala",
+        "sumbala"
+      ]
+    }
+  },
+  {
+    "number": 73,
+    "ingredient": "ogiri",
+    "canonical_id": "af7e36b4-a1c4-4764-8f1b-99ad532f4fc0",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "ogiri",
+        "fermented",
+        "ogili"
+      ],
+      "branded": [
+        "ogiri",
+        "ogili"
+      ]
+    }
+  },
+  {
+    "number": 74,
+    "ingredient": "grains of paradise",
+    "canonical_id": "730d6833-d1a8-4236-acc3-843bad189887",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "grains of paradise",
+        "melegueta pepper",
+        "aframomum",
+        "melegueta",
+        "Aframomum melegueta"
+      ],
+      "branded": [
+        "grains of paradise",
+        "melegueta pepper",
+        "melegueta",
+        "Aframomum melegueta"
+      ]
+    }
+  },
+  {
+    "number": 75,
+    "ingredient": "fonio",
+    "canonical_id": "5367312c-4765-48e1-b14b-41f6bc385468",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Foundation explicitly names dry raw fonio grain.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "2710829",
+        "url": "https://fdc.nal.usda.gov/food-details/2710829/nutrients",
+        "description": "Fonio, grain, dry, raw",
+        "data_type": "foundation_food",
+        "publication_date": "2024-10-31",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Foundation explicitly names dry raw fonio grain."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "fonio"
+      ],
+      "branded": [
+        "fonio"
+      ]
+    }
+  },
+  {
+    "number": 76,
+    "ingredient": "baobab fruit powder",
+    "canonical_id": "139def79-424c-46c4-aacf-c8607c6178cd",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Explicit baobab powder food, not a beverage containing it.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "167806",
+        "url": "https://fdc.nal.usda.gov/food-details/167806/nutrients",
+        "description": "Baobab powder",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Explicit baobab powder food, not a beverage containing it."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "baobab fruit powder",
+        "baobab powder",
+        "baobab"
+      ],
+      "branded": [
+        "baobab fruit powder",
+        "baobab powder",
+        "baobab"
+      ]
+    }
+  },
+  {
+    "number": 77,
+    "ingredient": "mopane worm",
+    "canonical_id": "7bdaf8aa-50c7-4adc-bd5c-274ffdd05bcf",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "mopane worm",
+        "mopani worm",
+        "insect",
+        "mopane",
+        "mopani",
+        "madora",
+        "Gonimbrasia belina"
+      ],
+      "branded": [
+        "mopane worm",
+        "mopani worm",
+        "mopane",
+        "mopani",
+        "madora",
+        "Gonimbrasia belina"
+      ]
+    }
+  },
+  {
+    "number": 78,
+    "ingredient": "amaranth leaf",
+    "canonical_id": "d81b6211-7f16-475a-bd39-3d2c80cba6fd",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Amaranth leaves, not grain.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "168385",
+        "url": "https://fdc.nal.usda.gov/food-details/168385/nutrients",
+        "description": "Amaranth leaves, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Amaranth leaves, not grain."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "amaranth leaf",
+        "amaranth greens",
+        "amaranth",
+        "amaranth leaves",
+        "callaloo"
+      ],
+      "branded": [
+        "amaranth leaf",
+        "amaranth greens",
+        "amaranth leaves",
+        "callaloo"
+      ]
+    }
+  },
+  {
+    "number": 79,
+    "ingredient": "moringa leaf",
+    "canonical_id": "603d7cec-44f8-4a83-b288-ffdaa85fbe38",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Drumstick leaves is the common food name for moringa leaves; leaf material, not pods or oil.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "168416",
+        "url": "https://fdc.nal.usda.gov/food-details/168416/nutrients",
+        "description": "Drumstick leaves, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Drumstick leaves is the common food name for moringa leaves; leaf material, not pods or oil."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "moringa leaf",
+        "moringa leaves",
+        "moringa",
+        "drumstick leaves",
+        "malunggay"
+      ],
+      "branded": [
+        "moringa leaf",
+        "moringa leaves",
+        "moringa",
+        "drumstick leaves",
+        "malunggay"
+      ]
+    }
+  },
+  {
+    "number": 80,
+    "ingredient": "Bambara groundnut",
+    "canonical_id": "411c67d9-fd58-4fa8-8804-e5aacaeaa015",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "Bambara groundnut",
+        "Bambara bean",
+        "bambara",
+        "voandzeia",
+        "subterranea",
+        "jugo",
+        "nyimo",
+        "voandzou",
+        "Vigna subterranea"
+      ],
+      "branded": [
+        "Bambara groundnut",
+        "Bambara bean",
+        "bambara",
+        "voandzeia",
+        "subterranea",
+        "jugo",
+        "nyimo",
+        "voandzou",
+        "Vigna subterranea"
+      ]
+    }
+  },
+  {
+    "number": 81,
+    "ingredient": "masa harina",
+    "canonical_id": "27c34c10-fd08-4737-92af-1ffc2c9fbd56",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Foundation explicitly names dry masa harina; SR Legacy identifies masa corn flour rather than hydrated masa dough.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "2710835",
+        "url": "https://fdc.nal.usda.gov/food-details/2710835/nutrients",
+        "description": "Corn flour, masa harina, white or yellow, dry, raw",
+        "data_type": "foundation_food",
+        "publication_date": "2024-10-31",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Foundation explicitly names dry masa harina; SR Legacy identifies masa corn flour rather than hydrated masa dough."
+      },
+      {
+        "status": "E",
+        "source_id": "169696",
+        "url": "https://fdc.nal.usda.gov/food-details/169696/nutrients",
+        "description": "Corn flour, masa, unenriched, white",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Foundation explicitly names dry masa harina; SR Legacy identifies masa corn flour rather than hydrated masa dough."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "masa harina",
+        "nixtamalized corn flour",
+        "masa",
+        "corn flour",
+        "corn flour, masa"
+      ],
+      "branded": [
+        "masa harina",
+        "nixtamalized corn flour",
+        "corn flour, masa"
+      ]
+    }
+  },
+  {
+    "number": 82,
+    "ingredient": "epazote",
+    "canonical_id": "697c6aea-d923-4fe0-8dc3-4dd119b83f58",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Raw epazote culinary herb.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "169398",
+        "url": "https://fdc.nal.usda.gov/food-details/169398/nutrients",
+        "description": "Epazote, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw epazote culinary herb."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "epazote"
+      ],
+      "branded": [
+        "epazote"
+      ]
+    }
+  },
+  {
+    "number": 83,
+    "ingredient": "huitlacoche",
+    "canonical_id": "bc9ab501-c595-4e15-9ef4-e8f442a4980c",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Huitlacoche product includes corn, onion and oil; it is a prepared mixture rather than an unambiguous standalone gall ingredient.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2673786",
+        "url": "https://fdc.nal.usda.gov/food-details/2673786/nutrients",
+        "description": "HUITLACOCHE",
+        "data_type": "branded_food",
+        "publication_date": "2023-11-16",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Huitlacoche product includes corn, onion and oil; it is a prepared mixture rather than an unambiguous standalone gall ingredient.",
+        "brand_owner": "Goya Foods, Inc. ",
+        "brand_name": "GOYA",
+        "ingredients": "HUITLACOCHE, CORN GRAIN, ONION, SAFFLOWER OIL, WATER, IODIZED SALT AND CITRIC ACID.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "huitlacoche",
+        "cuitlacoche",
+        "corn smut",
+        "smut",
+        "corn truffle",
+        "Mexican truffle"
+      ],
+      "branded": [
+        "huitlacoche",
+        "cuitlacoche",
+        "corn smut",
+        "corn truffle",
+        "Mexican truffle"
+      ]
+    }
+  },
+  {
+    "number": 84,
+    "ingredient": "achiote paste",
+    "canonical_id": "e9f15d6f-2f72-49f4-8dec-4223fbc4ac12",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Dry coriander/annatto sazon does not establish annatto-based achiote paste.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "172242",
+        "url": "https://fdc.nal.usda.gov/food-details/172242/nutrients",
+        "description": "Seasoning mix, dry, sazon, coriander & annatto",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Dry coriander/annatto sazon does not establish annatto-based achiote paste."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Annatto-based seasoning paste matching the achiote-paste scope; not annatto seed or dry sazon.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "931916",
+        "url": "https://fdc.nal.usda.gov/food-details/931916/nutrients",
+        "description": "ANNATTO PASTE",
+        "data_type": "branded_food",
+        "publication_date": "2020-05-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Annatto-based seasoning paste matching the achiote-paste scope; not annatto seed or dry sazon.",
+        "brand_owner": "Goya Foods, Inc. ",
+        "brand_name": "",
+        "ingredients": "WATER, CORN FLOUR, ANNATTO, SALT, ACETIC ACID, SPICES, ANNATTO EXTRACT, SODIUM BENZOATE AND POTASSIUM SORBATE AS PRESERVATIVES.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "achiote paste",
+        "recado rojo",
+        "annatto",
+        "achiote"
+      ],
+      "branded": [
+        "achiote paste",
+        "recado rojo",
+        "achiote",
+        "annatto"
+      ]
+    }
+  },
+  {
+    "number": 85,
+    "ingredient": "chipotle pepper",
+    "canonical_id": "8417c4ea-f01e-4c0f-a9f9-aa1f94643110",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Raw jalapeno does not establish smoke-dried ripe chipotle.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "168576",
+        "url": "https://fdc.nal.usda.gov/food-details/168576/nutrients",
+        "description": "Peppers, jalapeno, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Raw jalapeno does not establish smoke-dried ripe chipotle."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Dried chipotle chile product; not chipotle in adobo or a chipotle sauce.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "1908017",
+        "url": "https://fdc.nal.usda.gov/food-details/1908017/nutrients",
+        "description": "CHIPOTLE - DRIED CHILE",
+        "data_type": "branded_food",
+        "publication_date": "2021-07-29",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Dried chipotle chile product; not chipotle in adobo or a chipotle sauce.",
+        "brand_owner": "World Variety Produce, Inc.",
+        "brand_name": "DON ENRIQUE",
+        "ingredients": "CHIPOTLE CHILE",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "chipotle pepper",
+        "chipotle",
+        "pepper",
+        "jalapeno"
+      ],
+      "branded": [
+        "chipotle pepper",
+        "chipotle"
+      ]
+    }
+  },
+  {
+    "number": 86,
+    "ingredient": "aji amarillo",
+    "canonical_id": "144e00ec-06eb-4004-baa8-fdbfca00f73c",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic hot chili does not establish aji amarillo culinary type.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "170106",
+        "url": "https://fdc.nal.usda.gov/food-details/170106/nutrients",
+        "description": "Peppers, hot chili, red, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic hot chili does not establish aji amarillo culinary type."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Named aji amarillo yellow pepper preserved with water/salt/acids; the product is the pepper rather than a paste or mixed sauce.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "1548985",
+        "url": "https://fdc.nal.usda.gov/food-details/1548985/nutrients",
+        "description": "INCA'S FOOD, AJI AMARILLO YELLOW PEPPER",
+        "data_type": "branded_food",
+        "publication_date": "2021-03-19",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named aji amarillo yellow pepper preserved with water/salt/acids; the product is the pepper rather than a paste or mixed sauce.",
+        "brand_owner": "Peruvian Import Company",
+        "brand_name": "INCA'S FOOD",
+        "ingredients": "YELLOW HOT PEPPER, SALT, WATER, CITRIC ACID, ASCORBIC ACID AND POTASSIUM SORBATE.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "aji amarillo",
+        "ají amarillo",
+        "pepper",
+        "yellow pepper",
+        "hot chili"
+      ],
+      "branded": [
+        "aji amarillo",
+        "ají amarillo",
+        "yellow pepper"
+      ]
+    }
+  },
+  {
+    "number": 87,
+    "ingredient": "huacatay",
+    "canonical_id": "52eb7706-5305-4063-86de-ecdf015dc39f",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Named huacatay is available as a salted paste; the transformed paste is retained separately from the scoped culinary herb material.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2669225",
+        "url": "https://fdc.nal.usda.gov/food-details/2669225/nutrients",
+        "description": "HUACATAY BLACK MINT PASTE",
+        "data_type": "branded_food",
+        "publication_date": "2023-11-16",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Named huacatay is available as a salted paste; the transformed paste is retained separately from the scoped culinary herb material.",
+        "brand_owner": "Peruvian Import Company",
+        "brand_name": "INCA'S FOOD",
+        "ingredients": "BLACK MINT, SALT, CITRIC ACID, ASCORBIC ACID, POTASSIUM SORBATE AS PRESERVATIVE",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "huacatay",
+        "Peruvian black mint",
+        "mint",
+        "black mint",
+        "huacataya",
+        "Tagetes minuta"
+      ],
+      "branded": [
+        "huacatay",
+        "Peruvian black mint",
+        "black mint",
+        "huacataya",
+        "Tagetes minuta"
+      ]
+    }
+  },
+  {
+    "number": 88,
+    "ingredient": "chuño",
+    "canonical_id": "558f302a-55c1-4664-ae31-375151652c6a",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Dehydrated mashed potato flakes do not establish traditional freeze-dried chuno.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "170445",
+        "url": "https://fdc.nal.usda.gov/food-details/170445/nutrients",
+        "description": "Potatoes, mashed, dehydrated, flakes without milk, dry form",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Dehydrated mashed potato flakes do not establish traditional freeze-dried chuno."
+      }
+    ],
+    "branded_status": "N",
+    "branded_reason": "CHUNO PURE is a chocolate/cacao product, not traditional freeze-dried potato.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "chuño",
+        "chuno",
+        "potato",
+        "chuna",
+        "potatoes, mashed, dehydrated",
+        "freeze dried potato",
+        "freeze-dried potato",
+        "tunta",
+        "moraya"
+      ],
+      "branded": [
+        "chuño",
+        "chuno",
+        "chuna",
+        "freeze dried potato",
+        "freeze-dried potato",
+        "tunta",
+        "moraya"
+      ]
+    }
+  },
+  {
+    "number": 89,
+    "ingredient": "rocoto pepper",
+    "canonical_id": "10a2bad8-f96a-40e8-8ceb-6f99b656081b",
+    "status": "B",
+    "generic_status": "R",
+    "generic_reason": "Generic hot chili does not establish Capsicum pubescens rocoto.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "170106",
+        "url": "https://fdc.nal.usda.gov/food-details/170106/nutrients",
+        "description": "Peppers, hot chili, red, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic hot chili does not establish Capsicum pubescens rocoto."
+      }
+    ],
+    "branded_status": "E",
+    "branded_reason": "Rocoto hot pepper as the standalone product, confirmed by ingredients.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2669220",
+        "url": "https://fdc.nal.usda.gov/food-details/2669220/nutrients",
+        "description": "ROCOTO HOT PEPPER",
+        "data_type": "branded_food",
+        "publication_date": "2023-11-16",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Rocoto hot pepper as the standalone product, confirmed by ingredients.",
+        "brand_owner": "Peruvian Import Company",
+        "brand_name": "INCA'S FOOD",
+        "ingredients": "ROCOTO HOT PEPPER",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "rocoto pepper",
+        "rocoto",
+        "pepper",
+        "locoto",
+        "hot chili"
+      ],
+      "branded": [
+        "rocoto pepper",
+        "rocoto",
+        "locoto"
+      ]
+    }
+  },
+  {
+    "number": 90,
+    "ingredient": "tucupi",
+    "canonical_id": "14b01ff2-b064-45bd-873f-a172a53cd7df",
+    "status": "N",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "N",
+    "branded_reason": "No scoped standalone branded ingredient product confirmed after the saved label/alias and fallback description searches and review of any candidates. Ingredient-list mentions alone were not used to discover matches; no-match is limited to this method and release.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "tucupi",
+        "cassava"
+      ],
+      "branded": [
+        "tucupi"
+      ]
+    }
+  },
+  {
+    "number": 91,
+    "ingredient": "saffron",
+    "canonical_id": "2e12ec9c-1436-4e68-9756-d43eb7e8c3c8",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Saffron spice, not a flavored rice dish.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "170934",
+        "url": "https://fdc.nal.usda.gov/food-details/170934/nutrients",
+        "description": "Spices, saffron",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Saffron spice, not a flavored rice dish."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "saffron"
+      ],
+      "branded": [
+        "saffron"
+      ]
+    }
+  },
+  {
+    "number": 92,
+    "ingredient": "caper",
+    "canonical_id": "4c8a0655-faa1-43e5-bde4-b6ac3176c3d3",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Canned caper buds; a compatible preserved presentation.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "172238",
+        "url": "https://fdc.nal.usda.gov/food-details/172238/nutrients",
+        "description": "Capers, canned",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Canned caper buds; a compatible preserved presentation."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "caper",
+        "capers"
+      ],
+      "branded": [
+        "caper",
+        "capers"
+      ]
+    }
+  },
+  {
+    "number": 93,
+    "ingredient": "caraway seed",
+    "canonical_id": "bd4c815d-9619-4b73-ad56-7867e2222c9e",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Caraway seed spice.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "170918",
+        "url": "https://fdc.nal.usda.gov/food-details/170918/nutrients",
+        "description": "Spices, caraway seed",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Caraway seed spice."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "caraway seed",
+        "caraway"
+      ],
+      "branded": [
+        "caraway seed",
+        "caraway"
+      ]
+    }
+  },
+  {
+    "number": 94,
+    "ingredient": "rye flour",
+    "canonical_id": "9c423f9f-9c2d-4b5f-b53d-cd32bb1ef367",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Rye flour, not whole rye grain or bread.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "2512375",
+        "url": "https://fdc.nal.usda.gov/food-details/2512375/nutrients",
+        "description": "Flour, rye",
+        "data_type": "foundation_food",
+        "publication_date": "2023-04-20",
+        "snapshot": "foundation",
+        "release": "2026-04-30",
+        "reason": "Rye flour, not whole rye grain or bread."
+      },
+      {
+        "status": "E",
+        "source_id": "168886",
+        "url": "https://fdc.nal.usda.gov/food-details/168886/nutrients",
+        "description": "Rye flour, medium",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Rye flour, not whole rye grain or bread."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "rye flour",
+        "rye",
+        "flour, rye"
+      ],
+      "branded": [
+        "rye flour",
+        "flour, rye"
+      ]
+    }
+  },
+  {
+    "number": 95,
+    "ingredient": "lingonberry",
+    "canonical_id": "efa6a1dc-185e-40ee-83de-43c2134b8a4f",
+    "status": "R",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "R",
+    "branded_reason": "Lingonberries label is a 48% fruit preserve with sugar and pectin, not the unqualified fruit ingredient. All reviewed descriptions/ingredients are preserves, juices or mixed foods.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2025975",
+        "url": "https://fdc.nal.usda.gov/food-details/2025975/nutrients",
+        "description": "LINGONBERRIES",
+        "data_type": "branded_food",
+        "publication_date": "2021-10-28",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Lingonberries label is a 48% fruit preserve with sugar and pectin, not the unqualified fruit ingredient. All reviewed descriptions/ingredients are preserves, juices or mixed foods.",
+        "brand_owner": "Ab Felix",
+        "brand_name": "FELIX",
+        "ingredients": "LINGONBERRIES (48%), SUGAR, WATER AND FRUIT PECTIN.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "lingonberry",
+        "cowberry",
+        "lingonberries",
+        "lingon",
+        "cowberries",
+        "vaccinium vitis"
+      ],
+      "branded": [
+        "lingonberry",
+        "cowberry",
+        "lingonberries",
+        "lingon",
+        "cowberries",
+        "vaccinium vitis"
+      ]
+    }
+  },
+  {
+    "number": 96,
+    "ingredient": "ackee",
+    "canonical_id": "9582a662-4b2a-4f8b-90ac-36c539c7f006",
+    "status": "B",
+    "generic_status": "N",
+    "generic_reason": "No scoped ingredient record confirmed in the three complete generic food description tables after the saved label/alias and broader fallback searches. This is an observed lower bound, not proof of absence under every possible synonym.",
+    "generic_records": [],
+    "branded_status": "E",
+    "branded_reason": "Prepared ackee in brine; compatible with the edible prepared aril scope, not an ackee-flavored dish.",
+    "branded_records": [
+      {
+        "status": "E",
+        "source_id": "2655338",
+        "url": "https://fdc.nal.usda.gov/food-details/2655338/nutrients",
+        "description": "BRINE ACKEE",
+        "data_type": "branded_food",
+        "publication_date": "2023-10-26",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Prepared ackee in brine; compatible with the edible prepared aril scope, not an ackee-flavored dish.",
+        "brand_owner": "Fruits Of Jamaica Company Ltd.",
+        "brand_name": "A TASTE OF JAMAICA",
+        "ingredients": "ACKEE, WATER, SALT",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "ackee",
+        "akee"
+      ],
+      "branded": [
+        "ackee",
+        "akee"
+      ]
+    }
+  },
+  {
+    "number": 97,
+    "ingredient": "allspice",
+    "canonical_id": "67858c66-1cfa-4cab-8bfc-4cb1c28d58f2",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Ground allspice spice; not pimento sweet pepper.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "171315",
+        "url": "https://fdc.nal.usda.gov/food-details/171315/nutrients",
+        "description": "Spices, allspice, ground",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Ground allspice spice; not pimento sweet pepper."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "allspice",
+        "pimento",
+        "Jamaica pepper"
+      ],
+      "branded": [
+        "allspice",
+        "pimento",
+        "Jamaica pepper"
+      ]
+    }
+  },
+  {
+    "number": 98,
+    "ingredient": "Scotch bonnet pepper",
+    "canonical_id": "6aaad4b8-9edb-472b-be87-e6f041d00269",
+    "status": "R",
+    "generic_status": "R",
+    "generic_reason": "Generic hot chili does not establish the Scotch bonnet culinary type.",
+    "generic_records": [
+      {
+        "status": "R",
+        "source_id": "170106",
+        "url": "https://fdc.nal.usda.gov/food-details/170106/nutrients",
+        "description": "Peppers, hot chili, red, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Generic hot chili does not establish the Scotch bonnet culinary type."
+      }
+    ],
+    "branded_status": "R",
+    "branded_reason": "Scotch bonnet pepper sauce includes vinegar and salt; no standalone pepper record was confirmed. Salsa, jerk seasoning and sauce mentions do not count.",
+    "branded_records": [
+      {
+        "status": "R",
+        "source_id": "2204172",
+        "url": "https://fdc.nal.usda.gov/food-details/2204172/nutrients",
+        "description": "SCOTCH BONNET PEPPER SAUCE, SCOTCH BONNET PEPPER",
+        "data_type": "branded_food",
+        "publication_date": "2021-12-30",
+        "snapshot": "branded",
+        "release": "2026-04-30",
+        "reason": "Scotch bonnet pepper sauce includes vinegar and salt; no standalone pepper record was confirmed. Salsa, jerk seasoning and sauce mentions do not count.",
+        "brand_owner": "Island Spice",
+        "brand_name": "ISLAND SPICE",
+        "ingredients": "JAMAICAN SCOTCH BONNET PEPPERS, SALT, VINEGAR AND CITRIC ACID.",
+        "market_country": "United States",
+        "discontinued_date": ""
+      }
+    ],
+    "queries": {
+      "generic": [
+        "Scotch bonnet pepper",
+        "Scotch bonnet",
+        "pepper",
+        "scotch bonnet",
+        "hot chili"
+      ],
+      "branded": [
+        "Scotch bonnet pepper",
+        "Scotch bonnet",
+        "scotch bonnet"
+      ]
+    }
+  },
+  {
+    "number": 99,
+    "ingredient": "taro",
+    "canonical_id": "ff25c95e-e585-4f5c-9f16-b64909014aae",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Edible taro food with raw and compatible plain cooked presentations, not leaves or shoots.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "169308",
+        "url": "https://fdc.nal.usda.gov/food-details/169308/nutrients",
+        "description": "Taro, raw",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Edible taro food with raw and compatible plain cooked presentations, not leaves or shoots."
+      },
+      {
+        "status": "E",
+        "source_id": "2709567",
+        "url": "https://fdc.nal.usda.gov/food-details/2709567/nutrients",
+        "description": "Taro, cooked",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Edible taro food with raw and compatible plain cooked presentations, not leaves or shoots."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "taro",
+        "taro root"
+      ],
+      "branded": [
+        "taro",
+        "taro root"
+      ]
+    }
+  },
+  {
+    "number": 100,
+    "ingredient": "coconut milk",
+    "canonical_id": "463e1b6b-4d83-4044-9b8f-5f164d1e73c0",
+    "status": "E",
+    "generic_status": "E",
+    "generic_reason": "Coconut milk food used in cooking, not coconut water, cream or a fortified beverage.",
+    "generic_records": [
+      {
+        "status": "E",
+        "source_id": "170173",
+        "url": "https://fdc.nal.usda.gov/food-details/170173/nutrients",
+        "description": "Nuts, coconut milk, canned (liquid expressed from grated meat and water)",
+        "data_type": "sr_legacy_food",
+        "publication_date": "2019-04-01",
+        "snapshot": "sr_legacy",
+        "release": "2018-04",
+        "reason": "Coconut milk food used in cooking, not coconut water, cream or a fortified beverage."
+      },
+      {
+        "status": "E",
+        "source_id": "2707568",
+        "url": "https://fdc.nal.usda.gov/food-details/2707568/nutrients",
+        "description": "Coconut milk, used in cooking",
+        "data_type": "survey_fndds_food",
+        "publication_date": "2022-10-28",
+        "snapshot": "fndds",
+        "release": "2024-10-31",
+        "reason": "Coconut milk food used in cooking, not coconut water, cream or a fortified beverage."
+      }
+    ],
+    "branded_status": "NOT_ASSESSED",
+    "branded_reason": "Branded matches were not hand-graded for ingredients already covered by generic data; the branded pass measures additional coverage only.",
+    "branded_records": [],
+    "queries": {
+      "generic": [
+        "coconut milk",
+        "coconut"
+      ],
+      "branded": [
+        "coconut milk"
+      ]
+    }
+  }
+]

@@ -1,0 +1,40 @@
+# Consumed by the generated lifecycle helper, together with docker-compose.yml.
+services:
+  postgres:
+    image: "noms-codex-postgres:${NOMS_INSTANCE_ID}"
+    build:
+      dockerfile: "${NOMS_CLOUD_STATE_DIR}/Postgres.Dockerfile"
+      secrets: [cloud_ca]
+  minio:
+    image: "noms-codex-tools:${NOMS_INSTANCE_ID}"
+  minio-init:
+    image: "noms-codex-tools:${NOMS_INSTANCE_ID}"
+  schema-init:
+    image: "noms-codex-tools:${NOMS_INSTANCE_ID}"
+  mock-github-api:
+    healthcheck:
+      # BusyBox wget ignores no_proxy. This is exclusively a loopback check.
+      test: [CMD-SHELL, "wget -Y off -qO- http://127.0.0.1:8080/isalive || exit 1"]
+  app:
+    entrypoint: [/bin/bash, /run/cloud-app-entrypoint.sh]
+    environment:
+      DX_HOME: /noms-dioxus/dx-home
+      SSL_CERT_FILE: /run/cloud-ca.pem
+      CARGO_HTTP_CAINFO: /run/cloud-ca.pem
+      CURL_CA_BUNDLE: /run/cloud-ca.pem
+      GIT_SSL_CAINFO: /run/cloud-ca.pem
+      NODE_EXTRA_CA_CERTS: /run/cloud-ca.pem
+      SQLX_OFFLINE: "true"
+    volumes:
+      - "${NOMS_WORKTREE}/docker/codex-cloud/app-entrypoint.sh:/run/cloud-app-entrypoint.sh:ro"
+      - "${NOMS_CLOUD_STATE_DIR}/runtime-tools:/run/noms-runtime-tools:ro"
+      - "${NOMS_CLOUD_STATE_DIR}/tailwind.css:/workspace/assets/tailwind.css"
+      - "${NOMS_CLOUD_CA}:/run/cloud-ca.pem:ro"
+    build:
+      dockerfile: "${NOMS_CLOUD_STATE_DIR}/Development.Dockerfile"
+      secrets: [cloud_ca]
+    healthcheck:
+      start_period: 20m
+secrets:
+  cloud_ca:
+    file: "${NOMS_CLOUD_CA}"

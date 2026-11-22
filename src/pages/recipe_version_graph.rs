@@ -1748,6 +1748,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
     let mut context_fit = use_signal(|| None::<MountedEvent>);
     let mut context_lineage_toggle = use_signal(|| None::<MountedEvent>);
     let mut lineage_only = use_signal(|| false);
+    let mut mobile_map = use_signal(|| false);
     let mut comparison_before = use_signal(|| None::<VersionGraphNodeId>);
     let mut comparison_after = use_signal(|| None::<VersionGraphNodeId>);
     let mut comparison_result = use_signal(|| None::<VersionGraphComparison>);
@@ -2066,7 +2067,7 @@ pub fn RecipeVersionGraph(id: String) -> Element {
 
     rsx! {
         document::Link { rel: "stylesheet", href: asset!("/assets/recipe-version-graph.css") }
-        div { class: "container recipe-version-graph-page",
+        div { class: "container recipe-version-graph-page", "data-mobile-map": mobile_map(),
             id: "version-graph-content", tabindex: "-1",
             onmounted: move |event| async move {
                 if *graph_retry_requested.peek() {
@@ -2078,6 +2079,26 @@ pub fn RecipeVersionGraph(id: String) -> Element {
                 title: heading_title,
                 icon: Some(PageIconKind::History),
                 action: Some(back_to_recipe),
+            }
+            div { class: "mobile-graph-switch", role: "group", aria_label: "History view",
+                button { r#type: "button", aria_pressed: !mobile_map(), onclick: move |_| mobile_map.set(false), "Timeline" }
+                button { r#type: "button", aria_pressed: mobile_map(), onclick: move |_| mobile_map.set(true), "Map" }
+            }
+            section { class: "mobile-history-list", aria_label: "Loaded published snapshots",
+                for node in &graph.nodes {
+                    article { class: "mobile-history-item",
+                        if node.is_redacted() || node.is_deleted() {
+                            h3 { if node.is_deleted() { "Deleted recipe" } else { "Private recipe" } }
+                            p { "Snapshot details aren’t available." }
+                        } else {
+                            h3 { {node.title().unwrap_or("Untitled recipe")} }
+                            p { "Version {node.id().version_number}" if node.is_current_version() { " · Current" } }
+                            if let Some(summary) = node.change_summary() { p { "{summary}" } }
+                            Link { to: crate::Route::RecipeVersionDetail { id: node.id().recipe_id.to_string(), version_number: node.id().version_number }, class: "btn btn-secondary touch-target", "Open snapshot" }
+                        }
+                    }
+                }
+                p { class: "recipe-editor__hint", "Showing loaded snapshots. Use the expansion controls below to reveal more history, or switch to Map to explore relationships." }
             }
             div { class: "recipe-version-graph__shell",
                 div {

@@ -1,0 +1,84 @@
+{
+  "source_hashes": {
+    "assets/models/terraced-village/models/terraced-village-blockout.blend": "8f65fbf895f00220350c0f5162c1405c36604bb2b696b0d25d1e4e5f8719ca21",
+    "assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-manager.blend": "8a2139153fedbe73592e5b2e90541d855f9c570cf7dead5accb34faeb9640cf4",
+    "assets/about/kitchen-baked.glb": "eae324d897670673bfcdc24dda2197f6370a430e8f449a7860e91db56d9ee4f9"
+  },
+  "kitchen_objects": 863,
+  "landscape_objects": 217,
+  "crop_xz": [
+    -80,
+    -8,
+    10,
+    68
+  ],
+  "source_bounds": {
+    "min": [
+      -3.75,
+      -0.29005609265999466,
+      -3.049955795844976
+    ],
+    "max": [
+      3.75,
+      4.200055910269782,
+      3.1499557004775443
+    ]
+  },
+  "kitchen_transform": {
+    "position": [
+      -37.5,
+      -0.07,
+      30.0
+    ],
+    "yaw": -0.20944,
+    "scale": 1.8666666666666667
+  },
+  "camera": {
+    "id": "kitchen",
+    "eye": [
+      -30,
+      4.160942572193038,
+      45
+    ],
+    "target": [
+      -37.5,
+      2.6120935697500536,
+      30
+    ],
+    "bounds": {
+      "min": [
+        -45.55013374110378,
+        -0.07000000000000028,
+        22.88448208220207
+      ],
+      "max": [
+        -29.449866258896225,
+        8.311542405468916,
+        37.11551791779793
+      ]
+    }
+  },
+  "lighting": {
+    "sun_direction_y_up": [
+      -60,
+      100,
+      50
+    ],
+    "sun_energy": 2,
+    "sun_color": [
+      1.0,
+      0.9300000071525574,
+      0.8299999833106995
+    ],
+    "sun_angle_degrees": 9,
+    "sky_color": [
+      0.65,
+      0.78,
+      1
+    ],
+    "sky_strength": 0.5,
+    "view_transform": "AgX",
+    "look": "AgX - Medium High Contrast",
+    "exposure": -0.18
+  }
+}

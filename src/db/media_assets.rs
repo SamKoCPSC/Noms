@@ -10,6 +10,7 @@ use crate::types::{RecipeImage, RecipeStep};
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum MediaAttachAuthority {
     UploaderOnly,
+    JsonImport { source: Option<Uuid>, draft: Uuid },
     Recipe(Uuid),
     Draft(Uuid),
 }
@@ -213,6 +214,8 @@ async fn authorized_asset_ids(
 ) -> Result<HashSet<Uuid>, DbError> {
     let ids = match authority {
         MediaAttachAuthority::UploaderOnly => Vec::new(),
+        MediaAttachAuthority::JsonImport { source, draft } => sqlx::query_scalar("SELECT asset_id FROM recipe_media_refs WHERE recipe_id = $1 UNION SELECT asset_id FROM recipe_draft_media_refs WHERE recipe_draft_id = $2")
+            .bind(source).bind(draft).fetch_all(&mut **transaction).await.map_err(DbError::Query)?,
         MediaAttachAuthority::Draft(draft_id) => sqlx::query_scalar(
             "SELECT asset_id FROM recipe_draft_media_refs WHERE recipe_draft_id = $1",
         )

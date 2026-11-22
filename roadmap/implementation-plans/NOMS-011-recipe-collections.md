@@ -1,5 +1,11 @@
 # NOMS-011: Recipe Collections — Implementation Plan
 
+> **Current-state review — 2026-11-03:** Sharing/covers and hierarchy are delivered. PR #56 requires owner-wide normalized names; NOMS-016 adds JSON/HTML portability.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — collection baseline implemented
+
 **Issue:** [NOMS-011-recipe-collections.md](../issues/NOMS-011-recipe-collections.md)
 **Created:** 2026-06-10
 **Revised:** 2026-08-11

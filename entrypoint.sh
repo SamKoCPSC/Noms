@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Railway can invoke preparation as a one-shot pre-deploy command. Keep the
+# same preparation at startup for image-sourced services without that hook.
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != '--prepare-database' ]; }; then
+    echo 'Usage: entrypoint.sh [--prepare-database]' >&2
+    exit 2
+fi
+
 # Guard: perl must be available for the URL parser
 if ! command -v perl >/dev/null 2>&1; then
     echo "❌ Error: perl is required but not installed in this container."
@@ -100,6 +107,7 @@ apply_extensions() {
         -U "$MIGRATION_PGUSER" \
         -d "$MIGRATION_PGDATABASE" \
         -w \
+        --set=ON_ERROR_STOP=1 \
         -f /usr/local/app/migrations/extensions.sql
     echo "Extensions applied."
 }
@@ -134,6 +142,7 @@ grant_runtime_access() {
         -U "$MIGRATION_PGUSER" \
         -d "$MIGRATION_PGDATABASE" \
         -w \
+        --set=ON_ERROR_STOP=1 \
         --set=runtime_role="$APP_PGUSER" \
         --set=runtime_database="$APP_PGDATABASE" \
         -f /usr/local/app/migrations/runtime-grants.sql
@@ -174,10 +183,22 @@ apply_extensions
 apply_schema
 grant_runtime_access
 
+# The runtime role deliberately cannot write maintained vocabulary. Restrict the
+# deployment URL to this child process, leaving DATABASE_URL unchanged for the app.
+echo 'Checking maintained vocabulary...'
+DATABASE_URL="$migration_database_url" /usr/local/app/seed-vocabulary \
+    --if-changed \
+    --file /usr/local/app/data/vocabulary/ingredients.json \
+    --sources /usr/local/app/data/vocabulary/sources.json
+
 # The application process receives only its runtime URL. Migration credentials
 # are removed from the inherited environment before exec.
 unset MIGRATION_DATABASE_URL migration_database_url MIGRATION_PGPASSWORD APP_PGPASSWORD
 export NOMS_MIGRATIONS_APPLIED=1
+
+if [ "${1:-}" = '--prepare-database' ]; then
+    exit 0
+fi
 
 # Launch the server
 exec /usr/local/app/server

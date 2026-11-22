@@ -42,6 +42,7 @@ mod tests {
 pub fn PageHeader(props: PageHeaderProps) -> Element {
     rsx! {
         div {
+            class: "page-header",
             display: "flex",
             align_items: "center",
             justify_content: "space-between",

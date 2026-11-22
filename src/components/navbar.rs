@@ -32,6 +32,7 @@ use crate::auth::context::use_auth;
 use crate::components::base::{
     Avatar, AvatarSize, BrandMark, NavigationArtwork, PageIconKind, SharedModal,
 };
+use crate::components::kitchen::SectionLink;
 use crate::utils::theme::UseTheme;
 use crate::Route;
 
@@ -52,6 +53,10 @@ pub fn Navbar(theme: UseTheme) -> Element {
         crate::components::base::account_menu::close_account_menu("navbar-user-dropdown");
     }));
     let current_route = use_route::<Route>();
+    let editor_back = matches!(
+        current_route,
+        Route::RecipeNew {} | Route::RecipeEdit { .. } | Route::RecipeDraftEdit { .. }
+    );
     // Browser Back/Forward or another route transition must not leave a stale dialog.
     use_effect(use_reactive(&current_route, move |_| menu_open.set(false)));
     let is_signed_in = auth.is_authenticated;
@@ -74,21 +79,37 @@ pub fn Navbar(theme: UseTheme) -> Element {
     rsx! {
         nav { class: "navbar", aria_label: "Primary navigation",
             div { class: "navbar-inner",
+                if let Some((heading, parent)) = crate::components::mobile::route_heading(&current_route) {
+                    div { class: "mobile-route-heading",
+                        Link { to: parent, class: "mobile-back-link touch-target", aria_label: "Back", onclick_only: editor_back,
+                            onclick: move |event: MouseEvent| {
+                                if editor_back {
+                                    event.prevent_default();
+                                    #[cfg(target_arch = "wasm32")]
+                                    spawn(async { let _ = document::eval("document.getElementById('recipe-editor-exit')?.click()").await; });
+                                }
+                            },
+                            crate::components::mobile::MobileIcon { kind: "back" }
+                        }
+                        span { "{heading}" }
+                    }
+                }
                 Link { to: Route::Home {}, class: "navbar-logo", aria_label: "Noms introduction",
                     BrandMark {}
                     span { "Noms" }
                 }
                 div { class: "navbar-links",
                     for (route, label) in primary_navigation(is_signed_in) {
-                        Link {
+                        SectionLink {
                             class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
-                            aria_current: if navigation_is_current(&route, &current_route) { "page" } else { "false" },
+                            current: navigation_is_current(&route, &current_route),
                             to: route,
                             "{label}"
                         }
                     }
                 }
                 NavigationSearch { compact: true }
+                Link { to: Route::Search { query: Default::default() }, class: "mobile-search-link touch-target", aria_label: "Search Noms", crate::components::mobile::MobileIcon { kind: "search" } }
                 div { class: "navbar-actions",
                     if is_signed_in {
                         Link { to: Route::RecipeNew {}, class: "btn btn-primary navbar-create", "New recipe" }
@@ -207,28 +228,29 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
                     nav { class: "navigation-drawer-links", aria_label: "All destinations",
                         for (route, label, icon) in [
-                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", None),
+                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", Some(PageIconKind::Home)),
                             (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
                             (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
+                            (Route::Pantry {}, "Kitchen", Some(PageIconKind::Kitchen)),
                             (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
                             (Route::Search { query: Default::default() }, "Search", Some(PageIconKind::Search)),
                             (Route::RecipeNew {}, "New recipe", Some(PageIconKind::Editor)),
                             (Route::About {}, "About", Some(PageIconKind::About)),
                             (Route::HowTo {}, "How to", Some(PageIconKind::HowTo)),
                         ] {
-                            Link {
+                            SectionLink {
                                 class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
-                                aria_current: if navigation_is_current(&route, &current_route) { "page" } else { "false" },
-                                to: route, onclick: move |_| menu_open.set(false),
+                                current: navigation_is_current(&route, &current_route),
+                                to: route, on_navigate: move |_| menu_open.set(false),
                                 span { class: "navigation-artwork-slot", aria_hidden: "true",
                                     if let Some(kind) = icon { NavigationArtwork { kind: Some(kind) } }
                                 }
                                 span { "{label}" }
                             }
                         }
-                    }
-                    if is_signed_in {
-                        Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), "Noms introduction" }
+                        if is_signed_in {
+                            Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Introduction) } span { "Introduction" } }
+                        }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {
@@ -258,21 +280,29 @@ pub fn Navbar(theme: UseTheme) -> Element {
 #[component]
 fn NavigationSearch(compact: bool, #[props(default)] on_navigate: EventHandler<()>) -> Element {
     let mut text = use_signal(String::new);
+    let mut submit = move |value: String| {
+        text.set(value);
+        let route = crate::pages::search::landing_search_route(&text()).unwrap_or(Route::Search {
+            query: Default::default(),
+        });
+        navigator().push(route);
+        on_navigate.call(());
+    };
     rsx! {
         form {
             class: if compact { "navigation-search navigation-search--header" } else { "navigation-search" },
+            "data-autocomplete-anchor": "true",
             role: "search", aria_label: if compact { "Site search" } else { "Navigation search" },
             method: "get", action: "/search",
             onsubmit: move |event| {
                 event.prevent_default();
-                let route = crate::pages::search::landing_search_route(&text())
-                    .unwrap_or(Route::Search { query: Default::default() });
-                navigator().push(route);
-                // Same-route searches must dismiss the drawer too.
-                on_navigate.call(());
+                submit(text());
             },
-            input { r#type: "search", name: "q", aria_label: "Search Noms", placeholder: "Search Noms…", maxlength: "256",
-                value: text(), oninput: move |event| text.set(event.value()) }
+            crate::components::recipe_title_autocomplete::RecipeTitleAutocomplete {
+                id: if compact { "site-search-query" } else { "drawer-search-query" },
+                accessible_name: "Search Noms", placeholder: "Search Noms…", input_class: "",
+                value: text(), oninput: move |value| text.set(value), onsubmit: submit,
+            }
             button { r#type: "submit", aria_label: "Submit search",
                 svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "2", "aria-hidden": "true",
                     circle { cx: "10", cy: "10", r: "6" }
@@ -289,6 +319,7 @@ fn primary_navigation(signed_in: bool) -> Vec<(Route, &'static str)> {
             (Route::CommunityHome {}, "Home"),
             (Route::Dashboard {}, "Dashboard"),
             (Route::CollectionList {}, "Collections"),
+            (Route::Pantry {}, "Kitchen"),
             (Route::Explore {}, "Explore"),
         ]
     } else {
@@ -310,6 +341,9 @@ fn navigation_is_current(destination: &Route, current: &Route) -> bool {
             | Route::CollectionDetail { .. }
             | Route::CollectionEdit { .. },
         ) => true,
+        (Route::Pantry {}, route) if super::kitchen::KitchenView::for_route(route).is_some() => {
+            true
+        }
         (Route::Search { .. }, Route::Search { .. }) => true,
         _ => destination == current,
     }

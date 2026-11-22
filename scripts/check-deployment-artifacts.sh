@@ -8,7 +8,8 @@ failed=false
 while IFS= read -r dockerfile; do
     relative_path="${dockerfile#"$deployment_root"/}"
     while IFS= read -r from_line; do
-        image="$(awk '{print $2}' <<< "$from_line")"
+        # FROM may select a native builder with --platform=$BUILDPLATFORM.
+        image="$(awk '{ for (i = 2; i <= NF; i++) if ($i !~ /^--/) { print $i; break } }' <<< "$from_line")"
         case "$image" in
             scratch|builder|planner|build-check|pgschema-builder)
                 ;;

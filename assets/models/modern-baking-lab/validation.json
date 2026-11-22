@@ -1,0 +1,14 @@
+{
+  "model": "Noms Modern Baking Lab",
+  "revision": 3,
+  "concept": 10,
+  "format": "glTF 2.0",
+  "glb_bytes": 25097028,
+  "triangles": 847148,
+  "meshes": 1253,
+  "assembly_roots": 24,
+  "externally_referenced_images": false,
+  "studio_excluded": true,
+  "animation": "Static review model with separate assembly roots",
+  "geometry": "Evaluated Blender geometry, no decimation"
+}

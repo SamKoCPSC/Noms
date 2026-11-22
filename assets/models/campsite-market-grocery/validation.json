@@ -1,0 +1,44 @@
+{
+  "checks": "GLB headers, buffer bounds, finite attributes/transforms, triangle indices, PBR material references, acyclic hierarchy, embedded images",
+  "models": [
+    {
+      "file": "cozy-campsite.glb",
+      "bytes": 3222296,
+      "assemblies": 10,
+      "nodes": 353,
+      "primitives": 343,
+      "vertices": 86775,
+      "triangles": 110929,
+      "materials": 35,
+      "embedded_images": 0,
+      "sha256": "5cc5691a6f957c5ce41354e290aa190ce179bf6b3bce2d0b4d6573c7d93600ed",
+      "validation": "PASS"
+    },
+    {
+      "file": "neighborhood-grocery-store.glb",
+      "bytes": 23265448,
+      "assemblies": 10,
+      "nodes": 1353,
+      "primitives": 1343,
+      "vertices": 665196,
+      "triangles": 733628,
+      "materials": 30,
+      "embedded_images": 0,
+      "sha256": "c2e46a8dc17454967682e507806199f49c46d24bd6b9d4822dcbb6d0340742b9",
+      "validation": "PASS"
+    },
+    {
+      "file": "night-market-lantern-courtyard.glb",
+      "bytes": 16445552,
+      "assemblies": 8,
+      "nodes": 1301,
+      "primitives": 1293,
+      "vertices": 476523,
+      "triangles": 589022,
+      "materials": 36,
+      "embedded_images": 0,
+      "sha256": "f662da9d0a7890e132e13aa0ad14c8352effbc950e5011cf7487d2eed6e4bc93",
+      "validation": "PASS"
+    }
+  ]
+}

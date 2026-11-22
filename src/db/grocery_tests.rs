@@ -1,0 +1,850 @@
+use super::grocery::*;
+use crate::grocery::*;
+use sqlx::PgPool;
+use uuid::Uuid;
+
+async fn user(pool: &PgPool) -> Uuid {
+    let id = Uuid::new_v4();
+    let suffix = id.simple().to_string();
+    sqlx::query("INSERT INTO users(id,username,display_name,email) VALUES($1,$2,$2,$3)")
+        .bind(id)
+        .bind(&suffix[..24])
+        .bind(format!("{suffix}@example.test"))
+        .execute(pool)
+        .await
+        .unwrap();
+    id
+}
+fn fields(name: &str, amount: &str, unit: &str) -> ItemFields {
+    ItemFields {
+        name: name.into(),
+        amount: amount.into(),
+        unit: unit.into(),
+    }
+}
+fn request(name: &str) -> GroceryCreate {
+    GroceryCreate {
+        request_id: Uuid::new_v4(),
+        name: name.into(),
+        note: String::new(),
+        recipes: vec![],
+        manual_items: vec![
+            fields("Dish soap", "1", "bottle"),
+            fields("Coffee", "250", "g"),
+        ],
+        ..Default::default()
+    }
+}
+async fn recipe(pool: &PgPool, owner: Uuid, visibility: &str, amount: &str) -> Uuid {
+    let id = Uuid::new_v4();
+    sqlx::query("INSERT INTO recipes(id,user_id,title,servings,ingredients,visibility) VALUES($1,$2,$5,2,$3,$4)").bind(id).bind(owner).bind(serde_json::json!([{"name":"Rice","amount":amount,"unit":"cup"},{"name":"Garnish (optional)","amount":"to taste","unit":""}])).bind(visibility).bind(format!("Dinner {id}")).execute(pool).await.unwrap();
+    id
+}
+async fn selection(pool: &PgPool, owner: Uuid, id: Uuid, target: Option<i32>) -> RecipeSelection {
+    let mut conn = pool.acquire().await.unwrap();
+    let preview = preview_source(&mut conn, owner, id).await.unwrap();
+    RecipeSelection {
+        recipe_id: id,
+        target_servings: target,
+        expected_revision: preview.source.revision,
+    }
+}
+
+#[tokio::test]
+async fn manual_lists_persist_isolate_owners_and_retry_without_duplicates() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let a = user(&pool).await;
+    let b = user(&pool).await;
+    let req = request("Essentials");
+    let saved = create(&pool, a, req.clone()).await.unwrap();
+    assert!(saved.sources.is_empty());
+    assert_eq!(saved.items.len(), 2);
+    let retry = create(&pool, a, req.clone()).await.unwrap();
+    assert_eq!(retry.id, saved.id);
+    let mut altered = req;
+    altered.name = "Another list".into();
+    assert!(matches!(
+        create(&pool, a, altered).await,
+        Err(GroceryError::RetryMismatch)
+    ));
+    assert_eq!(summaries(&pool, a).await.unwrap().len(), 1);
+    assert!(summaries(&pool, b).await.unwrap().is_empty());
+    assert!(matches!(
+        get(&pool, b, saved.id).await,
+        Err(GroceryError::Missing)
+    ));
+    let item = &saved.items[0];
+    assert!(matches!(
+        change_item(
+            &pool,
+            b,
+            saved.id,
+            item.id,
+            0,
+            GroceryItemChange::Checked(true)
+        )
+        .await,
+        Err(GroceryError::Missing)
+    ));
+    assert!(matches!(
+        rename(&pool, b, saved.id, 0, "Steal".into()).await,
+        Err(GroceryError::Missing)
+    ));
+    assert!(matches!(
+        delete(&pool, b, saved.id, 0).await,
+        Err(GroceryError::Missing)
+    ));
+    let empty = create(
+        &pool,
+        a,
+        GroceryCreate {
+            manual_items: vec![],
+            ..request("Empty")
+        },
+    )
+    .await
+    .unwrap();
+    assert!(empty.items.is_empty());
+    assert!(matches!(
+        change_item(
+            &pool,
+            a,
+            empty.id,
+            item.id,
+            0,
+            GroceryItemChange::Checked(true)
+        )
+        .await,
+        Err(GroceryError::Missing)
+    ));
+    let add_key = Uuid::new_v4();
+    add_item(&pool, a, empty.id, add_key, fields("Apples", "4", ""))
+        .await
+        .unwrap();
+    add_item(&pool, a, empty.id, add_key, fields("Apples", "4", ""))
+        .await
+        .unwrap();
+    assert_eq!(get(&pool, a, empty.id).await.unwrap().items.len(), 1);
+    assert!(matches!(
+        add_item(&pool, a, empty.id, add_key, fields("Pears", "4", "")).await,
+        Err(GroceryError::RetryMismatch)
+    ));
+    let loaded = get(&pool, a, empty.id).await.unwrap();
+    delete(&pool, a, empty.id, loaded.revision).await.unwrap();
+    let remaining: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM grocery_list_items WHERE list_id=$1")
+            .bind(empty.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(remaining, 0);
+}
+
+#[tokio::test]
+async fn accessible_recipe_snapshots_scale_and_remain_independent_after_full_edits() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let a = user(&pool).await;
+    let b = user(&pool).await;
+    let own = recipe(&pool, a, "private", "1").await;
+    let public = recipe(&pool, b, "public", "2").await;
+    let unlisted = recipe(&pool, b, "unlisted", "3").await;
+    let selections = vec![
+        selection(&pool, a, own, Some(4)).await,
+        selection(&pool, a, public, None).await,
+        selection(&pool, a, unlisted, None).await,
+    ];
+    let saved = create(
+        &pool,
+        a,
+        GroceryCreate {
+            recipes: selections,
+            ..request("Dinner shop")
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(saved.sources.len(), 3);
+    let rice = saved
+        .items
+        .iter()
+        .find(|i| i.fields.name == "Rice")
+        .unwrap();
+    assert_eq!(rice.fields.amount, "7");
+    assert_eq!(rice.fields.unit, "cup");
+    assert_eq!(rice.contributions.len(), 3);
+    assert_eq!(
+        saved
+            .items
+            .iter()
+            .filter(|i| i.fields.name == "Garnish (optional)")
+            .count(),
+        3
+    );
+    change_item(
+        &pool,
+        a,
+        saved.id,
+        rice.id,
+        0,
+        GroceryItemChange::Checked(true),
+    )
+    .await
+    .unwrap();
+    change_item(
+        &pool,
+        a,
+        saved.id,
+        rice.id,
+        1,
+        GroceryItemChange::Fields(fields("Brown rice", "500", "g")),
+    )
+    .await
+    .unwrap();
+    sqlx::query("DELETE FROM recipes WHERE id=$1")
+        .bind(own)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE recipes SET visibility='private',ingredients='[]' WHERE id IN ($1,$2)")
+        .bind(public)
+        .bind(unlisted)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let loaded = get(&pool, a, saved.id).await.unwrap();
+    let edited = loaded.items.iter().find(|i| i.id == rice.id).unwrap();
+    assert!(edited.edited());
+    assert!(edited.checked);
+    assert_eq!(edited.original.as_ref().unwrap().amount, "7");
+    assert_eq!(edited.fields.unit, "g");
+    assert_eq!(edited.contributions[0].original.unit, "cup");
+    assert_eq!(edited.contributions.len(), 3);
+    remove_item(&pool, a, saved.id, edited.id, edited.revision)
+        .await
+        .unwrap();
+    assert!(!get(&pool, a, saved.id)
+        .await
+        .unwrap()
+        .items
+        .iter()
+        .any(|i| i.id == edited.id));
+}
+
+#[tokio::test]
+async fn invalid_or_changed_sources_roll_back_the_whole_creation() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let a = user(&pool).await;
+    let b = user(&pool).await;
+    let public = recipe(&pool, b, "public", "1").await;
+    let private = recipe(&pool, b, "private", "2").await;
+    let chosen = selection(&pool, a, public, None).await;
+    let inaccessible = RecipeSelection {
+        recipe_id: private,
+        target_servings: None,
+        expected_revision: "a".repeat(64),
+    };
+    assert!(create(
+        &pool,
+        a,
+        GroceryCreate {
+            recipes: vec![chosen.clone(), inaccessible],
+            ..request("Do not partially save")
+        }
+    )
+    .await
+    .is_err());
+    assert!(summaries(&pool, a).await.unwrap().is_empty());
+    sqlx::query("UPDATE recipes SET title='Changed dinner' WHERE id=$1")
+        .bind(public)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        create(
+            &pool,
+            a,
+            GroceryCreate {
+                recipes: vec![chosen],
+                ..request("Changed")
+            }
+        )
+        .await,
+        Err(GroceryError::SourceChanged)
+    ));
+    assert!(summaries(&pool, a).await.unwrap().is_empty());
+    let mut bad = request("  ");
+    assert!(create(&pool, a, bad.clone()).await.is_err());
+    bad.name = "Valid".into();
+    bad.manual_items[0].unit = "a".repeat(65);
+    assert!(create(&pool, a, bad).await.is_err());
+}
+
+#[tokio::test]
+async fn revisions_prevent_lost_edits_without_conflicting_independent_checkoffs() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let saved = create(&pool, owner, request("Shared devices"))
+        .await
+        .unwrap();
+    let first = &saved.items[0];
+    let second = &saved.items[1];
+    let (a, b) = tokio::join!(
+        change_item(
+            &pool,
+            owner,
+            saved.id,
+            first.id,
+            0,
+            GroceryItemChange::Checked(true)
+        ),
+        change_item(
+            &pool,
+            owner,
+            saved.id,
+            second.id,
+            0,
+            GroceryItemChange::Checked(true)
+        )
+    );
+    a.unwrap();
+    b.unwrap();
+    change_item(
+        &pool,
+        owner,
+        saved.id,
+        first.id,
+        0,
+        GroceryItemChange::Checked(true),
+    )
+    .await
+    .unwrap();
+    assert!(matches!(
+        change_item(
+            &pool,
+            owner,
+            saved.id,
+            first.id,
+            0,
+            GroceryItemChange::Checked(false)
+        )
+        .await,
+        Err(GroceryError::Conflict)
+    ));
+    assert!(matches!(
+        change_item(
+            &pool,
+            owner,
+            saved.id,
+            first.id,
+            0,
+            GroceryItemChange::Fields(fields("Old stale text", "1", "bottle"))
+        )
+        .await,
+        Err(GroceryError::Conflict)
+    ));
+    assert!(matches!(
+        delete(&pool, owner, saved.id, 0).await,
+        Err(GroceryError::Conflict)
+    ));
+    assert_eq!(
+        get(&pool, owner, saved.id)
+            .await
+            .unwrap()
+            .items
+            .iter()
+            .filter(|i| i.checked)
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn test_fixture_schema_matches_declarative_grocery_definitions() {
+    assert!(include_str!("../../migrations/schema.sql")
+        .contains(include_str!("../../migrations/grocery-lists.sql")));
+}
+
+#[tokio::test]
+async fn list_name_conflicts_preserve_items_revisions_and_retry_identity() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let req = request("Weekly shop");
+    let saved = create(&pool, owner, req.clone()).await.unwrap();
+    assert_eq!(create(&pool, owner, req).await.unwrap().id, saved.id);
+    let mut duplicate = request(" WEEKLY  shop ");
+    assert!(matches!(
+        create(&pool, owner, duplicate.clone()).await,
+        Err(GroceryError::NameTaken)
+    ));
+    assert_eq!(summaries(&pool, owner).await.unwrap().len(), 1);
+    duplicate.name = "Weekend shop".into();
+    let second = create(&pool, owner, duplicate).await.unwrap();
+    assert!(matches!(
+        rename(&pool, owner, second.id, 0, "weekly shop".into()).await,
+        Err(GroceryError::NameTaken)
+    ));
+    let unchanged = get(&pool, owner, second.id).await.unwrap();
+    assert_eq!(unchanged.name, "Weekend shop");
+    assert_eq!(unchanged.revision, 0);
+    assert_eq!(unchanged.items.len(), 2);
+    rename(&pool, owner, second.id, 0, "WEEKEND shop".into())
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn missing_groceries_preserve_quantities_optional_choices_and_snapshot_retries() {
+    use crate::pantry::{PantryCreate, PantryFields, PantryStock};
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let other = user(&pool).await;
+    let id = recipe(&pool, owner, "private", "1").await;
+    let ingredients = serde_json::json!([
+        {"name":"Rice","amount":"100","unit":"g"},
+        {"name":"Beans","amount":"200","unit":"g","optional":false},
+        {"name":"Parsley","amount":"5","unit":"g","optional":true},
+        {"name":"Beans","amount":"10","unit":"g","optional":true},
+        {"name":"Pepper","amount":"to taste","unit":"g","substitutes":[{"name":"Rice","amount":"1","unit":"g"}]}
+    ]);
+    sqlx::query("UPDATE recipes SET ingredients=$2 WHERE id=$1")
+        .bind(id)
+        .bind(ingredients)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let pantry = super::pantry::create(
+        &pool,
+        owner,
+        PantryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Home".into(),
+            ingredients: vec![
+                PantryStock {
+                    fields: PantryFields {
+                        name: "RICE".into(),
+                        amount: "0".into(),
+                        unit: "ml".into(),
+                    },
+                    available: true,
+                },
+                PantryStock {
+                    fields: PantryFields {
+                        name: "Beans".into(),
+                        amount: "999".into(),
+                        unit: "g".into(),
+                    },
+                    available: false,
+                },
+            ],
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let chosen = selection(&pool, owner, id, Some(4)).await;
+    let req = GroceryCreate {
+        request_id: Uuid::new_v4(),
+        name: "Missing groceries".into(),
+        recipes: vec![chosen.clone()],
+        pantry: Some(GroceryPantrySelection {
+            id: pantry.id,
+            expected_revision: pantry.revision,
+        }),
+        manual_items: vec![fields("Rice", "20", "g")],
+        ..Default::default()
+    };
+    let saved = create(&pool, owner, req.clone()).await.unwrap();
+    assert_eq!(
+        saved
+            .items
+            .iter()
+            .map(|i| (i.fields.name.as_str(), i.fields.amount.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("Beans", "420"),
+            ("Parsley", "10"),
+            ("Pepper", "to taste"),
+            ("Rice", "20")
+        ]
+    );
+    assert_eq!(
+        saved.items[0]
+            .contributions
+            .iter()
+            .map(|c| c.ingredient_index)
+            .collect::<Vec<_>>(),
+        vec![1, 3]
+    );
+    let required = create(
+        &pool,
+        owner,
+        GroceryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Required groceries".into(),
+            include_optional: false,
+            ..req.clone()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(required.items[0].fields.amount, "400");
+    assert!(!required.items.iter().any(|i| i.fields.name == "Parsley"));
+    // All-ingredient mode still defaults to copying every primary, and ignores substitutes.
+    let all = create(
+        &pool,
+        owner,
+        GroceryCreate {
+            request_id: Uuid::new_v4(),
+            name: "All groceries".into(),
+            pantry: None,
+            manual_items: vec![],
+            ..req.clone()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(all.items[0].fields.amount, "200");
+    assert_eq!(all.items.len(), 4);
+    // Cross-owner pantry references fail before writing any rows.
+    let foreign = super::pantry::create(
+        &pool,
+        other,
+        PantryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Private".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let before = summaries(&pool, owner).await.unwrap().len();
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                request_id: Uuid::new_v4(),
+                name: "Forbidden".into(),
+                pantry: Some(GroceryPantrySelection {
+                    id: foreign.id,
+                    expected_revision: 0
+                }),
+                ..req.clone()
+            }
+        )
+        .await,
+        Err(GroceryError::PantryMissing)
+    ));
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                request_id: Uuid::new_v4(),
+                name: "Stale".into(),
+                pantry: Some(GroceryPantrySelection {
+                    id: pantry.id,
+                    expected_revision: 1
+                }),
+                ..req.clone()
+            }
+        )
+        .await,
+        Err(GroceryError::PantryChanged)
+    ));
+    assert_eq!(summaries(&pool, owner).await.unwrap().len(), before);
+    // Saved list is an independent snapshot; retries recover it after source deletion.
+    super::pantry::delete(&pool, owner, pantry.id, pantry.revision)
+        .await
+        .unwrap();
+    assert_eq!(
+        create(&pool, owner, req.clone()).await.unwrap().id,
+        saved.id
+    );
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                include_optional: false,
+                ..req.clone()
+            }
+        )
+        .await,
+        Err(GroceryError::RetryMismatch)
+    ));
+    assert!(matches!(
+        create(
+            &pool,
+            owner,
+            GroceryCreate {
+                request_id: Uuid::new_v4(),
+                name: "Deleted".into(),
+                ..req
+            }
+        )
+        .await,
+        Err(GroceryError::PantryMissing)
+    ));
+}
+
+#[tokio::test]
+async fn purchased_groceries_transfer_atomically_and_retry_without_adding_amounts() {
+    use crate::pantry::{PantryCreate, PantryFields, PantryStock};
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let other = user(&pool).await;
+    let pantry = super::pantry::create(
+        &pool,
+        owner,
+        PantryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Home".into(),
+            ingredients: vec![PantryStock {
+                fields: PantryFields {
+                    name: "RICE".into(),
+                    amount: "2".into(),
+                    unit: "kg".into(),
+                },
+                available: false,
+            }],
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let foreign = super::pantry::create(
+        &pool,
+        other,
+        PantryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Private".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let list = create(
+        &pool,
+        owner,
+        GroceryCreate {
+            manual_items: vec![
+                fields("Rice", "500", "g"),
+                fields("Parsley", "to taste", "g"),
+                fields("Soap", "1", "bottle"),
+            ],
+            ..request("Shop")
+        },
+    )
+    .await
+    .unwrap();
+    for item in &list.items[..2] {
+        change_item(
+            &pool,
+            owner,
+            list.id,
+            item.id,
+            item.revision,
+            GroceryItemChange::Checked(true),
+        )
+        .await
+        .unwrap();
+    }
+    let list = get(&pool, owner, list.id).await.unwrap();
+    let ids = vec![list.items[0].id, list.items[1].id];
+    let transfer = super::grocery_transfer::transfer;
+    assert!(matches!(
+        transfer(
+            &pool,
+            owner,
+            list.id,
+            list.revision,
+            foreign.id,
+            ids.clone()
+        )
+        .await,
+        Err(GroceryError::PantryMissing)
+    ));
+    assert!(transfer(
+        &pool,
+        other,
+        list.id,
+        list.revision,
+        foreign.id,
+        ids.clone()
+    )
+    .await
+    .is_err());
+    assert!(transfer(
+        &pool,
+        owner,
+        list.id,
+        list.revision,
+        pantry.id,
+        vec![list.items[0].id, list.items[2].id]
+    )
+    .await
+    .is_err());
+    assert_eq!(
+        super::pantry::get(&pool, owner, pantry.id).await.unwrap(),
+        pantry
+    );
+    assert!(transfer(
+        &pool,
+        owner,
+        list.id,
+        list.revision - 1,
+        pantry.id,
+        ids.clone()
+    )
+    .await
+    .is_err());
+    assert!(transfer(
+        &pool,
+        owner,
+        list.id,
+        list.revision,
+        pantry.id,
+        vec![Uuid::new_v4()]
+    )
+    .await
+    .is_err());
+    assert!(
+        transfer(&pool, owner, list.id, list.revision, pantry.id, vec![])
+            .await
+            .is_err()
+    );
+    assert!(transfer(
+        &pool,
+        owner,
+        list.id,
+        list.revision,
+        pantry.id,
+        vec![ids[0], ids[0]]
+    )
+    .await
+    .is_err());
+    let (a, b) = tokio::join!(
+        transfer(&pool, owner, list.id, list.revision, pantry.id, ids.clone()),
+        transfer(&pool, owner, list.id, list.revision, pantry.id, ids.clone())
+    );
+    a.unwrap();
+    b.unwrap();
+    let saved = super::pantry::get(&pool, owner, pantry.id).await.unwrap();
+    assert_eq!(saved.entries.len(), 2);
+    assert!(saved.entries[0].stock.available);
+    assert_eq!(saved.entries[0].stock.fields.amount, "2");
+    assert_eq!(saved.entries[0].stock.fields.unit, "kg");
+    assert_eq!(saved.entries[1].stock.fields.amount, "to taste");
+    transfer(&pool, owner, list.id, list.revision, pantry.id, ids)
+        .await
+        .unwrap();
+    assert_eq!(
+        super::pantry::get(&pool, owner, pantry.id).await.unwrap(),
+        saved
+    );
+    assert_eq!(get(&pool, owner, list.id).await.unwrap(), list);
+}
+
+#[tokio::test]
+async fn purchased_transfer_removal_is_atomic_and_rejects_stale_retries() {
+    use super::grocery_transfer::transfer_with_options;
+    use crate::pantry::PantryCreate;
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let pantry = super::pantry::create(
+        &pool,
+        owner,
+        PantryCreate {
+            request_id: Uuid::new_v4(),
+            name: "Home".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+    let list = create(&pool, owner, request("Shop")).await.unwrap();
+    let item = list.items[0].clone();
+    change_item(
+        &pool,
+        owner,
+        list.id,
+        item.id,
+        item.revision,
+        GroceryItemChange::Checked(true),
+    )
+    .await
+    .unwrap();
+    let list = get(&pool, owner, list.id).await.unwrap();
+    let options = GroceryTransferOptions {
+        remove_from_list: true,
+    };
+    let selected = vec![item.id, list.items[1].id];
+    assert!(transfer_with_options(
+        &pool,
+        owner,
+        list.id,
+        list.revision,
+        pantry.id,
+        selected,
+        Some(options.clone())
+    )
+    .await
+    .is_err());
+    assert_eq!(get(&pool, owner, list.id).await.unwrap(), list);
+    assert!(super::pantry::get(&pool, owner, pantry.id)
+        .await
+        .unwrap()
+        .entries
+        .is_empty());
+    let ids = vec![item.id];
+    let (a, b) = tokio::join!(
+        transfer_with_options(
+            &pool,
+            owner,
+            list.id,
+            list.revision,
+            pantry.id,
+            ids.clone(),
+            Some(options.clone())
+        ),
+        transfer_with_options(
+            &pool,
+            owner,
+            list.id,
+            list.revision,
+            pantry.id,
+            ids.clone(),
+            Some(options.clone())
+        )
+    );
+    assert!(a.is_ok() ^ b.is_ok());
+    assert!(matches!(
+        a.err().or_else(|| b.err()),
+        Some(GroceryError::Conflict)
+    ));
+    let after = get(&pool, owner, list.id).await.unwrap();
+    assert_eq!(after.items.len(), 1);
+    assert_eq!(after.items[0].id, list.items[1].id);
+    assert_eq!(after.revision, list.revision + 1);
+    let stock = super::pantry::get(&pool, owner, pantry.id).await.unwrap();
+    assert_eq!(stock.entries.len(), 1);
+    assert!(matches!(
+        transfer_with_options(
+            &pool,
+            owner,
+            list.id,
+            list.revision,
+            pantry.id,
+            ids,
+            Some(options)
+        )
+        .await,
+        Err(GroceryError::Conflict)
+    ));
+    assert_eq!(get(&pool, owner, list.id).await.unwrap(), after);
+    assert_eq!(
+        super::pantry::get(&pool, owner, pantry.id).await.unwrap(),
+        stock
+    );
+}

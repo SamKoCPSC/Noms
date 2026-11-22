@@ -1,13 +1,25 @@
+mod pantry;
+mod pantry_recipes;
+pub use pantry::{Pantry, PantryDetail, PantryNew};
+mod grocery;
+mod grocery_transfer;
+pub use grocery::{GroceryListDetail, GroceryListFromPantry, GroceryListNew, GroceryLists};
 mod about;
+// The About route owns and disposes its client-side 3D runtime.
+mod about_tour;
 mod collection_detail;
 mod collection_edit;
+mod collection_json_controls;
 mod collection_list;
 mod collection_new;
 mod community_home;
 mod dashboard;
+mod draft_merge;
+mod draft_merge_review;
 mod draft_save;
 mod explore;
 mod home;
+mod home_scene;
 mod how_to;
 mod login;
 #[cfg(test)]
@@ -18,7 +30,10 @@ mod recipe_edit;
 mod recipe_editor_form;
 mod recipe_import;
 mod recipe_import_mapping;
+mod recipe_ingredient_editor;
+mod recipe_json_controls;
 mod recipe_new;
+mod recipe_pantry;
 mod recipe_version_graph;
 pub(crate) mod search;
 mod settings;
@@ -45,3 +60,8 @@ pub use search::Search;
 pub use settings::SettingsAccounts;
 pub use settings::SettingsProfile;
 pub use user_profile::UserProfile;
+
+pub use crate::components::mobile::MobileYou;
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) use about_tour::capture_entry_fragment as capture_about_entry_fragment;

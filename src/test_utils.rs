@@ -63,10 +63,10 @@ async fn verify_bm25_index_creation(pool: &PgPool) {
 /// Spawn a fresh temporary PostgreSQL database and apply the NOMS schema.
 ///
 /// Each call creates an isolated database — no shared state, no cleanup needed.
-/// The returned `PgTempDB` handle must stay in scope for the duration of the test;
+/// The returned `TestDatabase` handle must stay in scope for the duration of the test;
 /// dropping it cleans up the temporary database.
-pub async fn setup_test_db() -> (pgtemp::PgTempDB, PgPool) {
-    let db = pgtemp::PgTempDB::async_new().await;
+pub async fn setup_test_db() -> (crate::test_database::TestDatabase, PgPool) {
+    let db = crate::test_database::TestDatabase::start().await;
     let pool = PgPool::connect(&db.connection_uri())
         .await
         .expect("failed to connect to temp database");
@@ -119,6 +119,14 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create users table");
+
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS users_display_name_unique \
+         ON users (lower(btrim(display_name)))",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create display-name uniqueness index");
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS oauth_accounts (\
@@ -255,6 +263,11 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create recipes table");
+
+    sqlx::raw_sql(include_str!("../migrations/recipe-owner-title-unique.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create unique owner/recipe-name index");
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS recipe_tags (\
@@ -460,6 +473,27 @@ pub async fn apply_test_schema(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("failed to create collection_recipes recipe index");
+    sqlx::raw_sql(include_str!("../migrations/grocery-lists.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create grocery tables");
+    sqlx::raw_sql(include_str!("../migrations/pantry.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create pantry tables");
+    sqlx::raw_sql(include_str!("../migrations/resource-owner-name-unique.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create resource name indexes");
+
+    let schema = include_str!("../migrations/schema.sql");
+    let start = schema
+        .find("-- NOMS-017: maintained")
+        .expect("vocabulary schema marker");
+    sqlx::raw_sql(&schema[start..])
+        .execute(pool)
+        .await
+        .expect("failed to create vocabulary schema");
 }
 
 /// Generate a unique 8-character suffix for test data to avoid duplicate key conflicts.
@@ -515,7 +549,7 @@ pub async fn create_test_new_draft(pool: &PgPool, user_id: Uuid) -> crate::db::R
 }
 
 #[allow(dead_code)]
-fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapshot {
+pub(crate) fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapshot {
     crate::db::diff::RecipeSnapshot {
         title: title.to_string(),
         description: None,
@@ -524,9 +558,11 @@ fn test_recipe_snapshot(title: &str) -> crate::db::diff::RecipeSnapshot {
         cook_time_minutes: None,
         servings: None,
         ingredients: vec![crate::types::RecipeIngredient {
+            vocabulary_id: None,
             amount: "1".to_string(),
             unit: "cup".to_string(),
             name: "test ingredient".to_string(),
+            ..Default::default()
         }],
         instructions: vec![crate::types::RecipeStep {
             text: "Test instruction".to_string(),
@@ -545,7 +581,7 @@ pub async fn insert_test_user(pool: &PgPool) -> crate::db::User {
     crate::db::insert_user(
         pool,
         &format!("collections_{suffix}"),
-        "Collections Test User",
+        &format!("Collections Test User {suffix}"),
         &format!("collections_{suffix}@example.com"),
         None,
     )
@@ -562,7 +598,7 @@ pub async fn insert_test_recipe(
     crate::db::insert_recipe(
         pool,
         user_id,
-        "Collection Test Recipe",
+        &format!("Collection Test Recipe {}", uid()),
         None,
         None,
         None,
@@ -2237,7 +2273,14 @@ mod search_integration_tests {
         )
         .await
         .expect("collection browse fallback failed");
-        assert_eq!(browse.total_count, 5);
+        // Other integration tests concurrently create/remove public collections.
+        // The five owned fixtures must count; their exact total is checked above
+        // with fixture-specific text. Here we verify blank-query fallback sorting.
+        assert!(browse.total_count >= 5);
+        assert!(!browse
+            .results
+            .iter()
+            .any(|result| result.collection.id == other_collection_id));
         assert!(browse
             .results
             .iter()
@@ -2471,15 +2514,20 @@ mod search_integration_tests {
             .unwrap()
             .into_iter()
             .collect();
-        assert!(browse.recipes.windows(2).all(|recipes| {
-            let left = (
-                recipe_update_times[&recipes[0].recipe.id],
-                recipes[0].recipe.id,
-            );
-            let right = (
-                recipe_update_times[&recipes[1].recipe.id],
-                recipes[1].recipe.id,
-            );
+        // Parallel search fixtures can be deleted between browse and this lookup.
+        // The remaining results must still be a correctly ordered subsequence.
+        let surviving_recipes = browse
+            .recipes
+            .iter()
+            .filter_map(|result| {
+                recipe_update_times
+                    .get(&result.recipe.id)
+                    .map(|updated_at| (*updated_at, result.recipe.id))
+            })
+            .collect::<Vec<_>>();
+        assert!(surviving_recipes.windows(2).all(|recipes| {
+            let left = recipes[0];
+            let right = recipes[1];
             left.0 > right.0 || (left.0 == right.0 && left.1 <= right.1)
         }));
         assert!(browse.collections.windows(2).all(|collections| {
@@ -2568,7 +2616,7 @@ mod search_integration_tests {
                 RecipeFixture {
                     id,
                     owner_id: other_owner_id,
-                    title: "Hidden suggestion recipe",
+                    title: &format!("Hidden suggestion recipe {visibility}"),
                     description: &term,
                     visibility,
                     prep_time: None,

@@ -7,7 +7,7 @@
 
 use std::ops::DerefMut;
 
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{Acquire, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 use crate::auth::session;
@@ -82,6 +82,8 @@ pub enum LinkError {
     Session(session::SessionError),
     /// All attempts to generate a unique username failed.
     UsernameGenerationFailed,
+    /// All attempts to reserve a unique initial display name failed.
+    DisplayNameGenerationFailed,
     /// The provider did not return a usable stable subject identifier.
     InvalidProviderIdentity,
     /// A new provider identity presented an email belonging to another user.
@@ -97,6 +99,12 @@ impl std::fmt::Display for LinkError {
             LinkError::Session(e) => write!(f, "linking session: {e}"),
             LinkError::UsernameGenerationFailed => {
                 write!(f, "failed to generate a unique username after all attempts")
+            }
+            LinkError::DisplayNameGenerationFailed => {
+                write!(
+                    f,
+                    "failed to generate a unique display name after all attempts"
+                )
             }
             LinkError::InvalidProviderIdentity => {
                 write!(f, "OAuth provider returned an invalid stable identity")
@@ -120,6 +128,7 @@ impl std::error::Error for LinkError {
             LinkError::Db(e) => Some(e),
             LinkError::Session(e) => Some(e),
             LinkError::UsernameGenerationFailed => None,
+            LinkError::DisplayNameGenerationFailed => None,
             LinkError::InvalidProviderIdentity => None,
             LinkError::EmailAlreadyInUse => None,
             LinkError::AccountAlreadyLinked(_) => None,
@@ -213,6 +222,53 @@ async fn generate_unique_username(
 }
 
 // ── Main linking function ────────────────────────────────────────────────────
+
+/// Keep provider names readable, but resolve collisions without rejecting OAuth
+/// sign-up. Bound by PostgreSQL's character limit, including the random suffix.
+fn initial_display_name(provider_name: &str, retry: usize) -> String {
+    let trimmed = provider_name.trim();
+    let base = if trimmed.chars().count() < 2 {
+        "Cook"
+    } else {
+        trimmed
+    };
+    if retry == 0 {
+        base.chars().take(100).collect()
+    } else {
+        format!(
+            "{} {}",
+            base.chars().take(91).collect::<String>(),
+            &Uuid::new_v4().simple().to_string()[..8]
+        )
+    }
+}
+
+async fn insert_new_oauth_user(
+    tx: &mut Transaction<'_, Postgres>,
+    provider_name: &str,
+    email: &str,
+    avatar_url: Option<&str>,
+) -> Result<db::User, LinkError> {
+    for retry in 0..6 {
+        let username = generate_unique_username(tx, provider_name).await?;
+        let display_name = initial_display_name(provider_name, retry);
+        // An ordinary unique violation aborts a PostgreSQL transaction. A
+        // savepoint lets us retry only name collisions while retaining the
+        // outer identity/linking transaction and its locks.
+        let mut attempt = tx.begin().await.map_err(db::DbError::Query)?;
+        match db::insert_user(&mut *attempt, &username, &display_name, email, avatar_url).await {
+            Ok(user) => {
+                attempt.commit().await.map_err(db::DbError::Query)?;
+                return Ok(user);
+            }
+            Err(db::DbError::DisplayNameTaken | db::DbError::UsernameTaken) => {
+                attempt.rollback().await.map_err(db::DbError::Query)?;
+            }
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Err(LinkError::DisplayNameGenerationFailed)
+}
 
 // Do not derive Debug: explicit-link resolution contains a session credential.
 #[derive(Clone, Copy)]
@@ -401,7 +457,6 @@ async fn resolve_provider_identity(
     }
 
     // (b) Brand-new user
-    let username = generate_unique_username(&mut tx, &info.display_name).await?;
     let placeholder_email;
     let email = match verified_email {
         Some(email) => email,
@@ -411,17 +466,11 @@ async fn resolve_provider_identity(
         }
     };
     let avatar_url = info.avatar_url.as_deref();
-    let user = match db::insert_user(
-        tx.deref_mut(),
-        &username,
-        &info.display_name,
-        email,
-        avatar_url,
-    )
-    .await
-    {
+    let user = match insert_new_oauth_user(&mut tx, &info.display_name, email, avatar_url).await {
         Ok(user) => user,
-        Err(error) if verified_email.is_some() && is_users_email_conflict(&error) => {
+        Err(LinkError::Db(error))
+            if verified_email.is_some() && is_users_email_conflict(&error) =>
+        {
             tracing::warn!(
                 event = "oauth_email_conflict",
                 provider = info.provider.as_str(),
@@ -429,7 +478,7 @@ async fn resolve_provider_identity(
             );
             return Err(LinkError::EmailAlreadyInUse);
         }
-        Err(error) => return Err(error.into()),
+        Err(error) => return Err(error),
     };
     let account = db::insert_oauth_account_with_email_verification(
         tx.deref_mut(),
@@ -465,6 +514,55 @@ fn is_users_email_conflict(error: &db::DbError) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn initial_display_names_trim_and_fit_unicode_names_with_collision_suffixes() {
+        assert_eq!(initial_display_name("  Cook Name  ", 0), "Cook Name");
+        assert_eq!(initial_display_name(" ", 0), "Cook");
+        for retry in [0, 1] {
+            let name = initial_display_name(&"中".repeat(120), retry);
+            assert_eq!(name.chars().count(), 100);
+            if retry > 0 {
+                let suffix = name.split_whitespace().last().unwrap();
+                assert_eq!(suffix.len(), 8);
+                assert!(suffix.chars().all(|c| c.is_ascii_hexdigit()));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn concurrent_oauth_signups_resolve_display_name_collisions() {
+        let (_db, pool) = test_utils::setup_test_db().await;
+        let info = |index| OauthUserInfo {
+            provider: Provider::Google,
+            provider_uid: format!("concurrent-name-{index}"),
+            email: Some(format!("concurrent-name-{index}@example.test")),
+            email_verified: true,
+            display_name: " Shared OAuth Name ".into(),
+            avatar_url: None,
+        };
+        let (first, second) = tokio::join!(
+            login_or_create(&pool, info(1), None),
+            login_or_create(&pool, info(2), None),
+        );
+        let first = db::get_user_by_id(&pool, first.unwrap().user_id)
+            .await
+            .unwrap()
+            .unwrap();
+        let second = db::get_user_by_id(&pool, second.unwrap().user_id)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_ne!(
+            first.display_name.to_lowercase(),
+            second.display_name.to_lowercase()
+        );
+        assert!(
+            first.display_name == "Shared OAuth Name" || second.display_name == "Shared OAuth Name"
+        );
+        assert_eq!(db::count_oauth_accounts(&pool, first.id).await.unwrap(), 1);
+        assert_eq!(db::count_oauth_accounts(&pool, second.id).await.unwrap(), 1);
+    }
 
     // -- Unit tests for generate_username_from_display_name --
 
@@ -728,6 +826,7 @@ mod tests {
         // Create multiple users with the same display name —
         // each should get a unique username
         let mut usernames = Vec::new();
+        let mut display_names = Vec::new();
         for i in 0..3 {
             let result = login_or_create(
                 &pool,
@@ -751,6 +850,7 @@ mod tests {
                 .unwrap();
             assert!(user.username.starts_with("same-name-"));
             usernames.push(user.username);
+            display_names.push(user.display_name);
         }
 
         // All usernames should be unique
@@ -759,6 +859,14 @@ mod tests {
             .collect::<std::collections::HashSet<_>>()
             .len();
         assert_eq!(unique_count, 3, "usernames should be unique: {usernames:?}");
+        assert_eq!(display_names[0], "Same Name");
+        assert_eq!(
+            display_names
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            3
+        );
     }
 
     #[tokio::test]

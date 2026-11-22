@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-10-28T09:18:41.935679+00:00",
+  "bytes": 28483,
+  "source": {
+    "id": "wikidata-equipment-targeted-2026-10-28",
+    "checksum": "7c3e062ecae040d41bdbd929c5ebe20db78f026604048e99d583889897a5cabd",
+    "license": "CC0-1.0",
+    "attribution": "Wikidata contributors; targeted supplemental evidence only, not part of hierarchy coverage counts.",
+    "url": "https://www.wikidata.org/wiki/Wikidata:Data_access"
+  },
+  "revisions": {
+    "Q1796864": 2534155697,
+    "Q899600": 2444871108,
+    "Q321995": 2518125527,
+    "Q951722": 2538560669,
+    "Q36539": 2547362492,
+    "Q37828": 2556794966,
+    "Q2487743": 2557585169,
+    "Q1319419": 2550657102,
+    "Q1807716": 2487256730,
+    "Q17232663": 2549062325,
+    "Q356700": 2506761878,
+    "Q379831": 2517688958,
+    "Q3276479": 2531194574
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "native_study_reopened": true,
+  "shared_suns": 1,
+  "original_source_hashes_verified": 3,
+  "kitchen_objects": 863,
+  "landscape_objects": 217,
+  "animations": false,
+  "external_libraries": 0,
+  "unpacked_images": [],
+  "original_walking_camera": true,
+  "kitchen_vertex_bounds": {
+    "min": [
+      -45.487606048583984,
+      -0.06989526748657227,
+      22.946945190429688
+    ],
+    "max": [
+      -29.512393951416016,
+      8.311437606811523,
+      37.05305480957031
+    ]
+  },
+  "sha256": "7e91f4e4bdda302c3a723fe90557a497a6c1aa3f798828c54b6f93aea22949af",
+  "bytes": 11385106
+}

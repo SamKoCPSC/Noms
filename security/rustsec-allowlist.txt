@@ -3,3 +3,4 @@
 # Keep this empty when possible. Every exception must identify a concrete
 # non-reachable path and expire so CI forces re-evaluation.
 RUSTSEC-2023-0071|2026-11-30|RSA is retained only by SQLx's optional MySQL metadata; the production graph disables SQLx defaults, enables PostgreSQL only, and cargo tree has no RSA path.
+RUSTSEC-2026-0459|2026-11-30|SQLite is retained only by SQLx's optional driver metadata; no application feature or target activates libsqlite3-sys. SQLx 0.8 and 0.9 cannot resolve the fixed >=0.39 binding. The audit wrapper rejects this exception if SQLite enters the active all-feature all-target graph.

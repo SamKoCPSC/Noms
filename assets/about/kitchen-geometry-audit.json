@@ -1,0 +1,5024 @@
+[
+  {
+    "name": "Rounded oak diorama plinth",
+    "source_triangles": 716,
+    "web_triangles": 322,
+    "preserved": false
+  },
+  {
+    "name": "Tile grout bed",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 00 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 01 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 02 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 03 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 04 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 05 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 06 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 07 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 08 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 09 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 10 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 00",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 01",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 02",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 03",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 04",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 05",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 06",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 07",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 08",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Checker tile 11 09",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Right wall window \u00b7 ivory frame",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right wall window \u00b7 ivory frame.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right wall window \u00b7 ivory frame.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right wall window \u00b7 ivory frame.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right wall window \u00b7 ivory frame.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right wall window \u00b7 ivory frame.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right wall window \u00b7 pale daylight glazing",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Right wall window \u00b7 rounded sill",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left wall window \u00b7 ivory frame",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left wall window \u00b7 ivory frame.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left wall window \u00b7 ivory frame.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left wall window \u00b7 ivory frame.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left wall window \u00b7 ivory frame.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left wall window \u00b7 ivory frame.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left wall window \u00b7 pale daylight glazing",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Left wall window \u00b7 rounded sill",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Walls \u00b7 continuous closed L shell",
+    "source_triangles": 1620,
+    "web_triangles": 1620,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 continuous ivory backing",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 1",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 2",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 3",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 4",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 5",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 6",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 7",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 8",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 9",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 10",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 11",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 12",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 13",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 14",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 15",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 16",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 17",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 18",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 19",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 1 tile 20",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 1",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 2",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 3",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 4",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 5",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 6",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 7",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 8",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 9",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 10",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 11",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 12",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 13",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 14",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 15",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 16",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 17",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 18",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 19",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 2 tile 20",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 1",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 2",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 3",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 4",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 5",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 6",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 7",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 8",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 9",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 10",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 11",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 12",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 13",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 14",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 15",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 16",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 17",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 18",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 19",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Backsplash \u00b7 row 3 tile 20",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Back corner cabinet \u00b7 door 1 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Back corner cabinet \u00b7 door 1 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Back corner cabinet \u00b7 door 1 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Back corner cabinet \u00b7 door 2 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Back corner cabinet \u00b7 door 2 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Back corner cabinet \u00b7 door 2 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 body",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 recessed toe kick",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 door 1 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 door 1 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 door 1 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 door 2 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 door 2 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Mixer cabinet \u00b7 door 2 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 body",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 recessed toe kick",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 door 1 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 door 1 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 door 1 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 door 2 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 door 2 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Blender cabinet \u00b7 door 2 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Left oven cabinet \u00b7 door 1 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Left oven cabinet \u00b7 door 1 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Left oven cabinet \u00b7 door 1 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Left oven cabinet \u00b7 door 2 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Left oven cabinet \u00b7 door 2 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Left oven cabinet \u00b7 door 2 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 terracotta cabinet shell",
+    "source_triangles": 556,
+    "web_triangles": 278,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 recessed plinth",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 frame.001",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 inset.001",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 brass pull.001",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 frame.001",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 inset.001",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 brass pull.001",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 frame.002",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 inset.002",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 top drawer \u00b7 brass pull.002",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 frame.002",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 inset.002",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 lower cupboard \u00b7 brass pull.002",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 end drawer",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 end brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 end drawer.001",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 end brass pull.001",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 end drawer.002",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 end brass pull.002",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Island \u00b7 thick cream quartz worktop",
+    "source_triangles": 556,
+    "web_triangles": 278,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.001",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.002",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.003",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.001",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.002",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.003",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 rounded terracotta seat",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.004",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.005",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.006",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.007",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.004",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.005",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.006",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.007",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 rounded terracotta seat.001",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Continuous right cream countertop",
+    "source_triangles": 300,
+    "web_triangles": 150,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.008",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.009",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.010",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 footrest.011",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 rounded terracotta seat.002",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.008",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.009",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.010",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Stool \u00b7 splayed oak leg.011",
+    "source_triangles": 316,
+    "web_triangles": 158,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 continuous L cabinet carcass",
+    "source_triangles": 452,
+    "web_triangles": 226,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 continuous recessed toe kick",
+    "source_triangles": 452,
+    "web_triangles": 226,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 wrapped corner filler",
+    "source_triangles": 452,
+    "web_triangles": 226,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 left door 1 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 left door 1 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 left door 1 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 left door 2 \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 left door 2 \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 left door 2 \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 rear door \u00b7 frame",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 rear door \u00b7 inset",
+    "source_triangles": 444,
+    "web_triangles": 222,
+    "preserved": false
+  },
+  {
+    "name": "Corner join \u00b7 rear door \u00b7 brass pull",
+    "source_triangles": 480,
+    "web_triangles": 240,
+    "preserved": false
+  },
+  {
+    "name": "Continuous L-shaped cream countertop",
+    "source_triangles": 636,
+    "web_triangles": 318,
+    "preserved": false
+  },
+  {
+    "name": "Fridge \u00b7 ivory enamel cabinet",
+    "source_triangles": 556,
+    "web_triangles": 556,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 refrigerator dark gasket",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 refrigerator rounded door",
+    "source_triangles": 444,
+    "web_triangles": 444,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 refrigerator brass handle",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 freezer dark gasket",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 freezer rounded door",
+    "source_triangles": 444,
+    "web_triangles": 444,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 freezer brass handle",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 foot",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge \u00b7 foot.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Range \u00b7 ivory enamel body",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 dark oven seal",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 oven door surround",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 inset dark glass",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 interior black cavity",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 oven bar handle",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 control knob",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 control knob.001",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 control knob.002",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 control knob.003",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 cooktop",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner pan",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner inner ring",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner pan.001",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner inner ring.001",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner pan.002",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner inner ring.002",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate.004",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate.005",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner pan.003",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner inner ring.003",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate.006",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Range \u00b7 burner grate.007",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Wok \u00b7 open carbon steel bowl",
+    "source_triangles": 1280,
+    "web_triangles": 1280,
+    "preserved": true
+  },
+  {
+    "name": "Wok \u00b7 metal handle tang",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Wok \u00b7 single long oak handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Pot \u00b7 terracotta body",
+    "source_triangles": 672,
+    "web_triangles": 672,
+    "preserved": true
+  },
+  {
+    "name": "Pot \u00b7 domed lid",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Pot \u00b7 lid knob",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Pot \u00b7 small lug handle",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Pot \u00b7 small lug handle.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Hood \u00b7 symmetrical tapered canopy",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 lower rounded lip",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 vertical chimney",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 underside filter",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots.006",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Hood \u00b7 filter slots.007",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Espresso \u00b7 rounded cream body",
+    "source_triangles": 556,
+    "web_triangles": 556,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 black front recess",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 ivory top fascia",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 brass control",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 knob indicator",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 brass control.001",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 knob indicator.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 group head",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 portafilter handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 group head.001",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 portafilter handle.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 drip tray",
+    "source_triangles": 556,
+    "web_triangles": 556,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 tray drain slot.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 brewed cup \u00b7 hollow porcelain",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 brewed cup \u00b7 handle",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 brewed cup \u00b7 coffee",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 brewed cup \u00b7 crema ring",
+    "source_triangles": 1920,
+    "web_triangles": 1920,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 EMPTY top cup 1 \u00b7 hollow porcelain",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 EMPTY top cup 1 \u00b7 handle",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 EMPTY top cup 2 \u00b7 hollow porcelain",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 EMPTY top cup 2 \u00b7 handle",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Espresso \u00b7 steam wand",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Coffee shelf \u00b7 rounded walnut",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Shelf \u00b7 brass wall bracket",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Shelf \u00b7 brass wall bracket.001",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 pot",
+    "source_triangles": 576,
+    "web_triangles": 576,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 soil",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 stem",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 leaf",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 stem.001",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 leaf.001",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 stem.002",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 leaf.002",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 stem.003",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 leaf.003",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 stem.004",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 leaf.004",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 stem.005",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 leaf.005",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 stem.006",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 leaf.006",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing vine",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.001",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.002",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.003",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.004",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.005",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.006",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing vine.001",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.007",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.008",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.009",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.010",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.011",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.012",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Shelf trailing pothos \u00b7 trailing leaf.013",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "French press \u00b7 glass vessel",
+    "source_triangles": 560,
+    "web_triangles": 252,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 coffee",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 base",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 frame",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 frame.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 frame.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 frame.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 plunger",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 knob",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "French press \u00b7 handle",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 glass server",
+    "source_triangles": 960,
+    "web_triangles": 432,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 carafe handle",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Pour-over \u00b7 open ceramic cone",
+    "source_triangles": 576,
+    "web_triangles": 259,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.001",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.002",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.003",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.004",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.005",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.006",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.007",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.008",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.009",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.010",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.011",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.012",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.013",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.014",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.015",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.016",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 ceramic flute.017",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Pour-over \u00b7 dripper handle",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Shelf \u00b7 recipe book binding",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf \u00b7 recipe book paper",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf \u00b7 recipe book binding.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf \u00b7 recipe book paper.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf \u00b7 recipe book binding.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf \u00b7 recipe book paper.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 cream outer casing",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 front panel",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 dark glass door",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.004",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.005",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.006",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.007",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.008",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 visible rack.009",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 door handle",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 control dial",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 control dial.001",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 control dial.002",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 short feet",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 short feet.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 short feet.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Toaster oven \u00b7 short feet.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Prep \u00b7 oak cutting board",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Prep \u00b7 subtle board plank",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Prep \u00b7 subtle board plank.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Prep \u00b7 subtle board plank.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Prep \u00b7 subtle board plank.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Prep \u00b7 subtle board plank.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Prep \u00b7 subtle board plank.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chef knife \u00b7 forged blade",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chef knife \u00b7 walnut handle",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chef knife \u00b7 brass rivet",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Chef knife \u00b7 brass rivet.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 rounded enamel base",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 curved support tower",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 rounded motor head",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 head pivot",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 hollow steel bowl",
+    "source_triangles": 960,
+    "web_triangles": 960,
+    "preserved": true
+  },
+  {
+    "name": "Mixer \u00b7 whisk spindle",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire.001",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire.002",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire.003",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire.004",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire.005",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire.006",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 whisk wire.007",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Mixer \u00b7 speed selector",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 enamel base",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 transparent glass jug",
+    "source_triangles": 448,
+    "web_triangles": 200,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 dark removable lid",
+    "source_triangles": 556,
+    "web_triangles": 250,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 ingredients",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 ingredients.001",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 ingredients.002",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 jug handle",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 control dial",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blender \u00b7 blade",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 pot",
+    "source_triangles": 576,
+    "web_triangles": 576,
+    "preserved": true
+  },
+  {
+    "name": "Counter herb plant \u00b7 soil",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 stem",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 leaf",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 stem.001",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 leaf.001",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 stem.002",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 leaf.002",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 stem.003",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 leaf.003",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 stem.004",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 leaf.004",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 stem.005",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 leaf.005",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 stem.006",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Counter herb plant \u00b7 leaf.006",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Bread \u00b7 walnut board",
+    "source_triangles": 444,
+    "web_triangles": 198,
+    "preserved": false
+  },
+  {
+    "name": "Bread board \u00b7 plank seam",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread board \u00b7 plank seam.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread board \u00b7 plank seam.002",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread board \u00b7 plank seam.003",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread board \u00b7 plank seam.004",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread board \u00b7 plank seam.005",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 scored baked boule",
+    "source_triangles": 6720,
+    "web_triangles": 3024,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.001",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.002",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.003",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.004",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.005",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.006",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.007",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.008",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.009",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.010",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.011",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.012",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.013",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.014",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.015",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.016",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.017",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.018",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.019",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.020",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.021",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.022",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.023",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.024",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.025",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.026",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.027",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.028",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.029",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.030",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.031",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.032",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.033",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.034",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.035",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.036",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.037",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.038",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.039",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.040",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.041",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.042",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.043",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.044",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.045",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.046",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.047",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.048",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.049",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.050",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.051",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.052",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.053",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.054",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.055",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 flour fleck.056",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Cookies \u00b7 porcelain plate",
+    "source_triangles": 672,
+    "web_triangles": 672,
+    "preserved": true
+  },
+  {
+    "name": "Cookie \u00b7 baked disc",
+    "source_triangles": 636,
+    "web_triangles": 412,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.001",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.002",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.003",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.004",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.005",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.006",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 baked disc.001",
+    "source_triangles": 636,
+    "web_triangles": 412,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.007",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.008",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.009",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.010",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.011",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.012",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.013",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 baked disc.002",
+    "source_triangles": 636,
+    "web_triangles": 412,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.014",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.015",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.016",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.017",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.018",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.019",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Cookie \u00b7 chocolate chip.020",
+    "source_triangles": 80,
+    "web_triangles": 52,
+    "preserved": false
+  },
+  {
+    "name": "Sourdough \u00b7 lifted baked ear",
+    "source_triangles": 1600,
+    "web_triangles": 720,
+    "preserved": false
+  },
+  {
+    "name": "Croissant tray \u00b7 rolled-rim baking sheet",
+    "source_triangles": 1340,
+    "web_triangles": 1340,
+    "preserved": true
+  },
+  {
+    "name": "Croissant tray \u00b7 parchment liner",
+    "source_triangles": 30,
+    "web_triangles": 30,
+    "preserved": true
+  },
+  {
+    "name": "Bread knife \u00b7 serrated steel blade",
+    "source_triangles": 1848,
+    "web_triangles": 1848,
+    "preserved": false
+  },
+  {
+    "name": "Bread knife \u00b7 walnut handle",
+    "source_triangles": 300,
+    "web_triangles": 194,
+    "preserved": false
+  },
+  {
+    "name": "Bread knife \u00b7 brass rivet 1",
+    "source_triangles": 76,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Bread knife \u00b7 brass rivet 2",
+    "source_triangles": 76,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Bread knife \u00b7 brass rivet 3",
+    "source_triangles": 76,
+    "web_triangles": 48,
+    "preserved": false
+  },
+  {
+    "name": "Burger meal \u00b7 oval porcelain plate",
+    "source_triangles": 672,
+    "web_triangles": 672,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 bottom brioche bun",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 ruffled lettuce",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 chargrilled beef patty",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 tomato slice",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 tomato slice.001",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 domed sesame brioche top",
+    "source_triangles": 768,
+    "web_triangles": 768,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 1",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 2",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 3",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 4",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 5",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 6",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 7",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 8",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 9",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 10",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 11",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 12",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 13",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 14",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 15",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 16",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 17",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 18",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 19",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 20",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 21",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 22",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 23",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 24",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 25",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 26",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 27",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 sesame seed 28",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 tapered terracotta paper cup",
+    "source_triangles": 560,
+    "web_triangles": 560,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 cream cup band",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 snap-on cream lid",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 straw segment 1",
+    "source_triangles": 128,
+    "web_triangles": 128,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 straw segment 2",
+    "source_triangles": 128,
+    "web_triangles": 128,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 straw segment 3",
+    "source_triangles": 128,
+    "web_triangles": 128,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 straw segment 4",
+    "source_triangles": 128,
+    "web_triangles": 128,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 straw segment 5",
+    "source_triangles": 128,
+    "web_triangles": 128,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 straw segment 6",
+    "source_triangles": 128,
+    "web_triangles": 128,
+    "preserved": true
+  },
+  {
+    "name": "Soda \u00b7 straw segment 7",
+    "source_triangles": 128,
+    "web_triangles": 128,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 golden whole bulb",
+    "source_triangles": 864,
+    "web_triangles": 864,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 1",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 2",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 3",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 4",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 5",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 6",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 7",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 8",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 9",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 10",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 11",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 subtle skin seam 12",
+    "source_triangles": 640,
+    "web_triangles": 640,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 dry root 1",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 dry root 2",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 dry root 3",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 dry root 4",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Onion \u00b7 dry root 5",
+    "source_triangles": 256,
+    "web_triangles": 256,
+    "preserved": true
+  },
+  {
+    "name": "Burger \u00b7 draped cheddar slice",
+    "source_triangles": 1152,
+    "web_triangles": 1152,
+    "preserved": true
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 1",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 2",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 3",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 4",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 5",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 6",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 7",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 8",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 9",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 10",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Fries \u00b7 separated hand-cut fry 11",
+    "source_triangles": 188,
+    "web_triangles": 122,
+    "preserved": false
+  },
+  {
+    "name": "Croissant 1 \u00b7 rolled triangular dough",
+    "source_triangles": 48478,
+    "web_triangles": 3600,
+    "preserved": false
+  },
+  {
+    "name": "Croissant 2 \u00b7 rolled triangular dough",
+    "source_triangles": 48460,
+    "web_triangles": 3600,
+    "preserved": false
+  },
+  {
+    "name": "Croissant 3 \u00b7 rolled triangular dough",
+    "source_triangles": 48460,
+    "web_triangles": 3600,
+    "preserved": false
+  },
+  {
+    "name": "Laptop \u00b7 softly rounded aluminium chassis",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 supporting rubber pad.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 recessed keyboard well",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.023",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.023",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.024",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.024",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.025",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.025",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.026",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.026",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.027",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.027",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.028",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.028",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.029",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.029",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.030",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.030",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.031",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.031",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.032",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.032",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.033",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.033",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.034",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.034",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.035",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.035",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.036",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.036",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.037",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.037",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.038",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.038",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.039",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.039",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.040",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.040",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.041",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.041",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.042",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.042",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.043",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.043",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.044",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.044",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.045",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.045",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.046",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.046",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.047",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.047",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.048",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.048",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.049",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.049",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.050",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.050",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 individual keycap.051",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 key legend.051",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 space bar",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 trackpad outline",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 flush satin trackpad",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 display hinge",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 display hinge.001",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 rounded display casing",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 inset forest screen bezel",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 Noms editor display",
+    "source_triangles": 2,
+    "web_triangles": 2,
+    "preserved": true
+  },
+  {
+    "name": "Laptop \u00b7 webcam lens",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 rounded forest linen cover",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 recessed cloth spine",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 left curved paper block",
+    "source_triangles": 228,
+    "web_triangles": 228,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 left printed recipe page",
+    "source_triangles": 56,
+    "web_triangles": 56,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 right curved paper block",
+    "source_triangles": 228,
+    "web_triangles": 228,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 right printed recipe page",
+    "source_triangles": 56,
+    "web_triangles": 56,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 distinct paper edge.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe book \u00b7 draped terracotta bookmark",
+    "source_triangles": 44,
+    "web_triangles": 44,
+    "preserved": true
+  }
+]

@@ -152,10 +152,12 @@ pub fn validate_collection_search_request(
 ) -> Result<(), SearchValidationError> {
     validate_optional_simple_text(request.text.as_deref())?;
     validate_pagination(request.page, request.page_size)?;
+    let mut term_count = request.text.as_deref().map_or(0, search_term_count);
     if let Some(advanced) = &request.advanced {
         validate_advanced_collection(advanced)?;
+        term_count += field_term_count(&advanced.name) + field_term_count(&advanced.description);
     }
-    Ok(())
+    validate_term_count(term_count)
 }
 
 pub fn validate_user_search_request(
@@ -163,12 +165,25 @@ pub fn validate_user_search_request(
 ) -> Result<(), SearchValidationError> {
     validate_optional_simple_text(request.text.as_deref())?;
     validate_pagination(request.page, request.page_size)?;
+    let mut term_count = request.text.as_deref().map_or(0, search_term_count);
     if let Some(advanced) = &request.advanced {
         validate_text_field("username", &advanced.username)?;
         validate_text_field("display_name", &advanced.display_name)?;
         validate_text_field("bio", &advanced.bio)?;
+        term_count += field_term_count(&advanced.username)
+            + field_term_count(&advanced.display_name)
+            + field_term_count(&advanced.bio);
     }
-    Ok(())
+    validate_term_count(term_count)
+}
+
+fn field_term_count(field: &AdvancedTextField) -> usize {
+    field
+        .include
+        .iter()
+        .chain(field.exclude.iter())
+        .map(|criterion| search_term_count(&criterion.text))
+        .sum()
 }
 
 pub fn validate_all_search_request(
@@ -807,5 +822,61 @@ mod tests {
             "sort": "username_ascending"
         });
         assert!(serde_json::from_value::<RecipeSearchRequest>(scope_inapplicable_sort).is_err());
+    }
+}
+
+#[cfg(test)]
+mod public_search_limits {
+    use super::*;
+
+    fn field(words: usize) -> AdvancedTextField {
+        AdvancedTextField {
+            include: Some(TextCriterion {
+                text: vec!["x"; words].join(" "),
+                mode: crate::types::TextMatchMode::AllTerms,
+            }),
+            exclude: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn collection_limits_combine_simple_advanced_and_excluded_terms() {
+        let mut name = field(16);
+        name.exclude.push(TextCriterion {
+            text: vec!["excluded"; 16].join(" "),
+            mode: crate::types::TextMatchMode::AnyTerm,
+        });
+        let mut request = CollectionSearchRequest {
+            advanced: Some(AdvancedCollectionSearchCriteria {
+                name,
+                description: field(32),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert!(validate_collection_search_request(&request).is_ok());
+        request.text = Some("extra".into());
+        assert!(matches!(
+            validate_collection_search_request(&request),
+            Err(SearchValidationError::TooManyTerms { .. })
+        ));
+    }
+
+    #[test]
+    fn user_limits_combine_terms_across_public_fields() {
+        let mut request = UserSearchRequest {
+            advanced: Some(crate::types::AdvancedUserSearchCriteria {
+                username: field(16),
+                display_name: field(16),
+                bio: field(32),
+            }),
+            ..Default::default()
+        };
+        assert!(validate_user_search_request(&request).is_ok());
+        request.text = Some("extra".into());
+        assert!(matches!(
+            validate_user_search_request(&request),
+            Err(SearchValidationError::TooManyTerms { .. })
+        ));
     }
 }

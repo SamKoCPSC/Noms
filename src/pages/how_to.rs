@@ -153,7 +153,7 @@ fn HowToGuide() -> Element {
                     details { summary { "Can I edit a recipe after publishing?" } p { "Yes. Open a recipe you own and select Edit. Changes autosave to a private draft; select Publish Changes when you’re ready. Use Discard Draft to remove the unpublished revision." } }
                     details { summary { "Why can’t someone open my recipe or collection?" } p { "Check its visibility. Private items are owner-only. Use Unlisted for link access or Public for discovery. Sharing a collection does not make its private recipes public." } }
                     details { summary { "Where is my unfinished recipe?" } p { "Open Dashboard and look in Drafts. Drafts and unpublished edits remain private until you publish them." } }
-                    details { summary { "How do Explore and Search differ?" } p { "Explore is public browsing, with title and description search and Load more. Sign in to Search for recipes, collections and cooks, with result scopes and filters. Results respect content visibility." } }
+                    details { summary { "How do Explore and Search differ?" } p { "Explore offers public recipe browsing, title and description search, and Load more. Search finds public recipes, collections and cooks with result scopes and filters. Sign in to include your own private and unlisted recipes and collections." } }
                     details { summary { "What if an image is still processing?" } p { "Wait for processing to finish. If an image fails, retry it or remove it before publishing." } }
                 }
                 div { class: "how-to-more-heading",
@@ -193,7 +193,7 @@ fn HowToGuide() -> Element {
                     }
                     GuideSection { id: "explore", title: "Find your next recipe",
                         p { a { href: "/explore", "Explore" } " searches public recipe titles and descriptions, including recipes beyond those already loaded. Select Load more to see additional results. Community tags are labels, not filter controls." }
-                        p { a { href: "/search", "Search" } " requires sign-in and lets you find recipes, collections and cooks. Choose a result scope to see its filters and sorting options. Only content you can access appears." }
+                        p { a { href: "/search", "Search" } " lets everyone find public recipes, collections and cooks. Choose a result scope to see its filters and sorting options. Sign in to also search your own private and unlisted recipes and collections." }
                         p { "Creator links open public profiles with the recipes and collections that person has chosen to share." }
                     }
                     GuideSection { id: "fork", title: "Start with someone else’s idea",

@@ -1,0 +1,836 @@
+{
+  "schema_version": 1,
+  "version": "foodon-cooking-v1",
+  "source_checksum": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+  "catalog_checksum": "287864b790abd048200df301f84341765d1ad92bdcba17a8ea5c611cca522043",
+  "baseline_commit": "aee6b6ae2ad4e3f5eed7e59e8b82d63971d2139d",
+  "authorization": "User requested adding all labels suitable for typical cooking recipes and testing the expanded seed in the test deployment.",
+  "scope": "Broad ingredient/pantry scope, including regional foods, edible parts, named varieties, dairy, grains, herbs/spices, proteins, oils, condiments and useful forms. Hold organizational/ambiguous/industrial/medical labels and complete dishes. These are policy-screened batch decisions, not individual human verification of every source annotation.",
+  "duplicate_policy": "One display identity per normalized culinary label. Additional source records get related mappings; this does not assert exact source equivalence. Existing pilot relationships win.",
+  "alias_policy": "Do not bulk copy source exact synonyms. Use explicit culinary aliases, then remove collisions with other canonical labels/aliases. Original 100-entry wording remains unchanged.",
+  "fixed_ids": {
+    "FOODON_00003396": "1745729e-d12c-454d-92cd-1c448f08dd23"
+  },
+  "overrides": {
+    "FOODON_00002385": {
+      "source_label": "baking soda",
+      "action": "include",
+      "label": "baking soda",
+      "aliases": [
+        "bicarbonate of soda"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03301940": {
+      "source_label": "baking powder",
+      "action": "include",
+      "label": "baking powder",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03304534": {
+      "source_label": "white wheat flour (all purpose)",
+      "action": "include",
+      "label": "all-purpose flour",
+      "aliases": [
+        "all purpose flour"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00004510": {
+      "source_label": "flour",
+      "action": "include",
+      "label": "flour",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00005791": {
+      "source_label": "corn starch",
+      "action": "include",
+      "label": "corn starch",
+      "aliases": [
+        "cornstarch",
+        "cornflour"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03414273": {
+      "source_label": "potassium hydrogen tartrate",
+      "action": "include",
+      "label": "cream of tartar",
+      "aliases": [
+        "potassium hydrogen tartrate"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03304315": {
+      "source_label": "confectioner's sugar",
+      "action": "include",
+      "label": "powdered sugar",
+      "aliases": [
+        "icing sugar",
+        "confectioner's sugar",
+        "confectioners sugar"
+      ],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_03301073": {
+      "source_label": "sugar (granulated)",
+      "action": "include",
+      "label": "granulated sugar",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00005514": {
+      "source_label": "sugar (powdered)",
+      "action": "include",
+      "label": "powdered sugar",
+      "aliases": [
+        "icing sugar",
+        "confectioner's sugar",
+        "confectioners sugar"
+      ],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_00001123": {
+      "source_label": "cow milk beverage",
+      "action": "include",
+      "label": "cow's milk",
+      "aliases": [
+        "milk"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00005478": {
+      "source_label": "cow whole milk",
+      "action": "include",
+      "label": "whole milk",
+      "aliases": [
+        "whole cow milk"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00001772": {
+      "source_label": "cow milk butter food product",
+      "action": "include",
+      "label": "cow's milk butter",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03301777": {
+      "source_label": "butter (unsalted)",
+      "action": "include",
+      "label": "unsalted butter",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03302643": {
+      "source_label": "butter (salted)",
+      "action": "include",
+      "label": "salted butter",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00005747": {
+      "source_label": "cream (liquid)",
+      "action": "include",
+      "label": "cream",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00001216": {
+      "source_label": "cream food product",
+      "action": "include",
+      "label": "cream",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03301796": {
+      "source_label": "light whipping cream",
+      "action": "include",
+      "label": "light whipping cream",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03420154": {
+      "source_label": "mammalian light whipping cream (30%-36%)",
+      "action": "include",
+      "label": "light whipping cream (30–36% milk fat)",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00002340": {
+      "source_label": "water food product",
+      "action": "include",
+      "label": "water",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03303004": {
+      "source_label": "chicken broth",
+      "action": "include",
+      "label": "chicken broth",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03302091": {
+      "source_label": "beef broth",
+      "action": "include",
+      "label": "beef broth",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03315835": {
+      "source_label": "vegetable stock",
+      "action": "include",
+      "label": "vegetable stock",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03305128": {
+      "source_label": "cream of mushroom soup",
+      "action": "include",
+      "label": "cream of mushroom soup",
+      "aliases": [],
+      "reason": "A standard pantry soup used directly in cooking recipes; retain despite complete-soup wording."
+    },
+    "FOODON_03310321": {
+      "source_label": "mushroom soup (canned)",
+      "action": "include",
+      "label": "canned mushroom soup",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03316764": {
+      "source_label": "vanilla bean extract",
+      "action": "include",
+      "label": "vanilla extract",
+      "aliases": [
+        "vanilla bean extract"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03000223": {
+      "source_label": "coriander leaf (whole or pieces)",
+      "action": "include",
+      "label": "coriander leaf",
+      "aliases": [
+        "cilantro",
+        "fresh coriander"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00003618": {
+      "source_label": "eggplant",
+      "action": "include",
+      "label": "eggplant",
+      "aliases": [
+        "aubergine"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00004138": {
+      "source_label": "zucchini squash (raw)",
+      "action": "include",
+      "label": "zucchini",
+      "aliases": [
+        "courgette",
+        "zucchini squash"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03310943": {
+      "source_label": "zucchini squash",
+      "action": "include",
+      "label": "zucchini",
+      "aliases": [
+        "courgette",
+        "zucchini squash"
+      ],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00003546": {
+      "source_label": "bell pepper",
+      "action": "include",
+      "label": "bell pepper",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00003520": {
+      "source_label": "pepper",
+      "action": "include",
+      "label": "Capsicum pepper",
+      "aliases": [],
+      "reason": "Capsicum berry identity from source definition; disambiguate the label from peppercorn seasoning. No pepper alias copied."
+    },
+    "FOODON_03309928": {
+      "source_label": "pepper (raw)",
+      "action": "include",
+      "label": "Capsicum pepper",
+      "aliases": [],
+      "reason": "Raw Capsicum berry; label disambiguates from peppercorn seasoning. Additional source association is related, not an inferred exact merge."
+    },
+    "FOODON_03302626": {
+      "source_label": "yeast (fine, dry, active)",
+      "action": "include",
+      "label": "active dry yeast",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03310891": {
+      "source_label": "yeast (fine, dry, inactive)",
+      "action": "include",
+      "label": "inactive dry yeast",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03315025": {
+      "source_label": "yeast (fresh)",
+      "action": "include",
+      "label": "fresh yeast",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03413797": {
+      "source_label": "baker's yeast",
+      "action": "include",
+      "label": "baker's yeast",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03310334": {
+      "source_label": "bakers yeast",
+      "action": "include",
+      "label": "baker's yeast",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00002746": {
+      "source_label": "soft-shell crab",
+      "action": "include",
+      "label": "soft-shell crab",
+      "aliases": [
+        "softshell crab"
+      ],
+      "reason": "Culinary ingredient. Quarantine the source explanatory paragraph falsely annotated as an exact synonym."
+    },
+    "FOODON_03301424": {
+      "source_label": "bee pollen",
+      "action": "include",
+      "label": "bee pollen",
+      "aliases": [],
+      "reason": "Specific material with human culinary use; checked exception to the animal-feed ancestor filter. No plant or supplement synonyms copied."
+    },
+    "FOODON_00002977": {
+      "source_label": "baby spinach",
+      "action": "include",
+      "label": "baby spinach",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00004437": {
+      "source_label": "baby arugula greens",
+      "action": "include",
+      "label": "baby arugula greens",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03601044": {
+      "source_label": "panch phoron (non-ground)",
+      "action": "include",
+      "label": "panch phoron (whole spices)",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03601029": {
+      "source_label": "khmeli suneli",
+      "action": "include",
+      "label": "khmeli suneli",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_03601045": {
+      "source_label": "paneer",
+      "action": "include",
+      "label": "paneer",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00002770": {
+      "source_label": "'hyacinth bean (dried)'",
+      "action": "include",
+      "label": "hyacinth bean (dried)",
+      "aliases": [],
+      "reason": "Repair unmatched quotation marks surrounding the source label; retain the dried ingredient form."
+    },
+    "FOODON_00003396": {
+      "source_label": "cumin seed",
+      "action": "include",
+      "label": "cumin seed",
+      "aliases": [
+        "cumin"
+      ],
+      "reason": "Retain the existing tested cumin-seed UUID and source identity."
+    },
+    "FOODON_03302111": {
+      "source_label": "ale",
+      "action": "include",
+      "label": "ale",
+      "aliases": [],
+      "reason": "Specific cooking ingredient or pantry product; source scope checked for this selection."
+    },
+    "FOODON_00002387": {
+      "source_label": "an",
+      "action": "include",
+      "label": "an paste",
+      "aliases": [],
+      "reason": "Source defines the named East Asian sweet bean/grain paste; clarify the otherwise uninformative two-letter label."
+    },
+    "FOODON_00005213": {
+      "source_label": "A frozen new jersey blueberry.",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03414434": {
+      "source_label": "4-hexylresorcinol",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00001649": {
+      "source_label": "black or white pepper product",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00004281": {
+      "source_label": "amphibian food product",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00001251": {
+      "source_label": "avian food product",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00001177": {
+      "source_label": "insect food product",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00001579": {
+      "source_label": "alcoholic beverage",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00001817": {
+      "source_label": "alcoholic beverage (distilled)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03310866": {
+      "source_label": "alcoholic beverage (chinese)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03301637": {
+      "source_label": "alcoholic beverage (powdered)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03543330": {
+      "source_label": "33300 - alcoholic beverages (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03544097": {
+      "source_label": "40970 - alcoholic sauce (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03544151": {
+      "source_label": "41510 - alcoholic sweet sauce (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03540759": {
+      "source_label": "07590 - algae and prokaryotes organisms (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03543817": {
+      "source_label": "38170 - algae based formulations (e.g. spirulina, chlorella) (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03541877": {
+      "source_label": "18770 - animal carcase (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03541899": {
+      "source_label": "18990 - asses-mules-hinnies msm (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03543401": {
+      "source_label": "34010 - edible alcohol (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00003822": {
+      "source_label": "arnica leaf",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00002580": {
+      "source_label": "kava food product",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00003614": {
+      "source_label": "areca nut",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03302124": {
+      "source_label": "areca nut (raw)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03541140": {
+      "source_label": "11400 - areca nuts (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_00002457": {
+      "source_label": "food (fresh)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03542525": {
+      "source_label": "25250 - abalones, winkles, conchs (efsa foodex2)",
+      "action": "hold",
+      "reason": "Not a specific typical cooking ingredient in this source scope, or source label needs further identity/text review. Retain in the external hold queue."
+    },
+    "FOODON_03311872": {
+      "source_label": "cumin food product",
+      "action": "include",
+      "label": "cumin seed",
+      "aliases": [],
+      "reason": "Source definition derives products from cumin seed. Associate with the existing seed entry as related evidence; do not create a competing cumin label or drop its tested alias."
+    },
+    "FOODON_03307455": {
+      "source_label": "cow milk (raw)",
+      "action": "include",
+      "label": "raw cow's milk",
+      "aliases": [],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_00004509": {
+      "source_label": "milled food product",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_00001967": {
+      "source_label": "imitation food product",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_00004321": {
+      "source_label": "italian-style food product",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_00002952": {
+      "source_label": "leftover",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_03305145": {
+      "source_label": "produce (raw)",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_03460850": {
+      "source_label": "Glucuronolactone",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_03307903": {
+      "source_label": "tankage (food product)",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_00002086": {
+      "source_label": "passion food product",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_03310270": {
+      "source_label": "cotton-bract",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_03315619": {
+      "source_label": "figure-of-eight",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_03309930": {
+      "source_label": "polkudu",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_00004714": {
+      "source_label": "pokeberry food product",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_03542232": {
+      "source_label": "22320 - goldfish (efsa foodex2)",
+      "action": "hold",
+      "reason": "Generic category, unclear/misleading text, industrial/feed residue or an insufficiently established typical cooking identity. Hold for future source review."
+    },
+    "FOODON_00002632": {
+      "source_label": "tortellini",
+      "action": "include",
+      "label": "tortellini",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_00002633": {
+      "source_label": "tortelloni",
+      "action": "include",
+      "label": "tortelloni",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_00002678": {
+      "source_label": "fish cake",
+      "action": "include",
+      "label": "fish cake",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_00002875": {
+      "source_label": "jiaozi",
+      "action": "include",
+      "label": "jiaozi",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_03302326": {
+      "source_label": "fish ball (frozen)",
+      "action": "include",
+      "label": "fish ball (frozen)",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_03306619": {
+      "source_label": "dumpling",
+      "action": "include",
+      "label": "dumpling",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_03315368": {
+      "source_label": "mandoo",
+      "action": "include",
+      "label": "mandoo",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_03317284": {
+      "source_label": "meatball",
+      "action": "include",
+      "label": "meatball",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_03317446": {
+      "source_label": "gnocchi",
+      "action": "include",
+      "label": "gnocchi",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_03317647": {
+      "source_label": "fish ball",
+      "action": "include",
+      "label": "fish ball",
+      "aliases": [],
+      "reason": "A specific purchased pasta/dumpling/protein product used directly as a recipe ingredient, rather than a complete sauced meal."
+    },
+    "FOODON_00003351": {
+      "source_label": "brown rice flour",
+      "action": "include",
+      "label": "brown rice flour",
+      "aliases": [],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_03302339": {
+      "source_label": "white wheat flour",
+      "action": "include",
+      "label": "white wheat flour",
+      "aliases": [],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_00003064": {
+      "source_label": "watercress",
+      "action": "include",
+      "label": "watercress",
+      "aliases": [],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_00002369": {
+      "source_label": "yeast food product",
+      "action": "include",
+      "label": "yeast",
+      "aliases": [],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_03310351": {
+      "source_label": "butter",
+      "action": "include",
+      "label": "butter",
+      "aliases": [],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_00003493": {
+      "source_label": "caper",
+      "action": "include",
+      "label": "caper",
+      "aliases": [],
+      "reason": "Checked cooking ingredient or pantry input; retain the selected source identity."
+    },
+    "FOODON_03000249": {
+      "source_label": "pepper (whole or pieces)",
+      "action": "include",
+      "label": "Capsicum pepper (whole or pieces)",
+      "aliases": [],
+      "reason": "Named parent is pepper vegetable food product. Explicitly disambiguate this whole/processed Capsicum scope from peppercorns while retaining its persisted canonical UUID."
+    },
+    "FOODON_03301768": {
+      "source_label": "pepper (canned)",
+      "action": "include",
+      "label": "Capsicum pepper (canned)",
+      "aliases": [],
+      "reason": "Named vegetable/Piper parent checked; disambiguate Capsicum fruit from peppercorn seasoning while retaining the published source UUID."
+    },
+    "FOODON_03311745": {
+      "source_label": "pepper (dehydrated)",
+      "action": "include",
+      "label": "Capsicum pepper (dehydrated)",
+      "aliases": [],
+      "reason": "Named vegetable/Piper parent checked; disambiguate Capsicum fruit from peppercorn seasoning while retaining the published source UUID."
+    },
+    "FOODON_03301526": {
+      "source_label": "pepper (ground)",
+      "action": "include",
+      "label": "ground peppercorn",
+      "aliases": [
+        "ground pepper"
+      ],
+      "reason": "Reviewed familiar culinary wording for the named meat, leaf or peppercorn source scope. No cut, cooked-state or cross-species equivalence is inferred."
+    },
+    "FOODON_03302194": {
+      "source_label": "pepper (home-canned)",
+      "action": "include",
+      "label": "Capsicum pepper (home-canned)",
+      "aliases": [],
+      "reason": "Named vegetable/Piper parent checked; disambiguate Capsicum fruit from peppercorn seasoning while retaining the published source UUID."
+    },
+    "FOODON_03301147": {
+      "source_label": "pepper (pickled)",
+      "action": "include",
+      "label": "Capsicum pepper (pickled)",
+      "aliases": [],
+      "reason": "Named vegetable/Piper parent checked; disambiguate Capsicum fruit from peppercorn seasoning while retaining the published source UUID."
+    },
+    "FOODON_00002111": {
+      "source_label": "pepper vegetable food product",
+      "action": "include",
+      "label": "sweet or hot Capsicum pepper",
+      "aliases": [],
+      "reason": "Named vegetable/Piper parent checked; disambiguate Capsicum fruit from peppercorn seasoning while retaining the published source UUID."
+    },
+    "FOODON_03306722": {
+      "source_label": "pepper (liquid)",
+      "action": "hold",
+      "reason": "Final test-deployment review found an ambiguous seasoning scope, generic processing category or complete dish; retire its staged UUID rather than deleting it."
+    },
+    "FOODON_00005512": {
+      "source_label": "beef macaroni dish",
+      "action": "hold",
+      "reason": "Final test-deployment review found an ambiguous seasoning scope, generic processing category or complete dish; retire its staged UUID rather than deleting it."
+    },
+    "FOODON_03543845": {
+      "source_label": "38450 - composite dishes (efsa foodex2)",
+      "action": "hold",
+      "reason": "Final test-deployment review found an ambiguous seasoning scope, generic processing category or complete dish; retire its staged UUID rather than deleting it."
+    },
+    "FOODON_00002030": {
+      "source_label": "microbial refined food product",
+      "action": "hold",
+      "reason": "Final test-deployment review found an ambiguous seasoning scope, generic processing category or complete dish; retire its staged UUID rather than deleting it."
+    },
+    "FOODON_00001134": {
+      "source_label": "bovine meat food product",
+      "action": "include",
+      "label": "beef",
+      "aliases": [
+        "beef meat"
+      ],
+      "reason": "Reviewed familiar culinary wording for the named meat, leaf or peppercorn source scope. No cut, cooked-state or cross-species equivalence is inferred."
+    },
+    "FOODON_02020205": {
+      "source_label": "piece of chicken meat",
+      "action": "include",
+      "label": "chicken meat",
+      "aliases": [
+        "chicken"
+      ],
+      "reason": "Reviewed familiar culinary wording for the named meat, leaf or peppercorn source scope. No cut, cooked-state or cross-species equivalence is inferred."
+    },
+    "FOODON_03317271": {
+      "source_label": "pork meat (fresh)",
+      "action": "include",
+      "label": "pork meat",
+      "aliases": [
+        "pork"
+      ],
+      "reason": "Reviewed familiar culinary wording for the named meat, leaf or peppercorn source scope. No cut, cooked-state or cross-species equivalence is inferred."
+    },
+    "FOODON_00003423": {
+      "source_label": "lettuce leaf",
+      "action": "include",
+      "label": "lettuce leaf",
+      "aliases": [
+        "lettuce"
+      ],
+      "reason": "Reviewed familiar culinary wording for the named meat, leaf or peppercorn source scope. No cut, cooked-state or cross-species equivalence is inferred."
+    }
+  },
+  "additional_dish_words": "\\b(?:beignets|blini|bouillabaisse|brochette|chaat|cheeseburger|cheesecake|chimichanga|chowder|churro|coleslaw|croquembouche|croziflette|cupcake|dosa|doughnuts-berliner|eclair|éclair|fajita|fishcakes|flan|gimbap|gougere|granita|haggis|hushpuppy|jambalaya|johnnycake|kamu|kenkey|knish|macaroons|meatball|milkshake|moussaka|muffaletta|muffins|mulligatawny|ossobuco|panini|porchetta|profiterole|quenelle|ratatouille|roesti|salads|scrapple|sorbetto|tabbouleh|tajine|tandoori|taquito|tartiflette|tataki|thalipeeth|vichyssoise|waffles)(?:s|es)?\\b",
+  "additional_hold_words": "\\b(?:buckewheat|cotton-bract|extracts|figure-of-eight|Glucuronolactone|imitation|italian-style|leftover|milled|produce|solanacea|tankage|taurine|diphosphates|triphosphates|saccharins|cyclamates|polyols|sweetener|seasonings|legumes|starches|lipid|oilseed|cephalopod|echinoderm|helicidae|micro-phyte|glucuronolactone|salads|noodle dish|pie pastry|potted plant|living lettuce|spent|fumigated|electrically|bromated|agglomerated|individually wrapped|liquid,|paste,|without added|with no added|no added|sugar content)\\b",
+  "culinary_additives": [
+    "ammonium hydrogen carbonate",
+    "bread lecithin",
+    "guar gum",
+    "gum arabic",
+    "invertase",
+    "konjac",
+    "locust bean gum",
+    "xanthan gum",
+    "maltitol",
+    "steviol glycosides",
+    "pectin",
+    "agar",
+    "agar-agar",
+    "carrageenan",
+    "lecithin",
+    "gelatin",
+    "gelatine",
+    "papain"
+  ],
+  "final_category_holds": "\\b(?:dishes?|manufacturing|viscosity|semiliquid|semisolid|parenteral|infusion solution|injection|dosage|oral drops|aqueous solution|for fine bakery|for fine bakery wares|fine bakery wares|fine bakery goods|bone meal wafer|vegetarian entree|wild harvested animal|rice based alcoholic beverage|based alcoholic beverage)\\b|^(?:microbial refined|fish refined|wheat refined|soybean refined|field corn refined|gelatin refined|gluten refined|illipe refined|baby leaf brassica crops)$"
+}

@@ -29,6 +29,11 @@ pub fn CollectionList() -> Element {
                     h1 { class: "brand-title", PageIcon { kind: PageIconKind::Collections } span { "Your collections" } }
                     p { "Group your recipes into albums, with subcollections to keep things organized." }
                 }
+                nav { class: "mobile-library-tabs", aria_label: "Library sections",
+                    Link { to: Route::Dashboard {}, "Recipes" }
+                    Link { to: Route::CollectionList {}, aria_current: "page", "Collections" }
+                    Link { to: Route::Dashboard {}, "Drafts" }
+                }
                 div { class: "collections-toolbar",
                     label { class: "collections-filter",
                         span { class: "sr-only", "Filter top-level collections" }
@@ -44,6 +49,7 @@ pub fn CollectionList() -> Element {
                         }
                     }
                     Link { to: Route::CollectionNew { parent: None }, class: "btn btn-primary touch-target", "＋ New collection" }
+                    super::collection_json_controls::CollectionJsonImport { on_imported: move |_| collections.restart() }
                 }
                 p { id: "collections-filter-help", class: "collections-help", "Showing top-level collections. Open an album to see its subcollections." }
                 match collections.read().as_ref() {

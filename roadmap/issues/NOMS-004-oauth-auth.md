@@ -1,6 +1,10 @@
 # NOMS-004: OAuth Authentication (Google + GitHub)
 
-**Status:** ⚪ Backlog
+> **Current-state review — 2026-11-03:** Google/GitHub login, explicit provider linking and revocable server-side sessions exist. Automatic email linking and stateless logout in the original proposal are superseded by NOMS-006/015.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — OAuth baseline implemented
 **Phase:** 1 — Foundation
 **Created:** 2026-05-17
 

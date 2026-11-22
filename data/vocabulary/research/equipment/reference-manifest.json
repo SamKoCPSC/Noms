@@ -1,0 +1,47 @@
+{
+  "captured_date": "2026-10-28",
+  "reference_snapshots": [
+    {
+      "file": "wikibooks-appliances.json",
+      "bytes": 1033,
+      "sha256": "43e1fb3a076a7cd89fc8e37dcf10ae1b196cc97484086c38fbd593136e1b72a7"
+    },
+    {
+      "file": "wikibooks-bakeware.json",
+      "bytes": 597,
+      "sha256": "d1db45b6f2e795908ec0c5e251d91eed1a55310826e4d134ebbcb6c5f5979590"
+    },
+    {
+      "file": "wikibooks-category.json",
+      "bytes": 7621,
+      "sha256": "e50de0e28788bceb37dc01b41791587e3b2e65f63ee8a6ae88effa598344a6c7"
+    },
+    {
+      "file": "wikibooks-utensils.json",
+      "bytes": 641,
+      "sha256": "161e9019d29dbbc1e7dcff23ad84f167989057a3b95cde615e17dbc82830faed"
+    },
+    {
+      "file": "prism.html",
+      "bytes": 231641,
+      "sha256": "c7c5688756a4c892ed299c4508ab0d3371f217aa8d38b46a261b0ab4f422a913"
+    }
+  ],
+  "licenses": {
+    "wikibooks": "CC-BY-SA-4.0; Wikibooks contributors. Page titles used only for a reference benchmark; no article prose or images imported into the seed.",
+    "prism": "Copyright 2020 Idealliance, Inc.; W3C Document License. Term identifiers used as a reference checklist; no definitions imported into the seed."
+  },
+  "reference_urls": [
+    "https://en.wikibooks.org/wiki/Category:Cookbook_equipment",
+    "https://en.wikibooks.org/wiki/Category:Appliances",
+    "https://en.wikibooks.org/wiki/Category:Bakeware",
+    "https://en.wikibooks.org/wiki/Category:Utensils",
+    "https://www.w3.org/submissions/2020/SUBM-prism-20200910/prism-cvs.html"
+  ],
+  "benchmark_exclusions": [
+    "Cookbook:Equipment (index)",
+    "Cookbook:Policy/Cuisine template",
+    "Cookbook:Policy/Equipment template"
+  ],
+  "category_note": "Category membership is a captured result, not reproducible from a category-page revision alone. Use archived raw responses for exact replay."
+}

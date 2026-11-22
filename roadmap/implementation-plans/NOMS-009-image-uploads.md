@@ -1,6 +1,10 @@
 # NOMS-009: Image Uploads - Incremental Implementation Plan
 
-> **Status:** Draft - ready for implementation
+> **Current-state review — 2026-11-03:** Typed uploads, managed references and editing are implemented. The original no-upload baseline and speculative architecture below are historical.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — upload/editing baseline implemented
 > **Depends on:** NOMS-008 (recipe CRUD), NOMS-008b (JSONB schema)
 > **Current state:** images JSONB column exists, slider UI renders placeholders, no upload infrastructure
 

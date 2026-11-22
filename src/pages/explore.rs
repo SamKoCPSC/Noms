@@ -76,11 +76,32 @@ fn ExplorePagination(
     } }
 }
 
+/// Read the native landing search's query on both SSR and hydration. Keep each
+/// form value encoded until parsing so literal +, &, and # survive unchanged.
+fn initial_search_query() -> String {
+    #[cfg(target_arch = "wasm32")]
+    let query = web_sys::window()
+        .and_then(|window| window.location().search().ok())
+        .unwrap_or_default();
+    #[cfg(not(target_arch = "wasm32"))]
+    let query = dioxus_fullstack::FullstackContext::current()
+        .and_then(|context| context.parts_mut().uri.query().map(str::to_owned))
+        .unwrap_or_default();
+    parse_public_search_query(&query)
+}
+
+fn parse_public_search_query(query: &str) -> String {
+    url::form_urlencoded::parse(query.trim_start_matches('?').as_bytes())
+        .find(|(name, _)| name == "q")
+        .map(|(_, value)| value.trim().to_string())
+        .unwrap_or_default()
+}
+
 /// Public recipe discovery page with server-side search.
 #[component]
 pub fn Explore() -> Element {
     // ── Signal state ─────────────────────────────────────────────────────
-    let mut search_query = use_signal(String::new);
+    let mut search_query = use_signal(initial_search_query);
     let mut offset = use_signal(|| 0i64);
     let has_more = use_signal(|| true);
     let loaded_recipes = use_signal(Vec::<RecipeCardSummary>::new);
@@ -156,7 +177,7 @@ pub fn Explore() -> Element {
     let filtered_recipes = loaded_recipes.read().clone();
 
     // ── Handlers ─────────────────────────────────────────────────────────
-    let mut on_search = move |value: String| {
+    let on_search = move |value: String| {
         if value == *search_query.peek() {
             return;
         }
@@ -212,20 +233,20 @@ pub fn Explore() -> Element {
                     p { class: "explore-intro", "Public recipes from the community." }
                 }
                 div { class: "explore-tools",
-                    div { class: "explore-search",
+                    div { class: "explore-search", "data-autocomplete-anchor": "true",
                         label { class: "explore-visually-hidden", r#for: "explore-query", "Search public recipes" }
                         svg { class: "explore-search__icon", view_box: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor", stroke_width: "1.8", stroke_linecap: "round", "aria-hidden": "true",
                             circle { cx: "11", cy: "11", r: "7" }
                             path { d: "m16 16 4 4" }
                         }
-                        input {
+                        crate::components::recipe_title_autocomplete::RecipeTitleAutocomplete {
                             id: "explore-query",
-                            class: "input input--shared",
-                            r#type: "search",
-                            aria_label: "Search public recipes",
+                            input_class: "input input--shared", public_only: true,
+                            accessible_name: "Search public recipes",
                             value: search_query(),
                             placeholder: "Search recipes…",
-                            oninput: move |event| on_search(event.value()),
+                            oninput: on_search,
+                            onsubmit: on_search,
                         }
                     }
                     if !tags_list.is_empty() {
@@ -286,6 +307,32 @@ pub fn Explore() -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod public_search_query_tests {
+    use super::parse_public_search_query;
+
+    #[test]
+    fn native_form_query_preserves_food_names_and_encoded_delimiters() {
+        assert_eq!(
+            parse_public_search_query("?q=+chili+garlic+noodles+"),
+            "chili garlic noodles"
+        );
+        assert_eq!(
+            parse_public_search_query("q=fish+%26+chips+%2B+lime+%231"),
+            "fish & chips + lime #1"
+        );
+        assert_eq!(parse_public_search_query("q=%E9%9D%A2%E6%9D%A1"), "面条");
+    }
+
+    #[test]
+    fn empty_query_browses_all_public_recipes() {
+        assert_eq!(parse_public_search_query(""), "");
+        assert_eq!(parse_public_search_query("q=+++"), "");
+        assert_eq!(parse_public_search_query("other=ramen"), "");
+        assert_eq!(parse_public_search_query("q=ramen&q=burger"), "ramen");
     }
 }
 
@@ -364,7 +411,7 @@ mod tests {
             .unwrap();
         assert!(source.contains("framed: true"));
         assert!(source.contains("key: \"{recipe.id}\""));
-        assert!(source.contains("aria_label: \"Search public recipes\""));
+        assert!(source.contains("accessible_name: \"Search public recipes\""));
         assert!(source.contains("retry_generation()"));
         assert!(source.contains("\"Retry\""));
         assert!(!source.contains("selected_tag"));

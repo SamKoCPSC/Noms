@@ -1,0 +1,17 @@
+{
+  "sun_direction_y_up": [-60, 100, 50],
+  "sun_energy": 2,
+  "sun_color": [1, 0.93, 0.83],
+  "sun_angle_degrees": 9,
+  "sky_color": [0.78, 0.85, 1],
+  "sky_strength": 0.95,
+  "view_transform": "AgX",
+  "look": "AgX - Medium High Contrast",
+  "exposure": 0.1,
+  "room_atlas_size": 2048,
+  "room_samples": 64,
+  "ground_samples": 32,
+  "landscape_samples": 64,
+  "context_radius": 45,
+  "ground_bounds_xz": [-96, 96, -144, 80]
+}

@@ -1,0 +1,14 @@
+{
+  "kitchen": {"master":"assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-manager.blend", "existing":true},
+  "office": {"export":"assets/about/sams-office.glb", "prints":["office-editor-left.webp","office-editor-right.webp","office-rtx4090.webp","office-intel-core.webp"]},
+  "bedroom": {"export":"assets/about/sams-bedroom.glb", "prints":["bedroom-posters.webp"]},
+  "social-kitchen": {"master":"assets/models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend"},
+  "garden": {"export":"assets/about/sams-garden.glb", "prints":["garden-pastry.webp"]},
+  "corporate-office": {"master":"assets/models/corporate-workspace-pantry/models/corporate-workspace-pantry.blend"},
+  "library": {"master":"assets/models/university-library/models/university-library.blend"},
+  "supermarket": {"master":"assets/models/european-arcade-supermarket/models/european-arcade-supermarket.blend"},
+  "brick-kitchen": {"master":"assets/models/brick-loft-kitchen/models/brick-loft-kitchen.blend"},
+  "bakery": {"master":"assets/models/modern-baking-lab/models/modern-baking-lab.blend"},
+  "farmers-market": {"master":"assets/models/community-spaces/models/farmers-market.blend"},
+  "riverside-campsite": {"master":"assets/models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend"}
+}

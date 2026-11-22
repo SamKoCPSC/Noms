@@ -16,10 +16,11 @@ use crate::types::{SearchScope, SearchSuggestion};
 /// Return suggestions from only the fixed entity queries selected by `scope`.
 pub async fn autocomplete_entities(
     pool: &PgPool,
-    resolved_user_id: Uuid,
+    resolved_user_id: impl Into<Option<Uuid>>,
     scope: SearchScope,
     text: &str,
 ) -> Result<Vec<SearchSuggestion>, DbError> {
+    let resolved_user_id = resolved_user_id.into();
     validate_autocomplete_text(text)
         .map_err(|error| DbError::InvalidSearchRequest(error.to_string()))?;
 

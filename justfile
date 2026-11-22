@@ -163,3 +163,23 @@ recipe-import-bridge-test:
 ci: fmt check lint test schema-check-test security-policy-test security-check recipe-import-fixture-test recipe-import-parser-active-content-test recipe-import-parser-corpus-test recipe-import-parser-semantic-test recipe-import-provider-adapter-test recipe-import-bridge-test
 	@echo ""
 	@echo "✅ All checks passed."
+
+# Manual check/repair after `just migrate`; deployments use --if-changed.
+# Usage: just seed-vocabulary --dry-run | --validate-only | --if-changed
+seed-vocabulary *args:
+	SQLX_OFFLINE=true cargo run --features server --bin seed-vocabulary -- {{args}}
+
+# Offline revision-pinned Wikidata extraction and reviewed canonical generation.
+wikidata-adapter *args:
+	@python3 scripts/vocabulary/wikidata.py {{args}}
+
+# Offline FoodOn extraction and approved canonical seed generation.
+foodon-adapter *args:
+	@python3 scripts/vocabulary/foodon.py {{args}}
+
+foodon-adapter-test:
+	@python3 -m unittest discover -s scripts/vocabulary -p 'test_*.py' -v
+
+# Backfill after schema rollout; also repairs ingredient popularity counters.
+reconcile-vocabulary-counts *args:
+	SQLX_OFFLINE=true cargo run --features server --bin reconcile-vocabulary-counts -- {{args}}

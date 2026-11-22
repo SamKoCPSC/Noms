@@ -1,10 +1,9 @@
-use super::about::ABOUT_SECTIONS;
 use super::home::{home_cta, HomeCtaDestination};
 use super::how_to::HOW_TO_SECTIONS;
 use dioxus::prelude::*;
 
 #[component]
-fn LandingSearchTestRoot(signed_in: bool) -> Element {
+fn LandingTestRoot(signed_in: bool) -> Element {
     let auth = use_signal(move || crate::auth::context::AuthContext {
         is_authenticated: signed_in,
         ..Default::default()
@@ -23,14 +22,9 @@ fn signed_out_home_cta_starts_recipe_creation_through_login() {
     let cta = home_cta(false);
     let home_source = include_str!("home.rs");
 
-    assert_eq!(cta.label, "Start creating");
+    assert_eq!(cta.label, "Start your recipe book");
     assert_eq!(cta.destination, HomeCtaDestination::LoginThenCreateRecipe);
-    assert!(
-        home_source
-            .matches("/login?redirect_uri=/recipes/new")
-            .count()
-            >= 2
-    );
+    assert!(home_source.contains("/login?redirect_uri=/recipes/new"));
 }
 
 #[test]
@@ -42,32 +36,163 @@ fn signed_in_home_cta_opens_dashboard() {
 }
 
 #[test]
-fn about_story_covers_the_six_approved_beats() {
-    let ids = ABOUT_SECTIONS
-        .iter()
-        .map(|section| section.id)
-        .collect::<Vec<_>>();
-
-    assert_eq!(
-        ids,
-        ["capture", "organize", "evolve", "cook", "share", "build"]
-    );
+fn about_renders_twelve_cards_and_readable_fallback() {
+    let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
+    for title in [
+        "The Ultimate Recipe Manager",
+        "A side project that grew in to something larger.",
+        "Hi, I&#39;m Sam!",
+        "Just a simple and easy-to-use app.",
+        "Building a community.",
+    ] {
+        assert!(html.contains(title), "Missing {title}");
+    }
+    assert_eq!(html.matches("<article").count(), 12);
+    assert!(html.contains("class=\"kitchen-fallback\""));
+    assert!(html.contains("loading=\"lazy\""));
+    let opening = html.split("id=\"panel-1\"").next().unwrap();
+    assert!(opening.contains("kitchen-fallback"));
+    assert!(html.contains("data-kitchen-surface-color-url"));
+    assert!(html.contains("data-kitchen-surface-normal-url"));
+    assert!(!html.contains("data-kitchen-lighting-url"));
+    assert!(!html.contains("data-kitchen-arrival-lighting-url"));
+    let reason = html
+        .split("id=\"panel-1\"")
+        .nth(1)
+        .unwrap()
+        .split("id=\"panel-2\"")
+        .next()
+        .unwrap();
+    assert!(reason.contains("office-fallback"));
+    assert!(reason.contains("A UBC-inspired university library"));
+    for (panel, description, attribute, fallback) in [
+        (
+            1,
+            "A UBC-inspired university library",
+            "data-library-url",
+            "office-fallback",
+        ),
+        (
+            3,
+            "A modern supermarket",
+            "data-supermarket-url",
+            "office-fallback",
+        ),
+        (4, "Sam’s office", "data-office-url", "office-fallback"),
+        (
+            5,
+            "A corporate office",
+            "data-corporate-office-url",
+            "office-fallback",
+        ),
+        (
+            6,
+            "A U-shaped brick-loft kitchen",
+            "data-brick-kitchen-url",
+            "kitchen-fallback",
+        ),
+        (
+            7,
+            "A modern artisan bakery",
+            "data-bakery-url",
+            "kitchen-fallback",
+        ),
+        (
+            8,
+            "A corner farmers’ market",
+            "data-farmers-market-url",
+            "garden-fallback",
+        ),
+        (
+            9,
+            "A contemporary L-shaped kitchen",
+            "data-social-kitchen-url",
+            "kitchen-fallback",
+        ),
+        (
+            10,
+            "A secluded riverside campsite",
+            "data-riverside-campsite-url",
+            "garden-fallback",
+        ),
+    ] {
+        let card = html
+            .split(&format!("id=\"panel-{panel}\""))
+            .nth(1)
+            .unwrap()
+            .split(&format!("id=\"panel-{}\"", panel + 1))
+            .next()
+            .unwrap();
+        assert!(card.contains(description), "Panel {panel}: {description}");
+        assert!(card.contains(fallback), "Panel {panel}: {fallback}");
+        assert!(
+            card.contains("loading=\"lazy\""),
+            "Panel {panel}: lazy poster"
+        );
+        assert!(html.contains(attribute), "Missing {attribute}");
+    }
+    for attribute in [
+        "data-office-url",
+        "data-office-left-url",
+        "data-office-right-url",
+        "data-office-gpu-url",
+        "data-office-cpu-url",
+    ] {
+        assert!(html.contains(attribute));
+    }
+    let creator = html
+        .split("id=\"panel-2\"")
+        .nth(1)
+        .unwrap()
+        .split("id=\"panel-3\"")
+        .next()
+        .unwrap();
+    assert!(!creator.contains("kitchen-fallback"));
+    assert!(!html.contains("potluck-fallback"));
+    for attribute in [
+        "data-potluck-url",
+        "data-potluck-window-url",
+        "data-potluck-tv-url",
+        "data-potluck-pastry-url",
+        "data-potluck-salt-url",
+        "data-potluck-bbq-url",
+    ] {
+        assert!(
+            !html.contains(attribute),
+            "Retired potluck asset: {attribute}"
+        );
+    }
+    let garden = html.split("id=\"panel-11\"").nth(1).unwrap();
+    assert!(garden.contains("garden-fallback"));
+    assert!(garden.contains("lawn chairs"));
+    assert!(garden.contains("Take the tour again"));
+    assert!(html.contains("data-garden-url"));
+    assert!(html.contains("data-garden-pastry-url"));
+    assert!(html.contains("id=\"tour-chapter-status\""));
+    assert!(html.contains("Nowadays I continue to support the project"));
+    assert!(!html.contains("How did Noms start"));
 }
 
 #[test]
-fn about_cozy_layout_preserves_navigation_and_recipe_creation_flow() {
-    let page = include_str!("about.rs");
-    let css = include_str!("../../assets/main.css");
+fn about_provides_motion_and_reading_controls_before_enhancement() {
+    let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
+    assert!(html.contains("id=\"mode-toggle\""));
+    assert!(html.contains("id=\"motion-toggle\""));
+    assert!(!html.contains("id=\"tour-navigation\""));
+    assert_eq!(html.matches("class=\"next-link\"").count(), 12);
+    for id in ["idea", "why", "creator", "community", "gather"] {
+        assert!(html.contains(&format!("href=\"#{id}\"")));
+    }
+}
 
-    assert!(page.contains("class: \"about-hero__illustration\""));
-    assert!(page.contains("class: \"about-story__section\""));
-    assert!(page.contains("href: \"/login?redirect_uri=/recipes/new\""));
-    assert!(page.contains("to: Route::RecipeNew {}"));
-    assert!(page.contains("for section in ABOUT_SECTIONS"));
-    assert!(page.contains("class: \"about-story__versions\""));
-    assert!(page.contains("class: \"about-story__visibility\""));
-    assert!(css.contains(".about-story {\n    display: grid;"));
-    assert!(css.contains(".about-story__section {\n    position: relative;"));
+#[test]
+fn about_loading_screen_keeps_a_reading_escape_and_accessible_status() {
+    let html = dioxus_ssr::render_element(rsx! { super::about::About {} });
+    assert!(html.contains("id=\"tour-loader\""));
+    assert!(html.contains("role=\"status\""));
+    assert!(html.contains("Click here if the page takes too long to load"));
+    assert!(html.contains("class=\"about-tour is-reader\""));
+    assert!(!html.contains("data-entry-state=\"loading\""));
 }
 
 #[test]
@@ -110,33 +235,40 @@ fn public_page_copy_does_not_claim_unshipped_full_search() {
 }
 
 #[test]
-fn landing_search_explains_the_account_gate_and_public_explore_alternative() {
+fn landing_preserves_public_exploration_and_authenticated_creation() {
     for signed_in in [false, true] {
-        let mut dom = VirtualDom::new_with_props(
-            LandingSearchTestRoot,
-            LandingSearchTestRootProps { signed_in },
-        );
+        let mut dom =
+            VirtualDom::new_with_props(LandingTestRoot, LandingTestRootProps { signed_in });
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("The Ultimate Recipe Manager"));
+        let stories = html
+            .split("class=\"landing-chapters landing-wrap\"")
+            .nth(1)
+            .unwrap()
+            .split("class=\"landing-features landing-wrap\"")
+            .next()
+            .unwrap();
+        assert_eq!(stories.matches("class=\"landing-chapter-copy\"").count(), 6);
+        assert!(stories.contains("Use anywhere"));
+        assert!(stories.contains("features anywhere with a mobile-optimized experience"));
+        assert!(!html.contains("landing-chapter-number"));
+        assert!(!html.contains("landing-mobile landing-wrap"));
+        assert_eq!(html.matches("class=\"landing-recipe-search\"").count(), 1);
+        assert!(html.contains("action=\"/search\""));
+        assert!(html.contains("method=\"get\""));
+        assert!(html.contains("name=\"q\""));
+        assert!(html.contains("href=\"/explore\""));
         assert_eq!(
-            html.contains("aria-describedby=\"landing-search-access\""),
+            html.contains("href=\"/login?redirect_uri=/recipes/new\""),
             !signed_in
         );
-        assert_eq!(html.contains("id=\"landing-search-access\""), !signed_in);
-        assert_eq!(html.contains("Full search requires sign-in."), !signed_in);
-        assert_eq!(
-            html.contains("Search public recipes in Explore"),
-            !signed_in
-        );
-        if !signed_in {
-            let help = html
-                .split("id=\"landing-search-access\"")
-                .nth(1)
-                .unwrap()
-                .split("</p>")
-                .next()
-                .unwrap();
-            assert!(help.contains("href=\"/explore\""));
-        }
+        assert_eq!(html.contains("Open dashboard"), signed_in);
+        assert_eq!(html.contains("Create a recipe →"), signed_in);
+        assert!(html.contains("Free to use."));
+        assert!(html.contains("Your data is never shared or sold."));
+        assert!(html.contains("loading=\"lazy\""));
+        assert!(!html.contains("<iframe"));
+        assert!(!html.contains("Maya Chen"));
     }
 }

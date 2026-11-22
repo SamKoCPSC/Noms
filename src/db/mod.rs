@@ -12,11 +12,20 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 pub mod diff;
+pub mod grocery;
+pub mod grocery_transfer;
 mod media_assets;
+pub mod pantry;
+pub mod pantry_recipes;
 mod versioning;
 
 #[cfg(test)]
+mod display_name_tests;
+#[cfg(test)]
 mod media_asset_tests;
+#[cfg(test)]
+mod public_search_tests;
+mod resource_names;
 
 pub use media_assets::*;
 #[allow(unused_imports)]
@@ -34,12 +43,17 @@ use crate::types::{
     RecipeCardSummary, RecipeImageEdit,
 };
 
+mod recipe_names;
 mod recipe_search;
-pub use recipe_search::search_recipes;
+pub use recipe_search::{search_recipes, suggest_recipe_titles};
 mod user_search;
 pub use user_search::search_users;
 mod collection_search;
 pub use collection_search::search_collections;
+mod collection_json;
+pub use collection_json::export_collection_json;
+pub(crate) use collection_json::insert_collection_import_node;
+pub(crate) use collection_json::{read_collection_export, CollectionExport};
 mod all_search;
 pub use all_search::search_all;
 mod autocomplete;
@@ -65,6 +79,10 @@ pub enum DbError {
     Query(sqlx::Error),
     /// The requested username is already taken by another user.
     UsernameTaken,
+    /// This owner already has a saved recipe with the same normalized title.
+    RecipeNameTaken,
+    /// The requested display name is already taken, ignoring case and spaces.
+    DisplayNameTaken,
     /// The session was not found, revoked, or expired.
     SessionInvalid,
     /// The requested recipe was not found.
@@ -98,7 +116,7 @@ pub enum DbError {
     CollectionNotFound(Uuid),
     /// The requested parent collection was not found for the current owner.
     CollectionParentNotFound(Uuid),
-    /// A sibling collection already has this name, ignoring case.
+    /// This owner already has a collection with the same normalized name.
     CollectionNameTaken,
     /// A collection cannot be moved into itself or a descendant.
     CollectionCycle,
@@ -124,6 +142,8 @@ impl std::fmt::Display for DbError {
             DbError::InvalidConfiguration(e) => write!(f, "database configuration failed: {e}"),
             DbError::Query(e) => write!(f, "database query failed: {e}"),
             DbError::UsernameTaken => write!(f, "username is already taken"),
+            DbError::RecipeNameTaken => write!(f, "recipe name is already taken"),
+            DbError::DisplayNameTaken => write!(f, "display name is already taken"),
             DbError::SessionInvalid => write!(f, "session is invalid, revoked, or expired"),
             DbError::RecipeNotFound(id) => write!(f, "recipe not found: {id}"),
             DbError::VersionNotFound {
@@ -155,7 +175,7 @@ impl std::fmt::Display for DbError {
             DbError::CollectionNotFound(id) => write!(f, "collection not found: {id}"),
             DbError::CollectionParentNotFound(id) => write!(f, "collection parent not found: {id}"),
             DbError::CollectionNameTaken => {
-                write!(f, "collection name is already used by a sibling")
+                write!(f, "collection name is already taken")
             }
             DbError::CollectionCycle => write!(f, "collection move would create a cycle"),
             DbError::RecipeNotAccessible(id) => write!(f, "recipe is not accessible: {id}"),
@@ -181,7 +201,8 @@ impl std::error::Error for DbError {
         match self {
             DbError::MissingUrl | DbError::InvalidConfiguration(_) => None,
             DbError::Connection(e) | DbError::Query(e) => Some(e),
-            DbError::UsernameTaken => None,
+            DbError::UsernameTaken | DbError::RecipeNameTaken => None,
+            DbError::DisplayNameTaken => None,
             DbError::SessionInvalid => None,
             DbError::RecipeNotFound(_) => None,
             DbError::VersionNotFound { .. }
@@ -731,11 +752,8 @@ fn validate_collection_recipe_card_output(recipes: &[RecipeCardSummary]) -> Resu
 }
 
 fn collection_query_error(error: sqlx::Error) -> DbError {
-    if error
-        .as_database_error()
-        .and_then(|database_error| database_error.code())
-        .as_deref()
-        == Some("23505")
+    if resource_names::is_name_conflict(&error, "idx_collections_owner_name_unique")
+        || resource_names::is_name_conflict(&error, "idx_collections_sibling_name")
     {
         DbError::CollectionNameTaken
     } else {
@@ -2892,6 +2910,19 @@ pub async fn count_oauth_accounts(
 
 // ── User queries ────────────────────────────────────────────────────────────
 
+fn user_write_error(error: sqlx::Error) -> DbError {
+    if let sqlx::Error::Database(ref database_error) = error {
+        if database_error.is_unique_violation() {
+            match database_error.constraint() {
+                Some("users_display_name_unique") => return DbError::DisplayNameTaken,
+                Some("users_username_key") => return DbError::UsernameTaken,
+                _ => {}
+            }
+        }
+    }
+    DbError::Query(error)
+}
+
 /// Insert a new user. Returns the created user with the generated ID.
 pub async fn insert_user(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
@@ -2906,13 +2937,13 @@ pub async fn insert_user(
          VALUES ($1, $2, $3, $4) \
          RETURNING id, username, display_name, email, avatar_url, bio, created_at, updated_at",
         username,
-        display_name,
+        display_name.trim(),
         email,
         avatar_url,
     )
     .fetch_one(executor)
     .await
-    .map_err(DbError::Query)
+    .map_err(user_write_error)
 }
 
 /// Insert a new OAuth account linked to a user.
@@ -3153,17 +3184,31 @@ pub async fn update_user_profile(
     display_name: &str,
     bio: Option<&str>,
 ) -> Result<User, DbError> {
+    update_user_profile_and_username(pool, user_id, display_name, bio, None).await
+}
+
+/// A profile save is atomic, including an optional username change. The unique
+/// indexes arbitrate races; a rejected name must never partially save a profile.
+pub async fn update_user_profile_and_username(
+    pool: &PgPool,
+    user_id: Uuid,
+    display_name: &str,
+    bio: Option<&str>,
+    username: Option<&str>,
+) -> Result<User, DbError> {
     let mut transaction = pool.begin().await.map_err(DbError::Query)?;
     sqlx::query(
-        "UPDATE users SET display_name = $2, bio = $3, updated_at = NOW() \
+        "UPDATE users SET display_name = $2, bio = $3, \
+         username = COALESCE($4, username), updated_at = NOW() \
          WHERE id = $1",
     )
     .bind(user_id)
-    .bind(display_name)
+    .bind(display_name.trim())
     .bind(bio)
+    .bind(username)
     .execute(&mut *transaction)
     .await
-    .map_err(DbError::Query)?;
+    .map_err(user_write_error)?;
     let updated = get_user_by_id(&mut *transaction, user_id)
         .await?
         .ok_or(DbError::Query(sqlx::Error::RowNotFound))?;
@@ -3297,7 +3342,7 @@ pub async fn insert_recipe(
     .bind(visibility)
     .fetch_one(executor)
     .await
-    .map_err(DbError::Query)?;
+    .map_err(recipe_names::map_write_error)?;
 
     Recipe::from_row(&row).map_err(DbError::Query)
 }
@@ -3420,7 +3465,7 @@ pub async fn update_recipe(
     .await
     .map_err(|e| match e {
         sqlx::Error::RowNotFound => DbError::RecipeNotFound(id),
-        other => DbError::Query(other),
+        other => recipe_names::map_write_error(other),
     })?;
 
     Recipe::from_row(&row).map_err(DbError::Query)
@@ -3947,6 +3992,75 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(privileges, (true, false, false, true, false, true, false));
+        let vocabulary_privileges: (bool, bool, bool) = sqlx::query_as(
+            "SELECT has_table_privilege('noms_runtime','vocabulary_entries','SELECT'), \
+             has_table_privilege('noms_runtime','vocabulary_entries','INSERT,UPDATE,DELETE'), \
+             has_table_privilege('noms_runtime','vocabulary_seed_runs','INSERT')",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(vocabulary_privileges, (true, false, false));
+
+        let seeds: noms::vocabulary::SeedFile =
+            serde_json::from_str(include_str!("../../data/vocabulary/ingredients.json")).unwrap();
+        let sources: noms::vocabulary::SourceManifest =
+            serde_json::from_str(include_str!("../../data/vocabulary/sources.json")).unwrap();
+        noms::vocabulary::store::seed(&pool, &seeds, &sources, false)
+            .await
+            .unwrap();
+        let ingredient_id = seeds.entries[0].id;
+        let user = insert_user(
+            &pool,
+            "runtime_popularity",
+            "Runtime popularity",
+            "runtime_popularity@example.test",
+            None,
+        )
+        .await
+        .unwrap();
+        let mut connection = pool.acquire().await.unwrap();
+        sqlx::query("SET ROLE noms_runtime")
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        let callable: bool = sqlx::query_scalar("SELECT has_function_privilege(current_user,'maintain_ingredient_recipe_counts()','EXECUTE')")
+            .fetch_one(&mut *connection).await.unwrap();
+        assert!(!callable);
+        let recipe_id: Uuid = sqlx::query_scalar("INSERT INTO recipes (user_id,title,ingredients,visibility) VALUES ($1,'Runtime count test',$2,'public') RETURNING id")
+            .bind(user.id).bind(serde_json::json!([{"vocabulary_id":ingredient_id}]))
+            .fetch_one(&mut *connection).await.unwrap();
+        let count: i64 =
+            sqlx::query_scalar("SELECT recipe_count FROM vocabulary_entries WHERE id=$1")
+                .bind(ingredient_id)
+                .fetch_one(&mut *connection)
+                .await
+                .unwrap();
+        assert_eq!(count, 1, "runtime recipe write runs the owner-only trigger");
+        assert!(
+            sqlx::query("UPDATE vocabulary_entries SET recipe_count=99 WHERE id=$1")
+                .bind(ingredient_id)
+                .execute(&mut *connection)
+                .await
+                .is_err()
+        );
+        sqlx::query("DELETE FROM recipes WHERE id=$1")
+            .bind(recipe_id)
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        let count: i64 =
+            sqlx::query_scalar("SELECT recipe_count FROM vocabulary_entries WHERE id=$1")
+                .bind(ingredient_id)
+                .fetch_one(&mut *connection)
+                .await
+                .unwrap();
+        assert_eq!(count, 0);
+        sqlx::query("RESET ROLE")
+            .execute(&mut *connection)
+            .await
+            .unwrap();
+        drop(connection);
 
         sqlx::query("CREATE ROLE unsafe_runtime LOGIN SUPERUSER")
             .execute(&pool)
@@ -7572,7 +7686,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_collection_name_uniqueness_is_case_insensitive_per_parent() {
+    async fn test_collection_name_uniqueness_is_normalized_per_owner() {
         let (_db, pool) = test_utils::setup_test_db().await;
         let owner = test_utils::insert_test_user(&pool).await;
         let first = test_utils::insert_test_collection(&pool, owner.id, None, "Recipes").await;
@@ -7589,9 +7703,19 @@ mod tests {
         .await;
         assert!(matches!(duplicate, Err(DbError::CollectionNameTaken)));
 
-        let nested =
-            test_utils::insert_test_collection(&pool, owner.id, Some(first.id), "recipes").await;
-        assert_eq!(nested.parent_collection_id, Some(first.id));
+        let duplicate = insert_collection(
+            &pool,
+            owner.id,
+            Some(first.id),
+            "  RECIPES  ",
+            None,
+            CollectionVisibility::Private,
+            None,
+        )
+        .await;
+        assert!(matches!(duplicate, Err(DbError::CollectionNameTaken)));
+        let other = test_utils::insert_test_user(&pool).await;
+        test_utils::insert_test_collection(&pool, other.id, None, "recipes").await;
     }
 
     #[tokio::test]
@@ -7711,16 +7835,17 @@ mod tests {
             1
         );
 
-        let conflict =
-            test_utils::insert_test_collection(&pool, owner.id, Some(destination.id), "Child")
-                .await;
-        assert!(matches!(
-            move_collection(&pool, child.id, owner.id, Some(destination.id)).await,
-            Err(DbError::CollectionNameTaken)
-        ));
-        delete_collection(&pool, conflict.id, owner.id)
-            .await
-            .unwrap();
+        let conflict = insert_collection(
+            &pool,
+            owner.id,
+            Some(destination.id),
+            "Child",
+            None,
+            CollectionVisibility::Private,
+            None,
+        )
+        .await;
+        assert!(matches!(conflict, Err(DbError::CollectionNameTaken)));
 
         let moved = move_collection(&pool, child.id, owner.id, Some(destination.id))
             .await
@@ -8181,3 +8306,11 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod grocery_tests;
+
+#[cfg(test)]
+mod pantry_recipes_tests;
+#[cfg(test)]
+mod pantry_tests;

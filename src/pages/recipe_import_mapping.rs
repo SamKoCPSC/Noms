@@ -47,9 +47,11 @@ pub(super) fn map_import_candidate(
         }
         for item in section["items"].as_array().ok_or("Invalid ingredients.")? {
             editor.ingredients.push(RecipeIngredient {
+                vocabulary_id: None,
                 name: required_text(&item["name"])?,
                 amount: item["amount"].as_str().unwrap_or_default().into(),
                 unit: item["unit"].as_str().unwrap_or_default().into(),
+                ..Default::default()
             });
             if let Some(raw) = item["raw"].as_str() {
                 context.push(format!("Ingredient: {raw}"));

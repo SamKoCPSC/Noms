@@ -35,27 +35,29 @@ fn read_saved_theme() -> bool {
 
 /// Hook for managing light/dark theme with localStorage persistence.
 ///
-/// - Initialises from `localStorage.theme` (WASM-only; defaults to `false` on
-///   server / desktop).
+/// - Hydrates with the server's light state, then restores `localStorage.theme`
+///   on WASM so labels and switch semantics update with the page colors.
 /// - Whenever the value changes, a [`use_effect`] syncs the `dark` class on
 ///   `<html>` and writes the preference back to `localStorage`.
 ///
 /// Returns a [`UseTheme`] handle (Copy) that can be passed as a component prop.
 pub fn use_theme() -> UseTheme {
-    // ── initial value: restore saved preference ──────────────────────
-    let mut is_dark = use_signal(|| {
-        #[cfg(target_arch = "wasm32")]
-        {
-            read_saved_theme()
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            false
-        }
+    // Match SSR during hydration, then restore the saved preference.
+    let mut is_dark = use_signal(|| false);
+    #[cfg(target_arch = "wasm32")]
+    let mut restored = use_signal(|| false);
+    #[cfg(target_arch = "wasm32")]
+    use_effect(move || {
+        is_dark.set(read_saved_theme());
+        restored.set(true);
     });
 
     // ── side‑effect: keep <html> class + localStorage in sync ───────
     use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        if !restored() {
+            return;
+        }
         let dark = is_dark();
         spawn(async move {
             let script = if dark {

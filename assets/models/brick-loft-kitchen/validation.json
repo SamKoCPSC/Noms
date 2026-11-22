@@ -1,0 +1,15 @@
+{
+  "cloth_removed": true,
+  "faucet_clearance_checked": true,
+  "faucet_sill_clearance_m": 0.034999847412109375,
+  "recipe_display_removed": true,
+  "revision": 5,
+  "glb_bytes": 12922144,
+  "triangles": 332244,
+  "meshes": 1022,
+  "assembly_roots": 17,
+  "format": "glTF 2.0",
+  "layout": "U-shaped back run, right sink return, open-front dining peninsula",
+  "entrance_clearance_m": 1.4,
+  "animation": "Static grouped review model"
+}

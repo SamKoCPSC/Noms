@@ -1,5 +1,11 @@
 # NOMS-008: Recipe CRUD + Visibility & Discovery — Implementation Plan
 
+> **Current-state review — 2026-11-03:** Drafts/full snapshots supersede overwrite-only editing. Owner recipe-name uniqueness is implemented in PR #51.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — CRUD baseline implemented
+
 **Issue:** [NOMS-008-recipe-crud.md](../issues/NOMS-008-recipe-crud.md)
 **Created:** 2026-06-08
 **Updated:** 2026-06-13 (expanded scope: visibility + discovery)

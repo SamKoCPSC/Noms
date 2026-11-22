@@ -1,0 +1,86 @@
+# Mobile responsive design — review evidence
+
+Captured in the running app on 2026-10-17 using Chromium touch/viewport emulation,
+local mock authentication and clearly identified demo recipes. These images show
+the mobile implementation on main `3dd4e3e`, including the imported-draft
+interaction correction and the revised navbar Search placement.
+
+- [Navbar](navbar.png): Search and menu grouped on the right; 390px viewport.
+- [Library](library.png): populated mobile library and bottom navigation.
+- [Recipe](recipe.png): recipe reader on current main, including JSON export.
+- [Current-main browser checks](current-main-browser-checks.json): six route
+  families at 320px and 390px, actual JSON download/import into a private draft,
+  and the mobile publication-review flow, with no JavaScript page errors.
+
+The earlier review delivery contains 65 states across 24 route families and 47
+full-page PNGs. Those captures predate the current-main integration; the three
+images here provide a small repository-owned set for PR review.
+
+The navbar was additionally checked at 320, 390, 430, 599, 600 and 760px, with an
+8px Search-to-menu gap, centered buttons, and minimum 44px touch targets. Light
+and dark appearance, Search navigation, focused editor headings and the desktop
+header passed. Draft Back/save, section focus and theme persistence were also
+verified in the browser.
+
+Focused native UI tests use the server feature, with 182 component tests and 324
+page tests passing after integration. The page run excludes
+`avatar_media_ownership_tests`, whose PostgreSQL OS-user fixture is unavailable in
+the development image. This is not a full database test result. Formatting,
+whitespace and JavaScript syntax checks passed.
+
+These checks do not establish physical-device keyboard/safe-area behavior,
+assistive-technology compatibility or cross-browser support. The viewport helper
+supports visual-keyboard changes, but that behavior still needs device testing.
+
+## Rust viewport follow-up
+
+The mobile viewport helper now uses typed `web_sys` APIs in
+`src/utils/mobile_viewport.rs` and `src/utils/mobile_viewport/browser.rs`.
+The standalone JavaScript asset and its dynamic import have been removed.
+A scope-owned Rust registration removes listeners, cancels queued animation
+frames and clears viewport CSS state when the layout unmounts.
+
+The client/server build and three new Cargo tests passed.
+[Runtime browser checks](web-sys-runtime-checks.json) verify all six editor-section
+focus targets, a simulated 300px keyboard offset, fixed-action positioning,
+blur/reset behavior, bottom-tab hiding/restoration, desktop behavior and browsers
+without `visualViewport`. No handwritten mobile-runtime asset was requested and
+no JavaScript page errors occurred. An isolated WASM harness built from the exact
+helper source verified that unmounting cancels both pending frames and removes
+all six listeners; repeated mounts do not accumulate listeners, and 50 resize
+events coalesce into one update. These checks simulate viewport changes and do
+not replace physical-device keyboard testing.
+
+## Mobile drawer alignment follow-up
+
+The mobile drawer inherited the desktop `position: fixed` and 16px offsets.
+At a 393px viewport its left edge was -16px and its right edge was 377px,
+clipping the left side and leaving a gap on the right. The mobile rule now resets
+`position` and `inset`, allowing the native dialog's flex layout to place it as a
+full-width, bottom-aligned sheet.
+
+[Corrected drawer](drawer-alignment.png) and
+[browser measurements](drawer-alignment-checks.json) cover eight mobile sizes
+(320–760px wide, including 740 × 360 landscape) in light and dark appearance,
+plus signed-in navigation at 393 × 800. Every measured mobile sheet has its left
+edge at zero, right edge at the viewport width and bottom at the viewport height.
+Scrolling to a navigation link, Escape/focus restoration and backdrop dismissal
+passed without page errors. A 1440px desktop check retains the 360px right drawer
+with its original 16px inset.
+
+## Rounded mobile editor sections
+
+The mobile editor's square, horizontally scrolling section strip is now a
+rounded inset group with six pill-shaped controls in two rows. Every section is
+visible without horizontal scrolling; a raised pill identifies the current
+section. Heading scroll clearance accounts for the taller sticky picker.
+
+[Section picker](editor-section-picker.png), [dark appearance](editor-section-picker-dark.png)
+and [the complete new-recipe viewport](new-recipe-section-picker.png) show the
+updated design. [Browser checks](editor-section-picker-checks.json) passed at
+320, 360, 390, 393, 412, 600 and 760px in both themes: two rows, no clipped labels
+or horizontal overflow, and touch targets at least 44px tall. All six section
+links update the active state and move focus below the sticky picker; entered
+recipe text survives section changes. The existing-draft editor and the 1440px
+desktop sidebar also passed, with no JavaScript page errors. This refinement
+changes mobile CSS only.

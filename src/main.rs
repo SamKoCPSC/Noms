@@ -3,16 +3,23 @@ use dioxus::prelude::*;
 use dioxus::server::{DioxusRouterExt, ServeConfig};
 use manganis::CssAssetOptions;
 
+use noms::vocabulary;
+
 mod api;
 mod auth;
+mod collection_json;
 mod components;
 #[cfg(feature = "server")]
 mod config;
 #[cfg(feature = "server")]
 mod db;
+mod grocery;
 #[cfg(feature = "server")]
 mod middleware;
 mod pages;
+mod pantry;
+mod recipe_html;
+mod recipe_json;
 mod routing;
 mod search;
 mod search_url;
@@ -20,6 +27,8 @@ mod search_url;
 mod security;
 #[cfg(feature = "server")]
 mod storage;
+#[cfg(all(feature = "server", test))]
+mod test_database;
 #[cfg(all(feature = "server", test))]
 mod test_utils;
 mod types;
@@ -30,12 +39,13 @@ mod utils;
 mod worker;
 
 use auth::context::build_context_from_fullstack;
-use components::{AppLayout, ErrorFallback};
+use components::{AppLayout, ErrorFallback, KitchenLayout};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
-    Dashboard, Explore, Home, HowTo, Login, NotFound, RecipeDetail, RecipeDraftEdit, RecipeEdit,
-    RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts,
-    SettingsProfile, UserProfile,
+    Dashboard, Explore, GroceryListDetail, GroceryListFromPantry, GroceryListNew, GroceryLists,
+    Home, HowTo, Login, MobileYou, NotFound, Pantry, PantryDetail, PantryNew, RecipeDetail,
+    RecipeDraftEdit, RecipeEdit, RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph,
+    Search, SettingsAccounts, SettingsProfile, UserProfile,
 };
 
 // The route inventory is shared by the generated renderer and the raw-query boundary.
@@ -70,6 +80,29 @@ enum GeneratedRoute {
         RecipeEdit { id: String },
         #[route("/recipes/drafts/:id/edit")]
         RecipeDraftEdit { id: String },
+        #[layout(KitchenLayout)]
+        #[redirect("/kitchen", || Self::Pantry {})]
+        #[redirect("/pantry", || Self::Pantry {})]
+        #[route("/kitchen/pantry")]
+        Pantry {},
+        #[redirect("/pantry/new", || Self::PantryNew {})]
+        #[route("/kitchen/pantry/new")]
+        PantryNew {},
+        #[redirect("/pantry/:id", |id: String| Self::PantryDetail { id })]
+        #[route("/kitchen/pantry/:id")]
+        PantryDetail { id: String },
+        #[redirect("/grocery-lists", || Self::GroceryLists {})]
+        #[route("/kitchen/grocery-lists")]
+        GroceryLists {},
+        #[redirect("/grocery-lists/new", || Self::GroceryListNew {})]
+        #[route("/kitchen/grocery-lists/new")]
+        GroceryListNew {},
+        #[route("/kitchen/grocery-lists/new/from-pantry/:pantry_id/:recipe_id")]
+        GroceryListFromPantry { pantry_id: String, recipe_id: String },
+        #[redirect("/grocery-lists/:id", |id: String| Self::GroceryListDetail { id })]
+        #[route("/kitchen/grocery-lists/:id")]
+        GroceryListDetail { id: String },
+        #[end_layout]
         #[route("/collections")]
         CollectionList {},
         #[route("/collections/new?:parent")]
@@ -88,6 +121,8 @@ enum GeneratedRoute {
         #[route("/settings/profile")]
         #[route("/settings/profile")]
         SettingsProfile {},
+        #[route("/you")]
+        MobileYou {},
         #[route("/settings/accounts")]
         SettingsAccounts {},
         // Catch-all: matches any route not defined above
@@ -114,7 +149,17 @@ const COLLECTION_FORMS_CSS: Asset = asset!(
     CssAssetOptions::new().with_minify(false)
 );
 
-const GOOGLE_FONTS: &str = "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700&display=swap";
+const GROCERY_CSS: Asset = asset!(
+    "/assets/grocery.css",
+    CssAssetOptions::new().with_minify(false)
+);
+const PANTRY_CSS: Asset = asset!(
+    "/assets/pantry.css",
+    CssAssetOptions::new().with_minify(false)
+);
+const MOBILE_CSS: Asset = asset!("/assets/mobile.css");
+const FREDOKA: Asset = asset!("/assets/fonts/Fredoka.ttf");
+const NUNITO: Asset = asset!("/assets/fonts/Nunito.ttf");
 
 #[cfg(feature = "server")]
 fn main() {
@@ -200,7 +245,10 @@ async fn build_application_router() -> axum::Router {
 
     // The two endpoint classes deliberately have independent in-memory windows.
     // Each application replica owns its own limiter and cleanup task.
-    let oauth_router = build_oauth_router(state);
+    let mut oauth_router = build_oauth_router(state);
+    if let Some(config) = runtime_config.staging_login() {
+        oauth_router = oauth_router.layer(axum::Extension(config.clone()));
+    }
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
         loop {
@@ -211,6 +259,9 @@ async fn build_application_router() -> axum::Router {
 
     oauth_router
         .merge(dioxus_router)
+        .layer(axum::Extension(auth::staging_context::StagingEnvironment(
+            runtime_config.staging_environment(),
+        )))
         .layer(axum::Extension(auth::local_origin::LocalCanonicalOrigin(
             runtime_config.local_loopback_origin(),
         )))
@@ -228,12 +279,31 @@ async fn build_application_router() -> axum::Router {
 fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClient) -> axum::Router {
     let application_routes = axum::Router::new()
         .route(
+            "/api/vocabulary/ingredients/version.json",
+            axum::routing::get(api::vocabulary_index::manifest),
+        )
+        .route(
+            "/api/vocabulary/ingredients/{version}",
+            axum::routing::get(api::vocabulary_index::catalog),
+        )
+        .layer(axum::Extension(vocabulary::index_store::IndexService::new(
+            pool.clone(),
+        )))
+        .route(
             "/api/user_profile",
             axum::routing::get(auth::user_profile::handle_user_profile),
         )
         .route(
             "/api/upload",
             axum::routing::post(api::upload::upload_handler),
+        )
+        .route(
+            "/api/recipes/{id}/export-images",
+            axum::routing::get(api::recipe_archive::download),
+        )
+        .route(
+            "/api/collections/{id}/export-html",
+            axum::routing::get(api::collection_html::download),
         )
         .with_state(auth::user_profile::UserProfileState { pool: pool.clone() })
         .serve_dioxus_application(ServeConfig::new(), App);
@@ -254,7 +324,13 @@ fn build_dioxus_router(pool: sqlx::PgPool, storage_client: storage::StorageClien
 
 #[cfg(feature = "server")]
 fn build_oauth_router(state: auth::oauth::AppState) -> axum::Router {
+    let pool = state.pool.clone();
     axum::Router::new()
+        .route(
+            "/auth/staging/session",
+            axum::routing::post(auth::staging::create_test_session),
+        )
+        .layer(axum::Extension(pool))
         .route(
             "/auth/{provider}/start",
             axum::routing::get(auth::oauth::start_handler),
@@ -327,7 +403,6 @@ mod server_tests {
             format!("/collections/{RESOURCE_ID}/edit"),
             "/settings/profile".to_string(),
             "/settings/accounts".to_string(),
-            "/search?q=pasta%20salad&scope=recipes".to_string(),
         ];
 
         for path in owner_routes {
@@ -482,6 +557,8 @@ mod server_tests {
 
 #[cfg(not(feature = "server"))]
 fn main() {
+    #[cfg(target_arch = "wasm32")]
+    pages::capture_about_entry_fragment();
     dioxus::launch(App);
 }
 
@@ -489,6 +566,8 @@ fn main() {
 fn App() -> Element {
     // dx serve rewrites Host before proxying to Axum. Hydrate the configured
     // local origin, not a forwarded header, so the browser can converge too.
+    let staging_environment = use_server_cached(auth::staging_context::from_fullstack);
+    provide_context(staging_environment);
     let local_origin = use_server_cached(auth::local_origin::from_fullstack);
     provide_context(local_origin.clone());
     use_effect(move || {
@@ -520,10 +599,11 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: COLLECTIONS_CSS }
         document::Link { rel: "stylesheet", href: COLLECTION_FORMS_CSS }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
-        document::Link { rel: "preconnect", href: "https://fonts.googleapis.com" }
-        document::Link { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" }
-        document::Link { rel: "stylesheet", href: GOOGLE_FONTS }
-        document::Meta { name: "viewport", content: "width=device-width, initial-scale=1" }
+        document::Link { rel: "stylesheet", href: MOBILE_CSS }
+        document::Link { rel: "stylesheet", href: GROCERY_CSS }
+        document::Link { rel: "stylesheet", href: PANTRY_CSS }
+        document::Style { {format!("@font-face{{font-family:Fredoka;font-style:normal;font-weight:300 700;font-display:swap;src:url('{}') format('truetype')}}@font-face{{font-family:Nunito;font-style:normal;font-weight:200 1000;font-display:swap;src:url('{}') format('truetype')}}", FREDOKA, NUNITO)} }
+        document::Meta { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" }
 
         // Error boundary wrapping all routes
         ErrorBoundary {

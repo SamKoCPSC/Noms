@@ -1,0 +1,10 @@
+{
+  "models/university-library.blend": "eb5ed51a7c14041b142a4b4444f8cff98a992f0768ee5530fb5bf5d1d278fd73",
+  "models/university-library.glb": "81a9123e87b96a5c45785822bd4b2ed0d253a6baf10a5a62817e74d0cacb6035",
+  "source/build_library.py": "0e9d8210a3232b74ce845559abbbf5ed871690d0054aba3a594fb56d59e82be3",
+  "source/diorama_common.py": "a6a4ad0da1fc742943ff334e3a2ad5454c1cd0ca9aa9d943fdbf2c1f21b1ecfd",
+  "source/render_review.py": "4ac4fc79af4b1c68697962b5d10b27a31a8f61f6010108e8f1c6ccbe4f784ade",
+  "source/scene_details.py": "da992cd3a336fa85532b1634bb6f25404897e58931699180a75d7020ca6fd59f",
+  "source/study_furniture.py": "41a63daabceabd6ec60457c5fa4fdab328e61789b3c1ba615d6cb87138467ada",
+  "source/validate_export.py": "7b7aaae77918dad83b59bf122eccf7367c1111b94890dd4fb73641a6d2205133"
+}

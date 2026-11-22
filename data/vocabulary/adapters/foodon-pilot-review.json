@@ -1,0 +1,409 @@
+{
+  "schema_version": 1,
+  "source_checksum": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+  "descriptor_checksum": "6c0725ab123e85d09de269a7e9ba3e7ac0c6b86c593c121af67d7e27458b9a61",
+  "base_seed_checksum": "2386c3471d374c4855c36279189caf4b70fc219a3bd45e75ea901c1c2fdaebcd",
+  "base_sources_checksum": "a22dedf6efbb8e2882d0ef055b93d2eb07d25119af346ef2379ec9d0349471ad",
+  "decisions": [
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03306811",
+      "canonical_id": "686f2847-4f4b-4e0b-ae8f-c493e2e94bcb",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Edible chickpea seed."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003582",
+      "canonical_id": "9e257b68-7c43-41b4-a331-c42f559beda1",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Garlic bulb as culinary ingredient."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03301844",
+      "canonical_id": "090daaac-dfca-41c8-b9c7-e7cd0d414f43",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Garlic powder, not garlic salt."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03305217",
+      "canonical_id": "cb6506d0-12fc-424d-97b5-b7fc6d291687",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Garlic paste."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003744",
+      "canonical_id": "b940ee2d-3277-4160-9f09-346458e3e104",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Chili pepper ingredient."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03301453",
+      "canonical_id": "1c29f668-5bfa-4600-8e17-0133f91b68de",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Tomato ingredient."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03301826",
+      "canonical_id": "47359146-a677-400e-b6b5-c106520355e7",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. General olive oil."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03544111",
+      "canonical_id": "42f9281f-bd16-4212-998f-0370128f6e07",
+      "relationship": "broader",
+      "note": "FoodEx2 definition explicitly includes tamari, which the canonical ingredient excludes."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00002250",
+      "canonical_id": "090e6228-0da4-4920-b48d-3a2fb09c4a92",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Sodium chloride food material; culinary salt."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003855",
+      "canonical_id": "dea12fbf-c0e9-44ad-968e-0e8a438ec8fa",
+      "relationship": "narrower",
+      "note": "Source definition specifies toasted, hulled sesame; the canonical sesame paste does not require those preparations."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03541395",
+      "canonical_id": "e82dd25f-0dfe-42cb-a8c7-6077f00537d7",
+      "relationship": "broader",
+      "note": "Source identifies Rhus coriaria fruit spice but does not require the canonical dried, ground presentation."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03307370",
+      "canonical_id": "984aeedb-d887-406b-9dc3-f7ad851905a4",
+      "relationship": "broader",
+      "note": "Source label identifies rice wine vinegar without establishing the canonical exclusion of seasoned rice vinegar."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00004782",
+      "canonical_id": "cbb5bb76-927b-4bee-9761-1eeecb6289cd",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Black sesame seed."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03317000",
+      "canonical_id": "feb4a7c0-79a0-4a0e-8443-27fbe0def3ca",
+      "relationship": "narrower",
+      "note": "Named dried konbu is a presentation of the canonical kombu ingredient. Its reviewed food-material scope exception is recorded in the pinned descriptor."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003470",
+      "canonical_id": "c761993e-774c-44a8-b8b9-c9ca3acb5153",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Sichuan pepper food ingredient."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03541357",
+      "canonical_id": "9ddb1486-d3dd-4a2e-9254-fbf5f180c1cd",
+      "relationship": "broader",
+      "note": "Source definition includes roots or rhizomes of Alpinia galanga; the canonical ingredient specifically denotes the greater-galangal rhizome."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03540903",
+      "canonical_id": "8f4baf3d-6b84-4661-9b7c-4b6e21fd68eb",
+      "relationship": "narrower",
+      "note": "Source specifies a fresh Citrus hystrix leaf herb; the canonical leaf ingredient does not require a fresh presentation."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003340",
+      "canonical_id": "a08214d9-7023-4b49-8684-f9e98f6edf59",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Lemongrass stalk, rather than leaf or essential oil."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03540838",
+      "canonical_id": "be295ca5-20d9-4a91-a8ab-a08315ca83b9",
+      "relationship": "narrower",
+      "note": "Source specifies fresh Eryngium foetidum leaves; the canonical leaf material has no fresh-only constraint."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03541316",
+      "canonical_id": "1222f8ec-b845-444e-80a6-507100c5e02e",
+      "relationship": "broader",
+      "note": "Source identifies candlenut seeds without the canonical edible-kernel distinction."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03304999",
+      "canonical_id": "3ecc32bd-292a-4dbf-82ee-0a621c0a35b0",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Tempeh culinary product."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03541458",
+      "canonical_id": "a86d25ae-a2d5-4085-a96e-71fd714b6cc2",
+      "relationship": "narrower",
+      "note": "Source covers the citrus fruit, while the canonical scope also permits its culinary juice."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03000015",
+      "canonical_id": "25a28f42-0548-4ca1-9a9d-2a05a668517d",
+      "relationship": "narrower",
+      "note": "Source specifies a whole Bixa orellana seed; the canonical seed ingredient does not require whole presentation. The explicit Plant Ontology material scope exception is retained."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003722",
+      "canonical_id": "3324a5ff-1c10-4628-9c2a-edebc3da77d7",
+      "relationship": "broader",
+      "note": "Source defines a Canarium ovatum drupe fruit; the canonical ingredient is specifically its edible kernel."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00002936",
+      "canonical_id": "e6992fa3-02dd-4c85-8e4d-93c5a6c9554e",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Asafoetida culinary resin."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03541377",
+      "canonical_id": "c9bf3756-175f-4fca-9159-0b03016eba9d",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. FoodEx2 ajowan fruit includes carom seeds; culinary seed naming is accepted."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003143",
+      "canonical_id": "4b264aa4-561a-4178-9cb7-01f3fd119b0b",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Bulgur food."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00004577",
+      "canonical_id": "03f5c898-e2f1-4cb9-9dfb-a2a1ef7d531f",
+      "relationship": "narrower",
+      "note": "Source specifies raw/uncooked freekeh grain; the canonical roasted-green-wheat ingredient has no uncooked-only constraint."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00002484",
+      "canonical_id": "9042f141-b9db-4016-9d59-89675da4a181",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Harissa chili paste."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03316981",
+      "canonical_id": "1d04609f-089d-4511-911f-cdfbd3871abe",
+      "relationship": "narrower",
+      "note": "Source specifically denotes sliced bottled salt-preserved lemons; the canonical ingredient also allows other salt/brine-preserved presentations."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03000255",
+      "canonical_id": "9bbcd5fd-19cc-426d-ba90-b62fc3e578ae",
+      "relationship": "exact",
+      "note": "Source is the Eragrostis tef caryopsis/kernel, matching the canonical edible grain. The reviewed Plant Ontology material scope exception is recorded separately."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003899",
+      "canonical_id": "dc13ff20-fc84-44ee-a2b7-fd129c98e05b",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Egusi seed ingredient."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03305445",
+      "canonical_id": "730d6833-d1a8-4236-acc3-843bad189887",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Grains of paradise spice."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03540027",
+      "canonical_id": "5367312c-4765-48e1-b14b-41f6bc385468",
+      "relationship": "narrower",
+      "note": "Source specifies white fonio, Digitaria exilis; the canonical West African cereal ingredient does not exclude other culinary fonio types."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00005549",
+      "canonical_id": "139def79-424c-46c4-aacf-c8607c6178cd",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Baobab powder, not merely the tree."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03000026",
+      "canonical_id": "d81b6211-7f16-475a-bd39-3d2c80cba6fd",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Amaranth leaf, distinct from grain."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00005327",
+      "canonical_id": "603d7cec-44f8-4a83-b288-ffdaa85fbe38",
+      "relationship": "narrower",
+      "note": "Source explicitly specifies a whole moringa leaf; the canonical edible leaf ingredient does not require whole presentation."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00002775",
+      "canonical_id": "411c67d9-fd58-4fa8-8804-e5aacaeaa015",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Bambara groundnut seed, not peanut."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03540909",
+      "canonical_id": "697c6aea-d923-4fe0-8dc3-4dd119b83f58",
+      "relationship": "narrower",
+      "note": "FoodEx2 source specifies a fresh Dysphania ambrosioides herb; the canonical herb is not fresh-only."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03540785",
+      "canonical_id": "bc9ab501-c595-4e15-9ef4-e8f442a4980c",
+      "relationship": "broader",
+      "note": "The source identifies Ustilago maydis in a food category without explicitly restricting the material to the canonical edible maize galls."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00002563",
+      "canonical_id": "8417c4ea-f01e-4c0f-a9f9-aa1f94643110",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Chipotle smoke-dried chili."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03540656",
+      "canonical_id": "10a2bad8-f96a-40e8-8ceb-6f99b656081b",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. FoodEx2 rocoto capsicum fruit category."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003441",
+      "canonical_id": "2e12ec9c-1436-4e68-9756-d43eb7e8c3c8",
+      "relationship": "related",
+      "note": "Source label is saffron thread, but its definition says anther rather than the canonical Crocus sativus stigmas. Retain as related pending source correction or stronger evidence; do not adopt that definition."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003493",
+      "canonical_id": "4c8a0655-faa1-43e5-bde4-b6ac3176c3d3",
+      "relationship": "broader",
+      "note": "Source is an edible Capparis flower bud without the canonical preservation requirement."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003023",
+      "canonical_id": "bd4c815d-9619-4b73-ad56-7867e2222c9e",
+      "relationship": "narrower",
+      "note": "Source specifically denotes dried caraway seed; the canonical spice seed has no explicit dried-only constraint."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03302492",
+      "canonical_id": "9c423f9f-9c2d-4b5f-b53d-cd32bb1ef367",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Rye flour, not whole grain."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003542",
+      "canonical_id": "efa6a1dc-185e-40ee-83de-43c2134b8a4f",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Lingonberry edible fruit."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00002667",
+      "canonical_id": "67858c66-1cfa-4cab-8bfc-4cb1c28d58f2",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Allspice berry spice, not sweet pepper also called pimento."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_00003752",
+      "canonical_id": "ff25c95e-e585-4f5c-9f16-b64909014aae",
+      "relationship": "related",
+      "note": "Source label taro root denotes the familiar culinary ingredient, but the definition calls it a botanical root rather than the canonical corm. Preserve related evidence without asserting anatomical equivalence."
+    },
+    {
+      "approved": true,
+      "action": "map",
+      "term_id": "FOODON_03303084",
+      "canonical_id": "463e1b6b-4d83-4044-9b8f-5f164d1e73c0",
+      "relationship": "exact",
+      "note": "Reviewed source label, definition where present, and ingredient part/form identify the same canonical culinary ingredient. Coconut milk, distinct from water or cream."
+    }
+  ]
+}

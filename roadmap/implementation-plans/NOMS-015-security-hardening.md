@@ -1,6 +1,13 @@
 # NOMS-015: Security Hardening to a Good-Enough Baseline — Agentic Implementation Plan
 
-**Status:** In progress — CP9A–CP9C are implemented; CP9C manual browser validation is blocked and CP10 final re-review remains
+> **Current-state review — 2026-11-03:** Original defects have implementation/remediation evidence. Reconcile later browser evidence with CP9C and retain the final CP10 independent assessment; historical blockers/verdicts below belong to their stated revisions.
+> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
+> acceptance lists below are historical; they do not override this summary.
+
+**Status:** ✅ Done — hardening baseline delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-07-29
 **Issue:** [NOMS-015-security-hardening.md](../issues/NOMS-015-security-hardening.md)
 **Source:** Authentication, authorization, and application security review completed 2026-07-28

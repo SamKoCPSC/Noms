@@ -1,0 +1,107 @@
+{
+  "reviewed_on": "2026-10-22",
+  "foodon": {
+    "commit": "cd73540243a84bcd511a500d9a497d12d7dc02f6",
+    "url": "https://raw.githubusercontent.com/FoodOntology/foodon/cd73540243a84bcd511a500d9a497d12d7dc02f6/foodon.owl",
+    "sha256": "b897bf64c1b265c422db9ee01e1235c10c0b809e7f02326ef810a52068347edf",
+    "bytes": 40779019,
+    "version_iri": "http://purl.obolibrary.org/obo/foodon/releases/2026-09-20/foodon.owl",
+    "version_info_values": [
+      "2026-02-02",
+      "2026-09-20"
+    ],
+    "metadata_note": "Source exposes two versionInfo values; commit and digest identify the precise artifact.",
+    "license": "CC-BY-4.0",
+    "reviewed_on": "2026-10-21"
+  },
+  "wikidata": {
+    "method": "Indexed search plus direct public item pages and relation traversal; non-atomic cached representations",
+    "license": "CC0 structured data",
+    "api_status": "Proxy HTTP 403 during the 2026-10-21 review; no atomic bulk snapshot. Not reverified in the 2026-10-22 USDA review.",
+    "reviewed_on": "2026-10-21"
+  },
+  "usda": {
+    "status": "Generic benchmark review complete; targeted Branded review complete for ingredients without generic usable matches. Observed lower bounds from full food description table searches; not exhaustive semantic absence claims.",
+    "reviewed_on": "2026-10-22",
+    "downloaded_on": "2026-10-21",
+    "download_page": "https://fdc.nal.usda.gov/download-datasets/",
+    "method": "Stream each archive food.csv; exclude Foundation sample/acquisition rows; search the saved per-ingredient queries in descriptions with case/diacritic folding and word boundaries; review selected candidates by identity/part/form. For generic gaps, join branded_food.csv ingredients and reject mixed dishes, ambiguous forms and ingredient-list-only mentions. Branded rows already covered generically are deliberately not graded.",
+    "api": "No personal API key configured; no API quota needed for this bulk review. API reachability was not reverified.",
+    "license": "CC0 according to USDA API guide; USDA data are public domain.",
+    "archives": [
+      {
+        "key": "foundation",
+        "release": "2026-04-30",
+        "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_csv_2026-04-30.zip",
+        "local_filename": "foundation-2026-04-30.zip",
+        "bytes": 3825741,
+        "sha256": "70457ee9d9342f43bda2010318c85f04210c689fdeb9cd2da4c513b0e8dbc655",
+        "reviewed_data_type": "foundation_food",
+        "eligible_food_rows": 469,
+        "members": [
+          {
+            "name": "FoodData_Central_foundation_food_csv_2026-04-30/food.csv",
+            "bytes": 7229830,
+            "crc32": "2c1856ea"
+          }
+        ]
+      },
+      {
+        "key": "sr_legacy",
+        "release": "2018-04",
+        "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+        "local_filename": "sr-legacy-2018-04.zip",
+        "bytes": 6074592,
+        "sha256": "b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0",
+        "reviewed_data_type": "sr_legacy_food",
+        "eligible_food_rows": 7793,
+        "members": [
+          {
+            "name": "FoodData_Central_sr_legacy_food_csv_2018-04/food.csv",
+            "bytes": 793104,
+            "crc32": "ae0997e2"
+          }
+        ]
+      },
+      {
+        "key": "fndds",
+        "release": "2024-10-31",
+        "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_survey_food_csv_2024-10-31.zip",
+        "local_filename": "survey-2024-10-31.zip",
+        "bytes": 3325692,
+        "sha256": "5ccc25ec2777a8982fbb61378a42f415316173eb11e48c9a8ba4cb19f5a4f29c",
+        "reviewed_data_type": "survey_fndds_food",
+        "eligible_food_rows": 5432,
+        "members": [
+          {
+            "name": "FoodData_Central_survey_food_csv_2024-10-31/food.csv",
+            "bytes": 480475,
+            "crc32": "a5a511eb"
+          }
+        ]
+      },
+      {
+        "key": "branded",
+        "release": "2026-04-30",
+        "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_branded_food_csv_2026-04-30.zip",
+        "local_filename": "branded-2026-04-30.zip",
+        "bytes": 448767220,
+        "sha256": "26050a5d03197469813754743a21ee0fad4ccf22b6aac2a995846a987719fc49",
+        "reviewed_data_type": "branded_food",
+        "eligible_food_rows": 1999950,
+        "members": [
+          {
+            "name": "FoodData_Central_branded_food_csv_2026-04-30/food.csv",
+            "bytes": 375881194,
+            "crc32": "1bd068e8"
+          },
+          {
+            "name": "FoodData_Central_branded_food_csv_2026-04-30/branded_food.csv",
+            "bytes": 954002257,
+            "crc32": "46d7dd31"
+          }
+        ]
+      }
+    ]
+  }
+}

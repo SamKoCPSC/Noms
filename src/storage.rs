@@ -108,6 +108,13 @@ impl std::error::Error for StorageError {}
 
 // ── Storage client ──────────────────────────────────────────────────────────
 
+/// Bounded saved-image download failures, without exposing storage details.
+#[derive(Debug)]
+pub enum ExportImageError {
+    Unavailable,
+    TooLarge,
+}
+
 /// S3-compatible storage client wrapping the AWS SDK S3 client.
 ///
 /// Holds the configured S3 client, bucket name, and public base URL
@@ -338,6 +345,59 @@ impl StorageClient {
             .await
             .map_err(|e| StorageError::UploadFailed(e.to_string()))?;
         Ok(self.object_url(key))
+    }
+
+    /// Check configured storage only, never a URL supplied in an import.
+    pub async fn export_image_exists(&self, key: &str) -> Result<bool, ()> {
+        match self
+            .inner
+            .head_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+        {
+            Ok(_) => Ok(true),
+            Err(error)
+                if error
+                    .as_service_error()
+                    .is_some_and(|error| error.is_not_found()) =>
+            {
+                Ok(false)
+            }
+            Err(_) => Err(()),
+        }
+    }
+
+    /// Read a saved object with a hard streaming byte limit.
+    pub async fn read_export_image(
+        &self,
+        key: &str,
+        limit: usize,
+    ) -> Result<Vec<u8>, ExportImageError> {
+        let mut object = self
+            .inner
+            .get_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+            .map_err(|_| ExportImageError::Unavailable)?;
+        if object
+            .content_length()
+            .is_some_and(|size| size < 0 || size as u64 > limit as u64)
+        {
+            return Err(ExportImageError::TooLarge);
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = object.body.next().await {
+            let chunk = chunk.map_err(|_| ExportImageError::Unavailable)?;
+            if chunk.len() > limit.saturating_sub(bytes.len()) {
+                return Err(ExportImageError::TooLarge);
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        Ok(bytes)
     }
 
     /// Delete an object from the configured bucket by key.

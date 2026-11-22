@@ -2,9 +2,20 @@
   "private": true,
   "scripts": {
     "tailwind:build": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css",
-    "tailwind:watch": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css --watch"
+    "tailwind:watch": "npx @tailwindcss/cli -i tailwind.css -o assets/tailwind.css --watch",
+    "about:three:build": "node tools/about/three/build.mjs",
+    "home:three:build": "node tools/home/three/build.mjs"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.0.0"
+    "@gltf-transform/core": "4.2.1",
+    "@gltf-transform/extensions": "4.2.1",
+    "@gltf-transform/functions": "4.2.1",
+    "@tailwindcss/cli": "^4.0.0",
+    "esbuild": "0.25.12",
+    "meshoptimizer": "0.25.0",
+    "sharp": "0.35.5"
+  },
+  "dependencies": {
+    "three": "0.181.2"
   }
 }
