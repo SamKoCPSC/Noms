@@ -73,6 +73,29 @@ impl PantryMatcher {
         !name.trim().is_empty() && self.available.contains(&name.to_lowercase())
     }
 
+    pub fn available_swaps(&self, ingredients: &[RecipeIngredient]) -> Vec<String> {
+        ingredients
+            .iter()
+            .filter(|item| !item.optional && !self.is_available(&item.name))
+            .flat_map(|item| {
+                item.substitutes
+                    .iter()
+                    .filter(|alt| self.is_available(&alt.name))
+                    .map(|alt| {
+                        format!(
+                            "{} can replace {}",
+                            [&*alt.amount, &*alt.unit, &*alt.name]
+                                .into_iter()
+                                .filter(|s| !s.is_empty())
+                                .collect::<Vec<_>>()
+                                .join(" "),
+                            item.name
+                        )
+                    })
+            })
+            .collect()
+    }
+
     pub fn check(&self, ingredients: &[RecipeIngredient]) -> PantryCheck {
         self.check_requirements(ingredients.iter().map(|i| (i.name.as_str(), i.optional)))
     }

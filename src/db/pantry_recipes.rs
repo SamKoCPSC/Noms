@@ -1,6 +1,9 @@
 //! Private library checks. Stream names/optional flags, then hydrate bounded cards.
 use super::pantry::PantryError;
-use crate::pantry::{feasibility::PantryMatcher, PantryRecipePage};
+use crate::pantry::{
+    feasibility::{IngredientStatus, PantryMatcher},
+    PantryRecipePage, RecipeShortage,
+};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use chrono::{DateTime, Datelike, Utc};
 use futures_util::TryStreamExt;
@@ -15,6 +18,8 @@ const PAGE_SIZE: usize = crate::security::MAX_COLLECTION_RECIPE_CARDS_PER_PAGE;
 struct Cursor {
     pantry: Uuid,
     revision: i64,
+    #[serde(default)]
+    rank: usize,
     updated: DateTime<Utc>,
     recipe: Uuid,
 }
@@ -52,7 +57,7 @@ WITH library AS (
     JOIN collections c ON c.id = cr.collection_id
     WHERE c.owner_id = $1
 )
-SELECT r.id, r.updated_at,
+SELECT r.id, r.updated_at, r.ingredients AS authored,
        ARRAY(SELECT CASE WHEN jsonb_typeof(i->'name') = 'string' THEN i->>'name' END
              FROM jsonb_array_elements(CASE WHEN jsonb_typeof(r.ingredients) = 'array'
                   THEN r.ingredients ELSE '[]'::jsonb END) AS i) AS names,
@@ -63,8 +68,7 @@ SELECT r.id, r.updated_at,
 FROM library l JOIN recipes r ON r.id = l.id
 WHERE (r.user_id = $1 OR r.visibility IN ('public', 'unlisted'))
   AND jsonb_typeof(r.ingredients) = 'array'
-  AND octet_length(r.ingredients::text) <= $4
-  AND ($2::timestamptz IS NULL OR (r.updated_at, r.id) < ($2, $3::uuid))
+  AND octet_length(r.ingredients::text) <= $2
 ORDER BY r.updated_at DESC, r.id DESC";
 
 pub async fn find(
@@ -73,6 +77,7 @@ pub async fn find(
     pantry_id: Uuid,
     revision: i64,
     cursor: Option<&str>,
+    almost: bool,
 ) -> Result<PantryRecipePage, PantryError> {
     if pantry_id.is_nil() || revision < 0 {
         return Err(PantryError::Invalid("Invalid pantry reference.".into()));
@@ -87,24 +92,30 @@ pub async fn find(
         return Err(PantryError::Conflict);
     }
     let matcher = PantryMatcher::new(&pantry.entries);
-    let mut matches = Vec::new();
+    if cursor
+        .as_ref()
+        .is_some_and(|c| c.rank > 2 || (c.rank > 0) != almost)
+    {
+        return Err(PantryError::Invalid("Invalid recipe page.".into()));
+    }
+    let mut totals = [0; 3];
+    // Keep at most a page plus one per rank while counting the entire library.
+    let mut ranked = [Vec::new(), Vec::new(), Vec::new()];
     {
         let mut candidates = sqlx::query(CANDIDATES)
             .bind(owner)
-            .bind(cursor.as_ref().map(|c| c.updated))
-            .bind(cursor.as_ref().map(|c| c.recipe))
             .bind(crate::security::MAX_RECIPE_SNAPSHOT_BYTES as i64)
             .fetch(&mut *tx);
         while let Some(row) = candidates.try_next().await? {
             let names: Vec<Option<String>> = row.try_get("names")?;
             let optional: Vec<Option<bool>> = row.try_get("optional_flags")?;
-            if names
-                .iter()
-                .any(|n| n.as_ref().is_none_or(|n| n.trim().is_empty()))
+            if names.is_empty()
+                || names
+                    .iter()
+                    .any(|n| n.as_ref().is_none_or(|n| n.trim().is_empty()))
+                || optional.len() != names.len()
+                || optional.iter().any(Option::is_none)
             {
-                continue;
-            }
-            if optional.len() != names.len() || optional.iter().any(Option::is_none) {
                 continue;
             }
             let check =
@@ -114,26 +125,59 @@ pub async fn find(
                         optional.expect("validated optional flag"),
                     )
                 }));
-            if check.is_cookable() {
-                matches.push((
-                    row.try_get::<Uuid, _>("id")?,
-                    row.try_get::<DateTime<Utc>, _>("updated_at")?,
-                    check.missing_optional_count(),
-                ));
-                if matches.len() > PAGE_SIZE {
-                    break;
-                }
+            let missing: Vec<_> = check
+                .ingredients
+                .iter()
+                .filter(|i| i.status == IngredientStatus::Missing)
+                .collect();
+            let rank = missing.len();
+            if rank > 2 {
+                continue;
             }
+            let authored = if rank > 0 {
+                let authored: serde_json::Value = row.try_get("authored")?;
+                let Ok(items) =
+                    serde_json::from_value::<Vec<crate::types::RecipeIngredient>>(authored)
+                else {
+                    continue;
+                };
+                items
+            } else {
+                Vec::new()
+            };
+
+            totals[rank] += 1;
+            if (rank > 0) != almost || ranked[rank].len() > PAGE_SIZE {
+                continue;
+            }
+            let id: Uuid = row.try_get("id")?;
+            let updated: DateTime<Utc> = row.try_get("updated_at")?;
+            if cursor.as_ref().is_some_and(|c| {
+                rank < c.rank || (rank == c.rank && (updated, id) >= (c.updated, c.recipe))
+            }) {
+                continue;
+            }
+            let shortage = almost.then(|| RecipeShortage {
+                missing: missing.into_iter().map(|i| i.name.clone()).collect(),
+                substitutions_available: authored.iter().any(|i| {
+                    !i.optional
+                        && !matcher.is_available(&i.name)
+                        && i.substitutes.iter().any(|s| matcher.is_available(&s.name))
+                }),
+            });
+            ranked[rank].push((id, updated, check.missing_optional_count(), rank, shortage));
         }
     }
+    let mut matches: Vec<_> = ranked.into_iter().flatten().take(PAGE_SIZE + 1).collect();
     let next_cursor = if matches.len() > PAGE_SIZE {
         matches.truncate(PAGE_SIZE);
-        let (recipe, updated, _) = *matches.last().expect("nonempty full page");
+        let &(recipe, updated, _, rank, _) = matches.last().expect("nonempty full page");
         Some(
             URL_SAFE_NO_PAD.encode(
                 serde_json::to_vec(&Cursor {
                     pantry: pantry_id,
                     revision,
+                    rank,
                     updated,
                     recipe,
                 })
@@ -145,17 +189,17 @@ pub async fn find(
     };
     let optional_ingredients_missing = matches
         .iter()
-        .filter(|(_, _, count)| *count > 0)
-        .map(|(id, _, count)| (*id, *count))
+        .filter(|(_, _, count, _, _)| *count > 0)
+        .map(|(id, _, count, _, _)| (*id, *count))
         .collect();
-    let ids: Vec<_> = matches.into_iter().map(|(id, _, _)| id).collect();
+    let ids: Vec<_> = matches.iter().map(|(id, ..)| *id).collect();
     let recipes = if ids.is_empty() {
         Vec::new()
     } else {
         let query = format!(
             "SELECT {} FROM recipes r {} WHERE r.id = ANY($1) \
              AND (r.user_id=$2 OR r.visibility IN ('public','unlisted')) \
-             ORDER BY r.updated_at DESC,r.id DESC",
+             ORDER BY array_position($1::uuid[], r.id)",
             super::recipe_card_read_columns("r", "u"),
             super::recipe_card_read_joins("r", "u"),
         );
@@ -175,7 +219,13 @@ pub async fn find(
         pantry_id,
         pantry_revision: revision,
         recipes,
+        cookable_count: totals[0],
+        almost_cookable_count: totals[1] + totals[2],
         optional_ingredients_missing,
+        shortages: matches
+            .into_iter()
+            .filter_map(|(id, _, _, _, shortage)| shortage.map(|shortage| (id, shortage)))
+            .collect(),
         next_cursor,
     })
 }
@@ -190,6 +240,7 @@ mod tests {
             serde_json::to_vec(&Cursor {
                 pantry,
                 revision: 3,
+                rank: 0,
                 updated: Utc::now(),
                 recipe: Uuid::new_v4(),
             })

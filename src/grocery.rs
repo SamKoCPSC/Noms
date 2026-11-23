@@ -52,6 +52,48 @@ pub struct GroceryRecipePreview {
     pub source: GrocerySource,
     pub ingredients: Vec<crate::types::RecipeIngredient>,
 }
+impl GroceryRecipePreview {
+    /// Carry a choice across repeated names only where that row authors the same alternative.
+    pub fn choose_swap(
+        &self,
+        index: usize,
+        alternative: Option<usize>,
+        choices: &mut Vec<PantrySwap>,
+    ) {
+        let Some(primary) = self.ingredients.get(index) else {
+            return;
+        };
+        let name = primary.name.to_lowercase();
+        let selected = alternative.and_then(|i| primary.substitutes.get(i));
+        for (row, item) in self
+            .ingredients
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| item.name.to_lowercase() == name)
+        {
+            let choice = if row == index {
+                alternative
+            } else {
+                selected.and_then(|alt| {
+                    item.substitutes
+                        .iter()
+                        .position(|s| s.name.to_lowercase() == alt.name.to_lowercase())
+                })
+            };
+            if selected.is_some() && choice.is_none() {
+                continue;
+            }
+            choices.retain(|s| s.recipe != self.source.recipe_id || s.ingredient != row);
+            if let Some(alternative) = choice {
+                choices.push(PantrySwap {
+                    recipe: self.source.recipe_id,
+                    ingredient: row,
+                    alternative,
+                });
+            }
+        }
+    }
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct RecipeSelection {
     pub recipe_id: Uuid,
@@ -128,7 +170,16 @@ fn is_true(value: &bool) -> bool {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PantrySwap {
+    pub recipe: Uuid,
+    pub ingredient: usize,
+    pub alternative: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GroceryCreate {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub swaps: Vec<PantrySwap>,
     pub request_id: Uuid,
     pub name: String,
     pub note: String,
@@ -142,6 +193,7 @@ pub struct GroceryCreate {
 impl Default for GroceryCreate {
     fn default() -> Self {
         Self {
+            swaps: Vec::new(),
             request_id: Uuid::nil(),
             name: String::new(),
             note: String::new(),
@@ -163,6 +215,11 @@ impl GroceryCreate {
 
     pub fn validate(&self) -> Result<(), String> {
         validate_list_name(&self.name)?;
+        if self.swaps.len() > self.recipes.len().min(MAX_RECIPES) * 200
+            || (!self.swaps.is_empty() && self.pantry.is_none())
+        {
+            return Err("Review the selected pantry substitutions.".into());
+        }
         if self
             .pantry
             .as_ref()
@@ -338,11 +395,30 @@ pub fn build_requirements(previews: &[GroceryRecipePreview]) -> Result<Vec<Gener
 
 /// Filter authored occurrences before scaling/aggregation, retaining their original indices.
 /// Presence ignores quantities; manual extras are added separately and never filtered.
+#[cfg(test)]
 pub fn build_filtered_requirements(
     previews: &[GroceryRecipePreview],
     pantry: Option<&[crate::pantry::PantryEntry]>,
     include_optional: bool,
 ) -> Result<Vec<GeneratedItem>, String> {
+    requirements_with_swaps(previews, pantry, include_optional, &[])
+}
+
+pub fn requirements_with_swaps(
+    previews: &[GroceryRecipePreview],
+    pantry: Option<&[crate::pantry::PantryEntry]>,
+    include_optional: bool,
+    swaps: &[PantrySwap],
+) -> Result<Vec<GeneratedItem>, String> {
+    let mut choices = std::collections::HashMap::new();
+    for swap in swaps {
+        if choices
+            .insert((swap.recipe, swap.ingredient), swap.alternative)
+            .is_some()
+        {
+            return Err("Choose one substitution per ingredient.".into());
+        }
+    }
     let matcher = pantry.map(crate::pantry::feasibility::PantryMatcher::new);
     if previews.len() > MAX_RECIPES {
         return Err("Select up to 20 recipes.".into());
@@ -367,6 +443,19 @@ pub fn build_filtered_requirements(
             base.unwrap_or(1) as i128,
         );
         for (index, ingredient) in preview.ingredients.iter().enumerate() {
+            if let Some(alternative) = choices.remove(&(preview.source.recipe_id, index)) {
+                let valid = matcher.as_ref().is_some_and(|m| {
+                    !m.is_available(&ingredient.name)
+                        && ingredient
+                            .substitutes
+                            .get(alternative)
+                            .is_some_and(|s| m.is_available(&s.name))
+                });
+                if !valid {
+                    return Err("Review the available substitutions.".into());
+                }
+                continue;
+            }
             if (!include_optional && ingredient.optional)
                 || matcher
                     .as_ref()
@@ -427,6 +516,9 @@ pub fn build_filtered_requirements(
                 return Err("A grocery list supports up to 1,000 items.".into());
             }
         }
+    }
+    if !choices.is_empty() {
+        return Err("Review the selected recipe substitutions.".into());
     }
     Ok(result.into_iter().map(|(item, _)| item).collect())
 }
@@ -500,6 +592,46 @@ mod tests {
                 ..Default::default()
             }],
         }
+    }
+    #[test]
+    fn confirmed_swap_only_covers_the_selected_authored_occurrence() {
+        use crate::pantry::{PantryEntry, PantryFields, PantryKind, PantryStock};
+        let mut source = recipe("Cream", "1", "cup", None, None);
+        source.ingredients.push(source.ingredients[0].clone());
+        source.ingredients[0].substitutes = recipe("Milk", "150", "ml", None, None).ingredients;
+        let pantry = [PantryEntry {
+            id: Uuid::new_v4(),
+            kind: PantryKind::Ingredient,
+            stock: PantryStock {
+                fields: PantryFields {
+                    name: "MILK".into(),
+                    amount: String::new(),
+                    unit: String::new(),
+                },
+                available: true,
+            },
+            quantity_zero: false,
+            position: 0,
+            revision: 0,
+        }];
+        let mut choice = PantrySwap {
+            recipe: source.source.recipe_id,
+            ingredient: 0,
+            alternative: 0,
+        };
+        let sources = [source];
+        let generate = |choices: &[PantrySwap]| {
+            requirements_with_swaps(&sources, Some(&pantry), true, choices)
+        };
+        assert_eq!(generate(&[]).unwrap()[0].fields.amount, "2");
+        assert_eq!(
+            generate(std::slice::from_ref(&choice)).unwrap()[0]
+                .fields
+                .amount,
+            "1"
+        );
+        choice.ingredient = 1;
+        assert!(generate(&[choice]).is_err());
     }
     #[test]
     fn ingredient_options_leave_grocery_generation_unchanged() {

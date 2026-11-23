@@ -1159,6 +1159,7 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
     });
     let mut manual = use_signal(Vec::<ItemFields>::new);
     let mut entry = use_signal(ItemFields::default);
+    let mut swaps = use_signal(Vec::<PantrySwap>::new);
     let mut selected = use_signal(Vec::<GroceryRecipePreview>::new);
     let mut serving_inputs = use_signal(std::collections::HashMap::<Uuid, String>::new);
     let mut query = use_signal(String::new);
@@ -1222,16 +1223,76 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
     let pantry_pending = *pantry.state().read() == UseResourceState::Pending;
     let pantry_ready = !missing_only() || (!pantry_pending && current_pantry.is_some());
     let account_changed = auth.read().current_user_id != form_account();
+    let matcher = current_pantry
+        .as_ref()
+        .filter(|_| missing_only() && pantry_ready)
+        .map(|p| crate::pantry::feasibility::PantryMatcher::new(&p.entries));
+    let mut swap_rows = Vec::new();
+    let mut active_swaps = Vec::new();
+    let mut confirmed_labels = Vec::new();
+    if let Some(matcher) = matcher.as_ref() {
+        for recipe in selected.read().iter() {
+            for (index, primary) in recipe.ingredients.iter().enumerate() {
+                if matcher.is_available(&primary.name) || (primary.optional && !include_optional())
+                {
+                    continue;
+                }
+                let options: Vec<_> = primary
+                    .substitutes
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, s)| matcher.is_available(&s.name))
+                    .map(|(i, s)| (i, format!("{} {} {}", s.amount, s.unit, s.name)))
+                    .collect();
+                if options.is_empty() {
+                    continue;
+                }
+                let id = recipe.source.recipe_id;
+                let choice = swaps
+                    .read()
+                    .iter()
+                    .find(|s| {
+                        s.recipe == id
+                            && s.ingredient == index
+                            && options.iter().any(|(i, _)| *i == s.alternative)
+                    })
+                    .cloned();
+                if let Some(s) = choice.as_ref() {
+                    let replacement = &primary.substitutes[s.alternative];
+                    confirmed_labels.push(format!(
+                        "{}: using {} {} {} from the pantry for {}.",
+                        recipe.source.title,
+                        replacement.amount,
+                        replacement.unit,
+                        replacement.name,
+                        primary.name
+                    ));
+                    active_swaps.push(s.clone());
+                }
+                swap_rows.push((
+                    id,
+                    index,
+                    format!(
+                        "{} — {} {} {}",
+                        recipe.source.title, primary.amount, primary.unit, primary.name
+                    ),
+                    options,
+                    choice.map(|s| s.alternative),
+                ));
+            }
+        }
+    }
     let preview = if !pantry_ready {
         Err("Choose a pantry and wait for its ingredients to load.".into())
     } else {
-        build_filtered_requirements(
+        requirements_with_swaps(
             &selected(),
             current_pantry
                 .as_ref()
                 .filter(|_| missing_only())
                 .map(|p| p.entries.as_slice()),
             include_optional(),
+            &active_swaps,
         )
     };
     rsx! {
@@ -1321,7 +1382,7 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
                                 onclick: move |_| {
                                     recipe_mode.set(false);
                                     missing_only.set(false);
-                                    selected.set(Vec::new());
+                                    swaps.write().clear(); selected.set(Vec::new());
                                     serving_inputs.write().clear();
                                 },
                                 GroceryIcon {
@@ -1364,14 +1425,14 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
                             section { class: "grocery-ingredient-options", aria_label: "Ingredient options",
                                 label { class: "grocery-option-toggle",
                                     input { r#type: "checkbox", checked: missing_only(), disabled: frozen,
-                                        onchange: move |e| missing_only.set(e.checked()), }
+                                        onchange: move |e| { swaps.write().clear(); missing_only.set(e.checked()); }, }
                                     span { "Only missing ingredients" }
                                 }
                                 if missing_only() {
                                     label { r#for: "grocery-pantry", "Compare with pantry" }
                                     select { id: "grocery-pantry", class: "neumo-inset input input--shared",
                                         value: pantry_id().map(|id| id.to_string()).unwrap_or_default(), disabled: frozen,
-                                        onchange: move |e| pantry_id.set(Uuid::parse_str(&e.value()).ok()),
+                                        onchange: move |e| {swaps.write().clear(); pantry_id.set(Uuid::parse_str(&e.value()).ok());},
                                         option { value: "", disabled: true, selected: pantry_id().is_none(), "Choose a pantry" }
                                         if let Some(Ok(rows)) = pantries.read().as_ref() {
                                             for row in rows {
@@ -1389,6 +1450,20 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
                                     } else if pantries.read().as_ref().is_some_and(|r| r.as_ref().is_ok_and(Vec::is_empty)) {
                                         p { class: "grocery-muted", "Create a pantry first, or turn off ‘Only missing ingredients’ to copy all ingredients." }
                                         Link { to: Route::PantryNew {}, "Create pantry" }
+                                    }
+                                }
+                                for (id,index,label,options,chosen) in swap_rows {
+                                    label { "{label}"
+                                        select { disabled: frozen, value: chosen.map(|i|i.to_string()).unwrap_or_default(),
+                                            onchange: move |e| {
+                                                let mut choices = swaps.write();
+                                                if let Some(recipe) = selected.read().iter().find(|r| r.source.recipe_id == id) {
+                                                    recipe.choose_swap(index, e.value().parse().ok(), &mut choices);
+                                                }
+                                            },
+                                            option { value:"", "Keep original on list" }
+                                            for (i,name) in options { option {value:"{i}",selected:chosen == Some(i),"Use {name} from pantry"} }
+                                        }
                                     }
                                 }
                                 label { class: "grocery-option-toggle",
@@ -1615,6 +1690,7 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
                                             disabled: frozen,
                                             onclick: move |_| {
                                                 let removed=selected.write().remove(index);
+                                                swaps.write().retain(|s| s.recipe != removed.source.recipe_id);
                                                 serving_inputs.write().remove(&removed.source.recipe_id);
                                             },
                                             "✕"
@@ -1749,6 +1825,7 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
 
                                     "Review copied ingredients ({preview.as_ref().map(Vec::len).unwrap_or(0)})"
                                 }
+                                for label in &confirmed_labels { p { class: "grocery-muted", "{label}" } }
                                 match preview {
                                     Ok(items) => rsx! {
                                         if items.is_empty() {
@@ -1842,6 +1919,7 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
                                                     expected_revision: p.source.revision.clone(),
                                                 })
                                                 .collect(),
+                                            swaps: active_swaps.clone(),
                                             manual_items: extras,
                                             pantry: if missing_only() {
                                                 let Some(pantry) = current_pantry.as_ref().filter(|_| !pantry_pending) else {
@@ -1856,7 +1934,7 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
                                             error.set(Some(problem));
                                             return;
                                         }
-                                        if let Err(problem) = build_filtered_requirements(&selected(), current_pantry.as_ref().filter(|_| missing_only()).map(|p| p.entries.as_slice()), include_optional()) {
+                                        if let Err(problem) = requirements_with_swaps(&selected(), current_pantry.as_ref().filter(|_| missing_only()).map(|p| p.entries.as_slice()), include_optional(), &request.swaps) {
                                             error.set(Some(problem));
                                             return;
                                         }
@@ -1912,7 +1990,7 @@ fn GroceryListEditor(initial: Option<(Uuid, Uuid)>) -> Element {
                                                             reviewed.push(fresh);
                                                         }
                                                     }
-                                                    selected.set(reviewed);
+                                                    swaps.write().clear(); selected.set(reviewed);
                                                 }
                                                 error.set(Some(text));
                                             }

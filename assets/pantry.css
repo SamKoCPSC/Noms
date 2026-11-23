@@ -4,9 +4,67 @@
 .pantry-cookable-intro { margin-bottom: 8px; line-height: 1.6; }
 .pantry-cookable-hint { font-size: 12px; margin-bottom: 20px; line-height: 1.6; }
 .pantry-cookable-empty { padding: 18px 0; line-height: 1.6; color: var(--text-secondary); }
-.pantry-cookable-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
-.pantry-cookable-match { min-width: 0; }
-.pantry-cookable-match__status { margin: 0 0 10px; font-size: 13px; font-weight: 800; color: var(--text-primary); }
+.pantry-cookable-views {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.pantry-cookable-views .btn { display: inline-flex; align-items: center; gap: 8px; }
+.pantry-cookable-count { font-weight: 800; font-variant-numeric: tabular-nums; }
+.pantry-cookable-grid {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    column-gap: 20px;
+    row-gap: 10px;
+}
+.pantry-cookable-match {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    min-width: 0;
+    margin-bottom: 10px;
+}
+.pantry-cookable-match__status { margin: 0; font-size: 13px; font-weight: 800; color: var(--text-primary); }
+.pantry-cookable-shortage {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-block-size: 140px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: var(--surface);
+    overflow-wrap: anywhere;
+}
+.pantry-cookable-shortage__ingredients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.pantry-cookable-shortage__ingredients li {
+    max-width: 100%;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: var(--neumo-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+.pantry-cookable-shortage__substitutions {
+    margin: 0;
+    color: var(--success-ink);
+    font-size: 12px;
+    font-weight: 800;
+}
+.pantry-cookable-shortage__link {
+    margin-top: auto;
+    font-size: 13px;
+    font-weight: 800;
+}
 .pantry-cookable-match__status--optional { color: var(--text-secondary); }
 .pantry-cookable-pages { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 @media(max-width:1100px) { .pantry-cookable-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }

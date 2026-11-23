@@ -10,13 +10,24 @@ pub const MAX_EQUIPMENT: usize = 200;
 pub const MAX_PAYLOAD: usize = 2 * 1024 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RecipeShortage {
+    pub missing: Vec<String>,
+    pub substitutions_available: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PantryRecipePage {
     pub pantry_id: Uuid,
     pub pantry_revision: i64,
     pub recipes: Vec<crate::types::RecipeCardSummary>,
+    /// Totals across the library, independent of the current page or view.
+    pub cookable_count: usize,
+    pub almost_cookable_count: usize,
     /// Only returned recipes missing optional ingredients are included.
     #[serde(default)]
     pub optional_ingredients_missing: std::collections::BTreeMap<Uuid, usize>,
+    #[serde(default)]
+    pub shortages: std::collections::BTreeMap<Uuid, RecipeShortage>,
     pub next_cursor: Option<String>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
