@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image,ImageDraw,ImageFont
 import json,zipfile,html,sys
 R=Path(__file__).resolve().parent.parent
-scenes=[('specialty-coffee-shop','Specialty coffee shop','Sage cabinetry, espresso and pour-over equipment, fresh pastries and café seating.'),('farmers-market','Farmers’ market','Striped awnings, seasonal produce, bread, preserves and a wooden handcart.'),('artisan-bakery','Artisan bakery','A stone hearth oven, baker’s workbench, croissants, sourdough and fruit pastries.'),('night-market','Night market','Warm paper lanterns, bao, noodle bowls, sweets, tea and a shared dining table.'),('recipe-library','Recipe library','Cookbooks, a recipe-card catalog, shared reading table and a quiet reading nook.')]
+scenes=[('specialty-coffee-shop','Specialty coffee shop','Sage cabinetry, espresso and pour-over equipment, fresh pastries and café seating.'),('farmers-market','Farmers’ market','Four enlarged food carts form a corner with two on each side: dairy, bakery, pantry and street food, surrounding four picnic tables.'),('artisan-bakery','Artisan bakery','A stone hearth oven, baker’s workbench, croissants, sourdough and fruit pastries.'),('night-market','Night market','Warm paper lanterns, bao, noodle bowls, sweets, tea and a shared dining table.'),('recipe-library','Recipe library','Cookbooks, a recipe-card catalog, shared reading table and a quiet reading nook.')]
 for key,_,_ in scenes:
  p=R/'previews'/f'{key}.png';assert Image.open(p).size==(1600,1400),p
  for ext in ['blend','glb']:assert (R/'models'/f'{key}.{ext}').stat().st_size>10000

@@ -1,0 +1,18 @@
+{
+  "glb_bytes": 30022544,
+  "round_trip_import": "passed",
+  "mesh_objects": 2117,
+  "assembly_groups": 13,
+  "self_contained": true,
+  "features": {
+    "wooden_chairs": 12,
+    "window_chairs": 4,
+    "portraits": 11,
+    "art_glass_ribbons": 11,
+    "stair_treads": 24,
+    "blue_window_panels": 18,
+    "study_laptops": 4,
+    "open_study_books": 5
+  },
+  "animation": "static, assembly metadata only"
+}

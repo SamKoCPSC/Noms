@@ -14,10 +14,19 @@ async def main(args):
         context = await browser.new_context(viewport={'width': 393, 'height': 852})
         await context.add_init_script(CLOCK)
         page = await context.new_page()
+        # Software WebGL can spend over 30 seconds warming the complete asset set.
+        page.set_default_timeout(120000)
         errors = []
         page.on('pageerror', lambda e: errors.append(str(e)))
+        page.on('console', lambda m: print('BROWSER:', m.text, flush=True) if m.type == 'error' else None)
         await page.goto(args.url)
         await page.wait_for_selector('.about-tour.is-flight')
+        # Keep focus on the real mascot control while the paused frame clock
+        # lets the models load. Opening the story must transfer that focus.
+        pause = page.locator('[data-penguini-pause]')
+        await pause.wait_for(state='visible', timeout=15000)
+        await pause.focus()
+        assert await pause.evaluate('button => document.activeElement === button')
         for _ in range(400):
             await page.evaluate('step(1)')
             await page.wait_for_timeout(30)
@@ -25,6 +34,8 @@ async def main(args):
                 break
         else:
             raise AssertionError('Loading did not finish')
+        active = await page.locator('#story-canvas').get_attribute('data-active-chapter')
+        assert await page.evaluate('document.activeElement.id') == f'title-{active}'
         print('READY', flush=True)
         canvas = page.locator('#story-canvas')
         assert await canvas.get_attribute('data-scene-instances') == '12'
@@ -33,8 +44,13 @@ async def main(args):
             await page.evaluate('(i)=>scrollTo(0,document.querySelectorAll(".waypoint")[i].getBoundingClientRect().top+scrollY)', i)
             await page.wait_for_timeout(150)
             await page.evaluate('step(45)')
-        for model in ('corporate-office', 'library', 'supermarket'):
-            assert await page.locator('#about-tour').get_attribute(f'data-{model}-state') == 'ready'
+        for model in ('corporate-office', 'library', 'supermarket', 'brick-kitchen', 'bakery', 'farmers-market', 'social-kitchen', 'riverside-campsite'):
+            state = await page.locator('#about-tour').get_attribute(f'data-{model}-state')
+            assert state == 'ready', f'{model}: {state}; errors: {errors}'
+        for model in ('kitchen', 'library', 'bedroom', 'supermarket', 'office', 'corporate-office', 'brick-kitchen', 'bakery', 'farmers-market', 'social-kitchen', 'riverside-campsite', 'garden'):
+            groups = await canvas.get_attribute(f'data-{model}-groups')
+            expected = 2 if model in ('farmers-market', 'riverside-campsite', 'garden') else 1
+            assert groups.count('Penguin plush ') == expected, (model, groups)
         for i in args.stops:
             await go(i)
             card = page.locator('.story-panel[data-active=true]')
@@ -52,12 +68,45 @@ async def main(args):
                 assert await card.get_attribute('data-model') == str(asset)
                 assert await canvas.get_attribute('data-shadow-room') == chapter
                 assert await canvas.get_attribute(f'data-{model}-groups')
+                if model == 'library':
+                    groups = await canvas.get_attribute('data-library-groups')
+                    for name in ('Full turn spiral staircase', 'Student books and coding laptop', 'Window facing lounge chairs', 'Suspended coloured art glass'):
+                        assert name in groups, groups
                 await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-' + model)))
             if i == 5:
                 assert await card.get_attribute('data-model') == '5'
                 assert await canvas.get_attribute('data-shadow-room') == 'job-search'
                 assert 'Humorous framed company posters' in await canvas.get_attribute('data-corporate-office-groups')
                 await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-job-search')))
+            if i == 6:
+                assert await card.get_attribute('data-model') == '8'
+                assert await canvas.get_attribute('data-shadow-room') == 'same-idea'
+                assert float(await canvas.get_attribute('data-brick-kitchen-assembly-frame')) == 160
+                assert 'Front dining peninsula' in await canvas.get_attribute('data-brick-kitchen-groups')
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-brick-kitchen')))
+            if i == 7:
+                assert await card.get_attribute('data-model') == '9'
+                assert float(await canvas.get_attribute('data-bakery-assembly-frame')) == 160
+                groups = await canvas.get_attribute('data-bakery-groups')
+                assert 'Reversible dough sheeter' in groups and 'Refrigerated pastry counter' in groups
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-bakery')))
+            if i == 8:
+                assert await card.get_attribute('data-model') == '10'
+                assert await canvas.get_attribute('data-shadow-room') == 'accessible'
+                assert float(await canvas.get_attribute('data-farmers-market-assembly-frame')) == 160
+                groups = await canvas.get_attribute('data-farmers-market-groups')
+                for name in ('Farmhouse dairy cart', 'Village bakery cart', 'Farm pantry and eggs cart', 'Ready to eat market bites cart'):
+                    assert name in groups, groups
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-farmers-market')))
+            if i in (9, 10):
+                model, asset, chapter = {9: ('social-kitchen', 3, 'no-disruptions'), 10: ('riverside-campsite', 11, 'your-privacy')}[i]
+                assert await card.get_attribute('data-model') == str(asset)
+                assert await canvas.get_attribute('data-shadow-room') == chapter
+                assert float(await canvas.get_attribute(f'data-{model}-assembly-frame')) == 160
+                groups = await canvas.get_attribute(f'data-{model}-groups')
+                required = ('Prime rib island spread', 'Cooktop soup and steak sauce', 'Four bowls of soup') if i == 9 else ('Two-storey cedar cabin', 'Winding river', 'Camp stove kettle and hearty food')
+                assert all(name in groups for name in required), groups
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-' + model)))
             if i == 2:
                 assert frames[3] == 1, frames
             print('STOP', i, state, flush=True)
@@ -68,32 +117,63 @@ async def main(args):
         eye = list(map(float, (await canvas.get_attribute('data-camera')).split(',')))
         assert all((abs(a - b) < 0.01 for a, b in zip(eye, [4.1875, 3.54375, 2.375]))), eye
         await page.screenshot(timeout=60000, path=str(args.output))
-        await go(6)
+        await go(8)
         for w, h in [(360, 640), (1280, 900), (393, 852)]:
             await page.set_viewport_size({'width': w, 'height': h})
             await page.wait_for_timeout(500)
             await page.evaluate('step(25)')
-            await go(6)
+            await go(8)
             assert abs(float(await canvas.evaluate('c=>c.width/c.height-c.getBoundingClientRect().width/c.getBoundingClientRect().height'))) < 0.003
-            assert await page.locator('.story-panel[data-active=true]').get_attribute('data-panel') == '6'
+            assert await page.locator('.story-panel[data-active=true]').get_attribute('data-panel') == '8'
+            if w == 1280:
+                await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-farmers-market-desktop')))
+                for stop, model in ((9, 'social-kitchen'), (10, 'riverside-campsite')):
+                    await go(stop)
+                    assert await page.locator('.story-panel[data-active=true]').get_attribute('data-panel') == str(stop)
+                    assert float(await canvas.get_attribute(f'data-{model}-assembly-frame')) == 160
+                    await page.screenshot(timeout=60000, path=str(args.output.with_stem(args.output.stem + '-' + model + '-desktop')))
             print('RESIZE', w, h, flush=True)
         await page.emulate_media(reduced_motion='reduce')
         await page.evaluate('step(2)')
         await page.wait_for_selector('.about-tour.is-reader')
         assert await page.locator('.about-tour.is-reader').count() == 1
         assert await page.locator('.story-panel[inert]').count() == 0
-        for stop in (1, 3, 5):
-            selector = f'#panel-{stop} .office-fallback img'
+        for stop in (1, 3, 5, 6, 7, 8, 9, 10):
+            fallback = 'garden' if stop in (8, 10) else 'kitchen' if stop in (6, 7, 9) else 'office'
+            selector = f'#panel-{stop} .{fallback}-fallback img'
             poster = page.locator(selector)
             assert await poster.count() == 1
             await poster.scroll_into_view_if_needed()
-            await page.wait_for_function('(s)=>document.querySelector(s).naturalWidth > 0', arg=selector)
+            await page.wait_for_function('(s)=>document.querySelector(s).naturalWidth > 0', arg=selector, polling=50)
+        assert not errors, errors
+        # Re-enter loading, then force the runtime's context-loss fallback.
+        # Mode changes hide the loader before the gate updates its ARIA state.
+        await page.emulate_media(reduced_motion='no-preference')
+        await page.wait_for_selector('.about-tour.is-flight')
+        await pause.wait_for(state='visible', timeout=15000)
+        await pause.focus()
+        active = await canvas.get_attribute('data-active-chapter')
+        await canvas.evaluate("canvas => canvas.dispatchEvent(new Event('webglcontextlost', {cancelable:true}))")
+        await page.wait_for_selector('.about-tour.is-reader')
+        assert await page.evaluate('document.activeElement.id') == f'title-{active}'
+
+        # An unrelated focused control must retain ownership on later updates.
+        await page.evaluate("""() => {
+            const button = document.createElement('button');
+            button.id = 'outside-tour-focus';
+            button.textContent = 'Outside the tour';
+            document.body.append(button);
+            button.focus();
+        }""")
+        await page.emulate_media(reduced_motion='reduce')
+        await page.wait_for_function("document.getElementById('mode-toggle').textContent === 'Reduced motion'", polling=25)
+        assert await page.evaluate('document.activeElement.id') == 'outside-tour-focus'
         assert not errors, errors
         await browser.close()
-        print('PASS: full viewport, centered overlay, independent arrivals, original camera, resize, reduced motion', flush=True)
+        print('PASS: full viewport, centered overlay, independent arrivals, original camera, resize, reduced motion, loader focus recovery', flush=True)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='http://localhost:8765')
     parser.add_argument('--output', type=Path, default=Path('/tmp/about-overlay-travel.png'))
-    parser.add_argument('--stops', type=int, nargs='+', default=[0, 1, 2, 3, 4, 5, 6, 7, 10, 11])
+    parser.add_argument('--stops', type=int, nargs='+', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
     asyncio.run(main(parser.parse_args()))

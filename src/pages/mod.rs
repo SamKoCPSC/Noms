@@ -19,6 +19,7 @@ mod draft_merge_review;
 mod draft_save;
 mod explore;
 mod home;
+mod home_scene;
 mod how_to;
 mod login;
 #[cfg(test)]

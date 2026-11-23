@@ -1,0 +1,74 @@
+[
+  {
+    "id": "kitchen",
+    "source": "assets/about/kitchen-baked.glb",
+    "sha256": "eae324d897670673bfcdc24dda2197f6370a430e8f449a7860e91db56d9ee4f9",
+    "triangles": 447855
+  },
+  {
+    "id": "library",
+    "source": "assets/about/library-baked.glb",
+    "sha256": "d7962ca0e1c998141a6fc01ca876dc7aa3b04316a35696b5e173f7502b46665e",
+    "triangles": 1243534
+  },
+  {
+    "id": "bedroom",
+    "source": "assets/about/bedroom-baked.glb",
+    "sha256": "46e1874e0cb1e83c35afb198924bbf99863fe2dd3dc3ebb4fcee749519714439",
+    "triangles": 313206
+  },
+  {
+    "id": "supermarket",
+    "source": "assets/about/supermarket-baked.glb",
+    "sha256": "5c1bf4f46fdb5d6742760e789f6b6672293f6532d58de9ae73b6c3ff3e386fa1",
+    "triangles": 713206
+  },
+  {
+    "id": "office",
+    "source": "assets/about/office-baked.glb",
+    "sha256": "d0f7e51d9a76e63d1de631ec3c0d52e63ef1cb3c5b747b33436f976598eb3184",
+    "triangles": 232771
+  },
+  {
+    "id": "corporate-office",
+    "source": "assets/about/corporate-office-baked.glb",
+    "sha256": "a260257dfc2522bd81b4fe766378f479b60bd5c39fdc551524c484e43618153d",
+    "triangles": 267670
+  },
+  {
+    "id": "brick-kitchen",
+    "source": "assets/about/brick-kitchen-baked.glb",
+    "sha256": "80f1a9f3fe3ff245e85c916a5496249e01280b595991f8cfbea0e3f53ad024f6",
+    "triangles": 335085
+  },
+  {
+    "id": "bakery",
+    "source": "assets/about/bakery-baked.glb",
+    "sha256": "1f19a60122b84bba3577bb41e0bda41e589696fb13ec37694486f6a091ec2ddd",
+    "triangles": 849989
+  },
+  {
+    "id": "farmers-market",
+    "source": "assets/about/farmers-market-baked.glb",
+    "sha256": "0c609f792fb21ef7547eb4493b88fcd855db863a98ada8eee64dca563a363095",
+    "triangles": 786584
+  },
+  {
+    "id": "social-kitchen",
+    "source": "assets/about/social-kitchen-baked.glb",
+    "sha256": "7b2c79b20089769afd73a505d3b1720e07cc073b63539be25398397f2ba22f16",
+    "triangles": 365415
+  },
+  {
+    "id": "riverside-campsite",
+    "source": "assets/about/riverside-campsite-baked.glb",
+    "sha256": "1e0638bcc33761a047f385b82d58ddc058b92a7ed18ebf8e2cb8a52f520cf6ad",
+    "triangles": 161725
+  },
+  {
+    "id": "garden",
+    "source": "assets/about/garden-baked.glb",
+    "sha256": "0cd952395e5898500a1106486411edc5374d182b77d793e500ee5b1a2fccacfa",
+    "triangles": 383811
+  }
+]

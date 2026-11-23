@@ -72,6 +72,7 @@ struct State {
     dirty: bool,
     active: usize,
     focus_destination: Option<usize>,
+    focus_loader_on_entry: bool,
     last: f64,
     time: f32,
     frames: u64,
@@ -117,6 +118,9 @@ pub fn start() -> Result<(), JsValue> {
     let doc = window
         .document()
         .ok_or_else(|| JsValue::from_str("No document"))?;
+    if el(&doc, "about-tour")?.has_attribute("data-village-layout-url") {
+        return super::village_browser::start();
+    }
     let canvas: HtmlCanvasElement = el(&doc, "story-canvas")?.dyn_into()?;
     let media = window
         .match_media("(prefers-reduced-motion: reduce)")?
@@ -163,6 +167,7 @@ pub fn start() -> Result<(), JsValue> {
         dirty: true,
         active: usize::MAX,
         focus_destination: None,
+        focus_loader_on_entry: false,
         last: 0.,
         time: 0.,
         frames: 0,
@@ -324,6 +329,29 @@ pub fn start() -> Result<(), JsValue> {
         s.apply_mode();
         s.navigate(i, false, false);
     });
+    listen(
+        &state,
+        el(&doc, "story-three-canvas")?.into(),
+        "webglcontextlost",
+        |s, event| {
+            event.prevent_default();
+            // A baked environment render target cannot survive context loss.
+            // Keep navigation available through the existing renderer.
+            if let Some(renderer) = &mut s.renderer {
+                renderer.three_tour = None;
+            }
+            let _ = s.root.set_attribute("data-three-tour-state", "fallback");
+            s.dirty = true;
+        },
+    );
+    listen(
+        &state,
+        el(&doc, "story-three-canvas")?.into(),
+        "tourassetready",
+        |s, _| {
+            s.dirty = true;
+        },
+    );
     {
         let mut s = state.borrow_mut();
         s.apply_mode();
@@ -362,6 +390,7 @@ pub fn start() -> Result<(), JsValue> {
     Ok(())
 }
 pub fn stop() {
+    super::village_browser::stop();
     RUNTIME.with(|slot| {
         if let Some(s) = slot.borrow_mut().take() {
             let mut s = s.borrow_mut();
@@ -397,22 +426,16 @@ fn maybe_load_models(state: &StateRef) {
                 ]
                 .as_slice(),
             ),
-            (
-                "potluck",
-                [
-                    "data-potluck-window-url",
-                    "data-potluck-tv-url",
-                    "data-potluck-pastry-url",
-                    "data-potluck-salt-url",
-                    "data-potluck-bbq-url",
-                ]
-                .as_slice(),
-            ),
+            ("social-kitchen", [].as_slice()),
             ("bedroom", ["data-bedroom-prints-url"].as_slice()),
             ("garden", ["data-garden-pastry-url"].as_slice()),
             ("corporate-office", [].as_slice()),
             ("library", [].as_slice()),
             ("supermarket", [].as_slice()),
+            ("brick-kitchen", [].as_slice()),
+            ("bakery", [].as_slice()),
+            ("farmers-market", [].as_slice()),
+            ("riverside-campsite", [].as_slice()),
         ]
         .into_iter()
         .map(|(name, images)| {
@@ -484,9 +507,52 @@ fn maybe_load_models(state: &StateRef) {
                 models.remove(0),
                 models.remove(0),
                 models.remove(0),
+                models.remove(0),
+                models.remove(0),
+                models.remove(0),
+                models.remove(0),
             ))
         }
         .await;
+        // Await the current stop before releasing the shared loading curtain.
+        // The legacy renderer remains the fallback if WebGL2 or the bake fails.
+        let three_context = weak.upgrade().and_then(|state| {
+            let s = state.borrow();
+            let legacy = s
+                .window
+                .location()
+                .search()
+                .unwrap_or_default()
+                .split('&')
+                .any(|v| {
+                    matches!(
+                        v.trim_start_matches('?'),
+                        "kitchen=legacy" | "renderer=legacy"
+                    )
+                });
+            (result.is_ok() && s.generation == generation && !legacy).then(|| {
+                (
+                    s.doc.clone(),
+                    s.root.clone(),
+                    s.active.min(flight::COUNT - 1),
+                )
+            })
+        });
+        let three = if let Some((doc, root, initial)) = three_context {
+            match super::three_tour::ThreeTour::load(&doc, &root, initial).await {
+                Ok(view) => {
+                    let _ = root.set_attribute("data-three-tour-state", "ready");
+                    Some(view)
+                }
+                Err(error) => {
+                    tracing::warn!(?error, "Three tour uses legacy fallback");
+                    let _ = root.set_attribute("data-three-tour-state", "fallback");
+                    None
+                }
+            }
+        } else {
+            None
+        };
         if let Some(state) = weak.upgrade() {
             let mut s = state.borrow_mut();
             if s.generation != generation {
@@ -496,22 +562,30 @@ fn maybe_load_models(state: &StateRef) {
                 Ok((
                     (kitchen, kitchen_images),
                     (office, office_images),
-                    (potluck, potluck_images),
+                    (social_kitchen, social_kitchen_images),
                     (bedroom, bedroom_images),
                     (garden, garden_images),
                     (corporate_office, corporate_office_images),
                     (library, library_images),
                     (supermarket, supermarket_images),
+                    (brick_kitchen, brick_kitchen_images),
+                    (bakery, bakery_images),
+                    (farmers_market, farmers_market_images),
+                    (riverside_campsite, riverside_campsite_images),
                 )) => s.renderer.as_mut().is_some_and(|r| {
                     r.upload_models([
                         (&kitchen, &kitchen_images),
                         (&office, &office_images),
-                        (&potluck, &potluck_images),
+                        (&social_kitchen, &social_kitchen_images),
                         (&bedroom, &bedroom_images),
                         (&garden, &garden_images),
                         (&corporate_office, &corporate_office_images),
                         (&library, &library_images),
                         (&supermarket, &supermarket_images),
+                        (&brick_kitchen, &brick_kitchen_images),
+                        (&bakery, &bakery_images),
+                        (&farmers_market, &farmers_market_images),
+                        (&riverside_campsite, &riverside_campsite_images),
                     ])
                     .is_ok()
                 }),
@@ -520,12 +594,16 @@ fn maybe_load_models(state: &StateRef) {
             for name in [
                 "kitchen",
                 "office",
-                "potluck",
+                "social-kitchen",
                 "bedroom",
                 "garden",
                 "corporate-office",
                 "library",
                 "supermarket",
+                "brick-kitchen",
+                "bakery",
+                "farmers-market",
+                "riverside-campsite",
             ] {
                 let _ = s.root.set_attribute(
                     &format!("data-{name}-state"),
@@ -533,6 +611,13 @@ fn maybe_load_models(state: &StateRef) {
                 );
             }
             if loaded {
+                // Baked scenes and their fallback geometry are always fully assembled.
+                for arrival in &mut s.arrivals {
+                    arrival.settle();
+                }
+                if let Some(renderer) = &mut s.renderer {
+                    renderer.three_tour = three;
+                }
                 s.models_ready = true;
                 if s.flying {
                     s.gate = Gate::Warming;
@@ -623,12 +708,20 @@ impl State {
             }
         }
     }
+    fn loader_contains_focus(&self) -> bool {
+        self.doc
+            .get_element_by_id("tour-loader")
+            .is_some_and(|loader| {
+                self.doc
+                    .active_element()
+                    .is_some_and(|focused| loader.contains(Some(&focused)))
+            })
+    }
     fn sync_gate(&mut self) {
+        self.sync_gate_with_focus(self.loader_contains_focus());
+    }
+    fn sync_gate_with_focus(&mut self, focus_in_loader: bool) {
         let blocked = self.gate.blocked();
-        let focus_loading_control = self
-            .doc
-            .active_element()
-            .is_some_and(|e| e.id() == "tour-loader-read");
         let _ = self.root.set_attribute(
             "data-entry-state",
             if blocked { "loading" } else { "ready" },
@@ -653,8 +746,11 @@ impl State {
         if !blocked {
             self.loading_timeout = None;
             self.loading_phrases = None;
-            if focus_loading_control {
-                self.focus_chapter(self.active.min(flight::COUNT - 1));
+            if focus_in_loader || self.focus_loader_on_entry {
+                self.focus_loader_on_entry = self.flying;
+                if !self.flying {
+                    self.focus_chapter(self.active.min(flight::COUNT - 1));
+                }
             }
         }
     }
@@ -668,12 +764,16 @@ impl State {
         for name in [
             "kitchen",
             "office",
-            "potluck",
+            "social-kitchen",
             "bedroom",
             "garden",
             "corporate-office",
             "library",
             "supermarket",
+            "brick-kitchen",
+            "bakery",
+            "farmers-market",
+            "riverside-campsite",
         ] {
             let _ = self
                 .root
@@ -721,6 +821,9 @@ impl State {
         let _ = self.motion_button.remove_attribute("disabled");
     }
     fn apply_mode(&mut self) {
+        // Changing mode can hide the loader and blur its focused control before
+        // sync_gate runs. Capture ownership while the control is still visible.
+        let focus_in_loader = self.loader_contains_focus();
         let was_flying = self.flying;
         self.flying = self.renderer.is_some()
             && !self.reduced
@@ -797,7 +900,7 @@ impl State {
             }
             self.gate = Gate::Open;
         }
-        self.sync_gate();
+        self.sync_gate_with_focus(focus_in_loader);
         self.resize();
         self.buttons();
         self.dirty = true;
@@ -937,8 +1040,7 @@ impl State {
         }
         self.last = now;
         let motion = !self.paused && !self.gate.blocked();
-        // Warm-up stays behind the curtain. Only visible frames advance the intro;
-        // ambient pause (the mobile default) does not prevent its one-time playback.
+        // Ambient pause does not prevent scroll-driven camera movement.
         let blend = 1. - (-dt * 11.).exp();
         self.progress += (self.target - self.progress) * blend;
         if (self.target - self.progress).abs() < 0.0004 {
@@ -988,9 +1090,13 @@ impl State {
             let _ = panel.set_attribute("aria-hidden", if interactive { "false" } else { "true" });
             if interactive {
                 let _ = panel.remove_attribute("inert");
-                if self.focus_destination == Some(i) {
+                // The gate opens after this loop, while every panel is still
+                // inert. Restore loader focus on the next interactive panel,
+                // after any entry-fragment alignment has selected its chapter.
+                if self.focus_destination == Some(i) || self.focus_loader_on_entry {
                     self.focus_chapter(i);
                     self.focus_destination = None;
+                    self.focus_loader_on_entry = false;
                 }
             } else {
                 let _ = panel.set_attribute("inert", "");
@@ -1019,8 +1125,8 @@ impl State {
                 &format!("{:.3}", self.arrivals[4].frame()),
             );
             let _ = self.canvas.set_attribute(
-                "data-potluck-assembly-frame",
-                &format!("{:.3}", self.arrivals[7].frame()),
+                "data-social-kitchen-assembly-frame",
+                &format!("{:.3}", self.arrivals[9].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-bedroom-assembly-frame",
@@ -1041,6 +1147,22 @@ impl State {
             let _ = self.canvas.set_attribute(
                 "data-supermarket-assembly-frame",
                 &format!("{:.3}", self.arrivals[3].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-brick-kitchen-assembly-frame",
+                &format!("{:.3}", self.arrivals[6].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-bakery-assembly-frame",
+                &format!("{:.3}", self.arrivals[7].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-farmers-market-assembly-frame",
+                &format!("{:.3}", self.arrivals[8].frame()),
+            );
+            let _ = self.canvas.set_attribute(
+                "data-riverside-campsite-assembly-frame",
+                &format!("{:.3}", self.arrivals[10].frame()),
             );
             let _ = self.canvas.set_attribute(
                 "data-arrival-frames",

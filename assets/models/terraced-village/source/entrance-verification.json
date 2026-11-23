@@ -1,0 +1,306 @@
+{
+  "entrances": [
+    {
+      "id": "kitchen",
+      "surface": "brick",
+      "floor_height": 0.5469736330227177,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        -30,
+        -0.25905742780696167,
+        45
+      ],
+      "approach_end": [
+        -35.29497574754137,
+        0.03000000000000001,
+        41.117991358509094
+      ],
+      "threshold": [
+        -34.33234240101564,
+        0.5469736330227177,
+        36.589168438570994
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "library",
+      "surface": "stone",
+      "floor_height": 0.8391354106265441,
+      "sampled_floor": true,
+      "steps": 2,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        -49.5,
+        -0.06409684261098614,
+        16.5
+      ],
+      "approach_end": [
+        -44.66920479520606,
+        0.45,
+        10.948937268795802
+      ],
+      "threshold": [
+        -45.53619854358885,
+        0.8391354106265441,
+        6.870062198354793
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "bedroom",
+      "surface": "brick",
+      "floor_height": 1.312571802437866,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        -24,
+        0.2884799720851795,
+        -12
+      ],
+      "approach_end": [
+        -26.852090011303947,
+        0.8691951268852474,
+        -16.940983146148195
+      ],
+      "threshold": [
+        -24.895368772850837,
+        1.312571802437866,
+        -21.137188812579065
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "supermarket",
+      "surface": "stone",
+      "floor_height": 1.2795256806595563,
+      "sampled_floor": true,
+      "steps": 2,
+      "planting_beds": 1,
+      "corner_plantings": 2,
+      "approach_start": [
+        22.5,
+        0.8058332979727596,
+        -22.5
+      ],
+      "approach_end": [
+        15.371862232535367,
+        0.923,
+        -24.488349052319634
+      ],
+      "threshold": [
+        13.80975442155269,
+        1.2795256806595563,
+        -28.35470640606578
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "office",
+      "surface": "timber",
+      "floor_height": 1.1441834167604603,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        24,
+        0.6436147204941317,
+        -12
+      ],
+      "approach_end": [
+        29.893071829678696,
+        0.7130000000000001,
+        -9.973008355266588
+      ],
+      "threshold": [
+        31.476625744157673,
+        1.1441834167604603,
+        -14.323784952603932
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "corporate-office",
+      "surface": "stone",
+      "floor_height": 0.7621672837359856,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        40.5,
+        -0.019752043354193005,
+        34.5
+      ],
+      "approach_end": [
+        38.48791431765195,
+        0.257,
+        26.273951517888978
+      ],
+      "threshold": [
+        41.58598804159454,
+        0.7621672837359856,
+        22.833190090382487
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "brick-kitchen",
+      "surface": "brick",
+      "floor_height": 0.5002478102969445,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        9,
+        -0.3743703086346722,
+        51
+      ],
+      "approach_end": [
+        13.5757577254106,
+        -0.04000337126989244,
+        47.07133726050847
+      ],
+      "threshold": [
+        12.37742728091556,
+        0.5002478102969445,
+        42.59910022007822
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "bakery",
+      "surface": "brick",
+      "floor_height": 0.7459593799738609,
+      "sampled_floor": true,
+      "steps": 2,
+      "planting_beds": 1,
+      "corner_plantings": 2,
+      "approach_start": [
+        -1.5,
+        0.2587474866112435,
+        12
+      ],
+      "approach_end": [
+        -5.524647018640822,
+        0.36200000000000004,
+        12.788230010513821
+      ],
+      "threshold": [
+        -8.375320937557095,
+        0.7459593799738609,
+        8.717043671372545
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "farmers-market",
+      "surface": "gravel",
+      "floor_height": 0.858503453539079,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        18,
+        -0.036925518060626134,
+        22.5
+      ],
+      "approach_end": [
+        14.460572229427779,
+        0.41500000000000004,
+        17.240276704693287
+      ],
+      "threshold": [
+        16.138533138507057,
+        0.858503453539079,
+        12.076039375948428
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "social-kitchen",
+      "surface": "stone",
+      "floor_height": 1.8734267275843441,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        15,
+        1.0673175922618916,
+        -52.5
+      ],
+      "approach_end": [
+        9.66220156422671,
+        1.3250000000000002,
+        -52.7902354597489
+      ],
+      "threshold": [
+        8.231454048750273,
+        1.8734267275843441,
+        -57.193627509857315
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "riverside-campsite",
+      "surface": "timber",
+      "floor_height": 1.8334310739463486,
+      "sampled_floor": true,
+      "steps": 3,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        -28.5,
+        1.0499612845327462,
+        -45
+      ],
+      "approach_end": [
+        -40.16569911296329,
+        1.308,
+        -51.909451282176796
+      ],
+      "threshold": [
+        -38.208977874510175,
+        1.8334310739463486,
+        -56.10565694860767
+      ],
+      "approach_clear_of_neighbors": true
+    },
+    {
+      "id": "garden",
+      "surface": "gravel",
+      "floor_height": 2.1344556281166502,
+      "sampled_floor": true,
+      "steps": 2,
+      "planting_beds": 2,
+      "corner_plantings": 2,
+      "approach_start": [
+        4.5,
+        1.3023263958223912,
+        -76.5
+      ],
+      "approach_end": [
+        -4.990326004656524,
+        1.7630000000000001,
+        -81.52364502619889
+      ],
+      "threshold": [
+        -5.423487755740595,
+        2.1344556281166502,
+        -86.4747328760959
+      ],
+      "approach_clear_of_neighbors": true
+    }
+  ],
+  "camera_collisions": [],
+  "added_meshes": 592
+}

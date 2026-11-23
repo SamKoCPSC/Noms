@@ -5,9 +5,9 @@ use crate::components::base::{NavigationArtwork, PageIconKind, SharedModal};
 use crate::components::informational::PageMeta;
 use crate::Route;
 
+use super::home_scene::{HomeScene, Scene};
+
 const HOME_CSS: Asset = asset!("/assets/home.css");
-const TABLE: Asset = asset!("/assets/landing/table.webp");
-const COOKING: Asset = asset!("/assets/landing/cooking.webp");
 const MOBILE_BROWSE: Asset = asset!("/assets/landing/mobile-browse.webp");
 const MOBILE_EDIT: Asset = asset!("/assets/landing/mobile-edit.webp");
 const COOK_ONE: Asset = asset!("/assets/landing/cook-1.webp");
@@ -94,7 +94,7 @@ pub fn Home() -> Element {
                     LandingActions { signed_in: auth.is_authenticated, search: true }
                 }
                 div { class: "landing-hero-visual",
-                    img { src: TABLE, alt: "A shared table with homemade pasta, soup, bread, and salad", width: "1536", height: "1024", fetchpriority: "high" }
+                    HomeScene { scene: Scene::Kitchen }
                 }
             }
             div { class: "landing-promises landing-wrap", aria_label: "Noms commitments",
@@ -108,10 +108,7 @@ pub fn Home() -> Element {
                     h2 { id: "landing-mission-title", "Create and share your signature recipes." }
                     p { "Noms makes it easier for cooks from all backgrounds to save and discover their best dishes. Bringing together a community that's passionate about making and eating great food." }
                 }
-                figure {
-                    img { src: COOKING, alt: "Two home cooks preparing a meal together in a sunlit kitchen", width: "1536", height: "1024", loading: "lazy", decoding: "async" }
-                    figcaption { "Good food brings people together." }
-                }
+                HomeScene { scene: Scene::RecipeDesk, caption: "Good food brings people together." }
             }
             section { class: "landing-chapters landing-wrap", aria_label: "Six ways to use Noms",
                 for story in STORIES.iter().copied() {
@@ -185,6 +182,17 @@ pub fn Home() -> Element {
                 div { class: "landing-more-links",
                     Link { to: Route::About {}, "About Noms" }
                     Link { to: Route::HowTo {}, "How to use Noms" }
+                }
+                p { class: "landing-tiny",
+                    "Photo credits · "
+                    a { href: "https://commons.wikimedia.org/wiki/File:Yangnyeom-chikin_1.jpg", "Korean fried chicken by anokarina" }
+                    " ("
+                    a { href: "https://creativecommons.org/licenses/by-sa/2.0/", "CC BY-SA 2.0" }
+                    ", cropped) · "
+                    a { href: "https://commons.wikimedia.org/wiki/File:You_Po_Mian%EF%BC%88_Oil_poured_noodles%EF%BC%89.webp", "Chili oil noodles by syctown" }
+                    " ("
+                    a { href: "https://creativecommons.org/licenses/by-sa/4.0/", "CC BY-SA 4.0" }
+                    ", cropped)"
                 }
             }
         }

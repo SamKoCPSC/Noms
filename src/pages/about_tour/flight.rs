@@ -16,6 +16,7 @@ const EYES: [[f32; 3]; 5] = [
 const YAWS: [f32; 5] = [0., 0.32, -0.28, 0.28, -0.22];
 pub struct Camera {
     pub eye: [f32; 3],
+    pub view: Mat4,
     pub vp: Mat4,
     pub progress: f32,
 }
@@ -50,6 +51,7 @@ pub fn camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
     let (origin, inverse) = route_origin(cycle);
     Camera {
         eye: point(origin, local.eye),
+        view: mul(local.view, inverse),
         vp: mul(local.vp, inverse),
         progress: cycle as f32 * 4. + local.progress,
     }
@@ -85,22 +87,34 @@ fn original_camera(p: f32, aspect: f32, pointer: [f32; 2]) -> Camera {
     eye[0] += pointer[0] * 0.055;
     eye[1] -= pointer[1] * 0.035;
     let target = [eye[0] - yaw.sin() * 10., eye[1], eye[2] - yaw.cos() * 10.];
+    let view = look_at(eye, target);
     Camera {
         eye,
-        vp: mul(perspective(FOV, aspect), look_at(eye, target)),
+        view,
+        vp: mul(perspective(FOV, aspect), view),
         progress: i as f32 + t,
     }
 }
 /// An upright three-quarter view matching the approved office reference.
 pub fn room_rotation(room: super::assembly::Room, mobile: bool) -> Mat4 {
-    let pitch = if room == super::assembly::Room::Garden {
+    let pitch = if matches!(
+        room,
+        super::assembly::Room::Garden
+            | super::assembly::Room::FarmersMarket
+            | super::assembly::Room::RiversideCampsite
+    ) {
         0.72
     } else {
         0.58
     };
     // The lower mobile slot adds apparent elevation through perspective.
     let pitch = if mobile { pitch - 0.30 } else { pitch };
-    let yaw = if room == super::assembly::Room::Office {
+    let yaw = if matches!(
+        room,
+        super::assembly::Room::Office
+            | super::assembly::Room::BrickKitchen
+            | super::assembly::Room::Library
+    ) {
         0.62
     } else {
         -0.62
@@ -320,6 +334,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn browser_view_preserves_projection_along_the_whole_route() {
+        for progress in [0., 0.4, 1., 3.6, 4.2, 8.7, 11.] {
+            let camera = camera(progress, 0.46, [0.2, -0.3]);
+            let projected = mul(perspective(FOV, 0.46), camera.view);
+            for (actual, expected) in camera.vp.iter().zip(projected) {
+                assert!((actual - expected).abs() < 0.0001);
+            }
+        }
+    }
+
+    #[test]
     fn twelve_stops_preserve_original_camera_motion() {
         assert_eq!(COUNT, 12);
         for sample in 0..=220 {
@@ -355,11 +380,15 @@ mod tests {
             include_bytes!("../../../assets/about/sams-kitchen-detailed.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-office.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-bedroom.glb").as_slice(),
-            include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-social-kitchen.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-garden.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-corporate-office.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
             include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-brick-kitchen.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-bakery.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-farmers-market.glb").as_slice(),
+            include_bytes!("../../../assets/about/sams-riverside-campsite.glb").as_slice(),
         ]
         .into_iter()
         .enumerate()
@@ -376,11 +405,15 @@ mod tests {
                     super::super::assembly::Room::Kitchen,
                     super::super::assembly::Room::Office,
                     super::super::assembly::Room::Bedroom,
-                    super::super::assembly::Room::Potluck,
+                    super::super::assembly::Room::SocialKitchen,
                     super::super::assembly::Room::Garden,
                     super::super::assembly::Room::CorporateOffice,
                     super::super::assembly::Room::Library,
                     super::super::assembly::Room::Supermarket,
+                    super::super::assembly::Room::BrickKitchen,
+                    super::super::assembly::Room::Bakery,
+                    super::super::assembly::Room::FarmersMarket,
+                    super::super::assembly::Room::RiversideCampsite,
                 ][i];
                 let rotation = room_rotation(room, w <= 700.);
                 let points: Vec<_> = mesh

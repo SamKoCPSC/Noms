@@ -11,7 +11,7 @@ for o in bpy.data.objects:
   face=bpy.data.objects.get(o.name.removesuffix('lettering')+'painted face')
   if face and face.data.materials and face.data.materials[0].name in ['ivory','paper','white','linen']:
    o.data.materials.clear();o.data.materials.append(bpy.data.materials.get('ink') or bpy.data.materials['sageDark'])
-if key=='farmers-market' and not scene.get('egg_stand_added'):
+if key=='farmers-market' and scene.get('revision',1)==1 and not scene.get('egg_stand_added'):
  # Farm eggs are displayed on a small raised stand, never directly on the paving.
  for o in bpy.data.objects:
   if o.name.startswith(('Open egg carton','Free range egg')):o.location.z+=.58

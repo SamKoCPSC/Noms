@@ -1,0 +1,252 @@
+{
+  "models": 12,
+  "shared_world": true,
+  "original_source_hashes_verified": true,
+  "consistent_lighting": true,
+  "diffuse_materials_display_baked": true,
+  "realtime_shadow_maps_required": false,
+  "assets": [
+    {
+      "id": "kitchen",
+      "bytes": 12077532,
+      "triangles": 447823,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "d656bdd3f1589f150183619161456b4eb01ab9f868bfdcbc0b89092535dc0ba1"
+    },
+    {
+      "id": "library",
+      "bytes": 22962984,
+      "triangles": 1243534,
+      "baked_materials": 2,
+      "clear_glass_materials": 5,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "3e0487b85e8474677921ff2d0b4c797170c2bbc8778716d9c6b4625d9346fc0d"
+    },
+    {
+      "id": "bedroom",
+      "bytes": 22601032,
+      "triangles": 1676174,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "b58897f3b02752eda35b649eaf2655ceb27f52b81c605005bef86e68e4200762"
+    },
+    {
+      "id": "supermarket",
+      "bytes": 17694068,
+      "triangles": 713206,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "447fd8dbfa199cf7c593d1e77af574ab1b9a951c3451d3f476567a607a456abc"
+    },
+    {
+      "id": "office",
+      "bytes": 18651264,
+      "triangles": 920051,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "fcf829a50ff48572d487421016433ff7404efb8aca876c407bc7517b296db4e3"
+    },
+    {
+      "id": "corporate-office",
+      "bytes": 10591132,
+      "triangles": 267670,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "239f643d52d291ddf1738adfdf67d458f9b70536e7309a7a09b8cfa031f6d500"
+    },
+    {
+      "id": "brick-kitchen",
+      "bytes": 11959752,
+      "triangles": 335085,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "c720a0a7b9bcdf92968839f4bd6f7f5779454c262a50b0a4063e3b94379d052d"
+    },
+    {
+      "id": "bakery",
+      "bytes": 17942080,
+      "triangles": 849989,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "d3385ad976a387f672e52bb8a6e571dcbef6986e38efdeff84010f40ac0f9cc1"
+    },
+    {
+      "id": "farmers-market",
+      "bytes": 19916348,
+      "triangles": 786584,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "8a55f09a1cc234eecd887d6f8b674e83e469d5b9a8fcb748f175a875bd2a3d06"
+    },
+    {
+      "id": "social-kitchen",
+      "bytes": 10185164,
+      "triangles": 365415,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "7cbe55cf207966da0bb73ac3b93d7e248e5c64054ee97b6e34e8136bf6c0638c"
+    },
+    {
+      "id": "riverside-campsite",
+      "bytes": 11328404,
+      "triangles": 164637,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "cdc34cd3582cf62368959516e120d7932c108656430e6969733aa88a3ab12522"
+    },
+    {
+      "id": "garden",
+      "bytes": 17491516,
+      "triangles": 921589,
+      "baked_materials": 2,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "04e699a863ec7469b756dc95e47512b98823f40f76fa519641c3a30fdb33ce2d"
+    },
+    {
+      "id": "world",
+      "bytes": 41761296,
+      "triangles": 1308886,
+      "baked_materials": 5,
+      "clear_glass_materials": 1,
+      "texture_dimensions": [
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ],
+        [
+          2048,
+          2048
+        ]
+      ],
+      "sha256": "b17d1e977cfd7051a766f4c5d7ce790969d8bbaf9f6bc8f0fe3844959cc478df"
+    }
+  ]
+}

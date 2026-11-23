@@ -1,5 +1,7 @@
 //! Collection portability boundaries; imported identities never grant database access.
-use crate::collection_json::{CollectionImportPreview, CollectionImportResult};
+use crate::collection_json::{
+    CollectionImportNames, CollectionImportPreview, CollectionImportResult,
+};
 
 #[cfg(all(test, feature = "server"))]
 #[path = "collection_portability_tests.rs"]
@@ -46,6 +48,34 @@ pub async fn inspect_collection_json(
     .map_err(|_| ServerFnError::new("File checks are busy. Try again shortly."))?
     .map_err(ServerFnError::new)?;
     let storage = crate::storage::get_storage_client();
+    let mut collections = parsed
+        .snapshot
+        .collections
+        .iter()
+        .map(|node| crate::collection_json::CollectionImportNamePreview {
+            portable_id: node.portable_id.clone(),
+            name: node.name.clone(),
+            already_exists: false,
+        })
+        .collect::<Vec<_>>();
+    let mut recipes = parsed
+        .recipes
+        .iter()
+        .map(
+            |(file, editor)| crate::collection_json::CollectionImportNamePreview {
+                portable_id: file.portable_id.clone(),
+                name: editor.title.clone(),
+                already_exists: false,
+            },
+        )
+        .collect::<Vec<_>>();
+    crate::security::run_with_database_budget(crate::security::DATABASE_EXECUTION_BUDGET, async {
+        mark_existing_names(&crate::db::get_pool(), user, &mut collections, true).await?;
+        mark_existing_names(&crate::db::get_pool(), user, &mut recipes, false).await
+    })
+    .await
+    .map_err(|_| ServerFnError::new("Name checks timed out. Check the file again."))?
+    .map_err(|_| ServerFnError::new("Could not check imported names. Check the file again."))?;
     let mut urls = vec![];
     for (_, mut editor) in parsed.recipes {
         urls.extend(super::recipe_json_media::external_urls(
@@ -56,10 +86,13 @@ pub async fn inspect_collection_json(
     urls.sort();
     urls.dedup();
     Ok(CollectionImportPreview {
+        owner_id: user,
         name: parsed.snapshot.collections[0].name.clone(),
         collection_count: parsed.snapshot.collections.len(),
         recipe_count: parsed.snapshot.recipes.len(),
         external_image_urls: urls,
+        collections,
+        recipes,
     })
 }
 
@@ -68,6 +101,7 @@ pub async fn import_collection_json(
     expected_account_id: Option<uuid::Uuid>,
     json: String,
     available_external_urls: Vec<String>,
+    names: Option<CollectionImportNames>,
 ) -> Result<CollectionImportResult, ServerFnError> {
     let user = crate::auth::account_binding::require_form_account(expected_account_id).await?;
     crate::security::enforce_user_request_budget(user, crate::security::RequestClass::Mutation)
@@ -78,6 +112,7 @@ pub async fn import_collection_json(
         user,
         &json,
         &available_external_urls,
+        &names.unwrap_or_default(),
     ))
     .await
     .map_err(|_| ServerFnError::new("Image checks are busy. Try again shortly."))?
@@ -90,6 +125,7 @@ pub(crate) async fn import_for_user(
     user: uuid::Uuid,
     json: &str,
     available: &[String],
+    names: &CollectionImportNames,
 ) -> Result<CollectionImportResult, ServerFnError> {
     if available.len() > crate::collection_json::MAX_IMAGES
         || available
@@ -98,7 +134,8 @@ pub(crate) async fn import_for_user(
     {
         return Err(ServerFnError::new("Too many image checks"));
     }
-    let parsed = crate::collection_json::parse(json).map_err(ServerFnError::new)?;
+    let mut parsed = crate::collection_json::parse(json).map_err(ServerFnError::new)?;
+    parsed.apply_names(names).map_err(ServerFnError::new)?;
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(12);
     let mut prepared = vec![];
     for (file, editor) in parsed.recipes {
@@ -168,9 +205,52 @@ pub(crate) async fn import_for_user(
         crate::db::create_collection_json_import(pool, user, parsed.snapshot.collections, prepared, covers, warnings)
     ).await.map_err(|_| ServerFnError::new("Import could not be confirmed in time. Check your collections before retrying."))?
         .map_err(|error| match error {
-            crate::db::DbError::CollectionNameTaken => ServerFnError::new("A collection in this import uses a name you already have, or repeats a name within the import. Rename the collection in the import file and try again."),
-            crate::db::DbError::RecipeNameTaken => ServerFnError::new("A recipe in this collection uses a name you already have. Rename the recipe in the import file and try again."),
+            crate::db::DbError::CollectionNameTaken => ServerFnError::new("A collection in this import uses a name you already have, or repeats a name within the import. Change its name in the preview and try again. Your original file is unchanged."),
+            crate::db::DbError::RecipeNameTaken => ServerFnError::new("A recipe in this collection uses a title you already have, or repeats a title within the import. Change its title in the preview and try again. Your original file is unchanged."),
             crate::db::DbError::ResourceLimitExceeded(_) | crate::db::DbError::CollectionLimitExceeded(_) => ServerFnError::new("Import exceeds your collection, recipe-version or image-review draft capacity. Free some capacity or import a smaller collection."),
             _ => ServerFnError::new("The collection import could not be completed. Check your collections before retrying."),
         })
+}
+
+#[cfg(feature = "server")]
+async fn mark_existing_names(
+    pool: &sqlx::PgPool,
+    user: uuid::Uuid,
+    entries: &mut [crate::collection_json::CollectionImportNamePreview],
+    collections: bool,
+) -> Result<(), sqlx::Error> {
+    if entries.is_empty() {
+        return Ok(());
+    }
+    let ids = entries
+        .iter()
+        .map(|entry| entry.portable_id.clone())
+        .collect::<Vec<_>>();
+    let names = entries
+        .iter()
+        .map(|entry| entry.name.clone())
+        .collect::<Vec<_>>();
+    // Match the database's exact uniqueness expressions, including whitespace
+    // normalization. Only names belonging to the authenticated actor are read.
+    let query = if collections {
+        "SELECT incoming.portable_id FROM unnest($2::text[], $3::text[]) AS incoming(portable_id, name) \
+         WHERE EXISTS (SELECT 1 FROM collections WHERE owner_id=$1 AND \
+         lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g'))) = \
+         lower(btrim(regexp_replace(incoming.name, '[[:space:]]+', ' ', 'g'))))"
+    } else {
+        "SELECT incoming.portable_id FROM unnest($2::text[], $3::text[]) AS incoming(portable_id, name) \
+         WHERE EXISTS (SELECT 1 FROM recipes WHERE user_id=$1 AND \
+         lower(btrim(regexp_replace(title, '[[:space:]]+', ' ', 'g'))) = \
+         lower(btrim(regexp_replace(incoming.name, '[[:space:]]+', ' ', 'g'))))"
+    };
+    let taken = sqlx::query_scalar::<_, String>(query)
+        .bind(user)
+        .bind(ids)
+        .bind(names)
+        .fetch_all(pool)
+        .await?;
+    for entry in entries {
+        entry.already_exists = taken.contains(&entry.portable_id);
+    }
+    Ok(())
 }

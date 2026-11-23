@@ -1,0 +1,26 @@
+{
+  "source": "User attachment",
+  "original_filename": "sams-kitchen-recipe-manager-16b14214b88e4c5fb93e97f7adacd535.blend",
+  "file": "models/sams-kitchen-recipe-manager.blend",
+  "sha256": "8a2139153fedbe73592e5b2e90541d855f9c570cf7dead5accb34faeb9640cf4",
+  "bytes": 9761715,
+  "revision": 13,
+  "review_page": "https://chatgpt.com/space/page_60c2cf7e836c8191a4c07002a7fdfc0c",
+  "blender_version": "4.3.2",
+  "view_settings": {
+    "transform": "AgX",
+    "look": "AgX - Medium High Contrast",
+    "exposure": -0.18000000715255737,
+    "gamma": 1.0
+  },
+  "packed_images": [
+    "APPROVED \u00b7 Sunday pasta design",
+    "Croissant v10 \u00b7 color",
+    "Croissant v10 \u00b7 normal",
+    "Croissant v10 \u00b7 roughness",
+    "laptop-noms-screen.png",
+    "recipe-book-spread.png"
+  ],
+  "assembly_controls": 18,
+  "master_unchanged": true
+}

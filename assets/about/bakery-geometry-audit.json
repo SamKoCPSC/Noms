@@ -1,0 +1,7520 @@
+[
+  {
+    "name": "Grout bed",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Oak miniature base",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.006",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.007",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.008",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.009",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.010",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.011",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.012",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.013",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.014",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.015",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.016",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.017",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.018",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.019",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.020",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.021",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.022",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.023",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.024",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.025",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.026",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.027",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.028",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.029",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.030",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.031",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.032",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.033",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.034",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.035",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.036",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.037",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.038",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.039",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.040",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.041",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.042",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.043",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.044",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.045",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.046",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.047",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.048",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.049",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.050",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.051",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.052",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.053",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.054",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.055",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.056",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.057",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.058",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.059",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.060",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.061",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.062",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.063",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.064",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.065",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.066",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.067",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.068",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.069",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.070",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.071",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.072",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.073",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.074",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.075",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.076",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.077",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.078",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.079",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.080",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.081",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.082",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.083",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.084",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.085",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.086",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.087",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.088",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.089",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.090",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.091",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.092",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.093",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.094",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.095",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.096",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.097",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.098",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.099",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.100",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.101",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.102",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.103",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.104",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.105",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.106",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.107",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.108",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.109",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.110",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.111",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.112",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.113",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.114",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.115",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.116",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.117",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.118",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm grey porcelain floor tile.119",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear oak cap",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear plaster wall",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear stainless skirting",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Left oak cap",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Left plaster wall",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Left stainless skirting",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Left wall panel joint",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Left wall panel joint.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Attached gooseneck faucet",
+    "source_triangles": 320,
+    "web_triangles": 144,
+    "preserved": false
+  },
+  {
+    "name": "Drain grille",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Drain grille.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Drain grille.002",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Drain grille.003",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Drain grille.004",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Drain grille.005",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Faucet base",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Hollow inset stainless sink",
+    "source_triangles": 716,
+    "web_triangles": 322,
+    "preserved": false
+  },
+  {
+    "name": "Mixer lever",
+    "source_triangles": 252,
+    "web_triangles": 112,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet brushed worktop",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle bar",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle bar.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle bar.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle bar.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle bar.004",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.004",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.005",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.006",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.007",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.008",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet door handle fixed bracket.009",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet inset door",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet inset door.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet inset door.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet inset door.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet inset door.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet oak carcass",
+    "source_triangles": 652,
+    "web_triangles": 292,
+    "preserved": false
+  },
+  {
+    "name": "Rear prep cabinet recessed toe kick",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sanitary backsplash",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sink drain",
+    "source_triangles": 192,
+    "web_triangles": 86,
+    "preserved": false
+  },
+  {
+    "name": "Soap dispenser",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Soap pump",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Floating oak ingredient shelf",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Floating oak ingredient shelf.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient BREAD contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient BREAD label",
+    "source_triangles": 3000,
+    "web_triangles": 1350,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient BREAD metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient BREAD paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient BREAD rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 215,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient COCOA contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient COCOA label",
+    "source_triangles": 3424,
+    "web_triangles": 1540,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient COCOA metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient COCOA paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient COCOA rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 215,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient FLOUR contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient FLOUR label",
+    "source_triangles": 2772,
+    "web_triangles": 1246,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient FLOUR metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient FLOUR paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient FLOUR rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 215,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient OATS contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient OATS label",
+    "source_triangles": 2224,
+    "web_triangles": 1000,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient OATS metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient OATS paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient OATS rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 215,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient PASTRY contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient PASTRY label",
+    "source_triangles": 3156,
+    "web_triangles": 1420,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient PASTRY metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient PASTRY paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient PASTRY rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient RYE contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient RYE label",
+    "source_triangles": 1408,
+    "web_triangles": 632,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient RYE metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient RYE paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient RYE rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SALT contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SALT label",
+    "source_triangles": 1596,
+    "web_triangles": 718,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SALT metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SALT paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SALT rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEEDS contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEEDS label",
+    "source_triangles": 3104,
+    "web_triangles": 1396,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEEDS metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEEDS paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEEDS rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEMOLINA contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEMOLINA label",
+    "source_triangles": 3144,
+    "web_triangles": 1414,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEMOLINA metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEMOLINA paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SEMOLINA rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SPELT contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SPELT label",
+    "source_triangles": 2192,
+    "web_triangles": 986,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SPELT metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SPELT paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SPELT rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SUGAR contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SUGAR label",
+    "source_triangles": 3804,
+    "web_triangles": 1710,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SUGAR metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SUGAR paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient SUGAR rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient YEAST contents",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient YEAST label",
+    "source_triangles": 1952,
+    "web_triangles": 878,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient YEAST metal lid",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient YEAST paper label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient YEAST rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 216,
+    "preserved": false
+  },
+  {
+    "name": "Shelf bracket vertical",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf bracket vertical.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf bracket vertical.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf bracket vertical.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shelf diagonal brace",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Shelf diagonal brace.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Shelf diagonal brace.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Shelf diagonal brace.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door browned loaf",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door browned loaf.001",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door browned loaf.002",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door browned loaf.003",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.001",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.002",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.003",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.004",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.005",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.006",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.007",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.008",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.009",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.010",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.011",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.012",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.013",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.014",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread through oven door opened score.015",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Brushed oven back cabinet",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven badge",
+    "source_triangles": 5896,
+    "web_triangles": 2652,
+    "preserved": false
+  },
+  {
+    "name": "Oven black plinth",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven brushed door rail",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven brushed door rail.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven brushed door rail.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven brushed door rail.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven chamber back",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven chamber back.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven digital control",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven digital control.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven door gasket",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven door gasket.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven door gasket.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven door gasket.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven hearth sheet baking sheet",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Oven hearth sheet baking sheet.001",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Oven hearth sheet raised rolled rim",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Oven hearth sheet raised rolled rim.001",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Oven heat-resistant door glass",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven heat-resistant door glass.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated chamber divider",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated chamber divider.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated chamber divider.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated chamber divider.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated handle bar",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated handle bar.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated handle fixed bracket",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated handle fixed bracket.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated handle fixed bracket.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated handle fixed bracket.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated side",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven insulated side.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven lower fascia",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven side controls column",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven temperature",
+    "source_triangles": 2400,
+    "web_triangles": 1080,
+    "preserved": false
+  },
+  {
+    "name": "Oven temperature selector",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Oven temperature selector index",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Oven temperature selector index.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Oven temperature selector.001",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Oven temperature.001",
+    "source_triangles": 2344,
+    "web_triangles": 1054,
+    "preserved": false
+  },
+  {
+    "name": "Oven top ventilation fascia",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven ventilation slot",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven ventilation slot.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven ventilation slot.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven ventilation slot.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven ventilation slot.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven ventilation slot.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Oven ventilation slot.006",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm oven internal strip",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Warm oven internal strip.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer adjustable foot",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Proofer adjustable foot.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Proofer adjustable foot.002",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Proofer adjustable foot.003",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Proofer back",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer cap",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer cap.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer door stile",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer door stile.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan baking sheet",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan baking sheet.001",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan baking sheet.002",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan baking sheet.003",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan baking sheet.004",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan baking sheet.005",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan parchment",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan parchment.001",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan parchment.002",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan parchment.003",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan parchment.004",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan parchment.005",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan raised rolled rim",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan raised rolled rim.001",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan raised rolled rim.002",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan raised rolled rim.003",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan raised rolled rim.004",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Proofer dough pan raised rolled rim.005",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Proofer full door glass",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer handle mount",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Proofer handle mount.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Proofer horizontal frame",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer horizontal frame.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer insulated side",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer insulated side.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofer vertical handle",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Proofing control panel",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.001",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.002",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.003",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.004",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.005",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.006",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.007",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.008",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.009",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.010",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.011",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.012",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.013",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.014",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.015",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.016",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing dough portion.017",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Proofing humidity display",
+    "source_triangles": 5716,
+    "web_triangles": 2572,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.002",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.003",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.004",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.005",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.006",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.007",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.008",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.009",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.010",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Attached rack tray rail.011",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Caster fork",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Caster fork.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Caster fork.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Caster fork.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.001",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.002",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.003",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.004",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.005",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.006",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.007",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette baked body.008",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.001",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.002",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.003",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.004",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.005",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.006",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.007",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.008",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.009",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.010",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.011",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.012",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.013",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.014",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.015",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.016",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.017",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.018",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.019",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.020",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.021",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.022",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.023",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.024",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.025",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.026",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.027",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.028",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.029",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.030",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.031",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.032",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.033",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.034",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.035",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.036",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.037",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.038",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.039",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.040",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.041",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.042",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.043",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling baguette diagonal scoring.044",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough browned loaf",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough browned loaf.001",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough browned loaf.002",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough browned loaf.003",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough browned loaf.004",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough browned loaf.005",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.001",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.002",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.003",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.004",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.005",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.006",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.007",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.008",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.009",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.010",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.011",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.012",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.013",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.014",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.015",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.016",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.017",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.018",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.019",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.020",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.021",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.022",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling oval sourdough opened score.023",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack cross rail",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack cross rail.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack cross rail.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack cross rail.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack square upright",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack square upright.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack square upright.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Cooling rack square upright.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet baking sheet",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet baking sheet.001",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet baking sheet.002",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet baking sheet.003",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet baking sheet.004",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet baking sheet.005",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet raised rolled rim",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet raised rolled rim.001",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet raised rolled rim.002",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet raised rolled rim.003",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet raised rolled rim.004",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Cooling sheet raised rolled rim.005",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Rack rubber caster",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Rack rubber caster.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Rack rubber caster.002",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Rack rubber caster.003",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.001",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.002",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.003",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.004",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.005",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.006",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.007",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.008",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.009",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.010",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Banneton coiled edge.011",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Brushed steel island work surface",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Drawer handle bar",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Drawer handle bar.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Drawer handle fixed bracket",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Drawer handle fixed bracket.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Drawer handle fixed bracket.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Drawer handle fixed bracket.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Island center divider",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Island closed right cupboard",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Island cupboard pull bar",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Island cupboard pull fixed bracket",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Island cupboard pull fixed bracket.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Island lower shelf",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Island oak corner leg",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Island oak corner leg.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Island oak corner leg.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Island oak corner leg.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Island rear panel",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Proofing banneton on lower shelf",
+    "source_triangles": 1152,
+    "web_triangles": 518,
+    "preserved": false
+  },
+  {
+    "name": "Proofing banneton on lower shelf.001",
+    "source_triangles": 1152,
+    "web_triangles": 518,
+    "preserved": false
+  },
+  {
+    "name": "Shallow tool drawer",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Shallow tool drawer.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Thick pale oak island edge",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Deep hollow mixer bowl",
+    "source_triangles": 1152,
+    "web_triangles": 517,
+    "preserved": false
+  },
+  {
+    "name": "Mixer beater shaft",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Mixer bowl handle",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Mixer bowl mounting disc",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Mixer lever grip",
+    "source_triangles": 224,
+    "web_triangles": 100,
+    "preserved": false
+  },
+  {
+    "name": "Mixer motor housing",
+    "source_triangles": 1600,
+    "web_triangles": 712,
+    "preserved": false
+  },
+  {
+    "name": "Mixer oval foot",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Mixer speed lever",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Mixer stainless trim",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Mixer tucked power cable",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Mixer vertical pedestal",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Wire whisk in mixing bowl",
+    "source_triangles": 240,
+    "web_triangles": 107,
+    "preserved": false
+  },
+  {
+    "name": "Wire whisk in mixing bowl.001",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Wire whisk in mixing bowl.002",
+    "source_triangles": 240,
+    "web_triangles": 107,
+    "preserved": false
+  },
+  {
+    "name": "Wire whisk in mixing bowl.003",
+    "source_triangles": 240,
+    "web_triangles": 107,
+    "preserved": false
+  },
+  {
+    "name": "Bench scraper blade",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Bench scraper grip",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Digital kitchen scale",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Handwritten recipe line",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.001",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.002",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.003",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.004",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.005",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.006",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.007",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.008",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.009",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.010",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.011",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.012",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten recipe line.013",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Maple kneading board",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Open notebook page",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Open notebook page.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Recipe notebook cover",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Rolling pin barrel",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Rolling pin turned handle",
+    "source_triangles": 252,
+    "web_triangles": 112,
+    "preserved": false
+  },
+  {
+    "name": "Rolling pin turned handle.001",
+    "source_triangles": 252,
+    "web_triangles": 112,
+    "preserved": false
+  },
+  {
+    "name": "Scale black display",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Scale bowl",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Scale grams",
+    "source_triangles": 4388,
+    "web_triangles": 1974,
+    "preserved": false
+  },
+  {
+    "name": "Small flour dusting",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.001",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.002",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.003",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.004",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.005",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.006",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.007",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.008",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.009",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.010",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.011",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.012",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.013",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.014",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.015",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.016",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.017",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.018",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.019",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.020",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.021",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.022",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.023",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.024",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Small flour dusting.025",
+    "source_triangles": 48,
+    "web_triangles": 48,
+    "preserved": true
+  },
+  {
+    "name": "Soft dough ready to shape",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Rolls prep tray baking sheet",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Rolls prep tray parchment",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Rolls prep tray raised rolled rim",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll.001",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll.002",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll.003",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll.004",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll.005",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll.006",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Shaped unbaked roll.007",
+    "source_triangles": 528,
+    "web_triangles": 236,
+    "preserved": false
+  },
+  {
+    "name": "Bread case counter",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Display inset border",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Display inset border.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Display oak cabinet",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Display oak panel rail",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Display oak panel rail.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Display recessed oak front",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Display recessed plinth",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Small bakery brand",
+    "source_triangles": 5400,
+    "web_triangles": 2430,
+    "preserved": false
+  },
+  {
+    "name": "Small bakery tagline",
+    "source_triangles": 5832,
+    "web_triangles": 2624,
+    "preserved": false
+  },
+  {
+    "name": "Angled clear front pane",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Display clear glass roof",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Display continuous frame",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Display continuous frame.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Display continuous frame.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Display end frame",
+    "source_triangles": 32,
+    "web_triangles": 32,
+    "preserved": true
+  },
+  {
+    "name": "Display end frame.001",
+    "source_triangles": 32,
+    "web_triangles": 32,
+    "preserved": true
+  },
+  {
+    "name": "Display rear upright",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Display rear upright.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Display shelf standoff",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Display shelf standoff.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Display trapezoidal glass end",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Display trapezoidal glass end.001",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Raised rear pastry shelf",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Baguette display pan baking sheet",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Baguette display pan parchment",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Baguette display pan raised rolled rim",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Bread display pan baking sheet",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Bread display pan parchment",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Bread display pan raised rolled rim",
+    "source_triangles": 576,
+    "web_triangles": 258,
+    "preserved": false
+  },
+  {
+    "name": "Bread label BAGUETTE",
+    "source_triangles": 3844,
+    "web_triangles": 1728,
+    "preserved": false
+  },
+  {
+    "name": "Bread label SOURDOUGH",
+    "source_triangles": 6604,
+    "web_triangles": 2970,
+    "preserved": false
+  },
+  {
+    "name": "Bread label holder",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Bread label holder.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette baked body",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette baked body.001",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette baked body.002",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.001",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.002",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.003",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.004",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.005",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.006",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.007",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.008",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.009",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.010",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.011",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.012",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.013",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Retail scored baguette diagonal scoring.014",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule opened flour score",
+    "source_triangles": 960,
+    "web_triangles": 432,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule opened flour score.001",
+    "source_triangles": 960,
+    "web_triangles": 432,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule opened flour score.002",
+    "source_triangles": 960,
+    "web_triangles": 432,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule opened flour score.003",
+    "source_triangles": 960,
+    "web_triangles": 432,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule opened flour score.004",
+    "source_triangles": 960,
+    "web_triangles": 432,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule opened flour score.005",
+    "source_triangles": 960,
+    "web_triangles": 432,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule round crust",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule round crust.001",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Scored sourdough boule round crust.002",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Cinnamon bun base",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Cinnamon bun base.001",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Cinnamon spiral",
+    "source_triangles": 7920,
+    "web_triangles": 3564,
+    "preserved": false
+  },
+  {
+    "name": "Cinnamon spiral.001",
+    "source_triangles": 7920,
+    "web_triangles": 3564,
+    "preserved": false
+  },
+  {
+    "name": "Laminated butter croissant",
+    "source_triangles": 48478,
+    "web_triangles": 20990,
+    "preserved": false
+  },
+  {
+    "name": "Laminated butter croissant.001",
+    "source_triangles": 48478,
+    "web_triangles": 20990,
+    "preserved": false
+  },
+  {
+    "name": "Laminated butter croissant.002",
+    "source_triangles": 48478,
+    "web_triangles": 20990,
+    "preserved": false
+  },
+  {
+    "name": "Laminated butter croissant.003",
+    "source_triangles": 48478,
+    "web_triangles": 20990,
+    "preserved": false
+  },
+  {
+    "name": "Flour tub lid",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Flour tub lid.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Spare ceramic mixing bowl",
+    "source_triangles": 1152,
+    "web_triangles": 518,
+    "preserved": false
+  },
+  {
+    "name": "Stacked steel prep bowl",
+    "source_triangles": 1152,
+    "web_triangles": 518,
+    "preserved": false
+  },
+  {
+    "name": "Stacked steel prep bowl.001",
+    "source_triangles": 1152,
+    "web_triangles": 518,
+    "preserved": false
+  },
+  {
+    "name": "Stacked steel prep bowl.002",
+    "source_triangles": 1152,
+    "web_triangles": 518,
+    "preserved": false
+  },
+  {
+    "name": "Stored flour tub",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Stored flour tub.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Utensil crock",
+    "source_triangles": 400,
+    "web_triangles": 179,
+    "preserved": false
+  },
+  {
+    "name": "Wooden spoon bowl",
+    "source_triangles": 440,
+    "web_triangles": 198,
+    "preserved": false
+  },
+  {
+    "name": "Wooden spoon bowl.001",
+    "source_triangles": 440,
+    "web_triangles": 198,
+    "preserved": false
+  },
+  {
+    "name": "Wooden spoon bowl.002",
+    "source_triangles": 440,
+    "web_triangles": 198,
+    "preserved": false
+  },
+  {
+    "name": "Wooden spoon handle",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Wooden spoon handle.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Wooden spoon handle.002",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Conveyor end roller",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Conveyor end roller.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Conveyor end roller.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Conveyor end roller.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Emergency stop collar",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Handwheel spoke",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Handwheel spoke.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Handwheel spoke.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Laminated dough emerging on belt",
+    "source_triangles": 1600,
+    "web_triangles": 631,
+    "preserved": false
+  },
+  {
+    "name": "Polished dough compression roller",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Polished dough compression roller.001",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Red emergency stop",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster fork",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster fork.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster fork.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster fork.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster wheel",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster wheel.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster wheel.002",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter caster wheel.003",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter conveyor frame",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter conveyor frame.001",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter cream woven conveyor",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter cream woven conveyor.001",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter edge rail",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter edge rail.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter edge rail.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter edge rail.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter folding table support",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter folding table support.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter foot control",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter foot pedal stem",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter front control label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter guard crossbar",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter guard crossbar.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter model",
+    "source_triangles": 4168,
+    "web_triangles": 1874,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter motor cabinet",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter roller head",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.001",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.002",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.003",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.004",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.005",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.006",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.007",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.008",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.009",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.010",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter safety grille.011",
+    "source_triangles": 476,
+    "web_triangles": 214,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter stainless base rail",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter thickness handwheel",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Sheeter tucked cable",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Fridge attached vertical pull",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Fridge attached vertical pull.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation.006",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge base ventilation.007",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge control screen",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Fridge handle bracket",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Fridge handle bracket.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Fridge handle bracket.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Fridge handle bracket.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Fridge label BUTTER",
+    "source_triangles": 3300,
+    "web_triangles": 1484,
+    "preserved": false
+  },
+  {
+    "name": "Fridge label COLD STORAGE",
+    "source_triangles": 6576,
+    "web_triangles": 2958,
+    "preserved": false
+  },
+  {
+    "name": "Fridge label CREAM",
+    "source_triangles": 2628,
+    "web_triangles": 1182,
+    "preserved": false
+  },
+  {
+    "name": "Fridge temperature",
+    "source_triangles": 4660,
+    "web_triangles": 2096,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge adjustable foot",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge adjustable foot.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge adjustable foot.002",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge adjustable foot.003",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge door gasket",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge insulated cabinet",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge lower freezer door",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Ingredient fridge upper door",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Refrigerator ingredient label",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Refrigerator ingredient label.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Refrigerator ingredient label.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Cake fridge branding strip",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Cake fridge label",
+    "source_triangles": 7996,
+    "web_triangles": 3598,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support.002",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support.003",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support.004",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support.005",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support.006",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Cake shelf support.007",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Chilled cake glass shelf",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chilled cake glass shelf.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chilled cake glass shelf.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chilled cake glass shelf.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.001",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.002",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.003",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.004",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.005",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.006",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.007",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.008",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.009",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.010",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.011",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.012",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.013",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.014",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.015",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.016",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.017",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.018",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.019",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.020",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.021",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.022",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.023",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.024",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.025",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.026",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.027",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.028",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.029",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.030",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.031",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.032",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.033",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.034",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.035",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.036",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.037",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.038",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.039",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.040",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake berry leaf.041",
+    "source_triangles": 120,
+    "web_triangles": 54,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.001",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.002",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.003",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.004",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.005",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.006",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.007",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.008",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.009",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.010",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.011",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.012",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.013",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.014",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.015",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.016",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake cream layer.017",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake golden sponge",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake golden sponge.001",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake golden sponge.002",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake golden sponge.003",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake golden sponge.004",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake golden sponge.005",
+    "source_triangles": 764,
+    "web_triangles": 342,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake serving board",
+    "source_triangles": 896,
+    "web_triangles": 401,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake serving board.001",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake serving board.002",
+    "source_triangles": 896,
+    "web_triangles": 401,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake serving board.003",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake serving board.004",
+    "source_triangles": 896,
+    "web_triangles": 401,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake serving board.005",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.001",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.002",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.003",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.004",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.005",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.006",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.007",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.008",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.009",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.010",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.011",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.012",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.013",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.014",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.015",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.016",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.017",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.018",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.019",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.020",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.021",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.022",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.023",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.024",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.025",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.026",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.027",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.028",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.029",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.030",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.031",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.032",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.033",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.034",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.035",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.036",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.037",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.038",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.039",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.040",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled strawberry cake strawberry.041",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Cold milk bottle",
+    "source_triangles": 384,
+    "web_triangles": 172,
+    "preserved": false
+  },
+  {
+    "name": "Cold milk bottle.001",
+    "source_triangles": 384,
+    "web_triangles": 172,
+    "preserved": false
+  },
+  {
+    "name": "Cold milk bottle.002",
+    "source_triangles": 384,
+    "web_triangles": 172,
+    "preserved": false
+  },
+  {
+    "name": "Cold milk bottle.003",
+    "source_triangles": 384,
+    "web_triangles": 172,
+    "preserved": false
+  },
+  {
+    "name": "Cold milk bottle.004",
+    "source_triangles": 384,
+    "web_triangles": 172,
+    "preserved": false
+  },
+  {
+    "name": "Cold milk bottle.005",
+    "source_triangles": 384,
+    "web_triangles": 172,
+    "preserved": false
+  },
+  {
+    "name": "Milk bottle cap",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Milk bottle cap.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Milk bottle cap.002",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Milk bottle cap.003",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Milk bottle cap.004",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Milk bottle cap.005",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Refrigerator interior light",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Refrigerator interior light.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge adjustable foot",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge adjustable foot.001",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge adjustable foot.002",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge adjustable foot.003",
+    "source_triangles": 380,
+    "web_triangles": 170,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge back",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge cap",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge cap.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge clear door",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge door rail",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge door rail.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge insulated side",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge insulated side.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge pull",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge pull bracket",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge pull bracket.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge vertical frame",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail fridge vertical frame.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Bakery wall brand lettering",
+    "source_triangles": 7332,
+    "web_triangles": 3298,
+    "preserved": false
+  },
+  {
+    "name": "Bakery wall brand painted face",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Bakery wall brand walnut frame",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf angled bracket",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf angled bracket.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf angled bracket.002",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf angled bracket.003",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf rail attachment",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf rail attachment.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf rail attachment.002",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf rail attachment.003",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf retaining rail",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Bread shelf retaining rail.001",
+    "source_triangles": 188,
+    "web_triangles": 84,
+    "preserved": false
+  },
+  {
+    "name": "Retail wall oak shelf",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Retail wall oak shelf.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette baked body",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette baked body.001",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette baked body.002",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette baked body.003",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette baked body.004",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette baked body.005",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.001",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.002",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.003",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.004",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.005",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.006",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.007",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.008",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.009",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.010",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.011",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.012",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.013",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.014",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.015",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.016",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.017",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.018",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.019",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.020",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.021",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.022",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.023",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.024",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.025",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.026",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.027",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.028",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall artisan baguette diagonal scoring.029",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall shelf bread ticket",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Wall shelf bread ticket.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Wall shelf ticket BAKED TODAY",
+    "source_triangles": 4308,
+    "web_triangles": 1938,
+    "preserved": false
+  },
+  {
+    "name": "Wall shelf ticket SOURDOUGH",
+    "source_triangles": 6604,
+    "web_triangles": 2970,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf browned loaf",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf browned loaf.001",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf browned loaf.002",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf browned loaf.003",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf browned loaf.004",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf browned loaf.005",
+    "source_triangles": 1520,
+    "web_triangles": 684,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.001",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.002",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.003",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.004",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.005",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.006",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.007",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.008",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.009",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.010",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.011",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.012",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.013",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.014",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.015",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.016",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.017",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.018",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.019",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.020",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.021",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.022",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Wall sourdough loaf opened score.023",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Attached paper bag handle",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Attached paper bag handle.001",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Attached paper bag handle.002",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Attached paper bag handle.003",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Attached paper bag handle.004",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Attached paper bag handle.005",
+    "source_triangles": 240,
+    "web_triangles": 108,
+    "preserved": false
+  },
+  {
+    "name": "Bakery bag print",
+    "source_triangles": 2364,
+    "web_triangles": 1062,
+    "preserved": false
+  },
+  {
+    "name": "Bakery bag print.001",
+    "source_triangles": 2364,
+    "web_triangles": 1062,
+    "preserved": false
+  },
+  {
+    "name": "Bakery bag print.002",
+    "source_triangles": 2364,
+    "web_triangles": 1062,
+    "preserved": false
+  },
+  {
+    "name": "Card reader",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Card reader screen",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Checkout oak body",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Checkout pale countertop",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Checkout recessed foot",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Flat takeaway paper bag",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Flat takeaway paper bag.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Flat takeaway paper bag.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Kraft bakery bag",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Kraft bakery bag.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Kraft bakery bag.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "POS luminous screen",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "POS tablet body",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Service mat",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Serving tongs",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Till base",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Till fixed neck",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Till screen text",
+    "source_triangles": 5308,
+    "web_triangles": 2388,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.001",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.002",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.003",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.004",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.005",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.006",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.007",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.008",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.009",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.010",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart custard.011",
+    "source_triangles": 508,
+    "web_triangles": 228,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.001",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.002",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.003",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.004",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.005",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.006",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.007",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.008",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.009",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.010",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart fluted pastry base.011",
+    "source_triangles": 636,
+    "web_triangles": 286,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.001",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.002",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.003",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.004",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.005",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.006",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.007",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.008",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.009",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.010",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.011",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.012",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.013",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.014",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.015",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.016",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.017",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.018",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.019",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.020",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.021",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.022",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.023",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.024",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.025",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.026",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.027",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.028",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.029",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.030",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.031",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.032",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.033",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.034",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.035",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.036",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.037",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.038",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.039",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.040",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.041",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.042",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.043",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.044",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.045",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.046",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.047",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.048",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.049",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.050",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.051",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.052",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.053",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.054",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.055",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.056",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.057",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.058",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart glazed blueberry.059",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.001",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.002",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.003",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.004",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.005",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.006",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.007",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.008",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.009",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.010",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Blueberry custard tart rolled crust rim.011",
+    "source_triangles": 640,
+    "web_triangles": 288,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice plate",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice plate.001",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice plate.002",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice plate.003",
+    "source_triangles": 896,
+    "web_triangles": 402,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice strawberry",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice strawberry.001",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice strawberry.002",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Cake slice strawberry.003",
+    "source_triangles": 288,
+    "web_triangles": 128,
+    "preserved": false
+  },
+  {
+    "name": "Chilled case shelf support",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Chilled case shelf support.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Chilled case shelf support.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Chilled case shelf support.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Chilled display metal worktop",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream.006",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice cream.007",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice sponge",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice sponge.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice sponge.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Chocolate slice sponge.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Pastry ticket CAKE SLICES",
+    "source_triangles": 4956,
+    "web_triangles": 2230,
+    "preserved": false
+  },
+  {
+    "name": "Pastry ticket FRUIT TARTS",
+    "source_triangles": 4700,
+    "web_triangles": 2114,
+    "preserved": false
+  },
+  {
+    "name": "Pastry ticket holder",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Pastry ticket holder.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie base kick",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie case upright",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie case upright.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie case upright.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie case upright.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie clear front",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie display shelf",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie display shelf.001",
+    "source_triangles": 572,
+    "web_triangles": 256,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.006",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.007",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.008",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.009",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.010",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie front air vent.011",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie glass end",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie glass end.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie glass roof",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie refrigerated base",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie top frame",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Patisserie top frame.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Bakery opening-hours board lettering",
+    "source_triangles": 11392,
+    "web_triangles": 5126,
+    "preserved": false
+  },
+  {
+    "name": "Bakery opening-hours board painted face",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Bakery opening-hours board walnut frame",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette baked body",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette baked body.001",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette baked body.002",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette baked body.003",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette baked body.004",
+    "source_triangles": 1200,
+    "web_triangles": 540,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.001",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.002",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.003",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.004",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.005",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.006",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.007",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.008",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.009",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.010",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.011",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.012",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.013",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.014",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.015",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.016",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.017",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.018",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.019",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.020",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.021",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.022",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.023",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Basket baguette diagonal scoring.024",
+    "source_triangles": 160,
+    "web_triangles": 72,
+    "preserved": false
+  },
+  {
+    "name": "Bread stand leg",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Bread stand leg.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Bread stand leg.002",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Bread stand leg.003",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate base",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate corner post",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate corner post.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate corner post.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate corner post.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate end open slat",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate end open slat.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate end open slat.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate end open slat.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate end open slat.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate end open slat.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate long open slat",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate long open slat.001",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate long open slat.002",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate long open slat.003",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate long open slat.004",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Freestanding bread crate long open slat.005",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Front-of-shop chalk menu lettering",
+    "source_triangles": 35660,
+    "web_triangles": 16046,
+    "preserved": false
+  },
+  {
+    "name": "Front-of-shop chalk menu painted face",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Front-of-shop chalk menu walnut frame",
+    "source_triangles": 300,
+    "web_triangles": 134,
+    "preserved": false
+  },
+  {
+    "name": "Menu A-frame back leg",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Menu A-frame back leg.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Menu A-frame front leg",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Menu A-frame front leg.001",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  },
+  {
+    "name": "Menu board top hinge",
+    "source_triangles": 316,
+    "web_triangles": 142,
+    "preserved": false
+  }
+]

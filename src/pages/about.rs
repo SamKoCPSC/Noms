@@ -32,6 +32,77 @@ const _: &[u8] = include_bytes!("../../assets/brand/penguini/player.js");
 const _: &[u8] = include_bytes!("../../assets/brand/penguini/thinking-rig.js");
 const _: &[u8] = include_bytes!("../../assets/brand/penguini/dance-rig.js");
 const KITCHEN_MODEL: Asset = asset!("/assets/about/sams-kitchen-detailed.glb");
+const THREE_BRIDGE: Asset = asset!(
+    "/assets/about-three-tour.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const _: &[u8] = include_bytes!("../../assets/about-three-tour.js");
+#[cfg(target_arch = "wasm32")]
+pub(super) const BAKED_MODEL_NAMES: [&str; 12] = [
+    "kitchen",
+    "office",
+    "bedroom",
+    "social-kitchen",
+    "garden",
+    "corporate-office",
+    "library",
+    "supermarket",
+    "brick-kitchen",
+    "bakery",
+    "farmers-market",
+    "riverside-campsite",
+];
+const BAKED_KITCHEN: Asset = asset!("/assets/about/kitchen-baked.glb");
+const LIGHTING_KITCHEN: Asset = asset!("/assets/about/kitchen-lighting.json");
+const BAKED_OFFICE: Asset = asset!("/assets/about/office-baked.glb");
+const LIGHTING_OFFICE: Asset = asset!("/assets/about/office-lighting.json");
+const BAKED_BEDROOM: Asset = asset!("/assets/about/bedroom-baked.glb");
+const LIGHTING_BEDROOM: Asset = asset!("/assets/about/bedroom-lighting.json");
+const BAKED_SOCIAL_KITCHEN: Asset = asset!("/assets/about/social-kitchen-baked.glb");
+const LIGHTING_SOCIAL_KITCHEN: Asset = asset!("/assets/about/social-kitchen-lighting.json");
+const BAKED_GARDEN: Asset = asset!("/assets/about/garden-baked.glb");
+const LIGHTING_GARDEN: Asset = asset!("/assets/about/garden-lighting.json");
+const BAKED_CORPORATE_OFFICE: Asset = asset!("/assets/about/corporate-office-baked.glb");
+const LIGHTING_CORPORATE_OFFICE: Asset = asset!("/assets/about/corporate-office-lighting.json");
+const BAKED_LIBRARY: Asset = asset!("/assets/about/library-baked.glb");
+const LIGHTING_LIBRARY: Asset = asset!("/assets/about/library-lighting.json");
+const BAKED_SUPERMARKET: Asset = asset!("/assets/about/supermarket-baked.glb");
+const LIGHTING_SUPERMARKET: Asset = asset!("/assets/about/supermarket-lighting.json");
+const BAKED_BRICK_KITCHEN: Asset = asset!("/assets/about/brick-kitchen-baked.glb");
+const LIGHTING_BRICK_KITCHEN: Asset = asset!("/assets/about/brick-kitchen-lighting.json");
+const BAKED_BAKERY: Asset = asset!("/assets/about/bakery-baked.glb");
+const LIGHTING_BAKERY: Asset = asset!("/assets/about/bakery-lighting.json");
+const BAKED_FARMERS_MARKET: Asset = asset!("/assets/about/farmers-market-baked.glb");
+const LIGHTING_FARMERS_MARKET: Asset = asset!("/assets/about/farmers-market-lighting.json");
+const BAKED_RIVERSIDE_CAMPSITE: Asset = asset!("/assets/about/riverside-campsite-baked.glb");
+const LIGHTING_RIVERSIDE_CAMPSITE: Asset = asset!("/assets/about/riverside-campsite-lighting.json");
+
+// Track regenerated derivatives even when only model assets change.
+const _: &[u8] = include_bytes!("../../assets/about/kitchen-baked.glb");
+const _: &str = include_str!("../../assets/about/kitchen-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/office-baked.glb");
+const _: &str = include_str!("../../assets/about/office-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/bedroom-baked.glb");
+const _: &str = include_str!("../../assets/about/bedroom-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/social-kitchen-baked.glb");
+const _: &str = include_str!("../../assets/about/social-kitchen-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/garden-baked.glb");
+const _: &str = include_str!("../../assets/about/garden-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/corporate-office-baked.glb");
+const _: &str = include_str!("../../assets/about/corporate-office-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/library-baked.glb");
+const _: &str = include_str!("../../assets/about/library-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/supermarket-baked.glb");
+const _: &str = include_str!("../../assets/about/supermarket-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/brick-kitchen-baked.glb");
+const _: &str = include_str!("../../assets/about/brick-kitchen-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/bakery-baked.glb");
+const _: &str = include_str!("../../assets/about/bakery-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/farmers-market-baked.glb");
+const _: &str = include_str!("../../assets/about/farmers-market-lighting.json");
+const _: &[u8] = include_bytes!("../../assets/about/riverside-campsite-baked.glb");
+const _: &str = include_str!("../../assets/about/riverside-campsite-lighting.json");
+
 const KITCHEN_LAPTOP: Asset = asset!(
     "/assets/about/kitchen-laptop.webp",
     manganis::AssetOptions::builder()
@@ -54,6 +125,12 @@ const KITCHEN_POSTER: Asset = asset!(
 );
 const LIBRARY_MODEL: Asset = asset!("/assets/about/sams-library.glb");
 const LIBRARY_POSTER: Asset = asset!("/assets/about/sams-library.webp");
+const FARMERS_MARKET_MODEL: Asset = asset!("/assets/about/sams-farmers-market.glb");
+const FARMERS_MARKET_POSTER: Asset = asset!("/assets/about/sams-farmers-market.webp");
+const BAKERY_MODEL: Asset = asset!("/assets/about/sams-bakery.glb");
+const BAKERY_POSTER: Asset = asset!("/assets/about/sams-bakery.webp");
+const BRICK_KITCHEN_MODEL: Asset = asset!("/assets/about/sams-brick-kitchen.glb");
+const BRICK_KITCHEN_POSTER: Asset = asset!("/assets/about/sams-brick-kitchen.webp");
 const SUPERMARKET_MODEL: Asset = asset!("/assets/about/sams-supermarket.glb");
 const SUPERMARKET_POSTER: Asset = asset!("/assets/about/sams-supermarket.webp");
 const CORPORATE_OFFICE_MODEL: Asset = asset!("/assets/about/sams-corporate-office.glb");
@@ -82,31 +159,10 @@ const OFFICE_POSTER: Asset = asset!(
 const BEDROOM_MODEL: Asset = asset!("/assets/about/sams-bedroom.glb");
 const BEDROOM_PRINTS: Asset = asset!("/assets/about/bedroom-posters.webp");
 const BEDROOM_POSTER: Asset = asset!("/assets/about/sams-bedroom.webp");
-const POTLUCK_MODEL: Asset = asset!("/assets/about/sams-potluck.glb");
-const POTLUCK_WINDOW: Asset = asset!(
-    "/assets/about/potluck-window.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_TV: Asset = asset!(
-    "/assets/about/potluck-tv.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_PASTRY: Asset = asset!(
-    "/assets/about/potluck-pastry.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_SALT: Asset = asset!(
-    "/assets/about/potluck-chips-salt.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_BBQ: Asset = asset!(
-    "/assets/about/potluck-chips-bbq.webp",
-    manganis::AssetOptions::builder()
-);
-const POTLUCK_POSTER: Asset = asset!(
-    "/assets/about/sams-potluck.webp",
-    manganis::AssetOptions::builder()
-);
+const SOCIAL_KITCHEN_MODEL: Asset = asset!("/assets/about/sams-social-kitchen.glb");
+const SOCIAL_KITCHEN_POSTER: Asset = asset!("/assets/about/sams-social-kitchen.webp");
+const RIVERSIDE_CAMPSITE_MODEL: Asset = asset!("/assets/about/sams-riverside-campsite.glb");
+const RIVERSIDE_CAMPSITE_POSTER: Asset = asset!("/assets/about/sams-riverside-campsite.webp");
 const GARDEN_MODEL: Asset = asset!("/assets/about/sams-garden.glb");
 const GARDEN_PASTRY: Asset = asset!(
     "/assets/about/garden-pastry.webp",
@@ -232,7 +288,7 @@ pub(super) const IDS: [&str; 12] = [
     "your-privacy",
     "gather",
 ];
-pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 6, 2, 7, 1, 5, 2, 3, 3, 3, 3, 4];
+pub(super) const MODEL_FOR_STOP: [usize; 12] = [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 11, 4];
 pub(super) const NAMES: [&str; 12] = [
     "The idea",
     "The reason",
@@ -333,6 +389,42 @@ fn LoadingPenguini() -> Element {
     }
 }
 
+const VILLAGE_BRIDGE: Asset = asset!(
+    "/assets/about-three-village.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const _: &[u8] = include_bytes!("../../assets/about-three-village.js");
+const VILLAGE_LAYOUT: Asset = asset!("/assets/about/village/layout.json");
+// Track regenerated derivatives so incremental builds refresh Manganis URLs.
+const _: &str = include_str!("../../assets/about/village/layout.json");
+const _: &[u8] = include_bytes!("../../assets/about/village/world.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/kitchen.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/library.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/bedroom.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/supermarket.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/office.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/corporate-office.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/brick-kitchen.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/bakery.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/farmers-market.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/social-kitchen.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/riverside-campsite.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/garden.glb");
+
+const VILLAGE_WORLD: Asset = asset!("/assets/about/village/world.glb");
+const VILLAGE_KITCHEN: Asset = asset!("/assets/about/village/kitchen.glb");
+const VILLAGE_LIBRARY: Asset = asset!("/assets/about/village/library.glb");
+const VILLAGE_BEDROOM: Asset = asset!("/assets/about/village/bedroom.glb");
+const VILLAGE_SUPERMARKET: Asset = asset!("/assets/about/village/supermarket.glb");
+const VILLAGE_OFFICE: Asset = asset!("/assets/about/village/office.glb");
+const VILLAGE_CORPORATE_OFFICE: Asset = asset!("/assets/about/village/corporate-office.glb");
+const VILLAGE_BRICK_KITCHEN: Asset = asset!("/assets/about/village/brick-kitchen.glb");
+const VILLAGE_BAKERY: Asset = asset!("/assets/about/village/bakery.glb");
+const VILLAGE_FARMERS_MARKET: Asset = asset!("/assets/about/village/farmers-market.glb");
+const VILLAGE_SOCIAL_KITCHEN: Asset = asset!("/assets/about/village/social-kitchen.glb");
+const VILLAGE_RIVERSIDE_CAMPSITE: Asset = asset!("/assets/about/village/riverside-campsite.glb");
+const VILLAGE_GARDEN: Asset = asset!("/assets/about/village/garden.glb");
+
 #[component]
 pub fn About() -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -341,10 +433,36 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
-       "data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
+       "data-village-layout-url":VILLAGE_LAYOUT,"data-village-world-url":VILLAGE_WORLD,"data-village-bridge-url":VILLAGE_BRIDGE,
+    "data-village-kitchen-url":VILLAGE_KITCHEN,
+    "data-village-library-url":VILLAGE_LIBRARY,
+    "data-village-bedroom-url":VILLAGE_BEDROOM,
+    "data-village-supermarket-url":VILLAGE_SUPERMARKET,
+    "data-village-office-url":VILLAGE_OFFICE,
+    "data-village-corporate-office-url":VILLAGE_CORPORATE_OFFICE,
+    "data-village-brick-kitchen-url":VILLAGE_BRICK_KITCHEN,
+    "data-village-bakery-url":VILLAGE_BAKERY,
+    "data-village-farmers-market-url":VILLAGE_FARMERS_MARKET,
+    "data-village-social-kitchen-url":VILLAGE_SOCIAL_KITCHEN,
+    "data-village-riverside-campsite-url":VILLAGE_RIVERSIDE_CAMPSITE,
+    "data-village-garden-url":VILLAGE_GARDEN,
+       "data-three-bridge-url":THREE_BRIDGE,
+       "data-baked-kitchen-url":BAKED_KITCHEN,"data-baked-kitchen-lighting":LIGHTING_KITCHEN,
+       "data-baked-office-url":BAKED_OFFICE,"data-baked-office-lighting":LIGHTING_OFFICE,
+       "data-baked-bedroom-url":BAKED_BEDROOM,"data-baked-bedroom-lighting":LIGHTING_BEDROOM,
+       "data-baked-social-kitchen-url":BAKED_SOCIAL_KITCHEN,"data-baked-social-kitchen-lighting":LIGHTING_SOCIAL_KITCHEN,
+       "data-baked-garden-url":BAKED_GARDEN,"data-baked-garden-lighting":LIGHTING_GARDEN,
+       "data-baked-corporate-office-url":BAKED_CORPORATE_OFFICE,"data-baked-corporate-office-lighting":LIGHTING_CORPORATE_OFFICE,
+       "data-baked-library-url":BAKED_LIBRARY,"data-baked-library-lighting":LIGHTING_LIBRARY,
+       "data-baked-supermarket-url":BAKED_SUPERMARKET,"data-baked-supermarket-lighting":LIGHTING_SUPERMARKET,
+       "data-baked-brick-kitchen-url":BAKED_BRICK_KITCHEN,"data-baked-brick-kitchen-lighting":LIGHTING_BRICK_KITCHEN,
+       "data-baked-bakery-url":BAKED_BAKERY,"data-baked-bakery-lighting":LIGHTING_BAKERY,
+       "data-baked-farmers-market-url":BAKED_FARMERS_MARKET,"data-baked-farmers-market-lighting":LIGHTING_FARMERS_MARKET,
+       "data-baked-riverside-campsite-url":BAKED_RIVERSIDE_CAMPSITE,"data-baked-riverside-campsite-lighting":LIGHTING_RIVERSIDE_CAMPSITE,
+       "data-farmers-market-url":FARMERS_MARKET_MODEL,"data-bakery-url":BAKERY_MODEL,"data-brick-kitchen-url":BRICK_KITCHEN_MODEL,"data-library-url":LIBRARY_MODEL,"data-supermarket-url":SUPERMARKET_MODEL,"data-corporate-office-url":CORPORATE_OFFICE_MODEL,"data-office-url":OFFICE_MODEL,"data-office-left-url":OFFICE_LEFT,"data-office-right-url":OFFICE_RIGHT,"data-office-gpu-url":OFFICE_GPU,"data-office-cpu-url":OFFICE_CPU,
        "data-bedroom-url":BEDROOM_MODEL,"data-bedroom-prints-url":BEDROOM_PRINTS,
        "data-garden-url":GARDEN_MODEL,"data-garden-pastry-url":GARDEN_PASTRY,
-       "data-potluck-url":POTLUCK_MODEL,"data-potluck-window-url":POTLUCK_WINDOW,"data-potluck-tv-url":POTLUCK_TV,"data-potluck-pastry-url":POTLUCK_PASTRY,"data-potluck-salt-url":POTLUCK_SALT,"data-potluck-bbq-url":POTLUCK_BBQ,
+       "data-social-kitchen-url":SOCIAL_KITCHEN_MODEL,"data-riverside-campsite-url":RIVERSIDE_CAMPSITE_MODEL,
         onmounted: move |_| {
           #[cfg(target_arch="wasm32")]
           if let Err(error)=super::about_tour::start(){tracing::warn!(?error,"About tour uses its reading fallback");}
@@ -369,7 +487,15 @@ pub fn About() -> Element {
        button{id:"mode-toggle",r#type:"button",disabled:true,aria_pressed:"false","Reading view"}
       }
      }
-     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
+     div{id:"world",class:"world",aria_hidden:"true",canvas{id:"story-canvas",tabindex:"-1"}canvas{id:"story-three-canvas",tabindex:"-1"}div{id:"tour-scene-framing"}div{class:"world-vignette"}}
+     div{id:"village-look-surface",aria_hidden:"true"}
+     button{id:"village-look-toggle",class:"village-view-toggle",r#type:"button",hidden:true,aria_describedby:"village-look-hint","Explore village"}
+     span{id:"village-look-hint",
+      span{class:"walk-help desktop-walk-help","WASD to walk · Shift to sprint · Space to jump · Hold Left Ctrl to crouch · Click or use arrows to look · Esc to release"}
+      span{class:"walk-help touch-walk-help","Move with the stick · Swipe to look"}
+     }
+     div{id:"village-walk-stick",aria_hidden:"true",span{}}
+     button{id:"village-view-toggle",class:"village-view-toggle",r#type:"button",hidden:true,"Read as page"}
      div{id:"story",class:"story",
       for i in 0..IDS.len() {
        article{id:"panel-{i}",class:"story-panel","data-panel":"{i}","data-model":"{MODEL_FOR_STOP[i]}",aria_labelledby:"title-{i}",
@@ -377,20 +503,24 @@ pub fn About() -> Element {
         div{class:"panel-viewport",div{class:"panel-content",
         div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","{PARTS[i]}"}}
         if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
-        if MODEL_FOR_STOP[i]==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:960,height:960}}}
-        if MODEL_FOR_STOP[i]==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:960,height:960}}}
-        if MODEL_FOR_STOP[i]==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:960,height:960}}}
-        if MODEL_FOR_STOP[i]==3 {figure{class:"potluck-fallback",img{src:POTLUCK_POSTER,alt:"A communal potluck dining room and TV lounge with three couches, a chess game, and a table of cake, candy, chips and drinks",loading:"lazy",width:960,height:720}}}
-        if MODEL_FOR_STOP[i]==6 {figure{class:"office-fallback",img{src:LIBRARY_POSTER,alt:"A recipe library with cookbook shelves, a reading table, laptop and cozy reading nook",loading:"lazy",width:1080,height:945}}}
-        if MODEL_FOR_STOP[i]==7 {figure{class:"office-fallback",img{src:SUPERMARKET_POSTER,alt:"A modern supermarket with a European deli, Asian pantry, produce and grocery aisles",loading:"lazy",width:1073,height:960}}}
-        if MODEL_FOR_STOP[i]==5 {figure{class:"office-fallback",img{src:CORPORATE_OFFICE_POSTER,alt:"A corporate office with three personalized desks, humorous company posters, a kitchenette and a shared lunch table",loading:"lazy",width:1080,height:960}}}
-        if MODEL_FOR_STOP[i]==4 {figure{class:"garden-fallback",img{src:GARDEN_POSTER,alt:"A garden cookout with shared picnic tables, barbecue food, a beer table, lawn chairs, a cedar fence and outdoor games",loading:"lazy",width:960,height:720}}}
+        if MODEL_FOR_STOP[i]==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==3 {figure{class:"kitchen-fallback",img{src:SOCIAL_KITCHEN_POSTER,alt:"A contemporary L-shaped kitchen with a prime rib dinner for four, soup, brioche, wine and peppercorn sauce",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==11 {figure{class:"garden-fallback",img{src:RIVERSIDE_CAMPSITE_POSTER,alt:"A secluded riverside campsite with a two-storey cedar cabin, folded evergreen trees, a wooden porch chair, picnic food and a campfire",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==10 {figure{class:"garden-fallback",img{src:FARMERS_MARKET_POSTER,alt:"A corner farmers’ market with four enlarged bakery, dairy, pantry and prepared-food carts, two on each side, and four shared picnic tables",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==9 {figure{class:"kitchen-fallback",img{src:BAKERY_POSTER,alt:"A modern artisan bakery with bread and pastry displays, a dough sheeter, refrigerators and a baking workbench shifted to the right",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==8 {figure{class:"kitchen-fallback",img{src:BRICK_KITCHEN_POSTER,alt:"A U-shaped brick-loft kitchen with an oak dining peninsula, shared food, coffee appliances and a sink beneath the window",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==6 {figure{class:"office-fallback",img{src:LIBRARY_POSTER,alt:"A UBC-inspired university library with tall blue windows, a spiral staircase, portrait gallery, study laptops, open computer science textbooks and window-side lounge chairs",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==7 {figure{class:"office-fallback",img{src:SUPERMARKET_POSTER,alt:"A modern supermarket with a European deli, Asian pantry, produce and grocery aisles",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==5 {figure{class:"office-fallback",img{src:CORPORATE_OFFICE_POSTER,alt:"A corporate office with three personalized desks, humorous company posters, a kitchenette and a shared lunch table",loading:"lazy",width:1080,height:945}}}
+        if MODEL_FOR_STOP[i]==4 {figure{class:"garden-fallback",img{src:GARDEN_POSTER,alt:"A garden cookout with shared picnic tables, barbecue food, a beer table, lawn chairs, a cedar fence and outdoor games",loading:"lazy",width:1080,height:945}}}
         for (j, paragraph) in CONTENT[i].iter().enumerate() {p{class:if j==0{"lead"}else{"detail"},"{paragraph}"}}
 
         div{class:"card-actions",
         if i>0 {a{class:"back-link",href:format!("#{}",IDS[i-1]),"Back"}}
         a{class:"next-link",href:if i+1<IDS.len(){format!("#{}",IDS[i+1])}else{"#idea".into()},
-         if i==0{"Continue the story"}else if i+1==IDS.len(){"Take the tour again"}else{"Continue the story"}
+         if i+1==IDS.len(){"Take the tour again"}else{"Next page"}
          span{class:"arrow",aria_hidden:"true"}
         }}
         }}
@@ -425,7 +555,7 @@ mod story_tests {
             IDS.iter().collect::<std::collections::HashSet<_>>().len(),
             12
         );
-        assert_eq!(MODEL_FOR_STOP, [0, 6, 2, 7, 1, 5, 2, 3, 3, 3, 3, 4]);
+        assert_eq!(MODEL_FOR_STOP, [0, 6, 2, 7, 1, 5, 8, 9, 10, 3, 11, 4]);
         assert_eq!(CONTENT.len(), IDS.len());
     }
 }

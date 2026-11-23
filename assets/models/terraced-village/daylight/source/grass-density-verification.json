@@ -1,0 +1,12 @@
+{
+  "previous_grass_clumps": 13177,
+  "grass_clumps": 28080,
+  "clump_multiplier": 2.1309858086059044,
+  "previous_grass_blades": 52683,
+  "grass_blades": 84240,
+  "blade_multiplier": 1.5989977791697512,
+  "non_grass_meshes_identical": true,
+  "source_sha256": "65b568c84d517879c7d8590bb0878b4b5fb4135800047498b08c8f4d32064e16",
+  "previous_commit": "024479947b789f9ca9b20019823389b4dc609e73",
+  "previous_source_sha256": "4b56761d0dd7ba1acb9d085c7d1d07b4e1b0f171a4fe29cdd5cc226ac69ae9c2"
+}

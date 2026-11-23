@@ -1,0 +1,23 @@
+{
+  "source": "User attachment",
+  "restored_on": "2026-11-15",
+  "original_filename": "garden-v6.blend-73ca23471f0242d3b8fee2f03060fcf6.xz",
+  "attachment_sha256": "fffcb0a639d0b64c73e3d34be820149067d1d3d4f5be15e4775741537840aef8",
+  "attachment_bytes": 8806668,
+  "extraction": "XZ decompression",
+  "file": "models/garden-v6.blend",
+  "sha256": "6766c06921799b251c859767d62f56731ef689891f2ee5085de7c21db6aef26f",
+  "bytes": 10887506,
+  "revision": 6,
+  "review_page": "https://chatgpt.com/space/page_7c6bf3f7c53081919c1588f851054446",
+  "matches_budget": "assets/about/garden-budget.json",
+  "master_unchanged": true,
+  "validation": {
+    "blender_version": "4.3.2",
+    "opens_successfully": true,
+    "objects": 2733,
+    "materials": 96,
+    "saved_frame": 160,
+    "auto_execution_disabled": true
+  }
+}

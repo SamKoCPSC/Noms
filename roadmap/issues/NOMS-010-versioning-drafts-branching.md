@@ -4,6 +4,8 @@
 > [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
 > acceptance lists below are historical; they do not override this summary.
 
+> **2026-11-18 update:** [Draft conflict recovery](NOMS-024-draft-conflict-recovery.md) covers both editors. Autosave pauses on conflicts and resumes after a confirmed revision-guarded merge.
+
 **Status:** ✅ Done — immutable snapshots, drafts and forks implemented
 **Phase:** Phase 1 (core content creation)  
 **Depends on:** NOMS-008 (Recipe CRUD)

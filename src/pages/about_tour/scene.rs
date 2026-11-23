@@ -27,7 +27,7 @@ precision mediump float;
 #endif
 uniform vec4 u_color; uniform vec3 u_eye; uniform sampler2D u_texture;
 uniform float u_textured; uniform float u_shadow; uniform float u_reveal; uniform float u_diorama;
-uniform float u_enter; uniform float u_material_mode;
+uniform float u_enter; uniform float u_material_mode; uniform float u_glass_pass;
 uniform sampler2D u_surface_normal; uniform mediump mat3 u_normal;
 uniform vec3 u_fill_light; uniform vec3 u_rim_light; uniform vec3 u_room_up;
 uniform sampler2D u_depth_map; uniform float u_shadow_enabled; uniform float u_shadow_texel;
@@ -98,6 +98,30 @@ vec3 matte_finish(vec3 albedo,vec3 n,float roughness,float metallic,float cavity
  vec3 specular=fresnel*(key_spec*2.8+fill_spec*1.5+rim_spec+0.25*hemi*cavity)*mix(0.24,0.38,metallic);
  return diorama_agx((diffuse+specular)*1.75);
 }
+// Thin dielectric approximation: transmit the existing scene, then reflect the
+// studio lights. Glass has no diffuse paint layer and never receives matte exposure.
+// The exports' legacy opacity describes tint density, not a white overlay.
+vec4 glass_finish(vec3 tint,vec3 n){
+ if(u_glass_pass<1.5){
+  // Multiplicative absorption cannot brighten objects behind the glass. The
+  // destination is display encoded, so convert the linear filter to that space.
+  vec3 filter=pow(clamp(tint,vec3(0.01),vec3(1.0)),vec3(u_color.a/2.2));
+  return vec4(filter,1.0);
+ }
+ vec3 view=normalize(u_eye-v_world);
+ if(dot(n,view)<0.0)n=-n;
+ float cosine=clamp(dot(n,view),0.0,1.0);
+ // Schlick Fresnel for ordinary glass (IOR approximately 1.5).
+ float fresnel=0.04+0.96*pow(1.0-cosine,5.0);
+ vec3 reflected=reflect(-view,n);
+ float sky=0.5+0.5*dot(reflected,u_room_up);
+ vec3 studio=mix(vec3(0.025,0.028,0.032),vec3(0.12,0.14,0.16),sky);
+ float key=pow(max(dot(reflected,u_key_light),0.0),96.0)*shadow_visibility(n);
+ float fill=pow(max(dot(reflected,u_fill_light),0.0),64.0);
+ float rim=pow(max(dot(reflected,u_rim_light),0.0),64.0);
+ studio+=vec3(0.85)*key+vec3(0.32)*fill+vec3(0.22)*rim;
+ return vec4(display_srgb(clamp(studio,0.0,1.0)),fresnel);
+}
 // Ordered coverage preserves opaque depth and glass ordering while surfaces emerge.
 float bayer2(vec2 p){return 2.0*mod(p.x+p.y,2.0)+mod(p.y,2.0);}
 float coverage(vec2 p){p=floor(p);return (16.0*bayer2(mod(p,2.0))+4.0*bayer2(mod(floor(p/2.0),2.0))+bayer2(mod(floor(p/4.0),2.0))+0.5)/64.0;}
@@ -114,6 +138,7 @@ void main(){
    vec3 tex=texture2D(u_texture,v_uv).rgb;
    base=u_color.rgb*v_color.rgb*mix(tex/12.92,pow((tex+0.055)/1.055,vec3(2.4)),step(vec3(0.04045),tex));
   }
+  if(u_glass_pass>0.5){gl_FragColor=glass_finish(base,n);return;}
   if(u_material_mode>0.5){
    float visibility=shadow_visibility(n);
    if(u_material_mode>2.5){
@@ -169,6 +194,7 @@ struct Uniforms {
     diorama: WebGlUniformLocation,
     enter: WebGlUniformLocation,
     material_mode: WebGlUniformLocation,
+    glass_pass: WebGlUniformLocation,
     light_mvp: WebGlUniformLocation,
     shadow_enabled: WebGlUniformLocation,
     shadow_texel: WebGlUniformLocation,
@@ -191,13 +217,18 @@ pub struct Renderer {
     platform: Mesh,
     textures: Vec<WebGlTexture>,
     kitchen: Diorama,
+    pub three_tour: Option<super::three_tour::ThreeTour>,
     office: Diorama,
-    potluck: Diorama,
+    social_kitchen: Diorama,
     bedroom: Diorama,
     garden: Diorama,
     corporate_office: Diorama,
     library: Diorama,
     supermarket: Diorama,
+    brick_kitchen: Diorama,
+    bakery: Diorama,
+    farmers_market: Diorama,
+    riverside_campsite: Diorama,
     a_pos: u32,
     a_normal: u32,
     a_uv: u32,
@@ -255,6 +286,7 @@ impl Renderer {
             diorama: uniform("u_diorama")?,
             enter: uniform("u_enter")?,
             material_mode: uniform("u_material_mode")?,
+            glass_pass: uniform("u_glass_pass")?,
             light_mvp: uniform("u_light_mvp")?,
             shadow_enabled: uniform("u_shadow_enabled")?,
             shadow_texel: uniform("u_shadow_texel")?,
@@ -289,7 +321,12 @@ impl Renderer {
         gl.enable(Gl::DEPTH_TEST);
         gl.depth_func(Gl::LEQUAL);
         gl.enable(Gl::BLEND);
-        gl.blend_func(Gl::SRC_ALPHA, Gl::ONE_MINUS_SRC_ALPHA);
+        gl.blend_func_separate(
+            Gl::SRC_ALPHA,
+            Gl::ONE_MINUS_SRC_ALPHA,
+            Gl::ONE,
+            Gl::ONE_MINUS_SRC_ALPHA,
+        );
         gl.clear_color(0., 0., 0., 0.);
         let stop_shadows = (0..flight::COUNT)
             .map(|_| RefCell::new(ShadowMap::new(&gl).ok()))
@@ -306,13 +343,18 @@ impl Renderer {
             platform,
             textures,
             kitchen: Diorama::default(),
+            three_tour: None,
             office: Diorama::default(),
-            potluck: Diorama::default(),
+            social_kitchen: Diorama::default(),
             bedroom: Diorama::default(),
             garden: Diorama::default(),
             corporate_office: Diorama::default(),
             library: Diorama::default(),
             supermarket: Diorama::default(),
+            brick_kitchen: Diorama::default(),
+            bakery: Diorama::default(),
+            farmers_market: Diorama::default(),
+            riverside_campsite: Diorama::default(),
             a_pos,
             a_normal,
             a_uv,
@@ -378,13 +420,14 @@ impl Renderer {
     }
     pub fn upload_models(
         &mut self,
-        models: [(&super::gltf::DioramaMesh, &[HtmlImageElement]); 8],
+        models: [(&super::gltf::DioramaMesh, &[HtmlImageElement]); 12],
     ) -> Result<(), JsValue> {
-        let [(kitchen, kitchen_images), (office, office_images), (potluck, potluck_images), (bedroom, bedroom_images), (garden, garden_images), (corporate_office, corporate_office_images), (library, library_images), (supermarket, supermarket_images)] =
+        let [(kitchen, kitchen_images), (office, office_images), (social_kitchen, social_kitchen_images), (bedroom, bedroom_images), (garden, garden_images), (corporate_office, corporate_office_images), (library, library_images), (supermarket, supermarket_images), (brick_kitchen, brick_kitchen_images), (bakery, bakery_images), (farmers_market, farmers_market_images), (riverside_campsite, riverside_campsite_images)] =
             models;
         self.kitchen = self.upload_diorama(kitchen, kitchen_images, Room::Kitchen)?;
         self.office = self.upload_diorama(office, office_images, Room::Office)?;
-        self.potluck = self.upload_diorama(potluck, potluck_images, Room::Potluck)?;
+        self.social_kitchen =
+            self.upload_diorama(social_kitchen, social_kitchen_images, Room::SocialKitchen)?;
         self.bedroom = self.upload_diorama(bedroom, bedroom_images, Room::Bedroom)?;
         self.garden = self.upload_diorama(garden, garden_images, Room::Garden)?;
         self.corporate_office = self.upload_diorama(
@@ -395,15 +438,29 @@ impl Renderer {
         self.library = self.upload_diorama(library, library_images, Room::Library)?;
         self.supermarket =
             self.upload_diorama(supermarket, supermarket_images, Room::Supermarket)?;
+        self.brick_kitchen =
+            self.upload_diorama(brick_kitchen, brick_kitchen_images, Room::BrickKitchen)?;
+        self.bakery = self.upload_diorama(bakery, bakery_images, Room::Bakery)?;
+        self.farmers_market =
+            self.upload_diorama(farmers_market, farmers_market_images, Room::FarmersMarket)?;
+        self.riverside_campsite = self.upload_diorama(
+            riverside_campsite,
+            riverside_campsite_images,
+            Room::RiversideCampsite,
+        )?;
         for (name, data) in [
             ("kitchen", kitchen),
             ("office", office),
-            ("potluck", potluck),
+            ("social-kitchen", social_kitchen),
             ("bedroom", bedroom),
             ("garden", garden),
             ("corporate-office", corporate_office),
             ("library", library),
             ("supermarket", supermarket),
+            ("brick-kitchen", brick_kitchen),
+            ("bakery", bakery),
+            ("farmers-market", farmers_market),
+            ("riverside-campsite", riverside_campsite),
         ] {
             let _ = self.canvas.set_attribute(
                 &format!("data-{name}-groups"),
@@ -624,6 +681,9 @@ impl Renderer {
         frames: [f32; flight::COUNT],
     ) {
         let gl = &self.gl;
+        if let Some(tour) = &self.three_tour {
+            tour.begin(camera.progress, self.canvas.width(), self.canvas.height());
+        }
         self.update_shadows(camera.progress, frames, mobile);
         gl.use_program(Some(&self.program));
         gl.viewport(
@@ -638,7 +698,7 @@ impl Renderer {
         gl.uniform3fv_with_f32_array(Some(&self.uniforms.eye), &camera.eye);
         for (i, &frame) in frames.iter().enumerate() {
             let asset = crate::pages::about::MODEL_FOR_STOP[i];
-            let artwork = [0, 1, 3, 4, 4, 1, 1, 1][asset];
+            let artwork = self.rooms()[asset].2;
             let root = flight::station(i);
             if i < flight::COUNT {
                 let (diorama, room, _, _) = self.rooms()[asset];
@@ -666,6 +726,11 @@ impl Renderer {
                     ),
                 );
                 let visibility = 1. - smooth(0.28, 0.85, (camera.progress - i as f32).abs());
+                if let Some(tour) = &self.three_tour {
+                    if tour.draw(i, model, camera, visibility) {
+                        continue;
+                    }
+                }
                 if visibility > 0. {
                     self.draw_diorama(
                         model,
@@ -812,13 +877,18 @@ impl Renderer {
             );
         }
     }
-    // Chapter order differs from the authored frame array (potluck precedes bedroom).
-    fn rooms(&self) -> [(&Diorama, Room, usize, &'static str); 8] {
+    // Chapter order differs from the authored frame array (social_kitchen precedes bedroom).
+    fn rooms(&self) -> [(&Diorama, Room, usize, &'static str); 12] {
         [
             (&self.kitchen, Room::Kitchen, 0, "kitchen"),
             (&self.office, Room::Office, 1, "office"),
             (&self.bedroom, Room::Bedroom, 3, "bedroom"),
-            (&self.potluck, Room::Potluck, 2, "potluck"),
+            (
+                &self.social_kitchen,
+                Room::SocialKitchen,
+                2,
+                "social-kitchen",
+            ),
             (&self.garden, Room::Garden, 4, "garden"),
             (
                 &self.corporate_office,
@@ -828,9 +898,26 @@ impl Renderer {
             ),
             (&self.library, Room::Library, 1, "library"),
             (&self.supermarket, Room::Supermarket, 1, "supermarket"),
+            (&self.brick_kitchen, Room::BrickKitchen, 1, "brick-kitchen"),
+            (&self.bakery, Room::Bakery, 1, "bakery"),
+            (
+                &self.farmers_market,
+                Room::FarmersMarket,
+                4,
+                "farmers-market",
+            ),
+            (
+                &self.riverside_campsite,
+                Room::RiversideCampsite,
+                4,
+                "riverside-campsite",
+            ),
         ]
     }
     pub fn release_shadows(&self) {
+        if let Some(tour) = &self.three_tour {
+            tour.hide();
+        }
         self.update_shadows(-10., [160.; flight::COUNT], false);
     }
     pub fn observe_shadow_frame(&self, milliseconds: f64, frames: [f32; flight::COUNT]) {
@@ -859,7 +946,8 @@ impl Renderer {
             let (diorama, room, _, _) = self.rooms()[*asset];
             let index = stop;
             let name = crate::pages::about::IDS[stop];
-            let visible = (progress - stop as f32).abs() < 0.85;
+            let visible = (progress - stop as f32).abs() < 0.85
+                && !self.three_tour.as_ref().is_some_and(|tour| tour.has(stop));
             let frame = frames[index];
             let mut shadow = self.stop_shadows[index].borrow_mut();
             if let Some(map) = shadow.as_mut() {
@@ -984,7 +1072,7 @@ impl Renderer {
         for draw in &diorama.draws {
             let p = &draw.part;
             let pose = draw.motion.pose(frame, room);
-            if pose.reveal <= 0. {
+            if pose.reveal <= 0. || p.opacity <= 0. {
                 continue;
             }
             let local = pose.matrix;
@@ -1001,9 +1089,7 @@ impl Renderer {
                 Some(&self.uniforms.material_mode),
                 if room == Room::Kitchen && p.texture == 3 {
                     3.
-                } else if (room == Room::Potluck && p.texture == 3)
-                    || (room == Room::Garden && p.texture == 1)
-                {
+                } else if room == Room::Garden && p.texture == 1 {
                     // Pastry photographs are surface color, not emissive screen artwork.
                     1.
                 } else if p.texture > 0 {
@@ -1013,6 +1099,13 @@ impl Renderer {
                 },
             );
             self.gl.depth_mask(p.opacity >= 1.);
+            let glass = p.opacity < 1.;
+            if glass {
+                self.gl.uniform1f(Some(&self.uniforms.glass_pass), 1.);
+                // Filter only the scene's RGB; preserve its coverage alpha.
+                self.gl
+                    .blend_func_separate(Gl::ZERO, Gl::SRC_COLOR, Gl::ZERO, Gl::ONE);
+            }
             self.draw(
                 &draw.mesh,
                 mul(model, local),
@@ -1025,6 +1118,19 @@ impl Renderer {
                 false,
                 2.,
             );
+            if glass {
+                self.gl.uniform1f(Some(&self.uniforms.glass_pass), 2.);
+                self.gl.blend_func_separate(
+                    Gl::SRC_ALPHA,
+                    Gl::ONE_MINUS_SRC_ALPHA,
+                    Gl::ONE,
+                    Gl::ONE_MINUS_SRC_ALPHA,
+                );
+                // Reuse the bound mesh and pose. Both passes share entry coverage
+                // and depth testing; neither writes depth or allocates a scene copy.
+                self.gl.draw_arrays(Gl::TRIANGLES, 0, draw.mesh.count);
+                self.gl.uniform1f(Some(&self.uniforms.glass_pass), 0.);
+            }
         }
         self.gl.uniform1f(Some(&self.uniforms.material_mode), 0.);
         self.gl.uniform1f(Some(&self.uniforms.shadow_enabled), 0.);
@@ -1033,7 +1139,12 @@ impl Renderer {
     }
     /// Warm all model assets, including prints and transparent PC surfaces, before entry.
     pub fn warm_models(&self, aspect: f32, mobile: bool) -> bool {
-        let mut warmed = [false; 8];
+        // Three warms the visible scene. Visiting every stop here would defeat
+        // its bounded cache and start unnecessary downloads under the curtain.
+        if self.three_tour.is_some() {
+            return self.error() == Gl::NO_ERROR;
+        }
+        let mut warmed = [false; 12];
         for (stop, asset) in crate::pages::about::MODEL_FOR_STOP.iter().enumerate() {
             if warmed[*asset] {
                 continue;
@@ -1064,12 +1175,16 @@ impl Drop for Renderer {
             .draws
             .iter()
             .chain(&self.office.draws)
-            .chain(&self.potluck.draws)
+            .chain(&self.social_kitchen.draws)
             .chain(&self.bedroom.draws)
             .chain(&self.garden.draws)
             .chain(&self.corporate_office.draws)
             .chain(&self.library.draws)
             .chain(&self.supermarket.draws)
+            .chain(&self.brick_kitchen.draws)
+            .chain(&self.bakery.draws)
+            .chain(&self.farmers_market.draws)
+            .chain(&self.riverside_campsite.draws)
         {
             self.gl.delete_buffer(Some(&draw.mesh.buffer));
         }

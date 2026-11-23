@@ -1,0 +1,395 @@
+{
+  "version": 12,
+  "stage": "Clear village windows and display glass with shared bright daylight",
+  "coordinates": "Y up, x right, z toward viewer; yaw radians about Y",
+  "stops": [
+    {
+      "id": "kitchen",
+      "title": "Noms Test Kitchen",
+      "position": [
+        -37.5,
+        -0.07,
+        30.0
+      ],
+      "yaw": -0.20944,
+      "width": 14,
+      "master": "assets/models/terracotta-recipe-kitchen/models/sams-kitchen-recipe-manager.blend",
+      "model": "assets/about/kitchen-baked.glb",
+      "lighting": "assets/about/kitchen-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/kitchen.glb"
+    },
+    {
+      "id": "library",
+      "title": "The Noms Nook",
+      "position": [
+        -42.5,
+        0.35,
+        0.0
+      ],
+      "yaw": 0.20944,
+      "width": 15,
+      "master": "assets/models/university-library/models/university-library.blend",
+      "model": "assets/about/library-baked.glb",
+      "lighting": "assets/about/library-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/library.glb"
+    },
+    {
+      "id": "bedroom",
+      "title": "Crumb & Cozy",
+      "position": [
+        -26.25,
+        0.77,
+        -30.0
+      ],
+      "yaw": -0.436332,
+      "width": 15,
+      "master": "assets/models/corner-cocoon-bedroom/models/sams-corner-cocoon.blend",
+      "model": "assets/about/bedroom-baked.glb",
+      "lighting": "assets/about/bedroom-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/bedroom.glb"
+    },
+    {
+      "id": "supermarket",
+      "title": "The Noms Pantry",
+      "position": [
+        6.25,
+        0.823,
+        -33.75
+      ],
+      "yaw": 0.383972,
+      "width": 17,
+      "master": "assets/models/european-arcade-supermarket/models/european-arcade-supermarket.blend",
+      "model": "assets/about/supermarket-baked.glb",
+      "lighting": "assets/about/supermarket-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 6.4,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/supermarket.glb"
+    },
+    {
+      "id": "office",
+      "title": "Bites & Bytes",
+      "position": [
+        37.5,
+        0.613,
+        -18.75
+      ],
+      "yaw": -0.349066,
+      "width": 14,
+      "master": "assets/models/home-office/models/sams-project-room.blend",
+      "model": "assets/about/office-baked.glb",
+      "lighting": "assets/about/office-lighting.json",
+      "entrance": {
+        "surface": "timber",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/office.glb"
+    },
+    {
+      "id": "corporate-office",
+      "title": "The Lunchroom Lab",
+      "position": [
+        42.5,
+        0.157,
+        13.75
+      ],
+      "yaw": -0.733038,
+      "width": 17,
+      "master": "assets/models/corporate-workspace-pantry/models/corporate-workspace-pantry.blend",
+      "model": "assets/about/corporate-office-baked.glb",
+      "lighting": "assets/about/corporate-office-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/corporate-office.glb"
+    },
+    {
+      "id": "brick-kitchen",
+      "title": "Second Helpings",
+      "position": [
+        15.0,
+        -0.14,
+        35.0
+      ],
+      "yaw": 0.261799,
+      "width": 14,
+      "master": "assets/models/brick-loft-kitchen/models/brick-loft-kitchen.blend",
+      "model": "assets/about/brick-kitchen-baked.glb",
+      "lighting": "assets/about/brick-kitchen-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/brick-kitchen.glb"
+    },
+    {
+      "id": "bakery",
+      "title": "Rise & Noms",
+      "position": [
+        -15.0,
+        0.262,
+        6.25
+      ],
+      "yaw": 0.610865,
+      "width": 15,
+      "master": "assets/models/modern-baking-lab/models/modern-baking-lab.blend",
+      "model": "assets/about/bakery-baked.glb",
+      "lighting": "assets/about/bakery-lighting.json",
+      "entrance": {
+        "surface": "brick",
+        "width": 5.2,
+        "depth": 3.6,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/bakery.glb"
+    },
+    {
+      "id": "farmers-market",
+      "title": "Gather & Graze",
+      "position": [
+        13.75,
+        0.315,
+        2.5
+      ],
+      "yaw": -0.314159,
+      "width": 17,
+      "master": "assets/models/community-spaces/models/farmers-market.blend",
+      "model": "assets/about/farmers-market-baked.glb",
+      "lighting": "assets/about/farmers-market-lighting.json",
+      "entrance": {
+        "surface": "gravel",
+        "width": 6.4,
+        "depth": 3.6,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/farmers-market.glb"
+    },
+    {
+      "id": "social-kitchen",
+      "title": "The Slow Simmer",
+      "position": [
+        1.25,
+        1.225,
+        -62.5
+      ],
+      "yaw": 0.314159,
+      "width": 15,
+      "master": "assets/models/monochrome-social-kitchen/models/monochrome-social-kitchen.blend",
+      "model": "assets/about/social-kitchen-baked.glb",
+      "lighting": "assets/about/social-kitchen-lighting.json",
+      "entrance": {
+        "surface": "stone",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/social-kitchen.glb"
+    },
+    {
+      "id": "riverside-campsite",
+      "title": "Campfire Crumbs",
+      "position": [
+        -32.5,
+        1.208,
+        -61.25
+      ],
+      "yaw": -0.436332,
+      "width": 17,
+      "master": "assets/models/riverside-cabin-campsite/models/riverside-cabin-campsite.blend",
+      "model": "assets/about/riverside-campsite-baked.glb",
+      "lighting": "assets/about/riverside-campsite-lighting.json",
+      "entrance": {
+        "surface": "timber",
+        "width": 5.2,
+        "depth": 2.8,
+        "floorFallback": 0.42,
+        "edgePosition": -0.5
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/riverside-campsite.glb"
+    },
+    {
+      "id": "garden",
+      "title": "The Noms Table",
+      "position": [
+        -11.25,
+        1.663,
+        -93.75
+      ],
+      "yaw": 0.087266,
+      "width": 21,
+      "master": "assets/models/garden-cookout/models/garden-v6.blend",
+      "model": "assets/about/garden-baked.glb",
+      "lighting": "assets/about/garden-lighting.json",
+      "entrance": {
+        "surface": "gravel",
+        "width": 6.4,
+        "depth": 3.6,
+        "floorFallback": 0.42
+      },
+      "shared_model": "assets/models/terraced-village/daylight/models/garden.glb"
+    }
+  ],
+  "river": [
+    [
+      70,
+      0,
+      80
+    ],
+    [
+      70,
+      0,
+      35
+    ],
+    [
+      68,
+      0,
+      0
+    ],
+    [
+      60,
+      0,
+      -40
+    ],
+    [
+      42,
+      0,
+      -85
+    ],
+    [
+      15,
+      0,
+      -125
+    ],
+    [
+      -15,
+      0,
+      -155
+    ]
+  ],
+  "ground_outline": [
+    [
+      -110,
+      95
+    ],
+    [
+      110,
+      95
+    ],
+    [
+      110,
+      -165
+    ],
+    [
+      -110,
+      -165
+    ]
+  ],
+  "walk": {
+    "eye_height": 4.6,
+    "speed": 2.6,
+    "path_width": 3.2,
+    "spacing_multiplier": 1.25
+  },
+  "neighborhood": {
+    "streets": [
+      "Noms Lane",
+      "Recipe Row",
+      "Whisk Way",
+      "Pantry Place",
+      "Simmer Street",
+      "Supper Lane",
+      "Sourdough Rise",
+      "Market Mews",
+      "Gathering Green",
+      "Campfire Crescent",
+      "Potluck Parade"
+    ],
+    "houses": [
+      [
+        -62,
+        33
+      ],
+      [
+        -68,
+        -6
+      ],
+      [
+        -58,
+        -47
+      ],
+      [
+        -40,
+        -111
+      ],
+      [
+        25,
+        -115
+      ],
+      [
+        44,
+        -60
+      ],
+      [
+        57,
+        49
+      ],
+      [
+        -6,
+        64
+      ]
+    ],
+    "house_scale": 1.5
+  },
+  "shared_lighting": {
+    "environment": "assets/models/terraced-village/daylight/models/world.glb",
+    "settings": "assets/models/terraced-village/daylight/lighting.json"
+  },
+  "stone_paths": {
+    "geometry": "assets/models/terraced-village/daylight/source/stone-paths.json.gz",
+    "verification": "assets/models/terraced-village/daylight/source/stone-path-verification.json"
+  },
+  "vegetation": {
+    "geometry": "assets/models/terraced-village/daylight/source/vegetation.json.gz",
+    "verification": "assets/models/terraced-village/daylight/source/vegetation-verification.json",
+    "style": "Matte folded grass, daisies, buttercups, lavender and ridged layered foliage"
+  },
+  "signage": {
+    "geometry": "assets/models/terraced-village/daylight/source/signage.json.gz",
+    "verification": "assets/models/terraced-village/daylight/source/signage-verification.json"
+  },
+  "clear_glass": {
+    "policy": "tools/about/village/daylight/glass.py",
+    "verification": "assets/models/terraced-village/daylight/source/glass-native.json",
+    "surface_roughness": 0,
+    "transmission": 1,
+    "window_openings": true
+  }
+}

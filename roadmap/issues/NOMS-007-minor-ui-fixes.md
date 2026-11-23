@@ -6,7 +6,10 @@
 
 **Type:** Task / Bugfix
 **Priority:** Low
-**Status:** 🟡 In Progress — original acceptance not fully reconciled
+**Status:** ✅ Done — original cleanup item closed
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-06-06
 
 ---

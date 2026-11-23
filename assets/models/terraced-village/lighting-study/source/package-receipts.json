@@ -1,0 +1,24 @@
+[
+  {
+    "id": "before",
+    "source_sha256": "3318b42e73296fd448a8703474c557f42d2d22efb1fb85dcbd084f6422728bdc",
+    "bytes": 1094836,
+    "triangles": 96299,
+    "sha256": "3db1ccfbc5b977389b813cb9a6a7b56de129ad5f6aabfb3bf58687cd9a6c8be2"
+  },
+  {
+    "id": "after",
+    "source_sha256": "fb3bb736b09bfe981b6e20cc88a9e5b37a05fb9166b8929b9680b5aa1a858480",
+    "bytes": 12559064,
+    "triangles": 544154,
+    "sha256": "66c569534c98f3540b3e991d02dc46dcc6c640ff5d2d0f05280535c8c497b348",
+    "vertex_source_sha256": "5942b14398fda98eea282349c661d3781b74629288d9de5aa8c434e524f24ac1"
+  },
+  {
+    "id": "kitchen",
+    "source_sha256": "eae324d897670673bfcdc24dda2197f6370a430e8f449a7860e91db56d9ee4f9",
+    "bytes": 10670024,
+    "triangles": 447855,
+    "sha256": "eae324d897670673bfcdc24dda2197f6370a430e8f449a7860e91db56d9ee4f9"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "connected_components": 1,
+  "valid_footprint": true,
+  "stone_count": 4095,
+  "partition_overlap_area": 7.73070496506989e-12,
+  "uncovered_area": 0.0,
+  "minimum_terrain_clearance": 0.18999999999999995,
+  "entrances_connected": 12,
+  "walking_routes_covered": 11,
+  "one_height_field": true,
+  "continuous_grout_bed": true,
+  "beveled_edges": true,
+  "triangles": 179346,
+  "sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b"
+}

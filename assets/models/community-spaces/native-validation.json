@@ -14,7 +14,7 @@
   },
   {
     "file": "farmers-market.blend",
-    "objects": 1102,
+    "objects": 2013,
     "assembly_groups": 8,
     "packed_texture_images": 0,
     "camera": "orthographic",
@@ -22,8 +22,11 @@
       1600,
       1400
     ],
-    "samples": 64,
-    "validation": "PASS"
+    "samples": 32,
+    "validation": "PASS",
+    "revision": 9,
+    "stall_count": 4,
+    "picnic_table_count": 4
   },
   {
     "file": "night-market.blend",

@@ -1,0 +1,6134 @@
+[
+  {
+    "name": "Concrete expansion joint",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Concrete expansion joint.001",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Concrete expansion joint.002",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Concrete expansion joint.003",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Concrete expansion joint.004",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Concrete expansion joint.005",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Continuous concrete floor",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Oak-edged miniature foundation",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Back mortar wall",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.023",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.024",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.025",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.026",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.027",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.028",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.029",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.030",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.031",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.032",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.033",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.034",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.035",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.036",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.037",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.038",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.039",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.040",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.041",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.042",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.043",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.044",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.045",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.046",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.047",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.048",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.049",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.050",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.051",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.052",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.053",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.054",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.055",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.056",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.057",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.058",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.059",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.060",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.061",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.062",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.063",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.064",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.065",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.066",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.067",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.068",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.069",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.070",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.071",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.072",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.073",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.074",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.075",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.076",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.077",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.078",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.079",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.080",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.081",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.082",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.083",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.084",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.085",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.086",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.087",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.088",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.089",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.090",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.091",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.092",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.093",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.094",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.095",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.096",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.097",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.098",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.099",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.100",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.101",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.102",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.103",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.104",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.105",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.106",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.107",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.108",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.109",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.110",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.111",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.112",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.113",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.114",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.115",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.116",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.117",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.118",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.119",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.120",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.121",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.122",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.123",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.124",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.125",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.126",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.127",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.128",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.129",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.130",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.131",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.132",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.133",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.134",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.135",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.136",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.137",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.138",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.139",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.140",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.141",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.142",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.143",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.144",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.145",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.146",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.147",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.148",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.149",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.150",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.151",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.152",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.153",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.154",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.155",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.156",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.157",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.158",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.159",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.160",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.161",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.162",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.163",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.164",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.165",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.166",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.167",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.168",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.169",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.170",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.171",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.172",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.173",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.174",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.175",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.176",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.177",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.178",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.179",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.180",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.181",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.182",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.183",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.184",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.185",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.186",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.187",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.188",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.189",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.190",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.191",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.192",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.193",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.194",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.195",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.196",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.197",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.198",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.199",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.200",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.201",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.202",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.203",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.204",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.205",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.206",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.207",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.208",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.209",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.210",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.211",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.212",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.213",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.214",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.215",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.216",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.217",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.218",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.219",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.220",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.221",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.222",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.223",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.224",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.225",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.226",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.227",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.228",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.229",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.230",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.231",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.232",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.233",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.234",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.235",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.236",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.237",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.238",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.239",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.240",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.241",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.242",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.243",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.244",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.245",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.246",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.247",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.248",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.249",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.250",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.251",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.252",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.253",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.254",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.255",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.256",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.257",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.258",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.259",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.260",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.261",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.262",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.263",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.264",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back staggered brick.265",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back wall top coping",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oak window sill",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.010",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.011",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.012",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.013",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.014",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.015",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.016",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.017",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.018",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.019",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.020",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.021",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.022",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.023",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.024",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.025",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.026",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.027",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.028",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.029",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.030",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.031",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.032",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.033",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.034",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.035",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.036",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.037",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.038",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.039",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.040",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.041",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.042",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.043",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.044",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.045",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.046",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.047",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.048",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.049",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.050",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.051",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.052",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.053",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.054",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.055",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.056",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.057",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.058",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.059",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.060",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.061",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.062",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.063",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.064",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.065",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.066",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.067",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.068",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.069",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.070",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.071",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.072",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.073",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.074",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.075",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.076",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.077",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.078",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.079",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.080",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.081",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.082",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.083",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.084",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.085",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.086",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.087",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.088",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.089",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.090",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.091",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.092",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.093",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.094",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.095",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.096",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.097",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.098",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.099",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.100",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.101",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.102",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.103",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.104",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.105",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.106",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.107",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.108",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.109",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.110",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.111",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.112",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.113",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.114",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.115",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.116",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.117",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.118",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.119",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.120",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.121",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.122",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.123",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.124",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.125",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.126",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.127",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.128",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.129",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.130",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.131",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.132",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.133",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.134",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.135",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.136",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.137",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.138",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.139",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.140",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.141",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.142",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.143",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.144",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.145",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.146",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.147",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.148",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.149",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.150",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.151",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.152",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.153",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.154",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.155",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.156",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.157",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.158",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.159",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.160",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.161",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.162",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.163",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.164",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.165",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.166",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.167",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.168",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.169",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.170",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.171",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.172",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.173",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.174",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.175",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.176",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.177",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.178",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.179",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.180",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.181",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.182",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.183",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.184",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.185",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.186",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.187",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.188",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.189",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.190",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side staggered brick.191",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Side wall top coping",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Steel window crossbar",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Steel window crossbar.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Steel window crossbar.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Steel window mullion",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Steel window mullion.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Steel window mullion.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Steel window mullion.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window daylight panes",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window wall mortar",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window wall mortar.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window wall mortar.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window wall mortar.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit carcass",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit carcass.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit carcass.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit carcass.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door brass pull",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door brass pull.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door brass pull.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door brass pull.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door rail.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door recessed field",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door recessed field.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door recessed field.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door recessed field.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit door stile.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer brass pull",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer brass pull.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer brass pull.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer brass pull.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer rail.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer recessed field",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer recessed field.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer recessed field.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer recessed field.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit drawer stile.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit recessed plinth",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit recessed plinth.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit recessed plinth.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Back kitchen unit recessed plinth.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Counter backsplash",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Left stone countertop",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Right stone countertop",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Black gooseneck faucet",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Faucet deck mounting collar",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Faucet mixer base",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Faucet mixer lever",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Return stone worktop",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Return stone worktop.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink basin end",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink basin end.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink basin floor",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink basin side",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink basin side.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink drain",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Sink rim",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink rim.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink rim.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink rim.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink surround stone",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sink surround stone.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return carcass",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return carcass.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return carcass.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return carcass.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door brass pull",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return door brass pull.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return door brass pull.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return door brass pull.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door rail.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door recessed field",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door recessed field.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door recessed field.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door recessed field.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return door stile.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer brass pull",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer brass pull.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer brass pull.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer brass pull.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer rail.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer recessed field",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer recessed field.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer recessed field.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer recessed field.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return drawer stile.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return recessed plinth",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return recessed plinth.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return recessed plinth.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Window return recessed plinth.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge cabinet",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge top cupboard",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge top cupboard brass pull",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fridge top cupboard rail",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge top cupboard rail.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge top cupboard recessed field",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge top cupboard stile",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge top cupboard stile.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Fridge vertical handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Fridge vertical handle.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Separate brushed steel fridge door",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Separate brushed steel fridge door.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Black enamel hob",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate.004",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate.005",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate.006",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Cast iron grate.007",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Extractor bottom lip",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor chimney",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Extractor underside vent.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Gas burner",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Gas burner.001",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Gas burner.002",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Gas burner.003",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Knob indicator",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Knob indicator.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Knob indicator.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Knob indicator.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oven dark glass",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oven door handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Oven inner window",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Range body",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Range control knob",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Range control knob.001",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Range control knob.002",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Range control knob.003",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Tapered stainless extractor",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Generous oak dining countertop",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Oak dining side panel",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oak dining side panel.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oak dining side panel.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oak dining side panel.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oak dining side panel.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.004",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.005",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.006",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.007",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.008",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Panel slim inset edging.009",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Peninsula black corner frame",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Peninsula black corner frame.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Peninsula graphite carcass",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Peninsula recessed plinth",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Rounded oak stool seat",
+    "source_triangles": 1020,
+    "web_triangles": 1020,
+    "preserved": true
+  },
+  {
+    "name": "Rounded oak stool seat.001",
+    "source_triangles": 1020,
+    "web_triangles": 1020,
+    "preserved": true
+  },
+  {
+    "name": "Rounded oak stool seat.002",
+    "source_triangles": 1020,
+    "web_triangles": 1020,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.004",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.005",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.006",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.007",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.008",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.009",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.010",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Splayed black stool leg.011",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Stool circular footrest",
+    "source_triangles": 1024,
+    "web_triangles": 1024,
+    "preserved": true
+  },
+  {
+    "name": "Stool circular footrest.001",
+    "source_triangles": 1024,
+    "web_triangles": 1024,
+    "preserved": true
+  },
+  {
+    "name": "Stool circular footrest.002",
+    "source_triangles": 1024,
+    "web_triangles": 1024,
+    "preserved": true
+  },
+  {
+    "name": "Copper pan handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Copper pan handle.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Copper pan hanging eye",
+    "source_triangles": 512,
+    "web_triangles": 512,
+    "preserved": true
+  },
+  {
+    "name": "Copper pan hanging eye.001",
+    "source_triangles": 512,
+    "web_triangles": 512,
+    "preserved": true
+  },
+  {
+    "name": "Hanging copper pan",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Hanging copper pan.001",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Oak floating shelf",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Oak floating shelf.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar contents",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar contents.001",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar contents.002",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar contents.003",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar label",
+    "source_triangles": 2364,
+    "web_triangles": 2364,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar label.001",
+    "source_triangles": 2364,
+    "web_triangles": 2364,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar label.002",
+    "source_triangles": 2364,
+    "web_triangles": 2364,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar label.003",
+    "source_triangles": 2364,
+    "web_triangles": 2364,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar metal lid",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar metal lid.001",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar metal lid.002",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar metal lid.003",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar paper label",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar paper label.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar paper label.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar paper label.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar rounded glass",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar rounded glass.001",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar rounded glass.002",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Pantry jar rounded glass.003",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Serving bowl",
+    "source_triangles": 1152,
+    "web_triangles": 1152,
+    "preserved": true
+  },
+  {
+    "name": "Serving bowl.001",
+    "source_triangles": 1152,
+    "web_triangles": 1152,
+    "preserved": true
+  },
+  {
+    "name": "Serving bowl.002",
+    "source_triangles": 1152,
+    "web_triangles": 1152,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel brace",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel brace.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel brace.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel brace.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel support",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel support.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel support.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Shelf steel support.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates.001",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates.002",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates.003",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates.004",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates.005",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates.006",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Stacked dinner plates.007",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Utensil rail",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Bottle cap",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Bottle cap.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Lid knob",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Oak cutting board on counter",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Olive oil bottle",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Olive oil bottle.001",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Orange enamel cooking pot",
+    "source_triangles": 672,
+    "web_triangles": 672,
+    "preserved": true
+  },
+  {
+    "name": "Pot handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Pot handle.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Pot lid",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Tomatoes on counter",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Tomatoes on counter.001",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Tomatoes on counter.002",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Tomatoes on counter.003",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Utensil crock",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf.001",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf.002",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf.003",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf.004",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf.005",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf.006",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil herb leaf.007",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Window basil soil",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem.001",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem.002",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem.003",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem.004",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem.005",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem.006",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil stem.007",
+    "source_triangles": 80,
+    "web_triangles": 80,
+    "preserved": true
+  },
+  {
+    "name": "Window basil terracotta pot",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Wood spoon bowl",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Wood spoon bowl.001",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Wood spoon bowl.002",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Wood spoon bowl.003",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Wood utensil handle",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Wood utensil handle.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Wood utensil handle.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Wood utensil handle.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Coffee cup",
+    "source_triangles": 576,
+    "web_triangles": 576,
+    "preserved": true
+  },
+  {
+    "name": "Coffee cup coffee",
+    "source_triangles": 96,
+    "web_triangles": 96,
+    "preserved": true
+  },
+  {
+    "name": "Coffee cup coffee.001",
+    "source_triangles": 96,
+    "web_triangles": 96,
+    "preserved": true
+  },
+  {
+    "name": "Coffee cup handle",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Coffee cup handle.001",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Coffee cup.001",
+    "source_triangles": 576,
+    "web_triangles": 576,
+    "preserved": true
+  },
+  {
+    "name": "Dining cutlery",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Dining cutlery.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Dining cutlery.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Dining cutlery.003",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Dining stoneware plate",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Dining stoneware plate.001",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Salad bowl",
+    "source_triangles": 1152,
+    "web_triangles": 1152,
+    "preserved": true
+  },
+  {
+    "name": "Salad cherry tomatoes",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Salad cherry tomatoes.001",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Salad cherry tomatoes.002",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Salad cherry tomatoes.003",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Salad cherry tomatoes.004",
+    "source_triangles": 288,
+    "web_triangles": 288,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.001",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.002",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.003",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.004",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.005",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.006",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.007",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.008",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.009",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.010",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.011",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.012",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.013",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.014",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.015",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.016",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Salad greens.017",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Handwritten notebook pages",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.001",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.002",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.003",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.004",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.005",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.006",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.007",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.008",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.009",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.010",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook pencil recipe line.011",
+    "source_triangles": 12,
+    "web_triangles": 12,
+    "preserved": true
+  },
+  {
+    "name": "Notebook spine",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Recipe pencil",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus spear",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus spear.001",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus spear.002",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus spear.003",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus tip",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus tip.001",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus tip.002",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Asparagus tip.003",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.001",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.002",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.003",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.004",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.005",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.006",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.007",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.008",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.009",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.010",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.011",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.012",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.013",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.014",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread herb fleck.015",
+    "source_triangles": 120,
+    "web_triangles": 120,
+    "preserved": true
+  },
+  {
+    "name": "Garlic bread serving board",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Golden garlic bread crumb",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Golden garlic bread crumb.001",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Golden garlic bread crumb.002",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Golden garlic bread crumb.003",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Grilled salmon portion",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Lemon pale center",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Pasta basil garnish",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Pasta basil garnish.001",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.005",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.006",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.007",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.008",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.009",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.010",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.011",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.012",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.013",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.014",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta curled ribbon.015",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Pasta tomato sauce",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Pasta tomato sauce.001",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Pasta tomato sauce.002",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Pasta tomato sauce.003",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Pasta tomato sauce.004",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Pasta tomato sauce.005",
+    "source_triangles": 224,
+    "web_triangles": 224,
+    "preserved": true
+  },
+  {
+    "name": "Roasted cherry tomato",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Roasted cherry tomato.001",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Roasted cherry tomato.002",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Roasted cherry tomato.003",
+    "source_triangles": 360,
+    "web_triangles": 360,
+    "preserved": true
+  },
+  {
+    "name": "Roasted sweet potato",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Roasted sweet potato.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Roasted sweet potato.002",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Roasted sweet potato.003",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Roasted vegetable serving platter",
+    "source_triangles": 896,
+    "web_triangles": 896,
+    "preserved": true
+  },
+  {
+    "name": "Roasted zucchini round",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roasted zucchini round.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roasted zucchini round.002",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Roasted zucchini round.003",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Salmon lemon round",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Salmon pale flaky seam",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Salmon pale flaky seam.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Salmon pale flaky seam.002",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Salmon pale flaky seam.003",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Salmon pale flaky seam.004",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Toasted bread slice crust",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Toasted bread slice crust.001",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Toasted bread slice crust.002",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Toasted bread slice crust.003",
+    "source_triangles": 528,
+    "web_triangles": 528,
+    "preserved": true
+  },
+  {
+    "name": "Zucchini cut face",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Zucchini cut face.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Zucchini cut face.002",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Zucchini cut face.003",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Bean hopper lid",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Burr grinder base",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Burr grinder upright",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Coffee appliance cable",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Coffee appliance cable.001",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.001",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.002",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.003",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.004",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.005",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.006",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.007",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.008",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.009",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.010",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.011",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.012",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.013",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.014",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.015",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee bean in hopper.016",
+    "source_triangles": 168,
+    "web_triangles": 168,
+    "preserved": true
+  },
+  {
+    "name": "Coffee outlet plug",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Coffee outlet plug.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Coffee wall outlet",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Dual espresso spout",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Dual espresso spout.001",
+    "source_triangles": 160,
+    "web_triangles": 160,
+    "preserved": true
+  },
+  {
+    "name": "Espresso back cup rail",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Espresso brew button",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Espresso brew button.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Espresso cup handle",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Espresso cup on warming tray",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Espresso cup rail",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Espresso cup rail.001",
+    "source_triangles": 188,
+    "web_triangles": 188,
+    "preserved": true
+  },
+  {
+    "name": "Espresso cup warming top",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.001",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.002",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.003",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.004",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.005",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.006",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.007",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.008",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso drip grate bar.009",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Espresso group head",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Espresso machine body",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso machine brushed front",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso machine dark drip grate",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Espresso machine drip tray",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Grinder adjustment collar",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Grinder grounds chute",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Portafilter basket",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Portafilter black handle",
+    "source_triangles": 252,
+    "web_triangles": 252,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge bezel",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge ivory dial",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge needle",
+    "source_triangles": 476,
+    "web_triangles": 476,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.001",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.002",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.003",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.004",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.005",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.006",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.007",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Pressure gauge tick.008",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Smoked bean hopper",
+    "source_triangles": 480,
+    "web_triangles": 480,
+    "preserved": true
+  },
+  {
+    "name": "Steam control knob",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Steam wand",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Steel dosing cup",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Toast browned crust",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toast browned crust.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toast crumb face",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toast crumb face.001",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toaster black foot",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Toaster browning dial",
+    "source_triangles": 508,
+    "web_triangles": 508,
+    "preserved": true
+  },
+  {
+    "name": "Toaster cream rounded shell",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toaster dark bread slot",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Toaster dark bread slot.001",
+    "source_triangles": 572,
+    "web_triangles": 572,
+    "preserved": true
+  },
+  {
+    "name": "Toaster dial index",
+    "source_triangles": 380,
+    "web_triangles": 380,
+    "preserved": true
+  },
+  {
+    "name": "Toaster front button",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Toaster front button.001",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Toaster front button.002",
+    "source_triangles": 316,
+    "web_triangles": 316,
+    "preserved": true
+  },
+  {
+    "name": "Toaster lever",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toaster lever slot",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toaster power lead",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Toaster socket",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Toaster stainless top",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Kettle black handle",
+    "source_triangles": 320,
+    "web_triangles": 320,
+    "preserved": true
+  },
+  {
+    "name": "Kettle circular power base",
+    "source_triangles": 764,
+    "web_triangles": 764,
+    "preserved": true
+  },
+  {
+    "name": "Kettle illuminated switch",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Kettle lid",
+    "source_triangles": 636,
+    "web_triangles": 636,
+    "preserved": true
+  },
+  {
+    "name": "Kettle lid knob",
+    "source_triangles": 440,
+    "web_triangles": 440,
+    "preserved": true
+  },
+  {
+    "name": "Kettle open pouring spout",
+    "source_triangles": 400,
+    "web_triangles": 400,
+    "preserved": true
+  },
+  {
+    "name": "Kettle power cord",
+    "source_triangles": 240,
+    "web_triangles": 240,
+    "preserved": true
+  },
+  {
+    "name": "Kettle wall socket",
+    "source_triangles": 300,
+    "web_triangles": 300,
+    "preserved": true
+  },
+  {
+    "name": "Sage electric kettle body",
+    "source_triangles": 672,
+    "web_triangles": 672,
+    "preserved": true
+  }
+]

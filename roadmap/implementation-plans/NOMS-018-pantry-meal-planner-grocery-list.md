@@ -1,12 +1,13 @@
 # NOMS-018: Kitchen Workspace, Pantries, Grocery Lists & Recipe Feasibility — Implementation Plan
 
-> **Current-state review — 2026-11-03:** PRs #21/#25–32 deliver the main Kitchen slices; PR #49 adds artwork. PR #56 supersedes earlier non-unique-list/sibling-name assumptions with owner-wide uniqueness. Optional/substitute matching, shortages and later shopping/offline scope remain.
-> [Evidence and remaining work](../reviews/2026-11-03-current-state.md). Earlier proposals, dates and unchecked
-> acceptance lists below are historical; they do not override this summary.
+> **Current delivery — 2026-11-18:** Kitchen has private pantries and grocery lists, recipe presence checks, cookable-recipe discovery, missing-ingredient list generation, and transfer of purchased rows to a pantry. Optional ingredients do not block feasibility and can be excluded from grocery generation. Purchased rows can be kept or removed after a successful transfer. The sections below describe the delivered contracts and preserve earlier proposals.
 
-**Status:** 🟡 In Progress — lists, inventory and presence discovery delivered
+**Status:** ✅ Done — lists, inventory, feasibility and purchased transfer delivered
+
+> This item is closed. Earlier proposals and acceptance notes below are kept as
+> delivery history. Any future work gets a [new roadmap task](../README.md#open-work).
 **Created:** 2026-08-15
-**Updated:** 2026-10-25
+**Updated:** 2026-11-18
 **First delivery:** Multiple private, database-backed grocery lists; manual-only or generated as independent snapshots from selected recipes
 **Selected UI:** Workspace 2 — context inspector, and Create list 10 — compact form.
 **Implemented preview:** [Grocery list workspace](../assets/NOMS-018/implementation/workspace.png). Earlier exploratory HTML galleries remain local design artifacts.
@@ -18,8 +19,8 @@
 1. **Slice 1 — Independent grocery lists (merged in PR #21):** Deliver saved-list management, compact creation, recipe ingredient snapshots, manual items, shopping progress, and optional recipe context.
 2. **Slice 2 — Pantry inventory (merged in PR #25):** multiple named pantries, ingredients with optional authored quantities/units, equipment, and explicit availability. See the [pantry inventory implementation plan](NOMS-018-pantry-inventory.md) and its selected W01/C01 UI.
 3. **Workspace unification:** [Kitchen workspace](NOMS-018-kitchen-workspace.md) combines pantry and grocery navigation. Kitchen names the whole workspace; pantry names each inventory profile. Existing lists stay independent.
-4. **Slice 3 — Recipe feasibility and shortages:** start with an ingredient-only [recipe detail pantry check](NOMS-018-recipe-pantry-check.md), using case-insensitive ingredient names and explicit availability against one pantry. Amounts, units and servings do not affect this first check. The [What can I cook? section](NOMS-018-pantry-recipes.md) now checks owned and collected recipes within the Pantry tab. Shortage-list generation follows later.
-5. **Later — Shopping enhancements:** explicit shortage-to-list generation, regeneration/reconciliation, offline synchronization, and deliberate purchased-stock updates. Define those contracts before implementation.
+4. **Slice 3 — Recipe feasibility and shortages:** start with an ingredient-only [recipe detail pantry check](NOMS-018-recipe-pantry-check.md), using case-insensitive ingredient names and explicit availability against one pantry. Amounts, units and servings do not affect this first check. The [What can I cook? section](NOMS-018-pantry-recipes.md) now checks owned and collected recipes within the Pantry tab. Optional ingredients are nonblocking. Recipe detail and grocery creation can generate missing-ingredient lists (PRs #62 and #64).
+5. **Purchased-stock updates:** Select purchased rows and an owned pantry. Keep or remove transferred rows (PR #70). Regeneration, reconciliation and offline synchronization remain proposals.
 
 The current Kitchen/pantry terminology above supersedes the older kitchen-profile wording in historical sections below. The broader product scope remains recorded after the Slice 1 plan. Its pantry, equipment, and offline acceptance scenarios are not release gates for Slice 1. All saved lists remain independent: editing a source recipe never silently changes list contents or check-offs.
 

@@ -1,7 +1,9 @@
 use crate::api::collection_portability::{
     export_collection_json, import_collection_json, inspect_collection_json,
 };
-use crate::collection_json::{CollectionImportPreview, CollectionImportResult};
+use crate::collection_json::{
+    CollectionImportNames, CollectionImportPreview, CollectionImportResult,
+};
 use crate::utils::download::download_file;
 use dioxus::{html::FileData, prelude::*};
 use std::rc::Rc;
@@ -110,13 +112,14 @@ pub(super) fn CollectionJsonImport(on_imported: EventHandler<()>) -> Element {
     let mut selected = use_signal(|| None::<FileData>);
     let mut checked_json = use_signal(|| None::<Rc<String>>);
     let mut preview = use_signal(|| None::<CollectionImportPreview>);
+    let mut names = use_signal(CollectionImportNames::default);
     let mut result = use_signal(|| None::<CollectionImportResult>);
     let mut pending = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     rsx! {
-        button { r#type: "button", class: "btn btn-secondary touch-target", disabled: !ready(),
+        button { r#type: "button", class: "btn btn-secondary touch-target", disabled: !ready() || pending(),
             onmounted: move |_| ready.set(true),
-            onclick: move |_| { selected.set(None); checked_json.set(None); preview.set(None); result.set(None); error.set(None); open.set(true); },
+            onclick: move |_| { selected.set(None); checked_json.set(None); preview.set(None); names.set(Default::default()); result.set(None); error.set(None); open.set(true); },
             "Import collection JSON"
         }
         if open() {
@@ -150,7 +153,8 @@ pub(super) fn CollectionJsonImport(on_imported: EventHandler<()>) -> Element {
                         label { r#for: "collection-json-file", "Collection JSON file" }
                         input { id: "collection-json-file", r#type: "file", accept: ".json,application/json", disabled: pending(),
                             onchange: move |event| {
-                                selected.set(None); checked_json.set(None); preview.set(None); error.set(None);
+                                if pending() { return; }
+                                selected.set(None); checked_json.set(None); preview.set(None); names.set(Default::default()); error.set(None);
                                 if let Some(file) = event.files().into_iter().next() {
                                     if file.size() == 0 || file.size() > crate::collection_json::MAX_JSON_BYTES as u64 {
                                         error.set(Some("Choose a nonempty collection JSON file up to 8 MiB.".into()));
@@ -164,22 +168,24 @@ pub(super) fn CollectionJsonImport(on_imported: EventHandler<()>) -> Element {
                                 p { "{info.collection_count} ", if info.collection_count == 1 { "collection" } else { "collections" }
                                     " · {info.recipe_count} unique ", if info.recipe_count == 1 { "recipe" } else { "recipes" }
                                 }
-                                p { "Ready to import as private copies. A matching collection name gets a new name; nothing is overwritten." }
+                                p { "Import creates private copies. A matching root collection name gets an imported-copy name; nothing is overwritten." }
                             }
+                            ImportNameChoices { preview: info, names, pending, on_edit: move |_| error.set(None) }
                         }
                         if let Some(problem) = error() { p { role: "alert", "{problem}" } }
                         div { display: "flex", gap: "var(--space-sm)", justify_content: "flex-end", flex_wrap: "wrap",
-                            button { r#type: "button", class: "btn btn-secondary touch-target", disabled: pending(), onclick: move |_| open.set(false), "Cancel" }
-                            button { r#type: "button", class: "btn btn-primary touch-target", disabled: pending() || selected().is_none(), aria_busy: pending(),
+                            button { r#type: "button", class: "btn btn-secondary touch-target", disabled: pending(), onclick: move |_| { if !pending() { open.set(false); } }, "Cancel" }
+                            button { r#type: "button", class: "btn btn-primary touch-target", disabled: pending() || selected().is_none() || names().has_blank_names(), aria_busy: pending(),
                                 onclick: move |_| {
                                     if pending() { return; }
                                     let Some(file) = selected() else { return; };
-                                    let cached = checked_json(); let info = preview(); let initiating = account();
+                                    let cached = checked_json(); let info = preview(); let initiating = account(); let chosen_names = names();
+                                    if chosen_names.has_blank_names() { return; }
                                     pending.set(true); error.set(None);
                                     spawn(async move {
                                         if let (Some(json), Some(info)) = (cached, info) {
                                             let available = super::recipe_json_controls::check_linked_images(info.external_image_urls).await;
-                                            match import_collection_json(initiating, (*json).clone(), available).await {
+                                            match import_collection_json(initiating, (*json).clone(), available, Some(chosen_names)).await {
                                                 Ok(imported) => {
                                                     let current = auth.read().is_authenticated.then_some(auth.read().current_user_id).flatten();
                                                     if crate::auth::account_binding::account_completion_matches(initiating, current, imported.owner_id) {
@@ -192,7 +198,12 @@ pub(super) fn CollectionJsonImport(on_imported: EventHandler<()>) -> Element {
                                             match file.read_string().await {
                                                 Ok(json) if !json.is_empty() && json.len() <= crate::collection_json::MAX_JSON_BYTES => {
                                                     match inspect_collection_json(initiating, json.clone()).await {
-                                                        Ok(info) => { checked_json.set(Some(Rc::new(json))); preview.set(Some(info)); }
+                                                        Ok(info) => {
+                                                            let current = auth.read().is_authenticated.then_some(auth.read().current_user_id).flatten();
+                                                            if crate::auth::account_binding::account_completion_matches(initiating, current, info.owner_id) {
+                                                                names.set(CollectionImportNames::from_preview(&info)); checked_json.set(Some(Rc::new(json))); preview.set(Some(info));
+                                                            } else { error.set(Some(crate::auth::account_binding::ACCOUNT_COMPLETION_CHANGED_FEEDBACK.into())); }
+                                                        }
                                                         Err(problem) => error.set(Some(format!("Could not check this file: {problem}"))),
                                                     }
                                                 }
@@ -208,6 +219,141 @@ pub(super) fn CollectionJsonImport(on_imported: EventHandler<()>) -> Element {
                     }
                 }
             }
+        }
+    }
+}
+
+#[component]
+fn ImportNameChoices(
+    preview: CollectionImportPreview,
+    mut names: Signal<CollectionImportNames>,
+    pending: Signal<bool>,
+    on_edit: EventHandler<()>,
+) -> Element {
+    rsx! {
+        section { aria_label: "Names for imported copies",
+            h3 { "Names for imported copies" }
+            p { "Rename collections or recipes here to avoid names already in use. Your original JSON file and its checksums stay unchanged." }
+            for (collections, heading, entries) in [(true, "Collection names", preview.collections), (false, "Recipe titles", preview.recipes)] {
+                details { open: entries.iter().any(|entry| entry.already_exists),
+                    summary { class: "touch-target", "{heading} ({entries.len()})" }
+                    fieldset { disabled: pending(), border: "0", padding: "var(--space-sm) 0", display: "grid", gap: "var(--space-sm)",
+                        for (index, entry) in entries.iter().cloned().enumerate() {
+                            label { key: "{entry.portable_id}", display: "grid", gap: "4px",
+                                span { if collections { "Collection {index + 1}" if index == 0 { " (root)" } } else { "Recipe {index + 1}" } }
+                                input { class: "neumo-inset input", r#type: "text", required: true,
+                                    maxlength: if collections { "100" } else { "255" }, width: "100%",
+                                    value: if collections { names().collections.get(index).map(|item| item.name.clone()).unwrap_or_default() } else { names().recipes.get(index).map(|item| item.name.clone()).unwrap_or_default() },
+                                    oninput: move |event| {
+                                        if pending() { return; }
+                                        let mut choices = names.write();
+                                        let list = if collections { &mut choices.collections } else { &mut choices.recipes };
+                                        if let Some(item) = list.get_mut(index) { item.name = event.value(); }
+                                        drop(choices);
+                                        on_edit.call(());
+                                    }
+                                }
+                                if entry.already_exists {
+                                    small { color: "var(--warning-ink)",
+                                        if collections && index == 0 { "The original root name is already in use. An imported-copy name will be chosen if needed." }
+                                        else { "The original name is already in use. Choose another for this copy." }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod import_name_tests {
+    use super::*;
+    use crate::collection_json::CollectionImportNamePreview;
+    use std::{cell::Cell, rc::Rc};
+
+    fn preview() -> CollectionImportPreview {
+        CollectionImportPreview {
+            owner_id: uuid::Uuid::from_u128(1),
+            name: "Family recipes".into(),
+            collection_count: 1,
+            recipe_count: 1,
+            external_image_urls: vec![],
+            collections: vec![CollectionImportNamePreview {
+                portable_id: "root-entry".into(),
+                name: "Family recipes".into(),
+                already_exists: true,
+            }],
+            recipes: vec![CollectionImportNamePreview {
+                portable_id: "recipe-entry".into(),
+                name: "Original soup".into(),
+                already_exists: true,
+            }],
+        }
+    }
+
+    #[component]
+    fn NamesForm(is_pending: bool, edited: Rc<Cell<usize>>) -> Element {
+        let choices = use_signal(|| CollectionImportNames::from_preview(&preview()));
+        let pending = use_signal(|| is_pending);
+        let chosen_title = choices().recipes[0].name.clone();
+        let chosen_id = choices().recipes[0].portable_id.clone();
+        rsx! {
+            ImportNameChoices { preview: preview(), names: choices, pending, on_edit: move |_| edited.set(edited.get() + 1) }
+            output { "Chosen: {chosen_id}: {chosen_title}" }
+            output { "Source: {preview().recipes[0].name}" }
+        }
+    }
+
+    #[test]
+    fn preview_renaming_updates_only_the_choice_and_retains_archive_identity() {
+        use dioxus::html::{SerializedFormData, SerializedHtmlEventConverter};
+        set_event_converter(Box::new(SerializedHtmlEventConverter));
+        for is_pending in [false, true] {
+            let edited = Rc::new(Cell::new(0));
+            let mut dom = VirtualDom::new_with_props(
+                NamesForm,
+                NamesFormProps {
+                    is_pending,
+                    edited: edited.clone(),
+                },
+            );
+            let mutations = dom.rebuild_to_vec();
+            let inputs: Vec<_> = mutations
+                .edits
+                .iter()
+                .filter_map(|mutation| match mutation {
+                    dioxus_core::Mutation::NewEventListener { name, id } if *name == "input" => {
+                        Some(*id)
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(inputs.len(), 2);
+            dom.runtime().handle_event(
+                "input",
+                Event::new(
+                    Rc::new(PlatformEventData::new(Box::new(SerializedFormData::new(
+                        "My soup copy".into(),
+                        vec![],
+                    )))) as Rc<dyn std::any::Any>,
+                    true,
+                ),
+                inputs[1],
+            );
+            dom.render_immediate_to_vec();
+            let html = dioxus_ssr::render(&dom);
+            assert!(html.contains("Your original JSON file and its checksums stay unchanged"));
+            assert!(html.contains("The original name is already in use"));
+            assert!(html.contains("Source: Original soup"));
+            assert!(html.contains(if is_pending {
+                "Chosen: recipe-entry: Original soup"
+            } else {
+                "Chosen: recipe-entry: My soup copy"
+            }));
+            assert_eq!(edited.get(), usize::from(!is_pending));
         }
     }
 }

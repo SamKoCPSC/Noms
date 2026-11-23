@@ -41,6 +41,11 @@ impl ChapterArrival {
             self.playback.advance(seconds);
         }
     }
+    /// Static baked scenes are complete before the loading curtain opens.
+    pub fn settle(&mut self) {
+        self.started = true;
+        self.playback.elapsed = DURATION;
+    }
     pub fn animating(&self) -> bool {
         self.started && !self.playback.finished()
     }
@@ -52,12 +57,19 @@ impl ChapterArrival {
 pub enum Room {
     Kitchen,
     Office,
+    // Retained only for archived asset regression coverage.
+    #[cfg(test)]
     Potluck,
     Bedroom,
     Garden,
     CorporateOffice,
     Library,
     Supermarket,
+    BrickKitchen,
+    Bakery,
+    FarmersMarket,
+    SocialKitchen,
+    RiversideCampsite,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Kind {
@@ -152,7 +164,7 @@ pub fn prepare(data: &DioramaMesh, room: Room) -> DioramaMesh {
         {
             let cx = (tri[0] + tri[12] + tri[24]) / 3.;
             let cz = (tri[2] + tri[14] + tri[26]) / 3.;
-            let side_x = if room == Room::Office {
+            let side_x = if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
                 b.max[0]
             } else {
                 b.min[0]
@@ -281,7 +293,11 @@ impl Motion {
         }
         let q = smooth(u);
         let rest = 1. - q;
-        let sign = if room == Room::Office { -1. } else { 1. };
+        let sign = if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
+            -1.
+        } else {
+            1.
+        };
         let mut size = [1.; 3];
         let mut rot = [0.; 3];
         let mut delta = [0.; 3];
@@ -361,7 +377,7 @@ impl Motion {
                     moved = self.bounds.transformed(matrix);
                 }
                 matrix[12] += (lo - moved.min[0]).max(0.) - (moved.max[0] - hi).max(0.);
-            } else if room == Room::Office {
+            } else if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
                 matrix[12] -= (moved.max[0] - self.bounds.max[0]).max(0.);
             } else {
                 matrix[12] += (self.bounds.min[0] - moved.min[0]).max(0.);
@@ -395,12 +411,32 @@ mod tests {
                 include_bytes!("../../../assets/about/sams-potluck.glb").as_slice(),
             ),
             (
+                Room::SocialKitchen,
+                include_bytes!("../../../assets/about/sams-social-kitchen.glb").as_slice(),
+            ),
+            (
+                Room::RiversideCampsite,
+                include_bytes!("../../../assets/about/sams-riverside-campsite.glb").as_slice(),
+            ),
+            (
                 Room::Library,
                 include_bytes!("../../../assets/about/sams-library.glb").as_slice(),
             ),
             (
                 Room::Supermarket,
                 include_bytes!("../../../assets/about/sams-supermarket.glb").as_slice(),
+            ),
+            (
+                Room::FarmersMarket,
+                include_bytes!("../../../assets/about/sams-farmers-market.glb").as_slice(),
+            ),
+            (
+                Room::Bakery,
+                include_bytes!("../../../assets/about/sams-bakery.glb").as_slice(),
+            ),
+            (
+                Room::BrickKitchen,
+                include_bytes!("../../../assets/about/sams-brick-kitchen.glb").as_slice(),
             ),
             (
                 Room::CorporateOffice,
@@ -456,6 +492,19 @@ mod tests {
         }
     }
     #[test]
+    fn baked_scene_stays_assembled_before_entry_and_on_revisit() {
+        let mut arrival = ChapterArrival::new(1);
+        arrival.settle();
+        assert_eq!(arrival.frame(), 160.);
+        assert!(!arrival.animating());
+
+        for progress in [0., 0.8, 1., 2., 1.] {
+            arrival.advance(progress, 0.1);
+            assert_eq!(arrival.frame(), 160.);
+            assert!(!arrival.animating());
+        }
+    }
+    #[test]
     fn splitting_architecture_preserves_every_triangle_and_final_placement() {
         for (room, original) in models() {
             let m = prepare(&original, room);
@@ -482,7 +531,14 @@ mod tests {
                     floors += 1;
                 }
             }
-            assert!(walls >= 2, "{room:?}");
+            if matches!(room, Room::FarmersMarket | Room::RiversideCampsite) {
+                assert_eq!(
+                    walls, 0,
+                    "Outdoor assemblies must not be classified as wall panels"
+                );
+            } else {
+                assert!(walls >= 2, "{room:?}");
+            }
             assert!(floors > 0);
         }
     }
@@ -521,7 +577,7 @@ mod tests {
                             "{} right {frame}",
                             p.name
                         );
-                    } else if room == Room::Office {
+                    } else if matches!(room, Room::Office | Room::BrickKitchen | Room::Library) {
                         assert!(b.max[0] <= rest.max[0] + 0.00002, "{} side {frame}", p.name);
                     } else {
                         assert!(b.min[0] >= rest.min[0] - 0.00002, "{} side {frame}", p.name);
