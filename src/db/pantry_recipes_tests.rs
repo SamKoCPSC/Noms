@@ -120,7 +120,9 @@ async fn pantry_recipes_match_library_only_with_shared_presence_rules() {
     ] {
         recipe(&pool, owner, "Unavailable", "private", &names).await;
     }
-    let page = find(&pool, owner, p.id, p.revision, None).await.unwrap();
+    let page = find(&pool, owner, p.id, p.revision, None, false)
+        .await
+        .unwrap();
     let actual: std::collections::HashSet<_> = page.recipes.iter().map(|r| r.id).collect();
     assert_eq!(
         actual,
@@ -153,8 +155,14 @@ async fn pantry_recipes_pages_are_bounded_stable_and_deduplicated() {
         expected.push(id);
         save(&pool, c, id).await;
     }
-    for _ in 0..18 {
-        recipe(&pool, owner, "Not ready", "private", &["Milk"]).await;
+    let mut almost_expected = Vec::new();
+    for names in [&["Milk"][..], &["Milk", "Flour"][..]] {
+        let mut rank = Vec::new();
+        for _ in 0..if names.len() == 1 { 13 } else { 5 } {
+            rank.push(recipe(&pool, owner, "Not ready", "private", names).await);
+        }
+        rank.sort_by(|a, b| b.cmp(a));
+        almost_expected.extend(rank);
     }
     sqlx::query("UPDATE recipes SET updated_at='2026-01-01T00:00:00Z' WHERE user_id=$1")
         .bind(owner)
@@ -166,10 +174,12 @@ async fn pantry_recipes_pages_are_bounded_stable_and_deduplicated() {
     let mut cursor = None;
     let mut sizes = Vec::new();
     loop {
-        let page = find(&pool, owner, p.id, p.revision, cursor.as_deref())
+        let page = find(&pool, owner, p.id, p.revision, cursor.as_deref(), false)
             .await
             .unwrap();
         sizes.push(page.recipes.len());
+        assert_eq!(page.cookable_count, 30);
+        assert_eq!(page.almost_cookable_count, 18);
         assert!(page
             .optional_ingredients_missing
             .keys()
@@ -187,6 +197,35 @@ async fn pantry_recipes_pages_are_bounded_stable_and_deduplicated() {
     }
     assert_eq!(sizes, [12, 12, 6]);
     assert_eq!(seen, expected);
+
+    let first = find(&pool, owner, p.id, p.revision, None, true)
+        .await
+        .unwrap();
+    let second = find(
+        &pool,
+        owner,
+        p.id,
+        p.revision,
+        first.next_cursor.as_deref(),
+        true,
+    )
+    .await
+    .unwrap();
+    for page in [&first, &second] {
+        assert_eq!(page.cookable_count, 30);
+        assert_eq!(page.almost_cookable_count, 18);
+    }
+    assert_eq!(first.recipes.len(), 12);
+    assert!(second.next_cursor.is_none());
+    assert_eq!(
+        first
+            .recipes
+            .iter()
+            .chain(&second.recipes)
+            .map(|r| r.id)
+            .collect::<Vec<_>>(),
+        almost_expected
+    );
 }
 
 #[tokio::test]
@@ -249,7 +288,9 @@ async fn pantry_recipes_allow_optional_missing_and_keep_required_and_malformed_e
             expected.push((id, count));
         }
     }
-    let page = find(&pool, owner, p.id, p.revision, None).await.unwrap();
+    let page = find(&pool, owner, p.id, p.revision, None, false)
+        .await
+        .unwrap();
     assert_eq!(page.recipes.len(), expected.len());
     for (id, count) in expected {
         assert!(page.recipes.iter().any(|r| r.id == id));
@@ -270,16 +311,16 @@ async fn pantry_recipes_enforce_owner_revision_cursor_and_current_visibility() {
     let other = user(&pool).await;
     let p = kitchen(&pool, owner).await;
     assert!(matches!(
-        find(&pool, other, p.id, p.revision, None).await,
+        find(&pool, other, p.id, p.revision, None, false).await,
         Err(pantry::PantryError::Missing)
     ));
     assert!(matches!(
-        find(&pool, owner, Uuid::new_v4(), 0, None).await,
+        find(&pool, owner, Uuid::new_v4(), 0, None, false).await,
         Err(pantry::PantryError::Missing)
     ));
     for cursor in ["bad!".to_string(), "a".repeat(513)] {
         assert!(matches!(
-            find(&pool, owner, p.id, p.revision, Some(&cursor)).await,
+            find(&pool, owner, p.id, p.revision, Some(&cursor), false).await,
             Err(pantry::PantryError::Invalid(_))
         ));
     }
@@ -287,7 +328,7 @@ async fn pantry_recipes_enforce_owner_revision_cursor_and_current_visibility() {
     let id = recipe(&pool, other, "Saved", "public", &["Rice"]).await;
     save(&pool, c, id).await;
     assert_eq!(
-        find(&pool, owner, p.id, p.revision, None)
+        find(&pool, owner, p.id, p.revision, None, false)
             .await
             .unwrap()
             .recipes
@@ -299,14 +340,14 @@ async fn pantry_recipes_enforce_owner_revision_cursor_and_current_visibility() {
         .execute(&pool)
         .await
         .unwrap();
-    assert!(find(&pool, owner, p.id, p.revision, None)
+    assert!(find(&pool, owner, p.id, p.revision, None, false)
         .await
         .unwrap()
         .recipes
         .is_empty());
     sqlx::query("UPDATE recipes SET visibility='public',ingredients='[{\"name\":\"Milk\",\"amount\":\"1\",\"unit\":\"\"}]' WHERE id=$1")
         .bind(id).execute(&pool).await.unwrap();
-    assert!(find(&pool, owner, p.id, p.revision, None)
+    assert!(find(&pool, owner, p.id, p.revision, None, false)
         .await
         .unwrap()
         .recipes
@@ -325,11 +366,11 @@ async fn pantry_recipes_enforce_owner_revision_cursor_and_current_visibility() {
     .await
     .unwrap();
     assert!(matches!(
-        find(&pool, owner, p.id, p.revision, None).await,
+        find(&pool, owner, p.id, p.revision, None, false).await,
         Err(pantry::PantryError::Conflict)
     ));
     let newer = pantry::get(&pool, owner, p.id).await.unwrap();
-    assert!(find(&pool, owner, p.id, newer.revision, None)
+    assert!(find(&pool, owner, p.id, newer.revision, None, false)
         .await
         .unwrap()
         .recipes
@@ -346,7 +387,7 @@ async fn pantry_recipes_enforce_owner_revision_cursor_and_current_visibility() {
     .unwrap();
     let newer = pantry::get(&pool, owner, p.id).await.unwrap();
     assert_eq!(
-        find(&pool, owner, p.id, newer.revision, None)
+        find(&pool, owner, p.id, newer.revision, None, false)
             .await
             .unwrap()
             .recipes
@@ -358,9 +399,54 @@ async fn pantry_recipes_enforce_owner_revision_cursor_and_current_visibility() {
         .execute(&pool)
         .await
         .unwrap();
-    assert!(find(&pool, owner, p.id, newer.revision, None)
+    assert!(find(&pool, owner, p.id, newer.revision, None, false)
         .await
         .unwrap()
         .recipes
         .is_empty());
+}
+
+#[tokio::test]
+async fn near_matches_rank_distinct_required_names_and_check_each_authored_swap() {
+    let (_db, pool) = crate::test_utils::setup_test_db().await;
+    let owner = user(&pool).await;
+    let p = kitchen(&pool, owner).await;
+    let one = recipe(&pool, owner, "One", "private", &["Milk"]).await;
+    recipe(
+        &pool,
+        owner,
+        "Three",
+        "private",
+        &["Milk", "Flour", "Butter"],
+    )
+    .await;
+    let rows = serde_json::json!([
+        {"name":"Milk","amount":"1","unit":"cup","substitutes":[{"name":"Rice","amount":"20","unit":"g"}]},
+        {"name":"MILK","amount":"2","unit":"cups"},
+        {"name":"Mint","amount":"","unit":"","optional":true}
+    ]);
+    sqlx::query("UPDATE recipes SET ingredients=$1 WHERE id=$2")
+        .bind(rows)
+        .bind(one)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let two = recipe(&pool, owner, "Two", "private", &["Milk", "Flour"]).await;
+    let page = find(&pool, owner, p.id, p.revision, None, true)
+        .await
+        .unwrap();
+    assert_eq!(
+        page.recipes.iter().map(|r| r.id).collect::<Vec<_>>(),
+        vec![one, two]
+    );
+    assert_eq!(page.cookable_count, 0);
+    assert_eq!(page.almost_cookable_count, 2);
+    assert!(!page.shortages[&two].substitutions_available);
+    assert_eq!(
+        page.shortages[&one],
+        crate::pantry::RecipeShortage {
+            missing: vec!["Milk".to_owned()],
+            substitutions_available: true,
+        }
+    );
 }

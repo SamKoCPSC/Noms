@@ -281,10 +281,11 @@ pub async fn create(
                 .expect("validated unique source")
         })
         .collect::<Vec<_>>();
-    let generated = build_filtered_requirements(
+    let generated = requirements_with_swaps(
         &previews,
         pantry.as_ref().map(|p| p.entries.as_slice()),
         request.include_optional,
+        &request.swaps,
     )?;
     if generated.len() + request.manual_items.len() > MAX_ITEMS {
         return Err(GroceryError::Limit);

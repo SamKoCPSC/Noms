@@ -162,6 +162,7 @@ fn SignedInPantryCheck(recipe_id: Uuid, ingredients: Vec<RecipeIngredient>) -> E
                                 onretry: move |_| retry += 1,
                             }
                         } else if let Some(current) = current {
+                            for swap in crate::pantry::feasibility::PantryMatcher::new(&current.entries).available_swaps(&ingredients) { p { "{swap}" } }
                             PantryCheckResult { check: check_pantry(&ingredients, &current.entries) }
                             p { class: "recipe-pantry__hint",
                                 "Quantities aren’t checked. Ingredient names ignore capitalization. Equipment isn’t checked."

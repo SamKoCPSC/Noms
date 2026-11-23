@@ -63,6 +63,7 @@ pub async fn find_pantry_recipes(
     pantry_id: Uuid,
     pantry_revision: i64,
     cursor: Option<String>,
+    almost: bool,
 ) -> Result<PantryRecipePage, ServerFnError> {
     let owner = actor(expected_account_id, false).await?;
     crate::security::run_with_expensive_read_work_budget(budget(crate::db::pantry_recipes::find(
@@ -71,6 +72,7 @@ pub async fn find_pantry_recipes(
         pantry_id,
         pantry_revision,
         cursor.as_deref(),
+        almost,
     )))
     .await
     .map_err(|_| ServerFnError::new("Recipe checks are busy. Please try again."))?
