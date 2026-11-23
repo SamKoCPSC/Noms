@@ -1,16 +1,18 @@
 # Landing-page 3D scenes
 
 `HomeScene` owns each model's poster, pause control, reduced-motion preference
-and route cleanup. Both scenes share one locally bundled Three.js renderer. The
-hero loads immediately. The recipe desk waits until the mission section is near
-the viewport.
+and route cleanup. All three scenes share one locally bundled Three.js renderer.
+The kitchen loads in the hero. The recipe desk and Pandacotta’s banquet load
+when their respective sections approach the viewport.
 
-The hero's kitchen clip plays the full recipe and fades as the tray and bowl reset. The desk's
-25.5-second collaboration clip loops continuously, with the orthographic camera
-framed to match its poster. Both scenes suspend playback offscreen and in
-background tabs. Reduced motion starts them paused. Each can be played
-independently. The poster remains visible before hydration, on asset failure or
-after WebGL context loss.
+The kitchen plays the full recipe and fades as the tray and bowl reset. The desk
+loops its 25.5-second collaboration clip. In “Discover new recipes,” Pandacotta
+uncovers and tastes three dishes in a 33-second loop. Its poster shows all three
+dishes, and playback begins with the domes closed.
+
+Each scene has its own pause control, suspends playback offscreen and in
+background tabs, and starts paused for reduced motion. Its poster is visible
+before hydration, on asset failure, or after WebGL context loss.
 
 ```sh
 npm ci
@@ -21,10 +23,12 @@ python scripts/tests/test-home-kitchen-browser.py --url http://127.0.0.1:8765/ -
 ```
 
 Commit the generated home bundle after editing the renderer. Rebuild both bundles
-after changing the shared About helpers. The browser checks exercise both scenes,
+after changing the shared About helpers. The browser checks exercise the three scenes,
 responsive framing, reduced motion, independent playback, cleanup and fallbacks.
 Software WebGL verifies behavior, not phone GPU performance. The kitchen source
 and build instructions are in `assets/models/penguini-cookie-kitchen/README.md`.
+The editable banquet scene is `design/landing/pandacotta-banquet/pandacotta-banquet.blend`,
+with its runtime GLB and poster in `assets/landing/pandacotta-banquet/`.
 The editable desk scene is `design/landing/recipe-desk/recipe-desk.blend`. Pack
 its web export with `node tools/home/three/pack.mjs INPUT.glb assets/landing/recipe-desk/recipe-desk.glb`,
 which verifies the decoded geometry and animation values. Three and Meshopt
