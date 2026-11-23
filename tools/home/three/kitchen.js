@@ -5,13 +5,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'meshoptimizer/meshopt_decoder.module.js';
 import { reflectionEnvironment, disposeModel } from '../../about/three/scene-resources.js';
 
-// Match the orthographic framing of the desk poster exported from Blender.
-function deskCamera() {
+// Fit the entire composition at narrower or wider aspect ratios.
+function studioCamera(position, target, width, height) {
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .1, 100);
-  camera.position.set(2.1, 8.35, 15);
-  camera.lookAt(0, 1.98, .82);
+  camera.position.set(...position);
+  camera.lookAt(...target);
   return {camera, fit(aspect) {
-    const halfHeight = Math.max(7.48 / (2 * aspect), 7.48 * 5 / 12);
+    const halfHeight = Math.max(width / aspect, height) / 2;
     camera.top = halfHeight;
     camera.bottom = -halfHeight;
     camera.right = halfHeight * aspect;
@@ -43,8 +43,8 @@ function kitchenCamera(root) {
   }};
 }
 
-function lightDesk(renderer, scene, root) {
-  // Soft studio reflections keep the metallic laptops and glazed mugs readable.
+function lightStudio(renderer, scene, root, banquet) {
+  // Studio reflections give polished props visible highlights.
   const studio = new RoomEnvironment();
   const generator = new THREE.PMREMGenerator(renderer);
   let environment;
@@ -66,7 +66,7 @@ function lightDesk(renderer, scene, root) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   key.castShadow = true;
-  Object.assign(key.shadow.camera, {left: -4.2, right: 4.2, top: 3.7, bottom: -3.7, near: .5, far: 18});
+  Object.assign(key.shadow.camera, {left: banquet ? -6 : -4.2, right: banquet ? 6 : 4.2, top: 3.7, bottom: -3.7, near: .5, far: 18});
   key.shadow.mapSize.set(512, 512);
   key.shadow.normalBias = .015;
   key.shadow.intensity = .78;
@@ -90,7 +90,8 @@ async function fetchAsset(url, signal) {
 }
 
 export async function createScene(canvas, sceneName, modelUrl, lightingUrl, signal) {
-  const isDesk = sceneName === 'recipe-desk';
+  const isKitchen = sceneName === 'kitchen';
+  const isBanquet = sceneName === 'pandacotta-banquet';
   let renderer, root, environment, mixer, api;
   try {
     renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true, powerPreference:'low-power'});
@@ -99,7 +100,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     renderer.setClearColor(0, 0);
     const [bytes, lighting] = await Promise.all([
       fetchAsset(modelUrl, signal).then(r => r.arrayBuffer()),
-      isDesk ? null : fetchAsset(lightingUrl, signal).then(r => r.json()),
+      isKitchen ? fetchAsset(lightingUrl, signal).then(r => r.json()) : null,
     ]);
     signal.throwIfAborted();
     const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes, new URL('.', new URL(modelUrl, document.baseURI)).href);
@@ -114,25 +115,31 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
         if (m.isMeshBasicMaterial) m.toneMapped=false;
       }
     });
-    if (isDesk) {
-      environment = lightDesk(renderer, scene, root);
-    } else {
+    if (isKitchen) {
       environment = reflectionEnvironment(renderer, root, lighting);
       scene.environment = environment.texture;
       renderer.toneMappingExposure = 2 ** lighting.exposure;
+    } else {
+      environment = lightStudio(renderer, scene, root, isBanquet);
     }
     mixer = new THREE.AnimationMixer(root);
     const clip = gltf.animations[0], duration=clip.duration;
     const action = mixer.clipAction(clip);
-    if (isDesk) {
-      action.setLoop(THREE.LoopRepeat, Infinity);
-    } else {
+    if (isKitchen) {
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
+    } else {
+      action.setLoop(THREE.LoopRepeat, Infinity);
     }
     action.play();
-    const cycle = isDesk ? duration : duration + .4;
-    const view = isDesk ? deskCamera() : kitchenCamera(root);
+    // Show all three courses in the static pose. Begin the first reveal on play.
+    let showingPosterPose = isBanquet;
+    if (showingPosterPose) mixer.setTime(22.6);
+    const cycle = isKitchen ? duration + .4 : duration;
+    let view;
+    if (isKitchen) view = kitchenCamera(root);
+    else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
+    else view = studioCamera([2.1, 8.35, 15], [0, 1.98, .82], 7.48, 7.48 * 5 / 6);
     const camera = view.camera;
     let disposed=false, paused=true, inView=true, raf=0, previous=0, elapsed=0, width=0, height=0, dirty=true;
     const host=canvas.closest('figure');
@@ -154,14 +161,14 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
         const advance = paused ? 0 : dt;
         elapsed += advance;
         let opacity = 1;
-        if (isDesk) {
-          mixer.update(advance);
-        } else {
+        if (isKitchen) {
           // Hold and fade the kitchen across the ingredient reset.
           const t = elapsed % cycle;
           action.paused = false;
           mixer.setTime(THREE.MathUtils.clamp(t - .2, 0, duration));
           if (!paused && elapsed >= .2) opacity = THREE.MathUtils.clamp(Math.min(t / .2, (cycle - t) / .4), 0, 1);
+        } else {
+          mixer.update(advance);
         }
         fit(); renderer.render(scene,camera);
         canvas.style.opacity=String(opacity);
@@ -174,7 +181,10 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     const visibility=()=>{previous=0;wake();}; document.addEventListener('visibilitychange',visibility);
     const lost=e=>{e.preventDefault();host.dataset.state='fallback';api.dispose();};canvas.addEventListener('webglcontextlost',lost);
     api={
-      setPaused(value){paused=value;previous=0;dirty=true;wake();},
+      setPaused(value){
+        if (!value && showingPosterPose) { mixer.setTime(0); showingPosterPose=false; }
+        paused=value;previous=0;dirty=true;wake();
+      },
       dispose(){
         if(disposed)return;disposed=true;cancelAnimationFrame(raf);
         observer.disconnect();intersection.disconnect();document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);
@@ -184,7 +194,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
       }
     };
     signal.addEventListener('abort',api.dispose,{once:true});
-    canvas.dataset.renderer='three';canvas.dataset.duration=String(duration);canvas.dataset.bakedShadows=String(!isDesk);
+    canvas.dataset.renderer='three';canvas.dataset.duration=String(duration);canvas.dataset.bakedShadows=String(isKitchen);
     fit();mixer.update(0);renderer.render(scene,camera);
     host.dataset.state='ready';
     return api;

@@ -5,6 +5,8 @@ const KITCHEN_POSTER: Asset = asset!("/assets/landing/kitchen/poster.webp");
 const KITCHEN_MODEL: Asset = asset!("/assets/landing/kitchen/penguini-kitchen.glb");
 const DESK_POSTER: Asset = asset!("/assets/landing/recipe-desk/poster.webp");
 const DESK_MODEL: Asset = asset!("/assets/landing/recipe-desk/recipe-desk.glb");
+const BANQUET_POSTER: Asset = asset!("/assets/landing/pandacotta-banquet/poster.webp");
+const BANQUET_MODEL: Asset = asset!("/assets/landing/pandacotta-banquet/pandacotta-banquet.glb");
 const LIGHTING: Asset = asset!("/assets/landing/kitchen/lighting.json");
 const RENDERER: Asset = asset!(
     "/assets/home-kitchen.js",
@@ -16,23 +18,21 @@ const _: &[u8] = include_bytes!("../../assets/home-kitchen.js");
 pub(super) enum Scene {
     Kitchen,
     RecipeDesk,
+    Banquet,
 }
 
 #[component]
 pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element {
-    let (id, model, poster, width, height, description) = match scene {
-        Scene::Kitchen => ("landing-kitchen", KITCHEN_MODEL, KITCHEN_POSTER, 800, 720,
+    let (name, animation, model, poster, width, height, description) = match scene {
+        Scene::Kitchen => ("kitchen", "kitchen animation", KITCHEN_MODEL, KITCHEN_POSTER, 800, 720,
             "Penguini browns butter while checking his recipe book. He pours it into an empty bowl on a kitchen scale, adds brown sugar, eggs, vanilla and baking soda, then opens a jar and shakes in espresso powder. He stirs, adds flour and chocolate chips, mixes again, and bakes three cookies. He eats one in five bites and does a happy dance."),
-        Scene::RecipeDesk => ("landing-recipe-desk", DESK_MODEL, DESK_POSTER, 1200, 1000,
+        Scene::RecipeDesk => ("recipe-desk", "recipe desk animation", DESK_MODEL, DESK_POSTER, 1200, 1000,
             "Penguini and Cattatouille work on a recipe at their laptops, pointing out changes and nodding in agreement."),
+        Scene::Banquet => ("pandacotta-banquet", "banquet animation", BANQUET_MODEL, BANQUET_POSTER, 1120, 640,
+            "Pandacotta lifts silver domes at a banquet table to discover bao, tacos, and strawberry cream cake. He tastes each dish."),
     };
-    let canvas_id = format!("{id}-canvas");
-    let is_desk = scene == Scene::RecipeDesk;
-    let animation = if is_desk {
-        "recipe desk animation"
-    } else {
-        "kitchen animation"
-    };
+    let canvas_id = format!("landing-{name}-canvas");
+    let is_hero = scene == Scene::Kitchen;
     let mut paused = use_signal(|| true);
     #[allow(unused_mut)]
     let mut ready = use_signal(|| false);
@@ -57,10 +57,10 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
     let control = if paused() { "Play" } else { "Pause" };
     rsx! {
         figure {
-            id, class: "landing-model", "data-state": "loading",
-            "data-scene": if is_desk { "recipe-desk" } else { "kitchen" },
+            id: "landing-{name}", class: "landing-model", "data-state": "loading",
+            "data-scene": name,
             "data-model-url": model, "data-renderer-url": RENDERER,
-            "data-lighting-url": (!is_desk).then(|| LIGHTING.to_string()),
+            "data-lighting-url": is_hero.then(|| LIGHTING.to_string()),
             onmounted: move |_| {
                 #[cfg(target_arch = "wasm32")]
                 {
@@ -70,7 +70,7 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
                         let reduced = window.match_media("(prefers-reduced-motion: reduce)")
                             .ok().flatten().is_some_and(|m| m.matches());
                         paused.set(reduced);
-                        if browser::mount(runtime.clone(), paused, id).await.is_ok() && !runtime.borrow().disposed {
+                        if browser::mount(runtime.clone(), paused, name).await.is_ok() && !runtime.borrow().disposed {
                             ready.set(true);
                         }
                     });
@@ -79,7 +79,7 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
             div { class: "landing-model__viewer",
                 div { role: "img", aria_label: description,
                     img { class: "landing-model__poster", src: poster, alt: "", width: "{width}", height: "{height}",
-                        loading: if is_desk { "lazy" } else { "eager" }, fetchpriority: if is_desk { "low" } else { "high" }
+                        loading: if is_hero { "eager" } else { "lazy" }, fetchpriority: if is_hero { "high" } else { "low" }
                     }
                     canvas { id: "{canvas_id}", aria_hidden: "true" }
                 }
@@ -153,7 +153,7 @@ mod browser {
     pub(super) async fn mount(
         runtime: Rc<RefCell<Runtime>>,
         mut paused: dioxus::prelude::Signal<bool>,
-        id: &str,
+        name: &str,
     ) -> Result<(), JsValue> {
         if let Some(query) = web_sys::window().and_then(|w| {
             w.match_media("(prefers-reduced-motion: reduce)")
@@ -172,7 +172,8 @@ mod browser {
         let doc = web_sys::window()
             .and_then(|w| w.document())
             .ok_or("No document")?;
-        let host = doc.get_element_by_id(id).ok_or("Missing landing scene")?;
+        let id = format!("landing-{name}");
+        let host = doc.get_element_by_id(&id).ok_or("Missing landing scene")?;
         let canvas = doc
             .get_element_by_id(&format!("{id}-canvas"))
             .ok_or("Missing canvas")?

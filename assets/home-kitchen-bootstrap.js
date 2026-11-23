@@ -1,4 +1,4 @@
-// Keep the below-the-fold desk download out of the hero's initial load.
+// Keep below-the-fold model downloads out of the hero's initial load.
 async function nearViewport(canvas, signal) {
   if (!window.IntersectionObserver) return;
   await new Promise((resolve, reject) => {
@@ -21,7 +21,7 @@ async function nearViewport(canvas, signal) {
 
 export async function loadScene(canvas, signal) {
   const {scene, modelUrl, lightingUrl, rendererUrl} = canvas.closest('figure').dataset;
-  if (scene === 'recipe-desk') await nearViewport(canvas, signal);
+  if (scene !== 'kitchen') await nearViewport(canvas, signal);
   signal.throwIfAborted();
   const {createScene} = await import(rendererUrl);
   signal.throwIfAborted();

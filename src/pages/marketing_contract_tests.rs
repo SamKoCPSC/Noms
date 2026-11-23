@@ -250,6 +250,17 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .next()
             .unwrap();
         assert_eq!(stories.matches("class=\"landing-chapter-copy\"").count(), 6);
+        let discover = stories.split("</article>").next().unwrap();
+        assert!(discover.contains("Discover new recipes."));
+        assert!(discover.contains("data-scene=\"pandacotta-banquet\""));
+        assert!(discover.contains("bao, tacos, and strawberry cream cake"));
+        assert!(discover.contains("loading=\"lazy\""));
+        let (intro, screenshot) = discover.split_once("class=\"landing-app-window\"").unwrap();
+        assert!(intro.contains("landing-pandacotta-banquet"));
+        assert!(screenshot.contains("landing-shot-button"));
+        assert!(
+            screenshot.contains("Croissants, chocolate cake, and Korean fried chicken in Explore.")
+        );
         assert!(stories.contains("Use anywhere"));
         assert!(stories.contains("features anywhere with a mobile-optimized experience"));
         assert!(!html.contains("landing-chapter-number"));

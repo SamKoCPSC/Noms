@@ -143,9 +143,11 @@ async def main():
             results.append(
                 {"width": width, "no_overflow": True, "images_decoded": True}
             )
-        # Zoom works on every story and phone, including keyboard dismissal and focus restoration.
+        # Each screenshot supports keyboard dismissal and focus restoration.
         await p.set_viewport_size({"width": 393, "height": 852})
-        for button in await p.locator(".landing-shot-button").all():
+        screenshots = p.locator(".landing-shot-button")
+        await expect(screenshots).to_have_count(8)
+        for button in await screenshots.all():
             await button.click()
             await expect(p.get_by_role("dialog")).to_be_visible()
             await expect(
