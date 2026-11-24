@@ -93,6 +93,12 @@ async def main():
             lambda r: failures.append([r.status, r.url]) if r.status >= 400 else None,
         )
         await ready(p)
+        creation = p.locator(".landing-chapter").filter(
+            has=p.get_by_role("heading", name="Create your signature recipe.", exact=True)
+        )
+        plating = creation.locator("#landing-signature-recipe")
+        await expect(plating.locator("img")).to_be_visible()
+        await expect(plating.get_by_role("button", name="Play plating animation")).to_be_visible()
         for width, name in [
             (1440, "desktop"),
             (393, "mobile"),
@@ -200,18 +206,18 @@ async def main():
         public_query = "noms-no-match fish & chips + lime #1"
         form = p.get_by_role("search", name="Find a recipe", exact=True)
         await form.get_by_role(
-            "searchbox", name="Search public recipes", exact=True
+            "combobox", name="Search public recipes", exact=True
         ).fill(public_query)
         await form.get_by_role(
-            "searchbox", name="Search public recipes", exact=True
+            "combobox", name="Search public recipes", exact=True
         ).press("Enter")
-        await p.wait_for_url(re.compile(r"/explore\?q="))
-        await expect(p.locator("#explore-query")).to_have_value(public_query)
+        await p.wait_for_url(re.compile(r"/search\?q="))
+        await expect(p.locator("#search-query")).to_have_value(public_query)
         await expect(
-            p.get_by_role("heading", name="No recipes found", exact=True)
+            p.get_by_role("heading", name="No results found", exact=True)
         ).to_be_visible()
         await p.reload(wait_until="networkidle")
-        await expect(p.locator("#explore-query")).to_have_value(public_query)
+        await expect(p.locator("#search-query")).to_have_value(public_query)
         await p.go_back(wait_until="networkidle")
         await expect(p.locator("h1")).to_have_text("The Ultimate Recipe Manager")
         await ctx.close()
@@ -225,13 +231,15 @@ async def main():
         await expect(static.locator("h1")).to_have_text("The Ultimate Recipe Manager")
         await expect(static.locator(".landing-chapter")).to_have_count(6)
         await expect(static.locator(".landing-feature-card")).to_have_count(18)
+        await expect(static.locator("#landing-signature-recipe img")).to_be_visible()
+        await expect(static.locator("#landing-signature-recipe button")).to_have_count(0)
         static_form = static.get_by_role("search", name="Find a recipe", exact=True)
         await static_form.get_by_role(
-            "searchbox", name="Search public recipes", exact=True
+            "combobox", name="Search public recipes", exact=True
         ).fill("ramen & noodles")
         await static_form.get_by_role("button", name="Search", exact=True).click()
-        await static.wait_for_url(re.compile(r"/explore\?q="))
-        await expect(static.locator("#explore-query")).to_have_value("ramen & noodles")
+        await static.wait_for_url(re.compile(r"/search\?q="))
+        await expect(static.locator("#search-query")).to_have_value("ramen & noodles")
         await static_ctx.close()
         motion_ctx = await b.new_context(
             viewport={"width": 393, "height": 900}, reduced_motion="no-preference"
@@ -254,6 +262,16 @@ async def main():
             await frames.first.evaluate("e=>getComputedStyle(e).animationPlayState")
             == "running"
         )
+        plating = motion.locator("#landing-signature-recipe")
+        await plating.scroll_into_view_if_needed()
+        webgl = await motion.evaluate("!!document.createElement('canvas').getContext('webgl2')")
+        if webgl:
+            await expect(plating).to_have_attribute("data-state", "ready", timeout=60000)
+            await plating.get_by_role("button", name="Pause plating animation").click()
+            await expect(plating.get_by_role("button", name="Play plating animation")).to_be_visible()
+        else:
+            await expect(plating).to_have_attribute("data-state", "fallback")
+            await expect(plating.locator("img")).to_be_visible()
         await motion_ctx.close()
         await b.close()
     assert not errors, errors

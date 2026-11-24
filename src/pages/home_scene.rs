@@ -10,6 +10,11 @@ const BANQUET_MODEL: Asset = asset!("/assets/landing/pandacotta-banquet/pandacot
 const ISLAND_POSTER: Asset = asset!("/assets/landing/owlfredo-kitchen-island/poster.webp");
 const ISLAND_MODEL: Asset =
     asset!("/assets/landing/owlfredo-kitchen-island/owlfredo-kitchen-island.glb");
+const PLATING_POSTER: Asset = asset!(
+    "/assets/landing/signature-recipe/poster.webp",
+    manganis::AssetOptions::builder()
+);
+const PLATING_MODEL: Asset = asset!("/assets/landing/signature-recipe/terrimisu-and-owlfredo.glb");
 const LIGHTING: Asset = asset!("/assets/landing/kitchen/lighting.json");
 const RENDERER: Asset = asset!(
     "/assets/home-kitchen.js",
@@ -23,6 +28,7 @@ pub(super) enum Scene {
     RecipeDesk,
     Banquet,
     SoupIsland,
+    Plating,
 }
 
 #[component]
@@ -36,12 +42,18 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
             "Pandacotta lifts silver domes at a banquet table to discover bao, tacos, and strawberry cream cake. He tastes each dish."),
         Scene::SoupIsland => ("owlfredo-kitchen-island", "soup animation", ISLAND_MODEL, ISLAND_POSTER, 960, 720,
             "Owlfredo stirs, seasons, and tastes tomato soup at a sage-green kitchen island, then does two happy hops."),
+        Scene::Plating => ("signature-recipe", "plating animation", PLATING_MODEL, PLATING_POSTER, 800, 662,
+            "Terrimisu finishes the ravioli with sauce, pepper, grated truffle and herbs, wipes the plate, and serves Owlfredo. Owlfredo takes three bites and both chefs beam."),
     };
     let canvas_id = format!("landing-{name}-canvas");
     let is_hero = scene == Scene::Kitchen;
     let mut paused = use_signal(|| true);
     #[allow(unused_mut)]
     let mut ready = use_signal(|| false);
+    #[allow(unused_mut)]
+    let mut manual_start = use_signal(|| false);
+    #[cfg(target_arch = "wasm32")]
+    let mut load_requested = use_signal(|| false);
     #[cfg(target_arch = "wasm32")]
     let runtime =
         use_hook(|| std::rc::Rc::new(std::cell::RefCell::new(browser::Runtime::default())));
@@ -60,6 +72,22 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
             }
         });
     }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let runtime = runtime.clone();
+        use_effect(move || {
+            if load_requested() {
+                let runtime = runtime.clone();
+                spawn(async move {
+                    if browser::mount(runtime.clone(), paused, name).await.is_ok()
+                        && !runtime.borrow().disposed
+                    {
+                        ready.set(true);
+                    }
+                });
+            }
+        });
+    }
     let control = if paused() { "Play" } else { "Pause" };
     rsx! {
         figure {
@@ -70,16 +98,15 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
             onmounted: move |_| {
                 #[cfg(target_arch = "wasm32")]
                 {
-                    let runtime = runtime.clone();
-                    spawn(async move {
-                        let Some(window) = web_sys::window() else { return };
-                        let reduced = window.match_media("(prefers-reduced-motion: reduce)")
-                            .ok().flatten().is_some_and(|m| m.matches());
-                        paused.set(reduced);
-                        if browser::mount(runtime.clone(), paused, name).await.is_ok() && !runtime.borrow().disposed {
-                            ready.set(true);
-                        }
-                    });
+                    let Some(window) = web_sys::window() else { return };
+                    let reduced = window.match_media("(prefers-reduced-motion: reduce)")
+                        .ok().flatten().is_some_and(|m| m.matches());
+                    paused.set(reduced);
+                    if scene == Scene::Plating && reduced {
+                        manual_start.set(true);
+                    } else {
+                        load_requested.set(true);
+                    }
                 }
             },
             div { class: "landing-model__viewer",
@@ -89,12 +116,16 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
                     }
                     canvas { id: "{canvas_id}", aria_hidden: "true" }
                 }
-                if ready() {
+                if ready() || manual_start() {
                     button {
                         class: "landing-model__pause", r#type: "button",
                         aria_label: "{control} {animation}", title: "{control} {animation}",
                         aria_controls: "{canvas_id}", aria_pressed: paused(),
-                        onclick: move |_| paused.toggle(),
+                        onclick: move |_| {
+                            paused.toggle();
+                            #[cfg(target_arch = "wasm32")]
+                            if !load_requested() { load_requested.set(true); }
+                        },
                         svg { view_box: "0 0 24 24", width: "20", height: "20", fill: "currentColor", "aria-hidden": "true", "focusable": "false",
                             if paused() {
                                 path { d: "M8 5.5v13l10-6.5z" }

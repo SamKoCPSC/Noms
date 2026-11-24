@@ -2,13 +2,15 @@
 
 `HomeScene` owns each model's poster, pause control, reduced-motion preference
 and route cleanup. All scenes share one locally bundled Three.js renderer.
-The kitchen loads in the hero. The recipe desk, Pandacotta’s banquet, and Owlfredo’s soup island load
-when their respective sections approach the viewport.
+The kitchen loads in the hero. The recipe desk, Pandacotta’s banquet, the plating
+scene, and Owlfredo’s soup island load as their sections approach the viewport.
 
 The kitchen plays the full recipe and fades as the tray and bowl reset. The desk
 loops its 25.5-second collaboration clip. In “Discover new recipes,” Pandacotta
 uncovers and tastes three dishes in a 33-second loop. Its poster shows all three
-dishes, and playback begins with the domes closed.
+dishes, and playback begins with the domes closed. In “Create your signature
+recipe,” Terrimisu plates ravioli for Owlfredo in a 24-second loop. With reduced
+motion enabled, this scene shows its poster until the visitor presses Play.
 Under “Make cooking your favorites convenient,” Owlfredo seasons and tastes soup,
 then hops twice before his 28-second loop restarts.
 
@@ -37,3 +39,11 @@ The editable desk scene is `design/landing/recipe-desk/recipe-desk.blend`. Pack
 its web export with `node tools/home/three/pack.mjs INPUT.glb assets/landing/recipe-desk/recipe-desk.glb`,
 which verifies the decoded geometry and animation values. Three and Meshopt
 licenses are in `tools/about/three/`.
+
+The editable plating scene and full-resolution GLB are in
+`assets/brand/signature-recipe/`. From the repository root, rebuild the landing
+GLB from the full export with the same mesh simplification and animation settings:
+
+```sh
+npx --yes --package gltfpack@0.25.0 gltfpack -i assets/brand/signature-recipe/terrimisu-and-owlfredo.glb -o assets/landing/signature-recipe/terrimisu-and-owlfredo.glb -cc -si 0.23 -se 0.003 -af 0
+```

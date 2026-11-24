@@ -270,6 +270,14 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(intro.contains("Owlfredo stirs, seasons, and tastes tomato soup"));
         assert!(intro.contains("loading=\"lazy\""));
         assert!(screenshot.contains("Scale chili garlic oil noodles"));
+        let create = stories
+            .split("</article>")
+            .find(|article| article.contains("Create your signature recipe."))
+            .unwrap();
+        let (intro, screenshot) = create.split_once("class=\"landing-app-window\"").unwrap();
+        assert!(intro.contains("data-scene=\"signature-recipe\""));
+        assert!(intro.contains("grated truffle"));
+        assert!(screenshot.contains("landing-shot-button"));
         assert!(stories.contains("Use anywhere"));
         assert!(stories.contains("features anywhere with a mobile-optimized experience"));
         assert!(!html.contains("landing-chapter-number"));
