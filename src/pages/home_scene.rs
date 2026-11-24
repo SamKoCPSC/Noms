@@ -7,6 +7,9 @@ const DESK_POSTER: Asset = asset!("/assets/landing/recipe-desk/poster.webp");
 const DESK_MODEL: Asset = asset!("/assets/landing/recipe-desk/recipe-desk.glb");
 const BANQUET_POSTER: Asset = asset!("/assets/landing/pandacotta-banquet/poster.webp");
 const BANQUET_MODEL: Asset = asset!("/assets/landing/pandacotta-banquet/pandacotta-banquet.glb");
+const ISLAND_POSTER: Asset = asset!("/assets/landing/owlfredo-kitchen-island/poster.webp");
+const ISLAND_MODEL: Asset =
+    asset!("/assets/landing/owlfredo-kitchen-island/owlfredo-kitchen-island.glb");
 const LIGHTING: Asset = asset!("/assets/landing/kitchen/lighting.json");
 const RENDERER: Asset = asset!(
     "/assets/home-kitchen.js",
@@ -19,6 +22,7 @@ pub(super) enum Scene {
     Kitchen,
     RecipeDesk,
     Banquet,
+    SoupIsland,
 }
 
 #[component]
@@ -30,6 +34,8 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
             "Penguini and Cattatouille work on a recipe at their laptops, pointing out changes and nodding in agreement."),
         Scene::Banquet => ("pandacotta-banquet", "banquet animation", BANQUET_MODEL, BANQUET_POSTER, 1120, 640,
             "Pandacotta lifts silver domes at a banquet table to discover bao, tacos, and strawberry cream cake. He tastes each dish."),
+        Scene::SoupIsland => ("owlfredo-kitchen-island", "soup animation", ISLAND_MODEL, ISLAND_POSTER, 960, 720,
+            "Owlfredo stirs, seasons, and tastes tomato soup at a sage-green kitchen island, then does two happy hops."),
     };
     let canvas_id = format!("landing-{name}-canvas");
     let is_hero = scene == Scene::Kitchen;

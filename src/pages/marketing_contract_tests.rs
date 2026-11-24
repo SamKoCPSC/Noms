@@ -261,6 +261,15 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(
             screenshot.contains("Croissants, chocolate cake, and Korean fried chicken in Explore.")
         );
+        let cooking = stories
+            .split("</article>")
+            .find(|story| story.contains("Make cooking your favorites convenient"))
+            .unwrap();
+        let (intro, screenshot) = cooking.split_once("class=\"landing-app-window\"").unwrap();
+        assert!(intro.contains("data-scene=\"owlfredo-kitchen-island\""));
+        assert!(intro.contains("Owlfredo stirs, seasons, and tastes tomato soup"));
+        assert!(intro.contains("loading=\"lazy\""));
+        assert!(screenshot.contains("Scale chili garlic oil noodles"));
         assert!(stories.contains("Use anywhere"));
         assert!(stories.contains("features anywhere with a mobile-optimized experience"));
         assert!(!html.contains("landing-chapter-number"));

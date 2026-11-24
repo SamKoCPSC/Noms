@@ -139,6 +139,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     let view;
     if (isKitchen) view = kitchenCamera(root);
     else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
+    else if (sceneName === 'owlfredo-kitchen-island') view = studioCamera([3.75, 5.66, 11.4], [0, 2.51, .72], 7.0, 6.45);
     else view = studioCamera([2.1, 8.35, 15], [0, 1.98, .82], 7.48, 7.48 * 5 / 6);
     const camera = view.camera;
     let disposed=false, paused=true, inView=true, raf=0, previous=0, elapsed=0, width=0, height=0, dirty=true;
