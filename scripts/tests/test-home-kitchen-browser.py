@@ -21,6 +21,23 @@ async def rendered_pose(page, canvas):
     await page.evaluate('paint()')
     return await canvas.screenshot()
 
+async def check_chapter_layout(page, chapter, model, aspect, output, stem):
+    for width, name in [(1440, 'desktop'), (390, 'mobile')]:
+        await page.set_viewport_size({'width':width,'height':900})
+        await chapter.evaluate("e => e.scrollIntoView({block:'center',behavior:'instant'})")
+        await page.evaluate('paint()');await page.evaluate('step(3)')
+        assert not await page.evaluate('document.documentElement.scrollWidth > innerWidth')
+        assert await model.locator("canvas").evaluate("(c, ratio) => Math.abs(c.clientWidth / c.clientHeight - ratio) < .02", aspect)
+        text_box = await chapter.locator('.landing-chapter-copy p').bounding_box()
+        model_box = await model.bounding_box()
+        image_box = await chapter.locator('.landing-shot-button').bounding_box()
+        assert model_box['y'] >= text_box['y'] + text_box['height']
+        if name == 'desktop':
+            assert image_box['x'] >= model_box['x'] + model_box['width']
+        else:
+            assert image_box['y'] >= model_box['y'] + model_box['height']
+        await chapter.screenshot(path=str(output / f'{stem}-{name}.png'))
+
 async def main(args):
     assert urlsplit(args.url).hostname in {'localhost','127.0.0.1','::1'}
     args.output.mkdir(parents=True,exist_ok=True)
@@ -33,7 +50,7 @@ async def main(args):
         model_requests = []
         page.on('request', lambda req: model_requests.append(req.url) if '.glb' in req.url else None)
         await page.goto(args.url);await ready(page)
-        assert all('recipe-desk' not in url and 'pandacotta-banquet' not in url for url in model_requests)
+        assert all('penguini-kitchen' in url for url in model_requests)
         canvas=page.locator('#landing-kitchen-canvas');control=page.locator('#landing-kitchen button')
         assert await canvas.get_attribute('data-renderer')=='three'
         assert await canvas.get_attribute('data-baked-shadows')=='true'
@@ -138,32 +155,41 @@ async def main(args):
         await page.evaluate('step(4)')
         assert await banquet_canvas.get_attribute('data-time') == held
         await expect(desk_button).to_have_attribute('aria-label', 'Pause recipe desk animation')
-        for width, name in [(1440, 'desktop'), (390, 'mobile')]:
-            await page.set_viewport_size({'width':width,'height':900})
-            await chapter.evaluate("e => e.scrollIntoView({block:'center',behavior:'instant'})")
-            await page.evaluate('paint()');await page.evaluate('step(3)')
-            assert not await page.evaluate('document.documentElement.scrollWidth > innerWidth')
-            assert await banquet_canvas.evaluate('c=>Math.abs(c.clientWidth/c.clientHeight-7/4)<.02')
-            text_box = await chapter.locator('.landing-chapter-copy p').bounding_box()
-            model_box = await banquet.bounding_box()
-            image_box = await chapter.locator('.landing-shot-button').bounding_box()
-            assert model_box['y'] >= text_box['y'] + text_box['height']
-            if name == 'desktop':
-                assert image_box['x'] >= model_box['x'] + model_box['width']
-            else:
-                assert image_box['y'] >= model_box['y'] + model_box['height']
-            await chapter.screenshot(path=str(args.output/f'pandacotta-discover-{name}.png'))
+        await check_chapter_layout(page, chapter, banquet, 7/4, args.output, 'pandacotta-discover')
         print('PASS lazy banquet loading, looping reveal, independent pause, desktop and mobile framing', flush=True)
+        cooking = page.locator('.landing-chapter').filter(has=page.get_by_role('heading', name='Make cooking your favorites convenient'))
+        island = cooking.locator('.landing-chapter-copy #landing-owlfredo-kitchen-island')
+        island_canvas = island.locator('canvas')
+        island_button = island.get_by_role('button')
+        await island.scroll_into_view_if_needed()
+        await ready(page, '#landing-owlfredo-kitchen-island')
+        assert sum('owlfredo-kitchen-island' in url for url in model_requests) == 1
+        await expect(island_canvas).to_have_attribute('data-duration', '28')
+        await expect(island_button).to_have_attribute('aria-label', 'Pause soup animation')
+        await island_canvas.scroll_into_view_if_needed();await page.evaluate('paint()');await page.evaluate('step(2)')
+        pose = await rendered_pose(page, island_canvas)
+        await page.evaluate('step(1,28000)')
+        assert await rendered_pose(page, island_canvas) == pose
+        await page.evaluate('step(1,8300)')
+        assert await rendered_pose(page, island_canvas) != pose
+        await island_button.click();await page.evaluate('step(2)')
+        held = await island_canvas.get_attribute('data-time')
+        await page.evaluate('step(5)')
+        assert await island_canvas.get_attribute('data-time') == held
+        await check_chapter_layout(page, cooking, island, 4/3, args.output, 'owlfredo-island')
+        print('PASS soup island placement, full loop, pause and responsive framing', flush=True)
         # A live preference change stops motion; explicit Play still works.
         await page.emulate_media(reduced_motion='reduce');await page.evaluate('paint()')
         await expect(control).to_have_attribute('aria-label','Play kitchen animation');await page.evaluate('step(3)')
         await expect(desk_button).to_have_attribute('aria-label','Play recipe desk animation')
         await page.evaluate('window.oldDesk=document.querySelector("#landing-recipe-desk-canvas")')
+        await page.evaluate('window.oldIsland=document.querySelector("#landing-owlfredo-kitchen-island-canvas")')
         await page.evaluate('window.oldBanquet=document.querySelector("#landing-pandacotta-banquet-canvas")')
         # Route navigation releases the old renderer, and returning mounts exactly one.
         await page.evaluate('window.oldKitchen=document.querySelector("#landing-kitchen-canvas")')
         await page.locator('.landing-more-links a[href="/how-to"]').click();await page.wait_for_selector('#landing-kitchen',state='detached')
         assert await page.evaluate('oldKitchen.dataset.disposed')=='true'
+        assert await page.evaluate('oldIsland.dataset.disposed')=='true'
         assert await page.evaluate('oldDesk.dataset.disposed')=='true'
         assert await page.evaluate('oldBanquet.dataset.disposed')=='true'
         await page.go_back();await ready(page)
@@ -187,6 +213,7 @@ async def main(args):
         assert not errors,errors
         await context.close()
         failed=await browser.new_context();page=await failed.new_page()
+        await page.route('**/*owlfredo-kitchen-island*.glb',lambda r:r.abort())
         await page.route('**/*recipe-desk*.glb',lambda r:r.abort())
         await page.route('**/*pandacotta-banquet*.glb',lambda r:r.abort())
         await page.route('**/*penguini-kitchen*.glb',lambda r:r.abort())
@@ -199,11 +226,15 @@ async def main(args):
         await page.locator('#landing-pandacotta-banquet').scroll_into_view_if_needed()
         await expect(page.locator('#landing-pandacotta-banquet')).to_have_attribute('data-state','fallback')
         await expect(page.locator('#landing-pandacotta-banquet img')).to_be_visible()
+        await page.locator('#landing-owlfredo-kitchen-island').scroll_into_view_if_needed()
+        await expect(page.locator('#landing-owlfredo-kitchen-island')).to_have_attribute('data-state','fallback')
+        await expect(page.locator('#landing-owlfredo-kitchen-island img')).to_be_visible()
         await failed.close()
         nojs=await browser.new_context(java_script_enabled=False);page=await nojs.new_page();await page.goto(args.url)
         assert await page.locator('#landing-kitchen img').is_visible()
         assert await page.locator('#landing-recipe-desk img').is_visible()
         assert await page.locator('#landing-pandacotta-banquet img').is_visible()
+        assert await page.locator('#landing-owlfredo-kitchen-island img').is_visible()
         assert await page.locator('.landing-recipe-search input').is_visible()
         print('PASS context loss, failed asset, and no-JavaScript fallback',flush=True)
         await browser.close()
