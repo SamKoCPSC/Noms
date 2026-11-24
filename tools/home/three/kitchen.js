@@ -43,7 +43,7 @@ function kitchenCamera(root) {
   }};
 }
 
-function lightStudio(renderer, scene, root, banquet) {
+function lightStudio(renderer, scene, root, sceneName) {
   // Studio reflections give polished props visible highlights.
   const studio = new RoomEnvironment();
   const generator = new THREE.PMREMGenerator(renderer);
@@ -55,6 +55,18 @@ function lightStudio(renderer, scene, root, banquet) {
     studio.dispose();
   }
   scene.environment = environment.texture;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  root.traverse(mesh => {
+    if (mesh.isMesh) mesh.castShadow = mesh.receiveShadow = true;
+  });
+  const key = sceneName === 'signature-recipe'
+    ? lightPlating(renderer, scene)
+    : lightDeskOrBanquet(renderer, scene, sceneName === 'pandacotta-banquet');
+  return {dispose() {key.shadow.dispose(); environment.dispose();}};
+}
+
+function lightDeskOrBanquet(renderer, scene, banquet) {
   scene.environmentIntensity = .54;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = .78;
@@ -63,16 +75,11 @@ function lightStudio(renderer, scene, root, banquet) {
   key.position.set(-3.8, 7, 5.5);
   key.target.position.set(0, 1.6, .8);
   scene.add(key, key.target);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
   key.castShadow = true;
   Object.assign(key.shadow.camera, {left: banquet ? -6 : -4.2, right: banquet ? 6 : 4.2, top: 3.7, bottom: -3.7, near: .5, far: 18});
   key.shadow.mapSize.set(512, 512);
   key.shadow.normalBias = .015;
   key.shadow.intensity = .78;
-  root.traverse(mesh => {
-    if (mesh.isMesh) mesh.castShadow = mesh.receiveShadow = true;
-  });
   const fill = new THREE.DirectionalLight(0xe0edff, .8);
   fill.position.set(4, 4.5, 4);
   const rim = new THREE.DirectionalLight(0xffe3c6, 1.8);
@@ -80,7 +87,30 @@ function lightStudio(renderer, scene, root, banquet) {
   const bounce = new THREE.DirectionalLight(0xfff7ed, .6);
   bounce.position.set(-.5, .6, 6);
   scene.add(fill, rim, bounce);
-  return {dispose() {key.shadow.dispose(); environment.dispose();}};
+  return key;
+}
+
+function lightPlating(renderer, scene) {
+  renderer.toneMapping = THREE.AgXToneMapping;
+  renderer.toneMappingExposure = .96;
+  scene.environmentIntensity = .38;
+  scene.add(new THREE.HemisphereLight(0xfff4e2, 0xaba197, .52));
+  function light(color, intensity, x, y, z) {
+    const source = new THREE.DirectionalLight(color, intensity);
+    source.position.set(x, y, z);
+    source.target.position.set(0, 1.8, .35);
+    scene.add(source, source.target);
+    return source;
+  }
+  const key = light(0xffebd6, 2.8, -3.8, 7, 5.5);
+  key.castShadow = true;
+  Object.assign(key.shadow.camera, {left: -3.5, right: 3.5, top: 3, bottom: -3, near: .5, far: 16});
+  key.shadow.camera.updateProjectionMatrix();
+  key.shadow.mapSize.set(512, 512);
+  key.shadow.normalBias = .012;
+  light(0xddeaff, .87, 3, 4, 4);
+  light(0xffdfba, 1.7, 1.4, 6.5, -2.8);
+  return key;
 }
 
 async function fetchAsset(url, signal) {
@@ -120,7 +150,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
       scene.environment = environment.texture;
       renderer.toneMappingExposure = 2 ** lighting.exposure;
     } else {
-      environment = lightStudio(renderer, scene, root, isBanquet);
+      environment = lightStudio(renderer, scene, root, sceneName);
     }
     mixer = new THREE.AnimationMixer(root);
     const clip = gltf.animations[0], duration=clip.duration;
@@ -138,6 +168,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     const cycle = isKitchen ? duration + .4 : duration;
     let view;
     if (isKitchen) view = kitchenCamera(root);
+    else if (sceneName === 'signature-recipe') view = studioCamera([.11, 5.88, 12.7], [0, 2.08, .35], 6.16235, 6.16235 * 876 / 1059);
     else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
     else if (sceneName === 'owlfredo-kitchen-island') view = studioCamera([3.75, 5.66, 11.4], [0, 2.51, .72], 7.0, 6.45);
     else view = studioCamera([2.1, 8.35, 15], [0, 1.98, .82], 7.48, 7.48 * 5 / 6);

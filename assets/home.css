@@ -74,6 +74,10 @@
 .landing-chapter-copy > .landing-model { margin-top: 16px; }
 .landing-chapter-copy .landing-model__viewer { height: auto; aspect-ratio: 7 / 4; }
 .landing-chapter-copy [data-scene="owlfredo-kitchen-island"] .landing-model__viewer { aspect-ratio: 4 / 3; }
+.landing-chapter-copy > #landing-signature-recipe { width: min(100%, 28rem); margin: 0 auto; }
+#landing-signature-recipe .landing-model__viewer { aspect-ratio: 1059 / 876; }
+/* Match the richer midtones of the Blender-rendered poster during playback. */
+#landing-signature-recipe canvas { filter: saturate(1.16) contrast(1.045); }
 .landing-mission figcaption { margin-top: 12px; font-size: 12px; color: var(--landing-muted); }
 .landing-chapter { display: grid; grid-template-columns: .85fr 1.15fr; gap: 65px; align-items: center; padding-block: 65px; border-top: 1px solid var(--landing-line); }
 .landing-chapter:nth-child(even) { grid-template-columns: 1.15fr .85fr; }
