@@ -52,7 +52,7 @@ const STORIES: &[Story] = &[
     Story { title: "Create your signature recipe.", body: "Save all your favorite recipes, and easily make changes as you refine them.", caption: "Refine a caramelized onion and mushroom burger in a private draft.", image: asset!("/assets/landing/create.webp"), scene: Some(Scene::Plating), size: (1120, 780) },
     Story { title: "Make cooking your favorites convenient", body: "Easily adjust proportions with the recipe calculator, make use of the built-in ingredients checklist, and cook with cooking mode.", caption: "Scale chili garlic oil noodles, then check off the ingredients.", image: asset!("/assets/landing/calculator-checklist.webp"), scene: Some(Scene::SoupIsland), size: (900, 958) },
     Story { title: "Study how your recipes change.", body: "View a precise breakdown of how your recipes change over time to see what works and what doesn't.", caption: "Compare two batches of chocolate chip cookies, ingredient by ingredient.", image: asset!("/assets/landing/history.webp"), scene: None, size: (1120, 1200) },
-    Story { title: "Share your best creations.", body: "Publish and share recipes you're proud of, and let others know what you're working on.", caption: "Robert McRobertson’s public recipes and collections.", image: asset!("/assets/landing/share.webp"), scene: None, size: (1120, 900) },
+    Story { title: "Share your best creations.", body: "Publish and share recipes you're proud of, and let others know what you're working on.", caption: "Robert McRobertson’s public recipes and collections.", image: asset!("/assets/landing/share.webp"), scene: Some(Scene::MarketStand), size: (1120, 900) },
 ];
 
 const FEATURES: &[(PageIconKind, &str, &str)] = &[

@@ -278,6 +278,15 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(intro.contains("data-scene=\"signature-recipe\""));
         assert!(intro.contains("grated truffle"));
         assert!(screenshot.contains("landing-shot-button"));
+        let share = stories
+            .split("</article>")
+            .find(|article| article.contains("Share your best creations."))
+            .unwrap();
+        let (intro, screenshot) = share.split_once("class=\"landing-app-window\"").unwrap();
+        assert!(intro.contains("data-scene=\"pandacotta-market-stand\""));
+        assert!(intro.contains("Pandacotta hands him the recipe card"));
+        assert!(intro.contains("loading=\"lazy\""));
+        assert!(screenshot.contains("Robert McRobertson’s public recipes and collections."));
         assert!(stories.contains("Use anywhere"));
         assert!(stories.contains("features anywhere with a mobile-optimized experience"));
         assert!(!html.contains("landing-chapter-number"));

@@ -15,6 +15,12 @@ const PLATING_POSTER: Asset = asset!(
     manganis::AssetOptions::builder()
 );
 const PLATING_MODEL: Asset = asset!("/assets/landing/signature-recipe/terrimisu-and-owlfredo.glb");
+const MARKET_POSTER: Asset = asset!(
+    "/assets/landing/pandacotta-market-stand/poster.webp",
+    manganis::AssetOptions::builder()
+);
+const MARKET_MODEL: Asset =
+    asset!("/assets/landing/pandacotta-market-stand/pandacotta-market-stand.glb");
 const LIGHTING: Asset = asset!("/assets/landing/kitchen/lighting.json");
 const RENDERER: Asset = asset!(
     "/assets/home-kitchen.js",
@@ -29,6 +35,7 @@ pub(super) enum Scene {
     Banquet,
     SoupIsland,
     Plating,
+    MarketStand,
 }
 
 #[component]
@@ -44,6 +51,8 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
             "Owlfredo stirs, seasons, and tastes tomato soup at a sage-green kitchen island, then does two happy hops."),
         Scene::Plating => ("signature-recipe", "plating animation", PLATING_MODEL, PLATING_POSTER, 800, 662,
             "Terrimisu finishes the ravioli with sauce, pepper, grated truffle and herbs, wipes the plate, and serves Owlfredo. Owlfredo takes three bites and both chefs beam."),
+        Scene::MarketStand => ("pandacotta-market-stand", "bakery stand animation", MARKET_MODEL, MARKET_POSTER, 1152, 800,
+            "Pandacotta and Penguini wave hello at the bakery stand. Penguini studies the pastries, picks a berry swirl, takes a bite, and jumps with delight. Pandacotta hands him the recipe card, and Penguini jumps again with the card and bun in his flippers."),
     };
     let canvas_id = format!("landing-{name}-canvas");
     let is_hero = scene == Scene::Kitchen;
@@ -102,7 +111,7 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
                     let reduced = window.match_media("(prefers-reduced-motion: reduce)")
                         .ok().flatten().is_some_and(|m| m.matches());
                     paused.set(reduced);
-                    if scene == Scene::Plating && reduced {
+                    if reduced && matches!(scene, Scene::Plating | Scene::MarketStand) {
                         manual_start.set(true);
                     } else {
                         load_requested.set(true);
