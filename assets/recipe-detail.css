@@ -92,3 +92,28 @@
 .recipe-ingredient-alternatives { margin: 8px 0 4px 20px; padding-left: 16px; color: var(--text-secondary); font-size: .9em; overflow-wrap: anywhere; }
 .recipe-ingredient-alternatives li + li { margin-top: 6px; }
 .mobile-ingredient > span { min-width: 0; overflow-wrap: anywhere; }
+
+.recipe-discussion form,
+.recipe-discussion label {
+    display: grid;
+    gap: .5rem;
+}
+.recipe-discussion textarea {
+    width: 100%;
+    min-height: 4rem;
+    padding: .5rem;
+    font: inherit;
+}
+.recipe-discussion button {
+    justify-self: start;
+    margin-inline-end: .5rem;
+    min-height: 2.75rem;
+}
+.recipe-discussion article {
+    border-inline-start: 2px solid currentColor;
+    padding-inline-start: .5rem;
+}
+.recipe-discussion article article article article {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+}

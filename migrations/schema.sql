@@ -495,6 +495,25 @@ ON grocery_lists (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_kitchen_profiles_owner_name_unique
 ON kitchen_profiles (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+', ' ', 'g')))));
 
+
+CREATE TABLE IF NOT EXISTS recipe_comments (
+    request_id UUID NOT NULL,
+    UNIQUE (author_id, request_id),
+    id BIGSERIAL PRIMARY KEY,
+    recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    version_number INTEGER NOT NULL,
+    parent_id BIGINT,
+    author_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    body TEXT CHECK (body IS NULL OR char_length(body) BETWEEN 1 AND 2000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (recipe_id, id),
+    FOREIGN KEY (recipe_id, parent_id) REFERENCES recipe_comments(recipe_id, id),
+    FOREIGN KEY (recipe_id, version_number) REFERENCES recipe_versions(recipe_id, version_number) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipe_comments_thread
+    ON recipe_comments(recipe_id, parent_id, id);
+
 -- NOMS-017: maintained ingredient suggestions. The seed CLI owns these rows;
 -- authored recipe text and optional IDs remain in existing JSON snapshots.
 CREATE TABLE IF NOT EXISTS vocabulary_entries (

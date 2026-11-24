@@ -2818,6 +2818,10 @@ fn RecipeDetailContents(id: String) -> Element {
                 }
             }
 
+            if recipe.visibility == "public" {
+                super::recipe_discussion::RecipeDiscussion { key: "{recipe.id}", recipe: recipe.id }
+            }
+
             if lineage_failed || lineage_pending {
                 Card {
                     section { aria_label: "Fork lineage",

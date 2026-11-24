@@ -477,6 +477,10 @@ pub async fn apply_test_schema(pool: &PgPool) {
         .execute(pool)
         .await
         .expect("failed to create grocery tables");
+    sqlx::raw_sql(include_str!("../migrations/recipe-comments.sql"))
+        .execute(pool)
+        .await
+        .expect("failed to create recipe comments");
     sqlx::raw_sql(include_str!("../migrations/pantry.sql"))
         .execute(pool)
         .await
