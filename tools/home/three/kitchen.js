@@ -169,6 +169,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     let view;
     if (isKitchen) view = kitchenCamera(root);
     else if (sceneName === 'signature-recipe') view = studioCamera([.11, 5.88, 12.7], [0, 2.08, .35], 6.16235, 6.16235 * 876 / 1059);
+    else if (sceneName === 'terrimisu-cookie-study') view = studioCamera([1.13, 5.6, 10.9], [0, 2.19, .47], 5.79, 5.06);
     else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
     else if (sceneName === 'owlfredo-kitchen-island') view = studioCamera([3.75, 5.66, 11.4], [0, 2.51, .72], 7.0, 6.45);
     else view = studioCamera([2.1, 8.35, 15], [0, 1.98, .82], 7.48, 7.48 * 5 / 6);
