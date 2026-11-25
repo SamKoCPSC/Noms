@@ -129,8 +129,8 @@ const RECIPE_TOOLS: &[Feature] = &[
         title: "Organize your recipes",
         body: "Group favorites in collections so they’re easy to find again.",
         image: asset!("/assets/landing/features/collections.webp"),
-        caption: "The Collections screen with an option to start a new collection.",
-        size: (960, 448),
+        caption: "Weeknight dinners, Weekend baking, and Dinner with friends, each with a two-photo recipe cover.",
+        size: (1108, 716),
     },
 ];
 
