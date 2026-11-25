@@ -28,6 +28,7 @@ struct Draft {
 struct DiscussionState {
     drafts: HashMap<Editor, Draft>,
     open: HashSet<Panel>,
+    collapsed_threads: HashSet<i64>,
 }
 
 impl DiscussionState {
@@ -127,6 +128,7 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
     let expanded = state.read().open.contains(&replies);
     let mut error = use_signal(String::new);
     let id = item.id;
+    let collapsed = state.read().collapsed_threads.contains(&id);
     let author = item.author.as_deref().unwrap_or("Former member");
     let date = item.created_at.format("%b %-d, %Y · %H:%M UTC");
     let nested = matches!(depth, 1 | 2);
@@ -141,49 +143,64 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
                     a { class: "discussion-parent", href: "#comment-{parent}", "Replying to comment {parent}" }
                 }
             }
-            if let Some(body) = &item.body {
-                header { class: "discussion-byline",
+            header { class: "discussion-byline",
+                if item.body.is_some() {
                     span { aria_hidden: "true", Avatar { username: author.to_string(), size: AvatarSize::Small } }
                     div {
                         strong { "{author}" }
                         span { class: "discussion-version", "Version {item.version_number}" }
                         time { datetime: item.created_at.to_rfc3339(), "{date}" }
                     }
+                } else {
+                    span { class: "discussion-deleted", "Comment deleted" }
                 }
-                p { class: "discussion-body", "{body}" }
-            } else {
-                p { class: "discussion-deleted", "Comment deleted" }
+                button {
+                    class: "discussion-action discussion-toggle discussion-thread-toggle",
+                    aria_expanded: !collapsed, aria_controls: "comment-content-{id}",
+                    onclick: move |_| {
+                        let mut state = state.write();
+                        if !state.collapsed_threads.remove(&id) {
+                            state.collapsed_threads.insert(id);
+                        }
+                    },
+                    if collapsed { "Expand thread" } else { "Collapse thread" }
+                }
             }
-            div { class: "discussion-actions",
-                if auth.is_authenticated {
-                    button { class: "discussion-action", aria_expanded: state.read().open.contains(&reply),
-                        onclick: move |_| state.write().toggle(reply), "Reply" }
+            div { id: "comment-content-{id}", hidden: collapsed,
+                if let Some(body) = &item.body {
+                    p { class: "discussion-body", "{body}" }
                 }
-                if item.has_replies {
-                    button { class: "discussion-action discussion-toggle", aria_expanded: expanded,
-                        onclick: move |_| state.write().toggle(replies),
-                        if expanded { "Hide replies" } else { "Show replies" }
+                div { class: "discussion-actions",
+                    if auth.is_authenticated {
+                        button { class: "discussion-action", aria_expanded: state.read().open.contains(&reply),
+                            onclick: move |_| state.write().toggle(reply), "Reply" }
+                    }
+                    if item.has_replies {
+                        button { class: "discussion-action discussion-toggle", aria_expanded: expanded,
+                            onclick: move |_| state.write().toggle(replies),
+                            if expanded { "Hide replies" } else { "Show replies" }
+                        }
+                    }
+                    if own {
+                        button { class: "discussion-action", aria_expanded: state.read().open.contains(&edit),
+                            onclick: move |_| state.write().toggle(edit), "Edit" }
+                        button { class: "discussion-action", onclick: move |_| async move {
+                            if change(account(),recipe,Change::Delete{id}).await.is_ok() { revision += 1; }
+                            else { error.set("Could not delete comment.".into()); }
+                        }, "Delete" }
                     }
                 }
-                if own {
-                    button { class: "discussion-action", aria_expanded: state.read().open.contains(&edit),
-                        onclick: move |_| state.write().toggle(edit), "Edit" }
-                    button { class: "discussion-action", onclick: move |_| async move {
-                        if change(account(),recipe,Change::Delete{id}).await.is_ok() { revision += 1; }
-                        else { error.set("Could not delete comment.".into()); }
-                    }, "Delete" }
+                if !error().is_empty() { p { role: "alert", "{error}" } }
+                if own && state.read().open.contains(&edit) {
+                    if let Some(body) = &item.body {
+                        Composer { recipe, edit: Some(id), initial: body.clone() }
+                    }
                 }
-            }
-            if !error().is_empty() { p { role: "alert", "{error}" } }
-            if own && state.read().open.contains(&edit) {
-                if let Some(body) = &item.body {
-                    Composer { recipe, edit: Some(id), initial: body.clone() }
+                if auth.is_authenticated && state.read().open.contains(&reply) {
+                    Composer { recipe, parent: Some(id) }
                 }
+                if item.has_replies && expanded { ThreadPage { recipe, parent: Some(id), depth: depth+1, after: 0 } }
             }
-            if auth.is_authenticated && state.read().open.contains(&reply) {
-                Composer { recipe, parent: Some(id) }
-            }
-            if item.has_replies && expanded { ThreadPage { recipe, parent: Some(id), depth: depth+1, after: 0 } }
         }
     }
 }

@@ -129,6 +129,8 @@
     padding-inline-start: clamp(.65rem, 2vw, 1.25rem);
 }
 .discussion-entry .discussion-entry { margin-block-start: .6rem; }
+.discussion-byline { flex-wrap: wrap; }
+.discussion-thread-toggle { margin-inline-start: auto; }
 .discussion-byline > div { display: flex; align-items: center; flex-wrap: wrap; gap: .2rem .55rem; min-width: 0; }
 .discussion-byline strong { color: var(--text-primary); overflow-wrap: anywhere; }
 .discussion-version { background: color-mix(in srgb, #91a678 22%, var(--surface)); color: var(--text-primary); border-radius: 20px; padding: .1rem .55rem; font-size: .76rem; font-weight: 750; }
