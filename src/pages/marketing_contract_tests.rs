@@ -249,7 +249,6 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .split("class=\"landing-trust landing-wrap\"")
             .next()
             .unwrap();
-        assert_eq!(stories.matches("class=\"landing-chapter-copy\"").count(), 5);
         let chapter = |title: &str| {
             stories
                 .split("<article class=\"landing-chapter\"")
@@ -305,8 +304,16 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .unwrap();
         assert!(community.contains("Discover new recipes."));
         assert!(community.contains("Share your best creations."));
-        assert!(community.contains("In progress."));
-        assert!(community.contains("Concept preview"));
+        let discussion = community
+            .split_once("class=\"landing-chapter landing-discussion\"")
+            .unwrap()
+            .1;
+        let (copy, preview) = discussion
+            .split_once("class=\"landing-app-window\"")
+            .unwrap();
+        assert!(copy.contains("class=\"landing-chapter-copy\""));
+        assert!(copy.contains("In progress."));
+        assert!(preview.contains("Concept preview"));
         let pantry = stories
             .split("id=\"landing-pantry-title\"")
             .nth(1)
@@ -314,7 +321,12 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .split("</section>")
             .next()
             .unwrap();
-        assert!(pantry.contains("Build a grocery list"));
+        let (copy, previews) = pantry
+            .split_once("class=\"landing-feature-previews\"")
+            .unwrap();
+        assert!(copy.contains("See what you have"));
+        assert!(copy.contains("Build a grocery list"));
+        assert_eq!(previews.matches("class=\"landing-shot-button\"").count(), 2);
         let tools = stories
             .split("id=\"landing-features-title\"")
             .nth(1)
@@ -322,13 +334,17 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .split("</section>")
             .next()
             .unwrap();
+        let (copy, previews) = tools
+            .split_once("class=\"landing-feature-previews\"")
+            .unwrap();
         for feature in [
             "Built-in recipe image editor",
             "Scale your servings",
             "Organize your recipes",
         ] {
-            assert!(tools.contains(feature));
+            assert!(copy.contains(feature));
         }
+        assert_eq!(previews.matches("class=\"landing-shot-button\"").count(), 3);
         assert_eq!(stories.matches(">Scale your servings</h3>").count(), 1);
         assert!(!html.contains("landing-chapter-number"));
         assert!(!html.contains("landing-mobile landing-wrap"));

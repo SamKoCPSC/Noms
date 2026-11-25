@@ -153,14 +153,27 @@ fn LandingChapter(story: Story, #[props(default)] community: bool) -> Element {
 }
 
 #[component]
-fn FeatureGallery(features: &'static [Feature]) -> Element {
+fn FeatureDescriptions(features: &'static [Feature]) -> Element {
     rsx! {
-        div { class: "landing-feature-gallery",
+        div { class: "landing-feature-descriptions",
             for feature in features {
-                article { class: "landing-feature-detail", key: "{feature.title}",
+                div { key: "{feature.title}",
                     h3 { "{feature.title}" }
                     p { "{feature.body}" }
-                    LandingScreenshot { source: feature.image, title: feature.title, caption: feature.caption, size: feature.size }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn FeaturePreviews(features: &'static [Feature]) -> Element {
+    rsx! {
+        div { class: "landing-feature-previews",
+            for feature in features {
+                LandingScreenshot {
+                    key: "{feature.title}",
+                    source: feature.image, title: feature.title, caption: feature.caption, size: feature.size,
                 }
             }
         }
@@ -211,8 +224,8 @@ pub fn Home() -> Element {
                     for story in COMMUNITY_STORIES.iter().copied() {
                         LandingChapter { key: "{story.title}", story, community: true }
                     }
-                    aside { class: "landing-discussion", aria_labelledby: "landing-discussion-title",
-                        div {
+                    aside { class: "landing-chapter landing-discussion", aria_labelledby: "landing-discussion-title",
+                        div { class: "landing-chapter-copy",
                             h3 { id: "landing-discussion-title", "Community discussions" }
                             p { "In progress. Share cooking notes, ask questions, and talk about recipes with other cooks." }
                         }
@@ -250,21 +263,23 @@ pub fn Home() -> Element {
                     }
                 }
                 LandingChapter { story: VERSION_HISTORY_STORY }
-                section { class: "landing-feature-section", aria_labelledby: "landing-pantry-title",
-                    div { class: "landing-section-head",
+                section { class: "landing-chapter landing-feature-section", aria_labelledby: "landing-pantry-title",
+                    div { class: "landing-chapter-copy",
                         h2 { id: "landing-pantry-title", "Kitchen Pantry" }
                         p { "Check what you have before you cook, then turn the ingredients you’re missing into a shopping list." }
+                        FeatureDescriptions { features: PANTRY_FEATURES }
                     }
-                    FeatureGallery { features: PANTRY_FEATURES }
+                    FeaturePreviews { features: PANTRY_FEATURES }
                 }
-                section { class: "landing-feature-section landing-recipe-tools", id: "landing-features", aria_labelledby: "landing-features-title",
-                    div { class: "landing-section-head",
+                section { class: "landing-chapter landing-feature-section landing-recipe-tools", id: "landing-features", aria_labelledby: "landing-features-title",
+                    div { class: "landing-chapter-copy",
                         h2 { id: "landing-features-title", class: "landing-features-heading",
                             BrandMark {}
                             "Recipe tools"
                         }
+                        FeatureDescriptions { features: RECIPE_TOOLS }
                     }
-                    FeatureGallery { features: RECIPE_TOOLS }
+                    FeaturePreviews { features: RECIPE_TOOLS }
                 }
             }
             section { class: "landing-trust landing-wrap", aria_labelledby: "landing-trust-title",
