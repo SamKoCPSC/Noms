@@ -8,7 +8,7 @@ const SPRINT_SPEED: f32 = 2. * WALK_SPEED;
 const CROUCH_DROP: f32 = 0.6;
 const JUMP_RISE_TIME: f32 = 0.4;
 const JUMP_FALL_TIME: f32 = 0.37;
-const JUMP_HEIGHT: f32 = 1.0;
+const JUMP_HEIGHT: f32 = 3.0;
 
 #[derive(Default)]
 pub(super) struct Walk {

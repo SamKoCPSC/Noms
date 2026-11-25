@@ -1,5 +1,6 @@
 // Bake vertical solid spans from the exact meshes used by Explore, including glass.
 import {readFile, writeFile} from 'node:fs/promises';
+import {loadGrassFaces} from './grass-collision-filter.mjs';
 import {NodeIO} from '@gltf-transform/core';
 import {ALL_EXTENSIONS} from '@gltf-transform/extensions';
 import {MeshoptDecoder} from 'meshoptimizer';
@@ -67,6 +68,7 @@ function raster(a,b,c){
 await MeshoptDecoder.ready;
 const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'meshopt.decoder':MeshoptDecoder});
 for(const id of ['world',...layout.stops.map(s=>s.id)]){
+ const grass=id==='world' ? await loadGrassFaces() : null;
  const doc=await io.read(`${dir}/${id}.glb`);
  for(const node of doc.getRoot().listNodes()){
   // The existing continuous walk surface already handles the meadow terrain.
@@ -74,17 +76,22 @@ for(const id of ['world',...layout.stops.map(s=>s.id)]){
   const m=node.getWorldMatrix();
   for(const primitive of node.getMesh().listPrimitives()){
    const points=primitive.getAttribute('POSITION'),indices=primitive.getIndices();
-   const vertices=Array.from({length:points.getCount()},(_,i)=>{
+   const worldVertices=Array.from({length:points.getCount()},(_,i)=>{
     const [x,y,z]=points.getElement(i,[]);
-    return [(m[0]*x+m[4]*y+m[8]*z+m[12]-minX)/cell,
+    return [m[0]*x+m[4]*y+m[8]*z+m[12],
              m[1]*x+m[5]*y+m[9]*z+m[13],
-            (m[2]*x+m[6]*y+m[10]*z+m[14]-minZ)/cell];
+            m[2]*x+m[6]*y+m[10]*z+m[14]];
    });
+   const vertices=worldVertices.map(([x,y,z])=>[(x-minX)/cell,y,(z-minZ)/cell]);
    const order=indices?.getArray();
-   for(let i=0;i<(order?.length??vertices.length);i+=3)
-    raster(vertices[order?.[i]??i],vertices[order?.[i+1]??i+1],vertices[order?.[i+2]??i+2]);
+   for(let i=0;i<(order?.length??vertices.length);i+=3){
+    const a=order?.[i]??i,b=order?.[i+1]??i+1,c=order?.[i+2]??i+2;
+    if(grass?.take(worldVertices[a],worldVertices[b],worldVertices[c]))continue;
+    raster(vertices[a],vertices[b],vertices[c]);
+   }
   }
  }
+ grass?.verify();
  console.log('Rasterized',id);
 }
 
