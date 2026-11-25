@@ -27,7 +27,7 @@ mod tests {
                 action: Some(rsx! { button { "Back to recipe" } }),
             }
         });
-        assert!(html.contains("history-v1"), "{html}");
+        assert!(html.contains("/history.webp"), "{html}");
         assert!(
             html.contains("<span>Recipe version graph</span></h1>"),
             "{html}"

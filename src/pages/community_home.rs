@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::api::recipe::get_public_recipes;
-use crate::components::base::{BrandMark, PageIcon, PageIconKind, RecipeCard};
+use crate::components::base::{PageIcon, PageIconKind, RecipeCard};
 use crate::components::AuthRequired;
 use crate::types::{PublicRecipeListResponse, RecipeCardSummary};
 use crate::Route;
@@ -73,7 +73,7 @@ fn CommunityHomeContent(
             header { class: "community-home-heading",
                 div {
                     p { class: "community-home-eyebrow", "THE NOMS COMMUNITY" }
-                    h1 { class: "brand-title", BrandMark {} span { "Community Home" } }
+                    h1 { class: "brand-title", PageIcon { kind: PageIconKind::Home } span { "Community Home" } }
                     p { class: "community-home-muted", "Recipe discoveries, community updates, and ways to take part." }
                 }
                 Link { to: Route::Explore {}, class: "btn btn-primary touch-target", "Explore recipes →" }

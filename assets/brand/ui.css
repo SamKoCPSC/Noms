@@ -51,3 +51,10 @@
     .page-identity-icon--compact { width: 40px; height: 40px; }
     .brand-mark--large { width: 80px; height: 100px; }
 }
+
+.drawer-model-icon { position: relative; pointer-events: none; }
+.drawer-model-icon > :is(img, canvas) { display: block; width: 32px; height: 32px; object-fit: contain; }
+.drawer-model-icon[data-icon="noms-logo"] > :is(img, canvas) { height: 40px; }
+.drawer-model-icon > canvas { position: absolute; visibility: hidden; }
+.drawer-model-icon[data-ready] > canvas { visibility: visible; }
+.drawer-model-icon[data-ready] > img { visibility: hidden; }

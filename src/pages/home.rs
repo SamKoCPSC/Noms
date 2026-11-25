@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::auth::context::use_auth;
-use crate::components::base::{NavigationArtwork, PageIconKind, SharedModal};
+use crate::components::base::{NavigationArtwork, PageIcon, PageIconKind, SharedModal};
 use crate::components::informational::PageMeta;
 use crate::Route;
 
@@ -90,7 +90,10 @@ pub fn Home() -> Element {
         div { class: "home-page landing-page",
             section { class: "landing-hero landing-wrap", aria_labelledby: "home-title",
                 div { class: "landing-hero-copy",
-                    h1 { id: "home-title", "The Ultimate Recipe Manager" }
+                    h1 { id: "home-title", class: "brand-title",
+                        PageIcon { kind: if auth.is_authenticated { PageIconKind::Introduction } else { PageIconKind::Home } }
+                        span { "The Ultimate Recipe Manager" }
+                    }
                     p { class: "landing-intro", "Noms is a community-focused recipe archive designed for saving, sharing, and developing recipes" }
                     LandingActions { signed_in: auth.is_authenticated, search: true }
                 }

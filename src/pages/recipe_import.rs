@@ -264,14 +264,9 @@ mod tests {
     #[test]
     fn guided_import_layout_has_named_source_and_keyboard_guidance_without_a_preview() {
         let html = dioxus_ssr::render_element(rsx! { ImportLayout { p { "Source controls" } } });
-        // Plain cargo tests do not run Dioxus's asset-path replacement.
-        // Still check the decorative page identity in that harness; verify
-        // the exact import artwork whenever real asset paths are available.
         assert!(html.contains("page-identity-icon"), "{html}");
-        if !html.contains("This should be replaced by dx") {
-            assert!(html.contains("import-v1"), "{html}");
-            assert!(!html.contains("editor-v1"), "{html}");
-        }
+        assert!(html.contains("/import.webp"), "{html}");
+        assert!(!html.contains("/editor.webp"), "{html}");
         for expected in [
             "Bring a recipe home.",
             "Private until you choose to share",
