@@ -10,12 +10,13 @@ import {groundHeight} from '../village/walking-world.js';
 
 const layout=JSON.parse(readFileSync('assets/about/village/layout.json'));
 const surface=createWalkSurface(layout);
+const emptyMap={gap:(_x,_z,bottom)=>({bottom,top:Infinity})};
 
 const outline=JSON.parse(readFileSync('assets/models/terraced-village/layout.json')).ground_outline;
 const xs=outline.map(p=>p[0]), zs=outline.map(p=>p[1]);
 const west=Math.min(...xs), east=Math.max(...xs), north=Math.min(...zs), south=Math.max(...zs);
 
-test('all twelve stops, route samples and the open meadow are freely walkable',()=>{
+test('all twelve stops and route samples lie inside the walking perimeter',()=>{
  for(const route of layout.routes) for(const {eye:[x,,z]} of route) {
   assert.deepEqual(surface.constrain(x,z),[x,z]);
  }
@@ -75,7 +76,7 @@ test('the visible rails join each neighboring post, including the last corner, o
 });
 
 test('the walk uses eye height and camera-relative travel, and restores the guided view exactly',()=>{
- const camera=new THREE.PerspectiveCamera(), walk=createFirstPersonCamera(layout);
+ const camera=new THREE.PerspectiveCamera(), walk=createFirstPersonCamera(layout,undefined,emptyMap);
  function draw(input){
   frameCamera(camera,layout,.48,393,852,[8,450,377,350]);
   walk(camera,input);
@@ -100,7 +101,7 @@ test('the walk uses eye height and camera-relative travel, and restores the guid
 });
 
 test('footsteps follow grounded distance and settle without tilting the view',()=>{
- const camera=new THREE.PerspectiveCamera(), walk=createFirstPersonCamera(layout);
+ const camera=new THREE.PerspectiveCamera(), walk=createFirstPersonCamera(layout,undefined,emptyMap);
  function draw(forward,stepLength,amplitude,lift=0){
   frameCamera(camera,layout,0,900,600,[350,0,550,600]);
   walk(camera,[1,0,0,0,forward,lift,stepLength,amplitude]);

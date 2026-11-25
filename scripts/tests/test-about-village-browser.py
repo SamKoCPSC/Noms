@@ -131,6 +131,49 @@ async def check_explore(page, out, progress):
     assert await button.inner_text()=='Explore village'
     print('PASS first-person movement and return to fractional tour pose',flush=True)
 
+async def check_kitchen_collision(page):
+    canvas = page.locator('#story-three-canvas')
+    button = page.locator('#village-look-toggle')
+    async def position():
+        x, _, z = json.loads(await canvas.get_attribute('data-camera-eye'))
+        return x, z
+    await button.click()
+    await page.evaluate('step(1)'); await page.evaluate('step(1,1201)')
+    start = await position()
+    mobile = page.viewport_size['width'] <= 700
+    if mobile:
+        session = await page.context.new_cdp_session(page)
+        await session.send('Emulation.setTouchEmulationEnabled', {'enabled': True})
+        box = await page.locator('#village-walk-stick').bounding_box()
+        async def stick(kind, fraction):
+            point = {'x': box['x']+box['width']/2, 'y': box['y']+box['height']*fraction, 'id': 1}
+            await session.send('Input.dispatchTouchEvent', {'type': kind, 'touchPoints': [] if kind=='touchEnd' else [point]})
+        await stick('touchStart', .1)
+    else:
+        await page.keyboard.down('ShiftLeft')
+        await page.keyboard.down('w')
+    await page.evaluate('step(60,80)')
+    blocked = await position()
+    assert 8 < math.dist(start,blocked) < 16, (start,blocked)
+    await page.evaluate('step(6,80)')
+    assert math.dist(blocked,await position())<.01
+    if mobile:
+        await stick('touchMove', .9)
+    else:
+        await page.keyboard.up('w')
+        await page.keyboard.up('ShiftLeft')
+        await page.keyboard.down('s')
+    await page.evaluate('step(6,80)')
+    assert math.dist(blocked,await position())>1
+    if mobile:
+        await stick('touchEnd', .9)
+        await session.detach()
+    else:
+        await page.keyboard.up('s')
+    await button.click()
+    await page.evaluate('step(1)'); await page.evaluate('step(1,1201)')
+    print('PASS kitchen furniture blocks travel and allows retreat',flush=True)
+
 async def main(url,out):
     assert urlsplit(url).hostname in ['127.0.0.1','localhost'];out.mkdir(parents=True,exist_ok=True)
     async with async_playwright() as p:
@@ -161,6 +204,7 @@ async def main(url,out):
         assert math.dist(await eye(),first['eye'])<1e-5
         assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         print('PASS opening approach and first-stop landing',flush=True)
+        await check_kitchen_collision(page)
         await check_explore(page,out,.55)
         await page.locator(".waypoint").first.evaluate("e=>e.scrollIntoView({behavior:'instant'})")
         await settle(page)

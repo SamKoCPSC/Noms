@@ -395,6 +395,7 @@ const VILLAGE_BRIDGE: Asset = asset!(
     JsAssetOptions::new().with_minify(false)
 );
 const _: &[u8] = include_bytes!("../../assets/about-three-village.js");
+const VILLAGE_COLLISION: Asset = asset!("/assets/about/village/collision.json");
 const VILLAGE_LAYOUT: Asset = asset!("/assets/about/village/layout.json");
 // Track regenerated derivatives so incremental builds refresh Manganis URLs.
 const _: &str = include_str!("../../assets/about/village/layout.json");
@@ -434,7 +435,7 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
-       "data-village-layout-url":VILLAGE_LAYOUT,"data-village-world-url":VILLAGE_WORLD,"data-village-bridge-url":VILLAGE_BRIDGE,
+       "data-village-layout-url":VILLAGE_LAYOUT,"data-village-collision-url":VILLAGE_COLLISION,"data-village-world-url":VILLAGE_WORLD,"data-village-bridge-url":VILLAGE_BRIDGE,
     "data-village-kitchen-url":VILLAGE_KITCHEN,
     "data-village-library-url":VILLAGE_LIBRARY,
     "data-village-bedroom-url":VILLAGE_BEDROOM,

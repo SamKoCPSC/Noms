@@ -23,3 +23,4 @@ await writeFile(`${out}/receipts.json`,JSON.stringify(receipts,null,2)+'\n');
 console.log('VILLAGE_APP_ASSETS_READY',receipts.reduce((n,r)=>n+r.preview_bytes,0));
 
 await import("./build-camera.mjs");
+await import("./build-collision.mjs");

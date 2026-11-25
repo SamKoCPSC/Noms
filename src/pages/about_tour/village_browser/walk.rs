@@ -74,7 +74,7 @@ impl Walk {
             || self.bob_amplitude > 0.
     }
 
-    pub fn frame(&mut self, now: f64, returning: bool, yaw: f32, pitch: f32) -> [f32; 8] {
+    pub fn frame(&mut self, now: f64, returning: bool, yaw: f32, pitch: f32) -> [f32; 9] {
         let dt = ((now - self.last.replace(now).unwrap_or(now)).max(0.) / 1000.) as f32;
         self.blend = (self.blend + if returning { -dt } else { dt } / 1.2).clamp(0., 1.);
         let weight = self.blend * self.blend * (3. - 2. * self.blend);
@@ -106,7 +106,7 @@ impl Walk {
         let target = 0.012 * grounded_step * input.min(1.);
         self.bob_amplitude += (target - self.bob_amplitude).clamp(-0.3 * dt, 0.3 * dt);
 
-        let mut eye_offset = if self.crouching { -CROUCH_DROP } else { 0. };
+        let mut lift = 0.;
         if let Some(elapsed) = &mut self.jump_elapsed {
             *elapsed += dt;
             // The two parabolas meet with zero vertical velocity at the apex.
@@ -116,7 +116,7 @@ impl Walk {
             } else {
                 JUMP_FALL_TIME
             };
-            eye_offset += JUMP_HEIGHT * (1. - (from_apex / duration).powi(2)).max(0.);
+            lift = JUMP_HEIGHT * (1. - (from_apex / duration).powi(2)).max(0.);
             if from_apex >= JUMP_FALL_TIME {
                 self.jump_elapsed = None;
             }
@@ -130,9 +130,10 @@ impl Walk {
             pitch,
             side * distance,
             forward * distance,
-            eye_offset,
+            lift,
             grounded_step,
             self.bob_amplitude,
+            if self.crouching { CROUCH_DROP } else { 0. },
         ]
     }
 }
