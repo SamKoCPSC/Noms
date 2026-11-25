@@ -7,6 +7,7 @@ import { configureClearGlass } from '../village/clear-glass.js';
 import { createWalkingTurn, frameCamera } from './village-camera.js';
 
 import {createFence, createPerimeter} from '../village/perimeter.js';
+import {createCollisionMap} from './village-collision.js';
 import { createFirstPersonCamera } from './village-walk.js';
 
 export function createVillage(canvas,catalog) {
@@ -49,10 +50,11 @@ export function createVillage(canvas,catalog) {
  canvas.dataset.renderer='three-village';canvas.dataset.animations='0';canvas.dataset.bakedShadows='true';canvas.dataset.totalModels=String(catalog.models.length+1);canvas.dataset.ready='false';notify();
  api.ready=(async()=>{
   try{
-   layout=await fetchAsset(catalog.layout,true);if(disposed)throw new DOMException('Disposed','AbortError');
+   const [villageLayout,collision]=await Promise.all([fetchAsset(catalog.layout,true),fetchAsset(catalog.collision,true)]);
+   layout=villageLayout;if(disposed)throw new DOMException('Disposed','AbortError');
    if(layout.stops.length!==catalog.models.length)throw Error('Village/story mismatch');
    const perimeter=createPerimeter(layout.walk.outline);
-   firstPerson=createFirstPersonCamera(layout,perimeter);
+   firstPerson=createFirstPersonCamera(layout,perimeter,createCollisionMap(collision));
    const fence=createFence(perimeter,layout.walk);
    scene.add(fence);roots.push(fence);
    const settings=layout.lighting;renderer.toneMappingExposure=2**settings.exposure;

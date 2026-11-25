@@ -21,8 +21,11 @@ Native scrolling over the scene or cards controls the camera directly, including
 when paused between sections. Each full leg spans 3.4 viewport heights of scrolling.
 Explore village places the eyes 1.65 m above the floor in each room’s original
 model scale. On the approach, eye height blends smoothly between the meadow
-and the enlarged room over the width of that room. Visitors can cross the paths,
-lawns and room footprints inside the timber fence. Its rails follow the terrain around the master layout's
+and the enlarged room over the width of that room. Visitors can walk the paths,
+lawns and open spaces inside rooms. A circular body
+slides along solid objects, steps over low sills, and checks clearance above the
+head when crouching, standing or jumping. The outer fence follows the terrain around
+the master layout's
 220 × 260 m ground outline. The walking boundary uses those same edges and
 leaves 0.3 m between the camera and the inside face of the fence posts.
 WASD and the touch stick start and stop immediately, with a top walking speed of
@@ -53,10 +56,12 @@ claims. Native masters and full-quality bakes remain in the models archive.
 ```sh
 # Regenerate app GLBs only after changing the reviewed village/bakes:
 node tools/about/village/build-app-assets.mjs
+# Rebuild the collision map from the shipped world and room meshes after geometry edits:
+node tools/about/village/build-collision.mjs
 # Camera-only changes do not require repacking the GLBs:
 node tools/about/village/build-camera.mjs
 npm run about:three:build
-node --test tools/about/three/village-{camera,walk}.test.mjs
+node --test tools/about/three/village-{camera,walk,collision}.test.mjs
 cargo check --bin noms --target wasm32-unknown-unknown --no-default-features --features web
 python scripts/tests/test-about-village-browser.py http://127.0.0.1:8765/about /tmp/about-village-check
 ```

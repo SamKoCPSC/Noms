@@ -1,8 +1,8 @@
 import * as THREE from 'three';
+import {bodyRadius,createWalkBody,headClearance} from './village-collision.js';
 import { groundHeight } from '../village/walking-world.js';
 import {createPerimeter} from '../village/perimeter.js';
 
-const bodyRadius = 0.3;
 const adultEyeHeight = 1.65; // metres above the floor in the original room models
 const groundPoint = ([x,,z]) => new THREE.Vector2(x,z);
 
@@ -44,30 +44,31 @@ export function createWalkSurface(layout, perimeter = createPerimeter(layout.wal
  return {constrain: (x,z) => perimeter.constrain(x,z,bodyRadius),sample};
 }
 
-export function createFirstPersonCamera(layout, perimeter) {
+export function createFirstPersonCamera(layout, perimeter, collisionMap) {
  const surface=createWalkSurface(layout, perimeter);
- let position=null, initialYaw=0, stepPhase=0;
+ const controller=createWalkBody(surface,collisionMap,layout.stops.map(stop=>stop.pose.eye));
+ let body=null, initialYaw=0, stepPhase=0;
  return (camera,walk)=>{
-  if(!walk?.length){position=null;stepPhase=0;return;}
+  if(!walk?.length){body=null;stepPhase=0;return;}
   camera.rotation.reorder('YXZ');
-  if(!position){
-   position=surface.constrain(camera.position.x,camera.position.z);
+  if(!body){
+   body=controller.spawn(camera.position.x,camera.position.z);
+   if(!body)return;
    initialYaw=camera.rotation.y;
   }
-  const [weight,turn,pitch,side,forward,eyeOffset=0,stepLength=0,bobAmplitude=0]=walk;
+  const [weight,turn,pitch,side,forward,lift=0,stepLength=0,bobAmplitude=0,crouchDrop=0]=walk;
   const yaw=initialYaw+turn, sin=Math.sin(yaw), cos=Math.cos(yaw);
-  const next=surface.constrain(position[0]+side*cos-forward*sin,position[1]-side*sin-forward*cos);
-  const [x,z]=next;
+  const {x:oldX,z:oldZ}=body;
+  const {x,z,feet,height}=controller.move(body,oldX+side*cos-forward*sin,oldZ-side*sin-forward*cos,lift,crouchDrop);
   if(bobAmplitude===0) stepPhase=0;
   else if(stepLength>0){
    // Use actual travel so pushing straight into a fence cannot generate footsteps.
-   const travel=Math.hypot(x-position[0],z-position[1]);
+   const travel=Math.hypot(x-oldX,z-oldZ);
    stepPhase=(stepPhase+travel/stepLength)%1;
   }
-  position=next;
-  const {floor,eyeHeight}=surface.sample(x,z);
+  const {eyeHeight}=surface.sample(x,z);
   const bob=Math.sin(2*Math.PI*stepPhase)*bobAmplitude*(eyeHeight/adultEyeHeight);
-  camera.position.lerp(new THREE.Vector3(x,floor+eyeHeight+eyeOffset+bob,z),weight);
+  camera.position.lerp(new THREE.Vector3(x,feet+height-headClearance+bob,z),weight);
   camera.rotation.y+=weight*Math.atan2(Math.sin(yaw-camera.rotation.y),Math.cos(yaw-camera.rotation.y));
   camera.rotation.x=THREE.MathUtils.lerp(camera.rotation.x,pitch,weight);
   camera.fov=THREE.MathUtils.lerp(camera.fov,65,weight);
