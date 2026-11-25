@@ -93,12 +93,12 @@ async def check_explore(page, out, progress):
         await page.keyboard.down('Space')
         await page.evaluate('step(1,50)')
         await page.evaluate('step(8,50)')
-        assert abs((await pose())[0][1]-ground[1]-1.0)<.001
+        assert abs((await pose())[0][1]-ground[1]-3.0)<.001
         # A fresh press in midair and key repeats after landing cannot start another jump.
         await page.keyboard.up('Space')
         await page.keyboard.down('Space')
         await page.evaluate('step(7,50)')  # 350 ms after the apex, just above the ground
-        assert 0.09 < (await pose())[0][1]-ground[1] < 0.12
+        assert 0.30 < (await pose())[0][1]-ground[1] < 0.33
         await page.evaluate('step(1,50)')
         assert (await pose())[0]==ground
         await page.keyboard.down('Space')

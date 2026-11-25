@@ -31,7 +31,7 @@ leaves 0.3 m between the camera and the inside face of the fence posts.
 WASD and the touch stick start and stop immediately, with a top walking speed of
 5 m/s. Hold Shift to sprint at 10 m/s, press Space to jump, or hold Left Ctrl
 to crouch and walk at 2.5 m/s. Eye height bobs subtly with each grounded step,
-settling when movement stops. A jump rises one village unit in 0.40 seconds
+settling when movement stops. Meadow grass is passable. A jump rises three village units in 0.40 seconds
 and lands 0.37 seconds after its peak.
 Use the mouse, a touch drag or the arrow keys to look. Escape releases the mouse
 and stops movement. Resume tour eases back to the saved pose over 1.2 seconds.

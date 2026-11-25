@@ -75,3 +75,13 @@ test('the shipped kitchen furniture and cottage exterior block forward travel',(
   assert.ok(Math.hypot(body.x-tx,body.z-tz)>2);
  }
 });
+
+test('the meadow grass east of the kitchen is walkable at terrain height',()=>{
+ const walk=createWalkBody(surface,village),z=40;
+ const body=walk.spawn(-17,z);
+ for(let x=-16.75;x<=-11;x+=.25){
+  walk.move(body,x,z,0,0);
+  assert.ok(Math.abs(body.x-x)<1e-6 && Math.abs(body.z-z)<1e-6);
+  assert.ok(Math.abs(body.feet-surface.sample(x,z).floor)<1e-6);
+ }
+});
