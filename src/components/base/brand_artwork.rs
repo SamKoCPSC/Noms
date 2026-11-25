@@ -1,16 +1,7 @@
 use dioxus::prelude::*;
-use manganis::{ImageAssetOptions, ImageSize};
 
 const BRAND_STYLES: Asset = asset!("/assets/brand/ui.css");
-const PAINTED_BOOK: Asset = asset!(
-    "/assets/brand/noms-logo-painted-s3-v2.png",
-    ImageAssetOptions::new()
-        .with_webp()
-        .with_size(ImageSize::Manual {
-            width: 192,
-            height: 240
-        })
-);
+const PAGE_ART: Asset = asset!("/assets/brand/icons-3d/pages", AssetOptions::folder());
 
 /// Painted header identities, not replacements for small interactive icons.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -34,145 +25,23 @@ pub enum PageIconKind {
 }
 
 impl PageIconKind {
-    fn asset(self) -> Asset {
-        // Preserve the source paintings; ship appropriately sized transparent
-        // derivatives through the normal hashed Dioxus asset pipeline.
+    pub(crate) fn artwork_name(self) -> &'static str {
         match self {
-            Self::Home => asset!(
-                "/assets/brand/page-icons/home-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Introduction => asset!(
-                "/assets/brand/page-icons/introduction-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::About => asset!(
-                "/assets/brand/page-icons/about-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::HowTo => asset!(
-                "/assets/brand/page-icons/how-to-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Dashboard => asset!(
-                "/assets/brand/page-icons/dashboard-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Explore => asset!(
-                "/assets/brand/page-icons/explore-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Search => asset!(
-                "/assets/brand/page-icons/search-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Collections => asset!(
-                "/assets/brand/page-icons/collections-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Kitchen => asset!(
-                "/assets/brand/page-icons/kitchen-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Editor => asset!(
-                "/assets/brand/page-icons/editor-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Import => asset!(
-                "/assets/brand/page-icons/import-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::History => asset!(
-                "/assets/brand/page-icons/history-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Profile => asset!(
-                "/assets/brand/page-icons/profile-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Accounts => asset!(
-                "/assets/brand/page-icons/accounts-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
-            Self::Settings => asset!(
-                "/assets/brand/page-icons/settings-v1.png",
-                ImageAssetOptions::new()
-                    .with_webp()
-                    .with_size(ImageSize::Manual {
-                        width: 192,
-                        height: 192
-                    })
-            ),
+            Self::Home => "home",
+            Self::Introduction => "introduction",
+            Self::About => "about",
+            Self::HowTo => "how-to",
+            Self::Dashboard => "dashboard",
+            Self::Explore => "explore",
+            Self::Search => "search",
+            Self::Collections => "collections",
+            Self::Kitchen => "kitchen",
+            Self::Editor => "editor",
+            Self::Import => "import",
+            Self::History => "history",
+            Self::Profile => "profile",
+            Self::Accounts => "accounts",
+            Self::Settings => "settings",
         }
     }
 }
@@ -184,7 +53,7 @@ pub fn BrandMark(#[props(default)] large: bool) -> Element {
         document::Stylesheet { href: BRAND_STYLES }
         img {
             class: if large { "brand-mark brand-mark--large" } else { "brand-mark" },
-            src: PAINTED_BOOK,
+            src: "{PAGE_ART}/noms-logo.webp",
             alt: "",
             aria_hidden: "true",
             width: if large { "96" } else { "32" },
@@ -215,7 +84,7 @@ pub fn PageIcon(kind: PageIconKind, #[props(default)] compact: bool) -> Element 
         document::Stylesheet { href: BRAND_STYLES }
         img {
             class: if compact { "page-identity-icon page-identity-icon--compact" } else { "page-identity-icon" },
-            src: kind.asset(),
+            src: "{PAGE_ART}/{kind.artwork_name()}.webp",
             alt: "",
             aria_hidden: "true",
             width: if compact { "48" } else { "72" },
@@ -235,8 +104,8 @@ mod tests {
         let page = dioxus_ssr::render_element(rsx! {
             NavigationArtwork { kind: Some(PageIconKind::Dashboard) }
         });
-        assert!(book.contains("noms-logo-painted-s3-v2"), "{book}");
-        assert!(page.contains("dashboard-v1"), "{page}");
+        assert!(book.contains("/noms-logo.webp"), "{book}");
+        assert!(page.contains("/dashboard.webp"), "{page}");
         for html in [&book, &page] {
             assert!(html.contains("navigation-artwork"), "{html}");
             assert!(html.contains("alt=\"\""), "{html}");
@@ -260,21 +129,21 @@ mod tests {
     #[test]
     fn all_page_identities_render_distinct_decorative_sized_assets() {
         let icons = [
-            (PageIconKind::Home, "home-v1"),
-            (PageIconKind::Introduction, "introduction-v1"),
-            (PageIconKind::Dashboard, "dashboard-v1"),
-            (PageIconKind::Explore, "explore-v1"),
-            (PageIconKind::Search, "search-v1"),
-            (PageIconKind::Collections, "collections-v1"),
-            (PageIconKind::Kitchen, "kitchen-v1"),
-            (PageIconKind::Editor, "editor-v1"),
-            (PageIconKind::Import, "import-v1"),
-            (PageIconKind::History, "history-v1"),
-            (PageIconKind::Profile, "profile-v1"),
-            (PageIconKind::Accounts, "accounts-v1"),
-            (PageIconKind::Settings, "settings-v1"),
-            (PageIconKind::About, "about-v1"),
-            (PageIconKind::HowTo, "how-to-v1"),
+            (PageIconKind::Home, "/home.webp"),
+            (PageIconKind::Introduction, "/introduction.webp"),
+            (PageIconKind::Dashboard, "/dashboard.webp"),
+            (PageIconKind::Explore, "/explore.webp"),
+            (PageIconKind::Search, "/search.webp"),
+            (PageIconKind::Collections, "/collections.webp"),
+            (PageIconKind::Kitchen, "/kitchen.webp"),
+            (PageIconKind::Editor, "/editor.webp"),
+            (PageIconKind::Import, "/import.webp"),
+            (PageIconKind::History, "/history.webp"),
+            (PageIconKind::Profile, "/profile.webp"),
+            (PageIconKind::Accounts, "/accounts.webp"),
+            (PageIconKind::Settings, "/settings.webp"),
+            (PageIconKind::About, "/about.webp"),
+            (PageIconKind::HowTo, "/how-to.webp"),
         ];
         for (kind, name) in icons {
             let html = dioxus_ssr::render_element(rsx! { PageIcon { kind } });
@@ -293,7 +162,7 @@ mod tests {
     fn brand_marks_and_compact_artwork_reserve_correct_aspect_ratios() {
         let small = dioxus_ssr::render_element(rsx! { BrandMark {} });
         assert!(
-            small.contains("noms-logo-painted-s3-v2") && !small.contains(".svg"),
+            small.contains("/noms-logo.webp") && !small.contains(".svg"),
             "{small}"
         );
         assert!(
@@ -301,7 +170,7 @@ mod tests {
             "{small}"
         );
         let painted = dioxus_ssr::render_element(rsx! { BrandMark { large: true } });
-        assert!(painted.contains("noms-logo-painted-s3-v2"), "{painted}");
+        assert!(painted.contains("/noms-logo.webp"), "{painted}");
         let small_source = small
             .split("src=\"")
             .nth(1)

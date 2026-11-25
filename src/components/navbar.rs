@@ -1,5 +1,8 @@
 use dioxus::prelude::*;
 
+mod artwork;
+use artwork::DrawerArtwork;
+
 #[cfg(test)]
 mod navigation_tests;
 
@@ -29,9 +32,7 @@ mod logout_tests {
 }
 
 use crate::auth::context::use_auth;
-use crate::components::base::{
-    Avatar, AvatarSize, BrandMark, NavigationArtwork, PageIconKind, SharedModal,
-};
+use crate::components::base::{Avatar, AvatarSize, BrandMark, PageIconKind, SharedModal};
 use crate::components::kitchen::SectionLink;
 use crate::utils::theme::UseTheme;
 use crate::Route;
@@ -209,13 +210,14 @@ pub fn Navbar(theme: UseTheme) -> Element {
             }
         }
         if menu_open() {
+            document::Script { r#type: "module", src: artwork::BOOTSTRAP }
             SharedModal {
                 aria_labelledby: "navigation-menu-title",
                 focus_selector: "#navigation-menu-close",
                 on_dismiss: move |_| menu_open.set(false),
-                div { class: "feedback-surface navigation-drawer", onclick: move |event| event.stop_propagation(),
+                noms-drawer-models { class: "feedback-surface navigation-drawer", "data-renderer": artwork::RENDERER, onclick: move |event| event.stop_propagation(),
                     div { class: "navigation-drawer-header",
-                        h2 { id: "navigation-menu-title", class: "navigation-artwork-label", NavigationArtwork {} span { "Navigation" } }
+                        h2 { id: "navigation-menu-title", class: "navigation-artwork-label", DrawerArtwork {} span { "Navigation" } }
                         button { id: "navigation-menu-close", r#type: "button", class: "navigation-close",
                             aria_label: "Close navigation menu", onclick: move |_| menu_open.set(false), "✕" }
                     }
@@ -228,35 +230,33 @@ pub fn Navbar(theme: UseTheme) -> Element {
                     NavigationSearch { compact: false, on_navigate: move |_| menu_open.set(false) }
                     nav { class: "navigation-drawer-links", aria_label: "All destinations",
                         for (route, label, icon) in [
-                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", Some(PageIconKind::Home)),
-                            (Route::Dashboard {}, "Dashboard", Some(PageIconKind::Dashboard)),
-                            (Route::CollectionList {}, "Collections", Some(PageIconKind::Collections)),
-                            (Route::Pantry {}, "Kitchen", Some(PageIconKind::Kitchen)),
-                            (Route::Explore {}, "Explore", Some(PageIconKind::Explore)),
-                            (Route::Search { query: Default::default() }, "Search", Some(PageIconKind::Search)),
-                            (Route::RecipeNew {}, "New recipe", Some(PageIconKind::Editor)),
-                            (Route::About {}, "About", Some(PageIconKind::About)),
-                            (Route::HowTo {}, "How to", Some(PageIconKind::HowTo)),
+                            (if is_signed_in { Route::CommunityHome {} } else { Route::Home {} }, "Home", PageIconKind::Home),
+                            (Route::Dashboard {}, "Dashboard", PageIconKind::Dashboard),
+                            (Route::CollectionList {}, "Collections", PageIconKind::Collections),
+                            (Route::Pantry {}, "Kitchen", PageIconKind::Kitchen),
+                            (Route::Explore {}, "Explore", PageIconKind::Explore),
+                            (Route::Search { query: Default::default() }, "Search", PageIconKind::Search),
+                            (Route::RecipeNew {}, "New recipe", PageIconKind::Editor),
+                            (Route::About {}, "About", PageIconKind::About),
+                            (Route::HowTo {}, "How to", PageIconKind::HowTo),
                         ] {
                             SectionLink {
                                 class: if navigation_is_current(&route, &current_route) { "navbar-link navbar-link--current" } else { "navbar-link" },
                                 current: navigation_is_current(&route, &current_route),
                                 to: route, on_navigate: move |_| menu_open.set(false),
-                                span { class: "navigation-artwork-slot", aria_hidden: "true",
-                                    if let Some(kind) = icon { NavigationArtwork { kind: Some(kind) } }
-                                }
+                                DrawerArtwork { kind: icon }
                                 span { "{label}" }
                             }
                         }
                         if is_signed_in {
-                            Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Introduction) } span { "Introduction" } }
+                            Link { to: Route::Home {}, class: "navbar-link", onclick: move |_| menu_open.set(false), DrawerArtwork { kind: PageIconKind::Introduction } span { "Introduction" } }
                         }
                     }
                     div { class: "navigation-drawer-account",
                         if is_signed_in {
                             a { href: format!("/u/{}", auth.current_user.as_ref().map(|u| u.username.clone()).unwrap_or_default()),
-                                class: "navbar-link", NavigationArtwork { kind: Some(PageIconKind::Profile) } span { "My profile" } }
-                            Link { to: Route::SettingsProfile {}, class: "navbar-link", onclick: move |_| menu_open.set(false), NavigationArtwork { kind: Some(PageIconKind::Settings) } span { "Settings" } }
+                                class: "navbar-link", DrawerArtwork { kind: PageIconKind::Profile } span { "My profile" } }
+                            Link { to: Route::SettingsProfile {}, class: "navbar-link", onclick: move |_| menu_open.set(false), DrawerArtwork { kind: PageIconKind::Settings } span { "Settings" } }
                             form { class: "navbar-logout-form", method: "post", action: "/auth/logout?redirect_uri=/",
                                 button { r#type: "submit", class: "navbar-link",
                                     // Keep the form mounted until native POST completes.

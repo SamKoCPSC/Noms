@@ -193,6 +193,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     let view;
     if (isKitchen) view = kitchenCamera(root);
     else if (sceneName === 'signature-recipe') view = studioCamera([.11, 5.88, 12.7], [0, 2.08, .35], 6.16235, 6.16235 * 876 / 1059);
+    else if (sceneName === 'terrimisu-cookie-study') view = studioCamera([1.13, 5.6, 10.9], [0, 2.19, .47], 5.79, 5.06);
     else if (isMarket) view = studioCamera([.41, 5.13, 13.25], [.16, 2.05, .56], 7.36, 7.36 * 800 / 1152);
     else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
     else if (sceneName === 'owlfredo-kitchen-island') view = studioCamera([3.75, 5.66, 11.4], [0, 2.51, .72], 7.0, 6.45);
@@ -268,3 +269,6 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     throw error;
   }
 }
+
+// The drawer reuses this bundle's Three.js engine and GLB decoder.
+export {mountDrawerModels} from '../../drawer/renderer.js';

@@ -278,6 +278,15 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(intro.contains("data-scene=\"signature-recipe\""));
         assert!(intro.contains("grated truffle"));
         assert!(screenshot.contains("landing-shot-button"));
+        let history = stories
+            .split("</article>")
+            .find(|story| story.contains("Study how your recipes change."))
+            .unwrap();
+        let (intro, screenshot) = history.split_once("class=\"landing-app-window\"").unwrap();
+        assert!(intro.contains("data-scene=\"terrimisu-cookie-study\""));
+        assert!(intro.contains("Terrimisu tastes cookies from two batches."));
+        assert!(intro.contains("loading=\"lazy\""));
+        assert!(screenshot.contains("Compare two batches of chocolate chip cookies"));
         let share = stories
             .split("</article>")
             .find(|article| article.contains("Share your best creations."))

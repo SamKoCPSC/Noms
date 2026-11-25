@@ -75,6 +75,7 @@
 .landing-chapter-copy > .landing-model { margin-top: 16px; }
 .landing-chapter-copy .landing-model__viewer { height: auto; aspect-ratio: 7 / 4; }
 .landing-chapter-copy [data-scene="owlfredo-kitchen-island"] .landing-model__viewer { aspect-ratio: 4 / 3; }
+.landing-chapter-copy [data-scene="terrimisu-cookie-study"] .landing-model__viewer { aspect-ratio: 8 / 7; }
 .landing-chapter-copy [data-scene="pandacotta-market-stand"] .landing-model__viewer { aspect-ratio: 1152 / 800; }
 .landing-chapter-copy > #landing-signature-recipe { width: min(100%, 28rem); margin: 0 auto; }
 #landing-signature-recipe .landing-model__viewer { aspect-ratio: 1059 / 876; }

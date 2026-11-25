@@ -1,3 +1,4 @@
+use crate::components::base::{PageIcon, PageIconKind};
 use crate::components::informational::PageMeta;
 use dioxus::prelude::*;
 const TOUR_CSS: Asset = asset!(
@@ -502,7 +503,7 @@ pub fn About() -> Element {
         span{id:"{IDS[i]}",class:"reader-anchor",aria_hidden:"true"}
         div{class:"panel-viewport",div{class:"panel-content",
         div{class:"panel-meta",span{class:"eyebrow","{EYEBROWS[i]}"}span{class:"panel-number","{PARTS[i]}"}}
-        if i==0{h1{id:"title-{i}","{TITLES[i]}"}}else{h2{id:"title-{i}","{TITLES[i]}"}}
+        if i==0{h1{id:"title-{i}",class:"brand-title",PageIcon{kind:PageIconKind::About} span{"{TITLES[i]}"}}}else{h2{id:"title-{i}","{TITLES[i]}"}}
         if MODEL_FOR_STOP[i]==0 {figure{class:"kitchen-fallback",img{src:KITCHEN_POSTER,alt:"A kitchen for saving and developing recipes, with the Noms editor on a laptop and an open recipe book on the island",loading:"lazy",width:1080,height:945}}}
         if MODEL_FOR_STOP[i]==1 {figure{class:"office-fallback",img{src:OFFICE_POSTER,alt:"Sam’s office with three code monitors, a mesh chair, a glass-sided PC, coffee equipment and custom keyboards",loading:"lazy",width:1080,height:945}}}
         if MODEL_FOR_STOP[i]==2 {figure{class:"bedroom-fallback",img{src:BEDROOM_POSTER,alt:"Sam’s hobby bedroom with a custom keyboard workbench, badminton gear, collectible penguins and a cozy lounge",loading:"lazy",width:1080,height:945}}}

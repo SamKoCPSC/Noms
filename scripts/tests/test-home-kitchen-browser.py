@@ -33,7 +33,10 @@ async def check_chapter_layout(page, chapter, model, aspect, output, stem):
         image_box = await chapter.locator('.landing-shot-button').bounding_box()
         assert model_box['y'] >= text_box['y'] + text_box['height']
         if name == 'desktop':
-            assert image_box['x'] >= model_box['x'] + model_box['width']
+            if await chapter.evaluate("e => e.matches(':nth-child(even)')"):
+                assert model_box['x'] >= image_box['x'] + image_box['width']
+            else:
+                assert image_box['x'] >= model_box['x'] + model_box['width']
         else:
             assert image_box['y'] >= model_box['y'] + model_box['height']
         await chapter.screenshot(path=str(output / f'{stem}-{name}.png'))
@@ -178,6 +181,31 @@ async def main(args):
         assert await island_canvas.get_attribute('data-time') == held
         await check_chapter_layout(page, cooking, island, 4/3, args.output, 'owlfredo-island')
         print('PASS soup island placement, full loop, pause and responsive framing', flush=True)
+        history = page.locator('.landing-chapter').filter(has=page.get_by_role('heading', name='Study how your recipes change.'))
+        cookies = history.locator('.landing-chapter-copy #landing-terrimisu-cookie-study')
+        await cookies.scroll_into_view_if_needed()
+        await ready(page, '#landing-terrimisu-cookie-study')
+        cookie_canvas = cookies.locator('canvas')
+        cookie_button = cookies.get_by_role('button')
+        await expect(cookie_canvas).to_have_attribute('data-duration', '24')
+        await expect(cookie_button).to_have_attribute('aria-label', 'Pause cookie tasting animation')
+        await expect(cookie_button).to_have_attribute('aria-controls', 'landing-terrimisu-cookie-study-canvas')
+        await page.evaluate('paint()');await page.evaluate('step(2)')
+        elapsed = float(await cookie_canvas.get_attribute('data-time'))
+        await page.evaluate('ms => step(1,ms)', ((6.55 - elapsed) % 24) * 1000)
+        skeptical = await rendered_pose(page, cookie_canvas)
+        await page.evaluate('step(1,8325)')
+        happy = await rendered_pose(page, cookie_canvas)
+        assert happy != skeptical
+        await page.evaluate('step(1,24000)')
+        assert await rendered_pose(page, cookie_canvas) == happy
+        await cookie_button.click();await page.evaluate('step(2)')
+        held = await cookie_canvas.get_attribute('data-time')
+        await page.evaluate('step(4,200)')
+        assert await cookie_canvas.get_attribute('data-time') == held
+        await check_chapter_layout(page, history, cookies, 8/7, args.output, 'terrimisu-cookie-study')
+        await page.evaluate('window.oldCookies=document.querySelector("#landing-terrimisu-cookie-study-canvas")')
+        print('PASS cookie tasting poses, loop, independent pause, and history chapter layout', flush=True)
         # A live preference change stops motion; explicit Play still works.
         await page.emulate_media(reduced_motion='reduce');await page.evaluate('paint()')
         await expect(control).to_have_attribute('aria-label','Play kitchen animation');await page.evaluate('step(3)')
@@ -189,6 +217,7 @@ async def main(args):
         await page.evaluate('window.oldKitchen=document.querySelector("#landing-kitchen-canvas")')
         await page.locator('.landing-more-links a[href="/how-to"]').click();await page.wait_for_selector('#landing-kitchen',state='detached')
         assert await page.evaluate('oldKitchen.dataset.disposed')=='true'
+        assert await page.evaluate('oldCookies.dataset.disposed')=='true'
         assert await page.evaluate('oldIsland.dataset.disposed')=='true'
         assert await page.evaluate('oldDesk.dataset.disposed')=='true'
         assert await page.evaluate('oldBanquet.dataset.disposed')=='true'
@@ -196,6 +225,13 @@ async def main(args):
         assert await page.locator('#landing-kitchen-canvas').count()==1
         assert await page.locator('#landing-kitchen button').get_attribute('aria-label')=='Play kitchen animation'
         print('PASS offscreen suspension, reduced motion, route cleanup/remount',flush=True)
+        previous_cookie_loads = sum('terrimisu-cookie-study' in url for url in model_requests)
+        await cookies.scroll_into_view_if_needed()
+        await expect(cookie_button).to_have_attribute('aria-label', 'Play cookie tasting animation')
+        await expect(cookies.locator('img')).to_be_visible()
+        assert sum('terrimisu-cookie-study' in url for url in model_requests) == previous_cookie_loads
+        await cookie_button.click();await ready(page, '#landing-terrimisu-cookie-study')
+        assert sum('terrimisu-cookie-study' in url for url in model_requests) == previous_cookie_loads + 1
         await banquet.scroll_into_view_if_needed();await ready(page, '#landing-pandacotta-banquet')
         await expect(banquet_button).to_have_attribute('aria-label', 'Play banquet animation')
         assert await banquet_canvas.get_attribute('data-time') == '22.600'
@@ -216,6 +252,7 @@ async def main(args):
         await page.route('**/*owlfredo-kitchen-island*.glb',lambda r:r.abort())
         await page.route('**/*recipe-desk*.glb',lambda r:r.abort())
         await page.route('**/*pandacotta-banquet*.glb',lambda r:r.abort())
+        await page.route('**/*terrimisu-cookie-study*.glb',lambda r:r.abort())
         await page.route('**/*penguini-kitchen*.glb',lambda r:r.abort())
         await page.goto(args.url);await page.wait_for_selector('#landing-kitchen[data-state="fallback"]',timeout=120000)
         assert await page.locator('#landing-kitchen img').is_visible()
@@ -229,12 +266,16 @@ async def main(args):
         await page.locator('#landing-owlfredo-kitchen-island').scroll_into_view_if_needed()
         await expect(page.locator('#landing-owlfredo-kitchen-island')).to_have_attribute('data-state','fallback')
         await expect(page.locator('#landing-owlfredo-kitchen-island img')).to_be_visible()
+        await page.locator('#landing-terrimisu-cookie-study').scroll_into_view_if_needed()
+        await expect(page.locator('#landing-terrimisu-cookie-study')).to_have_attribute('data-state','fallback')
+        await expect(page.locator('#landing-terrimisu-cookie-study img')).to_be_visible()
         await failed.close()
         nojs=await browser.new_context(java_script_enabled=False);page=await nojs.new_page();await page.goto(args.url)
         assert await page.locator('#landing-kitchen img').is_visible()
         assert await page.locator('#landing-recipe-desk img').is_visible()
         assert await page.locator('#landing-pandacotta-banquet img').is_visible()
         assert await page.locator('#landing-owlfredo-kitchen-island img').is_visible()
+        assert await page.locator('#landing-terrimisu-cookie-study img').is_visible()
         assert await page.locator('.landing-recipe-search input').is_visible()
         print('PASS context loss, failed asset, and no-JavaScript fallback',flush=True)
         await browser.close()
