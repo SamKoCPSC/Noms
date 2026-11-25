@@ -58,11 +58,14 @@ function lightStudio(renderer, scene, root, sceneName) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   root.traverse(mesh => {
+    // The market flippers travel beyond their rest bounds during the handoff and hops.
+    if (sceneName === 'pandacotta-market-stand' && mesh.isSkinnedMesh) mesh.frustumCulled = false;
     if (mesh.isMesh) mesh.castShadow = mesh.receiveShadow = true;
   });
-  const key = sceneName === 'signature-recipe'
-    ? lightPlating(renderer, scene)
-    : lightDeskOrBanquet(renderer, scene, sceneName === 'pandacotta-banquet');
+  let key;
+  if (sceneName === 'pandacotta-market-stand') key = lightMarket(renderer, scene);
+  else if (sceneName === 'signature-recipe') key = lightPlating(renderer, scene);
+  else key = lightDeskOrBanquet(renderer, scene, sceneName === 'pandacotta-banquet');
   return {dispose() {key.shadow.dispose(); environment.dispose();}};
 }
 
@@ -90,26 +93,45 @@ function lightDeskOrBanquet(renderer, scene, banquet) {
   return key;
 }
 
+function aimedLight(scene, targetY, color, intensity, x, y, z) {
+  const source = new THREE.DirectionalLight(color, intensity);
+  source.position.set(x, y, z);
+  source.target.position.set(0, targetY, .35);
+  scene.add(source, source.target);
+  return source;
+}
+
+function lightMarket(renderer, scene) {
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = .81;
+  scene.environmentIntensity = .5;
+  scene.add(new THREE.HemisphereLight(0xfff6e9, 0xc5ab8d, .56));
+  const key = aimedLight(scene, 1.6, 0xffead6, 2.25, -3.8, 7, 5.5);
+  key.castShadow = true;
+  Object.assign(key.shadow.camera, {left: -3.7, right: 3.7, top: 3.5, bottom: -3.5, near: .5, far: 18});
+  key.shadow.camera.updateProjectionMatrix();
+  key.shadow.mapSize.set(512, 512);
+  key.shadow.normalBias = .012;
+  key.shadow.bias = -.00008;
+  aimedLight(scene, 1.6, 0xe2edff, .78, 3.2, 4.5, 4.5);
+  aimedLight(scene, 1.6, 0xffe3c6, 1.3, 1.4, 6, -3);
+  aimedLight(scene, 1.6, 0xfff2dd, .37, -.5, .6, 6);
+  return key;
+}
+
 function lightPlating(renderer, scene) {
   renderer.toneMapping = THREE.AgXToneMapping;
   renderer.toneMappingExposure = .96;
   scene.environmentIntensity = .38;
   scene.add(new THREE.HemisphereLight(0xfff4e2, 0xaba197, .52));
-  function light(color, intensity, x, y, z) {
-    const source = new THREE.DirectionalLight(color, intensity);
-    source.position.set(x, y, z);
-    source.target.position.set(0, 1.8, .35);
-    scene.add(source, source.target);
-    return source;
-  }
-  const key = light(0xffebd6, 2.8, -3.8, 7, 5.5);
+  const key = aimedLight(scene, 1.8, 0xffebd6, 2.8, -3.8, 7, 5.5);
   key.castShadow = true;
   Object.assign(key.shadow.camera, {left: -3.5, right: 3.5, top: 3, bottom: -3, near: .5, far: 16});
   key.shadow.camera.updateProjectionMatrix();
   key.shadow.mapSize.set(512, 512);
   key.shadow.normalBias = .012;
-  light(0xddeaff, .87, 3, 4, 4);
-  light(0xffdfba, 1.7, 1.4, 6.5, -2.8);
+  aimedLight(scene, 1.8, 0xddeaff, .87, 3, 4, 4);
+  aimedLight(scene, 1.8, 0xffdfba, 1.7, 1.4, 6.5, -2.8);
   return key;
 }
 
@@ -122,6 +144,8 @@ async function fetchAsset(url, signal) {
 export async function createScene(canvas, sceneName, modelUrl, lightingUrl, signal) {
   const isKitchen = sceneName === 'kitchen';
   const isBanquet = sceneName === 'pandacotta-banquet';
+  const isMarket = sceneName === 'pandacotta-market-stand';
+  const fadeOnLoop = isKitchen || isMarket;
   let renderer, root, environment, mixer, api;
   try {
     renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true, powerPreference:'low-power'});
@@ -155,7 +179,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     mixer = new THREE.AnimationMixer(root);
     const clip = gltf.animations[0], duration=clip.duration;
     const action = mixer.clipAction(clip);
-    if (isKitchen) {
+    if (fadeOnLoop) {
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
     } else {
@@ -165,11 +189,12 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     // Show all three courses in the static pose. Begin the first reveal on play.
     let showingPosterPose = isBanquet;
     if (showingPosterPose) mixer.setTime(22.6);
-    const cycle = isKitchen ? duration + .4 : duration;
+    const cycle = fadeOnLoop ? duration + .4 : duration;
     let view;
     if (isKitchen) view = kitchenCamera(root);
     else if (sceneName === 'signature-recipe') view = studioCamera([.11, 5.88, 12.7], [0, 2.08, .35], 6.16235, 6.16235 * 876 / 1059);
     else if (sceneName === 'terrimisu-cookie-study') view = studioCamera([1.13, 5.6, 10.9], [0, 2.19, .47], 5.79, 5.06);
+    else if (isMarket) view = studioCamera([.41, 5.13, 13.25], [.16, 2.05, .56], 7.36, 7.36 * 800 / 1152);
     else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
     else if (sceneName === 'owlfredo-kitchen-island') view = studioCamera([3.75, 5.66, 11.4], [0, 2.51, .72], 7.0, 6.45);
     else view = studioCamera([2.1, 8.35, 15], [0, 1.98, .82], 7.48, 7.48 * 5 / 6);
@@ -194,8 +219,8 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
         const advance = paused ? 0 : dt;
         elapsed += advance;
         let opacity = 1;
-        if (isKitchen) {
-          // Hold and fade the kitchen across the ingredient reset.
+        if (fadeOnLoop) {
+          // Fade across the reset when props or characters return to their starting positions.
           const t = elapsed % cycle;
           action.paused = false;
           mixer.setTime(THREE.MathUtils.clamp(t - .2, 0, duration));

@@ -3,7 +3,8 @@
 `HomeScene` owns each model's poster, pause control, reduced-motion preference
 and route cleanup. All scenes share one locally bundled Three.js renderer.
 The kitchen loads in the hero. The recipe desk, Pandacotta’s banquet, the plating
-scene, Owlfredo’s soup island, and Terrimisu’s cookie study load as their sections approach the viewport.
+scene, Owlfredo’s soup island, Terrimisu’s cookie study, and the bakery stand load
+as their sections approach the viewport.
 
 The kitchen plays the full recipe and fades as the tray and bowl reset. The desk
 loops its 25.5-second collaboration clip. In “Discover new recipes,” Pandacotta
@@ -15,6 +16,9 @@ Under “Make cooking your favorites convenient,” Owlfredo seasons and tastes 
 then hops twice before his 28-second loop restarts. In “Study how your recipes
 change,” Terrimisu tastes two cookie batches in a 24-second loop. Visitors who
 prefer reduced motion can start the cookie tasting from its static poster.
+In “Share your best creations,” Penguini tastes a berry swirl and receives its recipe
+from Pandacotta. The 27-second bakery animation waits for Play when reduced
+motion is enabled.
 
 Each scene has its own pause control, suspends playback offscreen and in
 background tabs, and starts paused for reduced motion. Its poster is visible
@@ -41,6 +45,8 @@ The cookie study source is `design/landing/terrimisu-cookie-study/terrimisu-cook
 Export the scene animation as a single GLB clip with its shape keys, excluding the
 studio floor, lights, and camera. Pack the web model with
 `npx --yes --package gltfpack@0.25.0 gltfpack -i INPUT.glb -o assets/landing/terrimisu-cookie-study/terrimisu-cookie-study.glb -cc -si 0.35 -se 0.003 -af 0`.
+The editable bakery stand is `design/landing/pandacotta-market-stand/pandacotta-market-stand.blend`,
+with its Meshopt-packed GLB and handoff poster in `assets/landing/pandacotta-market-stand/`.
 The editable desk scene is `design/landing/recipe-desk/recipe-desk.blend`. Pack
 its web export with `node tools/home/three/pack.mjs INPUT.glb assets/landing/recipe-desk/recipe-desk.glb`,
 which verifies the decoded geometry and animation values. Three and Meshopt

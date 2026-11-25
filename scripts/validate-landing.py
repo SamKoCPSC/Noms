@@ -99,6 +99,13 @@ async def main():
         plating = creation.locator("#landing-signature-recipe")
         await expect(plating.locator("img")).to_be_visible()
         await expect(plating.get_by_role("button", name="Play plating animation")).to_be_visible()
+        sharing = p.locator(".landing-chapter").filter(
+            has=p.get_by_role("heading", name="Share your best creations.", exact=True)
+        )
+        bakery = sharing.locator("#landing-pandacotta-market-stand")
+        await expect(bakery.get_by_role("img", name=re.compile("Pandacotta and Penguini wave hello"))).to_be_visible()
+        await expect(bakery.locator("img")).to_be_visible()
+        await expect(bakery.get_by_role("button", name="Play bakery stand animation")).to_be_visible()
         for width, name in [
             (1440, "desktop"),
             (393, "mobile"),
@@ -233,6 +240,8 @@ async def main():
         await expect(static.locator(".landing-feature-card")).to_have_count(18)
         await expect(static.locator("#landing-signature-recipe img")).to_be_visible()
         await expect(static.locator("#landing-signature-recipe button")).to_have_count(0)
+        await expect(static.locator("#landing-pandacotta-market-stand img")).to_be_visible()
+        await expect(static.locator("#landing-pandacotta-market-stand button")).to_have_count(0)
         static_form = static.get_by_role("search", name="Find a recipe", exact=True)
         await static_form.get_by_role(
             "combobox", name="Search public recipes", exact=True
@@ -262,16 +271,22 @@ async def main():
             await frames.first.evaluate("e=>getComputedStyle(e).animationPlayState")
             == "running"
         )
-        plating = motion.locator("#landing-signature-recipe")
-        await plating.scroll_into_view_if_needed()
         webgl = await motion.evaluate("!!document.createElement('canvas').getContext('webgl2')")
-        if webgl:
-            await expect(plating).to_have_attribute("data-state", "ready", timeout=60000)
-            await plating.get_by_role("button", name="Pause plating animation").click()
-            await expect(plating.get_by_role("button", name="Play plating animation")).to_be_visible()
-        else:
-            await expect(plating).to_have_attribute("data-state", "fallback")
-            await expect(plating.locator("img")).to_be_visible()
+        for scene_id, label in [
+            ("signature-recipe", "plating animation"),
+            ("pandacotta-market-stand", "bakery stand animation"),
+        ]:
+            scene = motion.locator(f"#landing-{scene_id}")
+            await scene.scroll_into_view_if_needed()
+            if webgl:
+                await expect(scene).to_have_attribute("data-state", "ready", timeout=60000)
+                await scene.get_by_role("button", name=f"Pause {label}").click()
+                await expect(scene.get_by_role("button", name=f"Play {label}")).to_be_visible()
+                if scene_id == "pandacotta-market-stand":
+                    await expect(scene.locator("canvas")).to_have_attribute("data-duration", "27")
+            else:
+                await expect(scene).to_have_attribute("data-state", "fallback")
+                await expect(scene.locator("img")).to_be_visible()
         await motion_ctx.close()
         await b.close()
     assert not errors, errors
