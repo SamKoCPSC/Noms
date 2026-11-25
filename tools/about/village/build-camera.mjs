@@ -10,7 +10,7 @@ const walk={
  outline:layout.ground_outline,
  stops:layout.stops.map(({id,position,width,yaw})=>{
   const {min,max,scale}=anchors[id];
-  return {position,width,yaw,halfSize:[0,2].map(axis=>(max[axis]-min[axis])*scale/2)};
+  return {position,width,yaw,scale,halfSize:[0,2].map(axis=>(max[axis]-min[axis])*scale/2)};
  }),
  entrances:entrances.map(({threshold,approach_end},i)=>({
   threshold,end:approach_end,width:layout.stops[i].entrance.width,depth:layout.stops[i].entrance.depth

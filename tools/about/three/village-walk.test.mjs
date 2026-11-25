@@ -21,12 +21,28 @@ test('all twelve stops, route samples and the open meadow are freely walkable',(
  }
  for(const [i,{position:[x,,z]}] of layout.walk.stops.entries()) {
   assert.deepEqual(surface.constrain(x,z),[x,z]);
-  assert.ok(Math.abs(surface.floor(x,z)-layout.walk.entrances[i].threshold[1])<1e-5);
+  assert.ok(Math.abs(surface.sample(x,z).floor-layout.walk.entrances[i].threshold[1])<1e-5);
  }
  for(let x=west+1;x<east;x+=7) for(let z=north+1;z<south;z+=7) {
   assert.deepEqual(surface.constrain(x,z),[x,z]);
-  assert.ok(Number.isFinite(surface.floor(x,z)));
+  assert.ok(Number.isFinite(surface.sample(x,z).floor));
  }
+});
+
+test('standing eye level follows the authored room scale and eases down to meadow scale',()=>{
+ const anchors=JSON.parse(readFileSync('assets/models/terraced-village/daylight/source/anchors.json'));
+ for(const [i,{position:[x,,z]}] of layout.walk.stops.entries()){
+  const scale=anchors[layout.stops[i].id].scale;
+  const {eyeHeight}=surface.sample(x,z);
+  assert.ok(Math.abs(eyeHeight/scale-1.65)<1e-6,layout.stops[i].id);
+ }
+ const kitchen=layout.walk.stops[0];
+ const [x,,z]=kitchen.position;
+ const outward=d=>surface.sample(x+d*Math.sin(kitchen.yaw),z+d*Math.cos(kitchen.yaw)).eyeHeight;
+ const edge=kitchen.halfSize[1], width=kitchen.width;
+ assert.ok(outward(edge)>outward(edge+width/2));
+ assert.ok(outward(edge+width/2)>outward(edge+width));
+ assert.ok(Math.abs(outward(edge+width)-1.65)<1e-6);
 });
 
 test('even a large sprint step stays inside the posts and can slide along every side',()=>{
@@ -70,7 +86,8 @@ test('the walk uses eye height and camera-relative travel, and restores the guid
  assert.ok(camera.position.equals(savedEye));
  draw([1,Math.PI/2,0,0,0]);
  const eye=camera.position.clone(), forward=camera.getWorldDirection(new THREE.Vector3());
- assert.ok(Math.abs(eye.y-surface.floor(eye.x,eye.z)-1.65)<1e-6);
+ const standing=surface.sample(eye.x,eye.z);
+ assert.ok(Math.abs(eye.y-standing.floor-standing.eyeHeight)<1e-6);
  assert.ok(Math.abs(forward.y)<1e-6);
  draw([1,Math.PI/2,0,0,.1]);
  assert.ok(camera.position.clone().sub(eye).dot(forward)>.099);
@@ -80,4 +97,27 @@ test('the walk uses eye height and camera-relative travel, and restores the guid
  assert.ok(camera.quaternion.angleTo(savedRotation)<1e-6);
  draw([1,0,0,0,0]);
  assert.ok(Math.abs(camera.position.x-eye.x)<1e-6);
+});
+
+test('footsteps follow grounded distance and settle without tilting the view',()=>{
+ const camera=new THREE.PerspectiveCamera(), walk=createFirstPersonCamera(layout);
+ function draw(forward,stepLength,amplitude,lift=0){
+  frameCamera(camera,layout,0,900,600,[350,0,550,600]);
+  walk(camera,[1,0,0,0,forward,lift,stepLength,amplitude]);
+  const {x,y,z}=camera.position;
+  const {floor,eyeHeight}=surface.sample(x,z);
+  // Compare in authored metres at every point on the path.
+  return (y-floor-eyeHeight-lift)*1.65/eyeHeight;
+ }
+ const close=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-5);
+ close(draw(0,0,0),0);
+ const rotation=camera.quaternion.clone();
+ close(draw(.625,2.5,.03),.03);   // quarter of a walking step
+ close(draw(1.25,2.5,.03),-.03);  // the opposite point in the same step
+ close(draw(.5,0,.01,.5),-.01);   // in the air, the last step fades in place
+ close(draw(.5,0,0,1),0);
+ close(draw(0,0,0),0);
+ assert.ok(camera.quaternion.angleTo(rotation)<1e-6);
+ const fence=draw(10000,2.5,.03);
+ close(draw(5,2.5,.03),fence);
 });
