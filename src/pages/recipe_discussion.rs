@@ -1,4 +1,5 @@
 use crate::api::comments::{change, thread, Change, Comment};
+use crate::components::base::{Avatar, AvatarSize, PageIcon, PageIconKind};
 use dioxus::prelude::*;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -66,11 +67,17 @@ fn RecipeDiscussion(recipe: Uuid) -> Element {
     use_context_provider(|| revision);
     rsx! {
         section { class: "neumo-card recipe-discussion", aria_label: "Recipe discussion",
-            h2 { "Discussion" }
+            header { class: "discussion-heading",
+                div { class: "brand-title",
+                    PageIcon { kind: PageIconKind::Editor, compact: true }
+                    h2 { "Discussion" }
+                }
+                if !auth.is_authenticated {
+                    a { class: "btn btn-secondary", href: "/login?redirect_uri=/recipes/{recipe}", "Sign in to comment" }
+                }
+            }
             if auth.is_authenticated {
                 Composer { recipe, parent: None }
-            } else {
-                a { href: "/login?redirect_uri=/recipes/{recipe}", "Sign in to comment" }
             }
             ThreadPage { recipe, parent: None, depth: 0, after: 0 }
         }
@@ -121,45 +128,62 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
     let mut error = use_signal(String::new);
     let id = item.id;
     let author = item.author.as_deref().unwrap_or("Former member");
-    let date = item.created_at.format("%Y-%m-%d %H:%M UTC");
-    let indent = if depth == 1 || depth == 2 {
-        "1rem"
-    } else {
-        "0"
-    };
+    let date = item.created_at.format("%b %-d, %Y · %H:%M UTC");
+    let nested = matches!(depth, 1 | 2);
+    let own = auth.is_authenticated && item.author_id == auth.current_user_id;
     rsx! {
-        article { id: "comment-{id}", style: "margin-inline-start: {indent}; padding-block: 0.5rem",
+        article {
+            id: "comment-{id}", class: "discussion-entry",
+            class: if depth == 0 { "discussion-root" },
+            class: if nested { "discussion-nested" },
             if depth > 2 {
-                if let Some(parent) = parent { a { href: "#comment-{parent}", "Replying to comment {parent}" } }
+                if let Some(parent) = parent {
+                    a { class: "discussion-parent", href: "#comment-{parent}", "Replying to comment {parent}" }
+                }
             }
-            if let Some(body) = item.body {
-                strong { "{author}" }
-                small { " · Version {item.version_number} · {date}" }
-                p { white_space: "pre-wrap", overflow_wrap: "anywhere", "{body}" }
-                if auth.is_authenticated && item.author_id == auth.current_user_id {
-                    button { class: "btn", onclick: move |_| state.write().toggle(edit), "Edit" }
-                    button { class: "btn", onclick: move |_| async move {
+            if let Some(body) = &item.body {
+                header { class: "discussion-byline",
+                    span { aria_hidden: "true", Avatar { username: author.to_string(), size: AvatarSize::Small } }
+                    div {
+                        strong { "{author}" }
+                        span { class: "discussion-version", "Version {item.version_number}" }
+                        time { datetime: item.created_at.to_rfc3339(), "{date}" }
+                    }
+                }
+                p { class: "discussion-body", "{body}" }
+            } else {
+                p { class: "discussion-deleted", "Comment deleted" }
+            }
+            div { class: "discussion-actions",
+                if auth.is_authenticated {
+                    button { class: "discussion-action", aria_expanded: state.read().open.contains(&reply),
+                        onclick: move |_| state.write().toggle(reply), "Reply" }
+                }
+                if item.has_replies {
+                    button { class: "discussion-action discussion-toggle", aria_expanded: expanded,
+                        onclick: move |_| state.write().toggle(replies),
+                        if expanded { "Hide replies" } else { "Show replies" }
+                    }
+                }
+                if own {
+                    button { class: "discussion-action", aria_expanded: state.read().open.contains(&edit),
+                        onclick: move |_| state.write().toggle(edit), "Edit" }
+                    button { class: "discussion-action", onclick: move |_| async move {
                         if change(account(),recipe,Change::Delete{id}).await.is_ok() { revision += 1; }
                         else { error.set("Could not delete comment.".into()); }
                     }, "Delete" }
-                    if state.read().open.contains(&edit) {
-                        Composer { recipe, edit: Some(id), initial: body.clone() }
-                    }
                 }
-            } else { p { "Comment deleted" } }
+            }
             if !error().is_empty() { p { role: "alert", "{error}" } }
-            if auth.is_authenticated {
-                button { class: "btn", onclick: move |_| state.write().toggle(reply), "Reply" }
-                if state.read().open.contains(&reply) {
-                    Composer { recipe, parent: Some(id) }
+            if own && state.read().open.contains(&edit) {
+                if let Some(body) = &item.body {
+                    Composer { recipe, edit: Some(id), initial: body.clone() }
                 }
             }
-            if item.has_replies {
-                button { class: "btn", aria_expanded: expanded, onclick: move |_| state.write().toggle(replies),
-                    if expanded { "Hide replies" } else { "Show replies" }
-                }
-                if expanded { ThreadPage { recipe, parent: Some(id), depth: depth+1, after: 0 } }
+            if auth.is_authenticated && state.read().open.contains(&reply) {
+                Composer { recipe, parent: Some(id) }
             }
+            if item.has_replies && expanded { ThreadPage { recipe, parent: Some(id), depth: depth+1, after: 0 } }
         }
     }
 }
