@@ -244,3 +244,6 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     throw error;
   }
 }
+
+// The drawer reuses this bundle's Three.js engine and GLB decoder.
+export {mountDrawerModels} from '../../drawer/renderer.js';

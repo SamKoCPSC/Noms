@@ -255,7 +255,7 @@ mod tests {
         let mut dom = VirtualDom::new(LoginTestRoot);
         dom.rebuild(&mut NoOpMutations);
         let html = dioxus_ssr::render(&dom);
-        assert!(html.contains("noms-logo-painted-s3-v2"), "{html}");
+        assert!(html.contains("/noms-logo.webp"), "{html}");
         assert!(html.contains("alt=\"\""), "{html}");
         assert!(html.contains("Welcome back"), "{html}");
     }

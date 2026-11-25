@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn guide_heading_uses_the_approved_decorative_identity() {
         let html = rendered_guide();
-        assert!(html.contains("how-to-v1"), "{html}");
+        assert!(html.contains("/how-to.webp"), "{html}");
         assert!(html.contains("brand-title"), "{html}");
         assert!(html.contains("alt=\"\""), "{html}");
         assert_eq!(html.matches("<h1").count(), 1);
