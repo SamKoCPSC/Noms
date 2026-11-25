@@ -115,8 +115,8 @@ const RECIPE_TOOLS: &[Feature] = &[
         title: "Built-in recipe image editor",
         body: "Crop, rotate, and adjust recipe photos right in Noms.",
         image: asset!("/assets/landing/features/image-editor.webp"),
-        caption: "Design preview of the image editor’s crop, rotation, and color controls.",
-        size: (927, 600),
+        caption: "Fish tacos with pickled onions in a preview of the image editor’s crop, rotation, and color controls.",
+        size: (1084, 752),
     },
     Feature {
         title: "Scale your servings",
