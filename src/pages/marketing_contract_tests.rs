@@ -246,10 +246,10 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .split("class=\"landing-chapters landing-wrap\"")
             .nth(1)
             .unwrap()
-            .split("class=\"landing-features landing-wrap\"")
+            .split("class=\"landing-trust landing-wrap\"")
             .next()
             .unwrap();
-        assert_eq!(stories.matches("class=\"landing-chapter-copy\"").count(), 6);
+        assert_eq!(stories.matches("class=\"landing-chapter-copy\"").count(), 5);
         let discover = stories.split("</article>").next().unwrap();
         assert!(discover.contains("Discover new recipes."));
         assert!(discover.contains("data-scene=\"pandacotta-banquet\""));
@@ -269,7 +269,11 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(intro.contains("data-scene=\"owlfredo-kitchen-island\""));
         assert!(intro.contains("Owlfredo stirs, seasons, and tastes tomato soup"));
         assert!(intro.contains("loading=\"lazy\""));
-        assert!(screenshot.contains("Scale chili garlic oil noodles"));
+        assert!(
+            screenshot.contains("Check off ingredients as you prepare chili garlic oil noodles")
+        );
+        assert!(screenshot.contains("Pause cooking preview"));
+        assert!(!cooking.contains("Scale your servings"));
         let create = stories
             .split("</article>")
             .find(|article| article.contains("Create your signature recipe."))
@@ -296,8 +300,40 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(intro.contains("Pandacotta hands him the recipe card"));
         assert!(intro.contains("loading=\"lazy\""));
         assert!(screenshot.contains("Robert McRobertson’s public recipes and collections."));
-        assert!(stories.contains("Use anywhere"));
-        assert!(stories.contains("features anywhere with a mobile-optimized experience"));
+        let community = stories
+            .split("id=\"landing-community-title\"")
+            .nth(1)
+            .unwrap()
+            .split("</section>")
+            .next()
+            .unwrap();
+        assert!(community.contains("Discover new recipes."));
+        assert!(community.contains("Share your best creations."));
+        assert!(community.contains("In progress."));
+        assert!(community.contains("Concept preview"));
+        let pantry = stories
+            .split("id=\"landing-pantry-title\"")
+            .nth(1)
+            .unwrap()
+            .split("</section>")
+            .next()
+            .unwrap();
+        assert!(pantry.contains("Build a grocery list"));
+        let tools = stories
+            .split("id=\"landing-features-title\"")
+            .nth(1)
+            .unwrap()
+            .split("</section>")
+            .next()
+            .unwrap();
+        for feature in [
+            "Built-in recipe image editor",
+            "Scale your servings",
+            "Organize your recipes",
+        ] {
+            assert!(tools.contains(feature));
+        }
+        assert_eq!(stories.matches(">Scale your servings</h3>").count(), 1);
         assert!(!html.contains("landing-chapter-number"));
         assert!(!html.contains("landing-mobile landing-wrap"));
         assert_eq!(html.matches("class=\"landing-recipe-search\"").count(), 1);

@@ -10,8 +10,6 @@ use super::home_scene::{HomeScene, Scene};
 const HOME_CSS: Asset = asset!("/assets/home.css");
 const RECIPE_DRAFT: Asset = asset!("/assets/landing/create.webp");
 const RECIPE_EXPLORE: Asset = asset!("/assets/landing/discover.webp");
-const MOBILE_BROWSE: Asset = asset!("/assets/landing/mobile-browse.webp");
-const MOBILE_EDIT: Asset = asset!("/assets/landing/mobile-edit.webp");
 const COOK_ONE: Asset = asset!("/assets/landing/cook-1.webp");
 const COOK_TWO: Asset = asset!("/assets/landing/cook-2.webp");
 const COOK_THREE: Asset = asset!("/assets/landing/cook-3.webp");
@@ -46,97 +44,128 @@ struct Story {
     body: &'static str,
     caption: &'static str,
     image: Asset,
-    scene: Option<Scene>,
+    scene: Scene,
     size: (u32, u32),
 }
-const STORIES: &[Story] = &[
-    Story { title: "Discover new recipes.", body: "Find dishes you've never tried and get inspiration for your next weekend meal.", caption: "Croissants, chocolate cake, and Korean fried chicken in Explore.", image: RECIPE_EXPLORE, scene: Some(Scene::Banquet), size: (1120, 780) },
-    Story { title: "Create your signature recipe.", body: "Save all your favorite recipes, and easily make changes as you refine them.", caption: "Refine a caramelized onion and mushroom burger in a private draft.", image: RECIPE_DRAFT, scene: Some(Scene::Plating), size: (1120, 780) },
-    Story { title: "Make cooking your favorites convenient", body: "Easily adjust proportions with the recipe calculator, make use of the built-in ingredients checklist, and cook with cooking mode.", caption: "Scale chili garlic oil noodles, then check off the ingredients.", image: asset!("/assets/landing/calculator-checklist.webp"), scene: Some(Scene::SoupIsland), size: (900, 958) },
-    Story { title: "Study how your recipes change.", body: "View a precise breakdown of how your recipes change over time to see what works and what doesn't.", caption: "Compare two batches of chocolate chip cookies, ingredient by ingredient.", image: asset!("/assets/landing/history.webp"), scene: Some(Scene::CookieStudy), size: (1120, 1200) },
-    Story { title: "Share your best creations.", body: "Publish and share recipes you're proud of, and let others know what you're working on.", caption: "Robert McRobertson’s public recipes and collections.", image: asset!("/assets/landing/share.webp"), scene: Some(Scene::MarketStand), size: (1120, 900) },
+const COMMUNITY_STORIES: &[Story] = &[
+    Story {
+        title: "Discover new recipes.",
+        body: "Find dishes you've never tried and get inspiration for your next weekend meal.",
+        caption: "Croissants, chocolate cake, and Korean fried chicken in Explore.",
+        image: RECIPE_EXPLORE,
+        scene: Scene::Banquet,
+        size: (1120, 780),
+    },
+    Story {
+        title: "Share your best creations.",
+        body:
+            "Publish recipes you're proud of and browse what other cooks share on their profiles.",
+        caption: "Robert McRobertson’s public recipes and collections.",
+        image: asset!("/assets/landing/share.webp"),
+        scene: Scene::MarketStand,
+        size: (1120, 900),
+    },
 ];
 
+const RECIPE_DRAFT_STORY: Story = Story {
+    title: "Create your signature recipe.",
+    body: "Keep ingredients and instructions together in a private draft that saves as you work.",
+    caption: "Refine a caramelized onion and mushroom burger in a private draft.",
+    image: RECIPE_DRAFT,
+    scene: Scene::Plating,
+    size: (1120, 780),
+};
+const VERSION_HISTORY_STORY: Story = Story {
+    title: "Study how your recipes change.",
+    body: "Compare published versions and restore an earlier one when you need it.",
+    caption: "Compare two batches of chocolate chip cookies, ingredient by ingredient.",
+    image: asset!("/assets/landing/history.webp"),
+    scene: Scene::CookieStudy,
+    size: (1120, 1200),
+};
+
+#[derive(PartialEq)]
 struct Feature {
     title: &'static str,
     body: &'static str,
     image: Asset,
-    alt: &'static str,
-    caption: Option<&'static str>,
+    caption: &'static str,
+    size: (u32, u32),
 }
 
-const FEATURES: &[Feature] = &[
+const PANTRY_FEATURES: &[Feature] = &[
     Feature {
-        title: "Write and save recipes",
-        body: "Keep ingredients and instructions together in a private draft that saves as you work.",
-        image: RECIPE_DRAFT,
-        alt: "The recipe editor with draft fields and a saved recipe photo.",
-        caption: None,
+        title: "See what you have",
+        body: "Track the ingredients and quantities you have on hand.",
+        image: asset!("/assets/landing/features/pantry.webp"),
+        caption: "A Kitchen Pantry with ingredient quantities.",
+        size: (955, 600),
     },
+    Feature {
+        title: "Build a grocery list",
+        body: "Start with the ingredients a recipe needs, then list only what’s missing from your pantry.",
+        image: asset!("/assets/landing/features/grocery-list.webp"),
+        caption: "A grocery checklist with quantities and an option to put purchased ingredients away.",
+        size: (944, 590),
+    },
+];
+
+const RECIPE_TOOLS: &[Feature] = &[
     Feature {
         title: "Built-in recipe image editor",
         body: "Crop, rotate, and adjust recipe photos right in Noms.",
         image: asset!("/assets/landing/features/image-editor.webp"),
-        alt: "An image editor design showing the crop, rotation, and color controls.",
-        caption: Some("Design preview"),
-    },
-    Feature {
-        title: "Organize your recipes",
-        body: "Group favorites in collections so they’re easy to find again.",
-        image: asset!("/assets/landing/features/collections.webp"),
-        alt: "The Collections screen with an option to start a new collection.",
-        caption: None,
-    },
-    Feature {
-        title: "Discover and share",
-        body: "Find recipes from other cooks and choose which of your own to share.",
-        image: RECIPE_EXPLORE,
-        alt: "Public recipes in Explore, including croissants, chocolate cake, and Korean fried chicken.",
-        caption: None,
+        caption: "Design preview of the image editor’s crop, rotation, and color controls.",
+        size: (927, 600),
     },
     Feature {
         title: "Scale your servings",
         body: "Change the serving count and let Noms recalculate the ingredient amounts.",
         image: asset!("/assets/landing/features/servings.webp"),
-        alt: "The recipe calculator scaling chili garlic oil noodles from two to four servings.",
-        caption: None,
+        caption: "The recipe calculator scales chili garlic oil noodles from two to four servings.",
+        size: (440, 572),
     },
     Feature {
-        title: "Cook step by step",
-        body: "Check off ingredients as you prep and follow one instruction at a time on your phone.",
-        image: asset!("/assets/landing/features/cooking-mode.webp"),
-        alt: "The first two steps of a ramen recipe in mobile cooking mode.",
-        caption: None,
-    },
-    Feature {
-        title: "Kitchen Pantry",
-        body: "Track ingredients and quantities so you know what you have on hand.",
-        image: asset!("/assets/landing/features/pantry.webp"),
-        alt: "The Kitchen Pantry with an ingredient list and quantities.",
-        caption: None,
-    },
-    Feature {
-        title: "Build a grocery list",
-        body: "Add ingredients from recipes, scale quantities for your servings, and list only what’s missing from your pantry.",
-        image: asset!("/assets/landing/features/grocery-list.webp"),
-        alt: "A grocery checklist with quantities and an option to add purchased ingredients to the pantry.",
-        caption: None,
-    },
-    Feature {
-        title: "Track recipe changes",
-        body: "Compare published versions and restore an earlier one when you need it.",
-        image: asset!("/assets/landing/features/version-history.webp"),
-        alt: "Version history comparing changes to chocolate chip cookies.",
-        caption: None,
-    },
-    Feature {
-        title: "Community discussions",
-        body: "In progress. Share cooking notes, ask questions, and talk about recipes with other cooks.",
-        image: asset!("/assets/landing/features/discussions.webp"),
-        alt: "A concept showing a question and reply about proofing croissants.",
-        caption: Some("Concept preview"),
+        title: "Organize your recipes",
+        body: "Group favorites in collections so they’re easy to find again.",
+        image: asset!("/assets/landing/features/collections.webp"),
+        caption: "The Collections screen with an option to start a new collection.",
+        size: (960, 448),
     },
 ];
+
+#[component]
+fn LandingChapter(story: Story, #[props(default)] community: bool) -> Element {
+    rsx! {
+        article { class: "landing-chapter",
+            div { class: "landing-chapter-copy",
+                if community {
+                    h3 { "{story.title}" }
+                } else {
+                    h2 { "{story.title}" }
+                }
+                p { "{story.body}" }
+                HomeScene { scene: story.scene }
+            }
+            LandingScreenshot { source: story.image, title: story.title, caption: story.caption, size: story.size }
+        }
+    }
+}
+
+#[component]
+fn FeatureGallery(features: &'static [Feature]) -> Element {
+    rsx! {
+        div { class: "landing-feature-gallery",
+            for feature in features {
+                article { class: "landing-feature-detail", key: "{feature.title}",
+                    h3 { "{feature.title}" }
+                    p { "{feature.body}" }
+                    LandingScreenshot { source: feature.image, title: feature.title, caption: feature.caption, size: feature.size }
+                }
+            }
+        }
+    }
+}
 
 #[component]
 pub fn Home() -> Element {
@@ -173,63 +202,69 @@ pub fn Home() -> Element {
                 }
                 HomeScene { scene: Scene::RecipeDesk, caption: "Good food brings people together." }
             }
-            section { class: "landing-chapters landing-wrap", aria_label: "Six ways to use Noms",
-                for story in STORIES.iter().copied() {
-                    article { class: "landing-chapter", key: "{story.title}",
-                        div { class: "landing-chapter-copy",
-                            h2 { "{story.title}" }
-                            p { "{story.body}" }
-                            if let Some(scene) = story.scene {
-                                HomeScene { scene }
-                            }
+            div { class: "landing-chapters landing-wrap",
+                section { class: "landing-community", aria_labelledby: "landing-community-title",
+                    div { class: "landing-section-head",
+                        h2 { id: "landing-community-title", "Community" }
+                        p { "Discover recipes, share your own, and see what other cooks are making." }
+                    }
+                    for story in COMMUNITY_STORIES.iter().copied() {
+                        LandingChapter { key: "{story.title}", story, community: true }
+                    }
+                    aside { class: "landing-discussion", aria_labelledby: "landing-discussion-title",
+                        div {
+                            h3 { id: "landing-discussion-title", "Community discussions" }
+                            p { "In progress. Share cooking notes, ask questions, and talk about recipes with other cooks." }
                         }
-                        LandingScreenshot { source: story.image, title: story.title, caption: story.caption, size: story.size }
+                        LandingScreenshot {
+                            source: asset!("/assets/landing/features/discussions.webp"),
+                            title: "Community discussions",
+                            caption: "Concept preview showing a question and reply about proofing croissants.",
+                            size: (960, 600),
+                        }
                     }
                 }
-                article { class: "landing-chapter landing-chapter--mobile", aria_labelledby: "landing-anywhere-title",
+                LandingChapter { story: RECIPE_DRAFT_STORY }
+                article { class: "landing-chapter",
                     div { class: "landing-chapter-copy",
-                        h2 { id: "landing-anywhere-title", "Use anywhere" }
-                        p { "access all of Noms' features anywhere with a mobile-optimized experience" }
+                        h2 { "Make cooking your favorites convenient" }
+                        p { "Check off ingredients as you prep and follow one step at a time in cooking mode on your phone." }
+                        HomeScene { scene: Scene::SoupIsland }
                     }
-                    div { class: "landing-mobile-story",
-                        div { class: "landing-mobile-grid",
-                            MobilePreview { source: MOBILE_BROWSE, title: "Browse recipes on mobile" }
-                            MobilePreview { source: MOBILE_EDIT, title: "Edit recipes on mobile" }
-                            MobilePreview { source: COOK_ONE, title: "Cook on mobile", animate: true, paused: paused() }
+                    div { class: "landing-cooking-previews",
+                        LandingScreenshot {
+                            source: asset!("/assets/landing/features/ingredient-checklist.webp"),
+                            title: "Ingredient checklist",
+                            caption: "Check off ingredients as you prepare chili garlic oil noodles.",
+                            size: (440, 732),
                         }
-                        div { class: "landing-motion-control",
-                            button { class: "btn btn-secondary", r#type: "button", aria_pressed: paused(), onclick: move |_| { let next = !paused(); paused.set(next); },
-                                if paused() { "Play animation" } else { "Pause animation" }
+                        div { class: "landing-cooking-phone",
+                            LandingScreenshot {
+                                source: COOK_ONE, title: "Cook on mobile", caption: "Miso mushroom ramen in cooking mode.",
+                                size: (390, 780), phone: true, animate: true, paused: paused(),
                             }
-                            p { "Actual Noms screens. Tap any screen to view it larger." }
+                            button { class: "btn btn-secondary", r#type: "button", aria_pressed: paused(), onclick: move |_| paused.toggle(),
+                                if paused() { "Play cooking preview" } else { "Pause cooking preview" }
+                            }
                         }
                     }
                 }
-            }
-            section { class: "landing-features landing-wrap", id: "landing-features", aria_labelledby: "landing-features-title",
-                div { class: "landing-section-head",
-                    h2 { id: "landing-features-title", class: "landing-features-heading",
-                        BrandMark {}
-                        "Noms Features"
+                LandingChapter { story: VERSION_HISTORY_STORY }
+                section { class: "landing-feature-section", aria_labelledby: "landing-pantry-title",
+                    div { class: "landing-section-head",
+                        h2 { id: "landing-pantry-title", "Kitchen Pantry" }
+                        p { "Check what you have before you cook, then turn the ingredients you’re missing into a shopping list." }
                     }
+                    FeatureGallery { features: PANTRY_FEATURES }
                 }
-                div { class: "landing-feature-grid",
-                    for feature in FEATURES {
-                        article { class: "landing-feature-card", key: "{feature.title}",
-                            div { class: "landing-feature-copy",
-                                h3 { "{feature.title}" }
-                                p { "{feature.body}" }
-                            }
-                            figure { class: "landing-feature-preview",
-                                div { class: "landing-feature-inset",
-                                    img { src: feature.image, alt: feature.alt, loading: "lazy", decoding: "async" }
-                                }
-                                if let Some(caption) = feature.caption {
-                                    figcaption { "{caption}" }
-                                }
-                            }
+                section { class: "landing-feature-section landing-recipe-tools", id: "landing-features", aria_labelledby: "landing-features-title",
+                    div { class: "landing-section-head",
+                        h2 { id: "landing-features-title", class: "landing-features-heading",
+                            BrandMark {}
+                            "Recipe tools"
                         }
                     }
+                    FeatureGallery { features: RECIPE_TOOLS }
                 }
             }
             section { class: "landing-trust landing-wrap", aria_labelledby: "landing-trust-title",
@@ -361,20 +396,6 @@ fn LandingScreenshot(
                     }
                 }
             }
-        }
-    }
-}
-
-#[component]
-fn MobilePreview(
-    source: Asset,
-    title: &'static str,
-    #[props(default)] animate: bool,
-    #[props(default)] paused: bool,
-) -> Element {
-    rsx! {
-        article { class: "landing-mobile-card",
-            LandingScreenshot { source, title, caption: title, size: (390, 780), phone: true, animate, paused }
         }
     }
 }
