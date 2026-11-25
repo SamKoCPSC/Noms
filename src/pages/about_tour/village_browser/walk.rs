@@ -6,8 +6,9 @@ use web_sys::{HtmlElement, KeyboardEvent, MouseEvent, PointerEvent};
 const WALK_SPEED: f32 = 5.;
 const SPRINT_SPEED: f32 = 2. * WALK_SPEED;
 const CROUCH_DROP: f32 = 0.6;
-const JUMP_DURATION: f32 = 0.8;
-const JUMP_HEIGHT: f32 = 0.85;
+const JUMP_RISE_TIME: f32 = 0.4;
+const JUMP_FALL_TIME: f32 = 0.37;
+const JUMP_HEIGHT: f32 = 1.0;
 
 #[derive(Default)]
 pub(super) struct Walk {
@@ -17,6 +18,7 @@ pub(super) struct Walk {
     stick_id: Option<i32>,
     pub(super) crouching: bool,
     jump_elapsed: Option<f32>,
+    bob_amplitude: f32,
     blend: f32,
     last: Option<f64>,
 }
@@ -60,6 +62,7 @@ impl Walk {
         self.stick_id = None;
         self.crouching = false;
         self.jump_elapsed = None;
+        self.bob_amplitude = 0.;
         self.last = None;
     }
 
@@ -68,23 +71,25 @@ impl Walk {
             || self.keys.contains(&true)
             || self.stick != [0.; 2]
             || self.jump_elapsed.is_some()
+            || self.bob_amplitude > 0.
     }
 
-    pub fn frame(&mut self, now: f64, returning: bool, yaw: f32, pitch: f32) -> [f32; 6] {
+    pub fn frame(&mut self, now: f64, returning: bool, yaw: f32, pitch: f32) -> [f32; 8] {
         let dt = ((now - self.last.replace(now).unwrap_or(now)).max(0.) / 1000.) as f32;
         self.blend = (self.blend + if returning { -dt } else { dt } / 1.2).clamp(0., 1.);
         let weight = self.blend * self.blend * (3. - 2. * self.blend);
         let axis = |positive: bool, negative: bool| positive as i8 as f32 - negative as i8 as f32;
         let side = self.stick[0] + axis(self.keys[3], self.keys[2]);
         let forward = self.stick[1] + axis(self.keys[0], self.keys[1]);
-        let speed = if self.crouching {
-            WALK_SPEED * 0.5
+        let (speed, step_length) = if self.crouching {
+            (WALK_SPEED * 0.5, 1.8)
         } else if self.sprinting {
-            SPRINT_SPEED
+            (SPRINT_SPEED, 3.6)
         } else {
-            WALK_SPEED
+            (WALK_SPEED, 2.5)
         };
-        let scale = speed / side.hypot(forward).max(1.);
+        let input = side.hypot(forward);
+        let scale = speed / input.max(1.);
         // Bound the physics step after a suspended tab or a slow draw.
         let dt = dt.min(0.08);
         let distance = if returning || self.blend < 1. {
@@ -92,12 +97,27 @@ impl Walk {
         } else {
             scale * dt
         };
+        // Ease the step amplitude in and out, including when leaving the ground.
+        let grounded_step = if distance > 0. && self.jump_elapsed.is_none() {
+            step_length
+        } else {
+            0.
+        };
+        let target = 0.012 * grounded_step * input.min(1.);
+        self.bob_amplitude += (target - self.bob_amplitude).clamp(-0.3 * dt, 0.3 * dt);
+
         let mut eye_offset = if self.crouching { -CROUCH_DROP } else { 0. };
         if let Some(elapsed) = &mut self.jump_elapsed {
             *elapsed += dt;
-            let t = (*elapsed / JUMP_DURATION).min(1.);
-            eye_offset += 4. * JUMP_HEIGHT * t * (1. - t);
-            if t >= 1. {
+            // The two parabolas meet with zero vertical velocity at the apex.
+            let from_apex = *elapsed - JUMP_RISE_TIME;
+            let duration = if from_apex < 0. {
+                JUMP_RISE_TIME
+            } else {
+                JUMP_FALL_TIME
+            };
+            eye_offset += JUMP_HEIGHT * (1. - (from_apex / duration).powi(2)).max(0.);
+            if from_apex >= JUMP_FALL_TIME {
                 self.jump_elapsed = None;
             }
         }
@@ -111,6 +131,8 @@ impl Walk {
             side * distance,
             forward * distance,
             eye_offset,
+            grounded_step,
+            self.bob_amplitude,
         ]
     }
 }

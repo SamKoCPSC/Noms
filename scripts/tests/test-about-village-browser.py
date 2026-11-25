@@ -78,6 +78,7 @@ async def check_explore(page, out, progress):
         await check_speed(5.)
         await page.keyboard.up('w')
         await check_speed(0.)
+        await page.evaluate('step(4,50)')  # allow the last footstep to settle
         standing = (await pose())[0]
         await page.keyboard.down('ControlLeft')
         await page.evaluate('step(1,50)')
@@ -87,16 +88,19 @@ async def check_explore(page, out, progress):
         await check_speed(2.5)
         await page.keyboard.up('d')
         await page.keyboard.up('ControlLeft')
-        await page.evaluate('step(1,50)')
+        await page.evaluate('step(4,50)')
         ground = (await pose())[0]
         await page.keyboard.down('Space')
         await page.evaluate('step(1,50)')
         await page.evaluate('step(8,50)')
-        assert abs((await pose())[0][1]-ground[1]-.85)<.001
+        assert abs((await pose())[0][1]-ground[1]-1.0)<.001
         # A fresh press in midair and key repeats after landing cannot start another jump.
         await page.keyboard.up('Space')
         await page.keyboard.down('Space')
-        await page.evaluate('step(10,50)')
+        await page.evaluate('step(7,50)')  # 350 ms after the apex, just above the ground
+        assert 0.09 < (await pose())[0][1]-ground[1] < 0.12
+        await page.evaluate('step(1,50)')
+        assert (await pose())[0]==ground
         await page.keyboard.down('Space')
         await page.evaluate('step(3,50)')
         assert (await pose())[0]==ground
