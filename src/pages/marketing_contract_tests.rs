@@ -341,6 +341,7 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             "Built-in recipe image editor",
             "Scale your servings",
             "Organize your recipes",
+            "Import and export",
         ] {
             assert!(copy.contains(feature));
         }
