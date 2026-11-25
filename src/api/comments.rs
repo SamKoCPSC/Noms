@@ -49,6 +49,11 @@ pub enum Change {
         id: i64,
         body: String,
     },
+    Report {
+        id: i64,
+        observed_body: String,
+        reason: String,
+    },
     Delete {
         id: i64,
     },
@@ -112,6 +117,59 @@ async fn apply(
             sqlx::query("UPDATE recipe_comments SET body=$4 WHERE recipe_id=$1 AND id=$2 AND author_id=$3 RETURNING id")
                 .bind(recipe).bind(id).bind(user).bind(validate(body)?).fetch_one(&mut *tx).await.map_err(failure)?;
         }
+        Change::Report {
+            id,
+            observed_body,
+            reason,
+        } => {
+            let reason = reason.trim();
+            if reason.is_empty() || reason.chars().count() > 500 {
+                return Err(ServerFnError::new(
+                    "Use 1 to 500 characters for your report",
+                ));
+            }
+            let threshold: i64 = std::env::var("COMMENT_REPORT_THRESHOLD")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .filter(|n| *n > 0)
+                .unwrap_or(3);
+            // The recipe lock above serializes submissions with edits, deletes and other reports.
+            let version: i32 = sqlx::query_scalar(
+                "SELECT version_number FROM recipe_comments
+                 WHERE recipe_id=$1 AND id=$2 AND body=$3",
+            )
+            .bind(recipe)
+            .bind(id)
+            .bind(&observed_body)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(failure)?
+            .ok_or_else(|| ServerFnError::new("Comment changed or unavailable"))?;
+            let case_id: i64 = sqlx::query_scalar(
+                "INSERT INTO comment_review_cases (recipe_id,comment_id) VALUES ($1,$2)
+                 ON CONFLICT (comment_id) WHERE resolved_at IS NULL
+                 DO UPDATE SET comment_id=EXCLUDED.comment_id RETURNING id",
+            )
+            .bind(recipe)
+            .bind(id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(failure)?;
+            sqlx::query("INSERT INTO comment_reports (case_id,reporter_id,reason,reported_body,recipe_version)
+                         VALUES ($1,$2,$3,$4,$5) ON CONFLICT (case_id,reporter_id) DO NOTHING")
+                .bind(case_id).bind(user).bind(reason).bind(observed_body).bind(version)
+                .execute(&mut *tx).await.map_err(failure)?;
+            sqlx::query(
+                "UPDATE comment_review_cases SET queued_at=now()
+                         WHERE id=$1 AND queued_at IS NULL
+                         AND (SELECT count(*) FROM comment_reports WHERE case_id=$1) >= $2",
+            )
+            .bind(case_id)
+            .bind(threshold)
+            .execute(&mut *tx)
+            .await
+            .map_err(failure)?;
+        }
         Change::Delete { id } => {
             sqlx::query("UPDATE recipe_comments SET body=NULL,author_id=NULL WHERE recipe_id=$1 AND id=$2 AND author_id=$3 RETURNING id")
                 .bind(recipe).bind(id).bind(user).fetch_one(&mut *tx).await.map_err(failure)?;
@@ -129,6 +187,95 @@ async fn apply(
 #[cfg(all(test, feature = "server"))]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn recipe_discussion_reports_queue_once_and_preserve_evidence() {
+        let (_db, pool) = crate::test_utils::setup_test_db().await;
+        let users: Vec<Uuid> = sqlx::query_scalar(
+            "INSERT INTO users(username,display_name,email)
+             SELECT 'cook'||n,'Cook '||n,n||'@example.test' FROM generate_series(1,3) n RETURNING id")
+            .fetch_all(&pool).await.unwrap();
+        let recipe: Uuid = sqlx::query_scalar(
+            "INSERT INTO recipes(user_id,title,visibility) VALUES ($1,'Soup','public') RETURNING id")
+            .bind(users[0]).fetch_one(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO recipe_versions(recipe_id,version_number,snapshot) VALUES ($1,1,'{}')",
+        )
+        .bind(recipe)
+        .execute(&pool)
+        .await
+        .unwrap();
+        let publish = |parent| Change::Publish {
+            parent,
+            body: "Original".into(),
+            request_id: Uuid::new_v4(),
+        };
+        apply(&pool, users[0], recipe, publish(None)).await.unwrap();
+        let root = read_thread(&pool, recipe, None, 0).await.unwrap().remove(0);
+        apply(&pool, users[0], recipe, publish(Some(root.id)))
+            .await
+            .unwrap();
+        let reply = read_thread(&pool, recipe, Some(root.id), 0)
+            .await
+            .unwrap()
+            .remove(0);
+        let report = |user, reason: &str, body: &str| {
+            apply(
+                &pool,
+                user,
+                recipe,
+                Change::Report {
+                    id: reply.id,
+                    observed_body: body.to_owned(),
+                    reason: reason.to_owned(),
+                },
+            )
+        };
+        let counts = || {
+            sqlx::query_as::<_,(i64,i64)>(
+            "SELECT (SELECT count(*) FROM comment_reports), count(*) FROM comment_review_cases WHERE queued_at IS NOT NULL").fetch_one(&pool)
+        };
+        assert!(report(users[0], "  ", "Original").await.is_err());
+        assert!(report(users[0], "Spam", "Stale").await.is_err());
+        report(users[0], "Spam", "Original").await.unwrap();
+        report(users[0], "Retry", "Original").await.unwrap();
+        report(users[1], "Spam", "Original").await.unwrap();
+        assert_eq!(counts().await.unwrap(), (2, 0));
+        tokio::try_join!(
+            report(users[2], "Spam", "Original"),
+            report(users[2], "Retry", "Original")
+        )
+        .unwrap();
+        assert_eq!(counts().await.unwrap(), (3, 1));
+        assert_eq!(
+            read_thread(&pool, recipe, Some(root.id), 0).await.unwrap()[0].body,
+            reply.body
+        );
+        sqlx::query("UPDATE comment_review_cases SET resolved_at=now()")
+            .execute(&pool)
+            .await
+            .unwrap();
+        report(users[0], "New cycle", "Original").await.unwrap();
+        assert_eq!(counts().await.unwrap(), (4, 1));
+        sqlx::query("UPDATE recipes SET visibility='private' WHERE id=$1")
+            .bind(recipe)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert!(report(users[1], "Private", "Original").await.is_err());
+        sqlx::query("UPDATE recipes SET visibility='public' WHERE id=$1")
+            .bind(recipe)
+            .execute(&pool)
+            .await
+            .unwrap();
+        apply(&pool, users[0], recipe, Change::Delete { id: reply.id })
+            .await
+            .unwrap();
+        assert!(report(users[1], "Deleted", "Original").await.is_err());
+        let retained: i64 = sqlx::query_scalar("SELECT count(*) FROM comment_reports WHERE reported_body='Original' AND recipe_version=1")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(retained, 4);
+    }
 
     #[tokio::test]
     async fn nested_recipe_discussion_lifecycle() {

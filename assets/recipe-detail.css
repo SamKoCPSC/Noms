@@ -139,6 +139,7 @@
 .discussion-deleted { color: var(--text-secondary); font-style: italic; }
 .discussion-parent { display: block; width: fit-content; margin-block: .65rem; font-size: .84rem; color: var(--accent-ink); }
 .discussion-actions { flex-wrap: wrap; gap: .2rem .65rem; }
+.discussion-report { flex-basis: 100%; }
 .discussion-action {
     padding: .35rem .45rem; min-height: 44px; border: 0; border-radius: .6rem;
     background: transparent; color: var(--text-secondary); font: 700 .875rem/1.2 var(--font-body); cursor: pointer;

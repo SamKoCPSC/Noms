@@ -181,6 +181,11 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
                             if expanded { "Hide replies" } else { "Show replies" }
                         }
                     }
+                    if auth.is_authenticated {
+                        if let Some(body) = &item.body {
+                            ReportComment { recipe, id, body: body.clone() }
+                        }
+                    }
                     if own {
                         button { class: "discussion-action", aria_expanded: state.read().open.contains(&edit),
                             onclick: move |_| state.write().toggle(edit), "Edit" }
@@ -200,6 +205,50 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
                     Composer { recipe, parent: Some(id) }
                 }
                 if item.has_replies && expanded { ThreadPage { recipe, parent: Some(id), depth: depth+1, after: 0 } }
+            }
+        }
+    }
+}
+
+#[component]
+fn ReportComment(recipe: Uuid, id: i64, body: String) -> Element {
+    let account = crate::auth::account_binding::use_form_account();
+    let mut open = use_signal(|| false);
+    let mut reason = use_signal(String::new);
+    let mut busy = use_signal(|| false);
+    let mut sent = use_signal(|| false);
+    let mut failed = use_signal(|| false);
+    rsx! {
+        if sent() {
+            span { role: "status", "Report received" }
+        } else {
+            button { class: "discussion-action", aria_expanded: open(), disabled: busy(),
+                onclick: move |_| open.toggle(), if open() { "Cancel report" } else { "Report" }
+            }
+            if open() {
+                form { class: "discussion-report", onsubmit: move |event| {
+                    event.prevent_default();
+                    let action = Change::Report { id, observed_body: body.clone(), reason: reason() };
+                    async move {
+                        if busy() { return; }
+                        busy.set(true);
+                        failed.set(false);
+                        if change(account(), recipe, action).await.is_ok() {
+                            sent.set(true);
+                        } else {
+                            failed.set(true);
+                        }
+                        busy.set(false);
+                    }
+                },
+                    label { "Reason for reporting"
+                        textarea { value: reason(), required: true, maxlength: "500", disabled: busy(),
+                            oninput: move |event| reason.set(event.value()) }
+                    }
+                    button { class: "btn btn-primary", disabled: busy() || reason.read().trim().is_empty(),
+                        r#type: "submit", "Submit report" }
+                    if failed() { p { role: "alert", "Could not submit your report. Check that the comment is still current and try again." } }
+                }
             }
         }
     }
