@@ -2819,7 +2819,7 @@ fn RecipeDetailContents(id: String) -> Element {
             }
 
             if recipe.visibility == "public" {
-                super::recipe_discussion::RecipeDiscussion { key: "{recipe.id}", recipe: recipe.id }
+                super::recipe_discussion::RecipeDiscussionScope { key: "{recipe.id}-{auth.current_user_id:?}", recipe: recipe.id }
             }
 
             if lineage_failed || lineage_pending {
