@@ -345,7 +345,8 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         ] {
             assert!(copy.contains(feature));
         }
-        assert_eq!(previews.matches("class=\"landing-shot-button\"").count(), 3);
+        assert_eq!(previews.matches("class=\"landing-shot-button\"").count(), 4);
+        assert!(previews.contains("The Export recipe dialog showing JSON and HTML formats"));
         assert_eq!(stories.matches(">Scale your servings</h3>").count(), 1);
         assert!(!html.contains("landing-chapter-number"));
         assert!(!html.contains("landing-mobile landing-wrap"));

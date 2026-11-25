@@ -105,6 +105,9 @@
 .landing-recipe-tools { scroll-margin-top: 110px; }
 .landing-recipe-tools .landing-feature-previews { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .landing-recipe-tools .landing-feature-previews > :first-child { grid-column: 1 / -1; }
+@media (min-width: 761px) {
+    .landing-recipe-tools .landing-feature-previews > :nth-child(2) { grid-row: span 2; }
+}
 .landing-features-heading { display: flex; align-items: center; gap: 12px; }
 .landing-features-heading .brand-mark { flex: none; }
 .landing-feature-previews .landing-shot-button { background: var(--landing-bg); box-shadow: var(--landing-inset); }

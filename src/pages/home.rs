@@ -132,6 +132,13 @@ const RECIPE_TOOLS: &[Feature] = &[
         caption: "Weeknight dinners, Weekend baking, and Dinner with friends, each with a two-photo recipe cover.",
         size: (1108, 716),
     },
+    Feature {
+        title: "Import and export",
+        body: "Back up and re-import recipes and collections with Noms JSON, or export HTML copies to read, share, or print.",
+        image: asset!("/assets/landing/features/recipe-export.webp"),
+        caption: "The Export recipe dialog showing JSON and HTML formats, with an option to download saved images.",
+        size: (640, 546),
+    },
 ];
 
 #[component]
@@ -153,7 +160,7 @@ fn LandingChapter(story: Story, #[props(default)] community: bool) -> Element {
 }
 
 #[component]
-fn FeatureDescriptions(features: &'static [Feature], children: Option<Element>) -> Element {
+fn FeatureDescriptions(features: &'static [Feature]) -> Element {
     rsx! {
         div { class: "landing-feature-descriptions",
             for feature in features {
@@ -162,7 +169,6 @@ fn FeatureDescriptions(features: &'static [Feature], children: Option<Element>) 
                     p { "{feature.body}" }
                 }
             }
-            {children}
         }
     }
 }
@@ -278,12 +284,7 @@ pub fn Home() -> Element {
                             BrandMark {}
                             "Recipe tools"
                         }
-                        FeatureDescriptions { features: RECIPE_TOOLS,
-                            div {
-                                h3 { "Import and export" }
-                                p { "Back up and re-import recipes and collections with Noms JSON, or export HTML copies to read, share, or print." }
-                            }
-                        }
+                        FeatureDescriptions { features: RECIPE_TOOLS }
                     }
                     FeaturePreviews { features: RECIPE_TOOLS }
                 }
