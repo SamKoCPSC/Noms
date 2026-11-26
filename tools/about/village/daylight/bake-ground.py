@@ -5,10 +5,14 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from common import *
 from glass import glass_revision
 from terrain import split_ground
+from tree_casters import install_tree_casters
+from rocks import install_rocks
 sys.path.insert(0,str(REPO/'assets/models/terracotta-recipe-kitchen/source'))
 from finalize_baked_glb import finalize
 out=Path(sys.argv[sys.argv.index('--')+1]);out.mkdir(parents=True,exist_ok=True)
 bpy.ops.wm.open_mainfile(filepath=str(DAY/'models/terraced-village-daylight.blend'),load_ui=False,use_scripts=False)
+rock_revision=install_rocks()
+tree_revision=install_tree_casters()
 scene=bpy.context.scene;scene.cycles.samples=CONFIG['ground_samples'];tiles=split_ground();baked=[]
 assert sum(o.instance_type=='COLLECTION' and 'stop' in o for o in scene.objects)==12
 for i,obj in enumerate(tiles[:4]):
@@ -34,5 +38,5 @@ for obj,i in baked:
 bpy.ops.object.select_all(action='DESELECT')
 for obj,_ in baked:obj.select_set(True)
 path=out/'ground.glb';bpy.ops.export_scene.gltf(filepath=str(path),export_format='GLB',use_selection=True,export_animations=False,export_cameras=False,export_lights=False,export_yup=True);finalize(path,expected_count=4)
-(out/'ground.json').write_text(json.dumps(dict(glass_revision=glass_revision(),lighting=CONFIG,tiles=4,atlas_size=2048,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),vegetation_geometry_sha256=vegetation_revision(),signage_geometry_sha256=signage_revision(),triangles=sum(len(o.data.polygons) for o,_ in baked)),indent=2)+'\n')
+(out/'ground.json').write_text(json.dumps(dict(rock_geometry_sha256=rock_revision,tree_casters_sha256=tree_revision,glass_revision=glass_revision(),lighting=CONFIG,tiles=4,atlas_size=2048,full_world_occluders=True,stone_path_geometry_sha256=path_revision(),vegetation_geometry_sha256=vegetation_revision(),signage_geometry_sha256=signage_revision(),triangles=sum(len(o.data.polygons) for o,_ in baked)),indent=2)+'\n')
 print('GROUND_BAKE_COMPLETE',flush=True)

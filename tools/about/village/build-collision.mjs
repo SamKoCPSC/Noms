@@ -73,6 +73,8 @@ for(const id of ['world',...layout.stops.map(s=>s.id)]){
  for(const node of doc.getRoot().listNodes()){
   // The existing continuous walk surface already handles the meadow terrain.
   if(!node.getMesh() || (id==='world' && node.getName().startsWith('Daylight ground ')))continue;
+  // Cutout leaf sprays have transparent space between leaves. Only the wood is solid.
+  if (id==='world' && node.getName().startsWith('Village tree foliage ')) continue;
   const m=node.getWorldMatrix();
   for(const primitive of node.getMesh().listPrimitives()){
    const points=primitive.getAttribute('POSITION'),indices=primitive.getIndices();

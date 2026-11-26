@@ -85,3 +85,13 @@ test('the meadow grass east of the kitchen is walkable at terrain height',()=>{
   assert.ok(Math.abs(body.feet-surface.sample(x,z).floor)<1e-6);
  }
 });
+
+test('the maple near the brick kitchen has walkable ground under its crown and a solid trunk',()=>{
+ const walk=createWalkBody(surface,village);
+ const x=-9, trunkZ=37.24;
+ const body=walk.spawn(x,trunkZ+2);
+ walk.move(body,x,trunkZ+1,0,0);
+ assert.ok(Math.abs(body.z-(trunkZ+1))<1e-6);
+ walk.move(body,x,trunkZ,0,0);
+ assert.ok(body.z>trunkZ+.25 && body.z<trunkZ+1);
+});

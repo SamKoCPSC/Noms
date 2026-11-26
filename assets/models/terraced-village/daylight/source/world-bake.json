@@ -1,5 +1,7 @@
 {
   "ground": {
+    "rock_geometry_sha256": "eea27b6c3f7fafecb9ba4f8b89bebc00f8092c43230eb55132b2a71a22d045f8",
+    "tree_casters_sha256": "e9d3d174812ac9d28d3c1a178814bc37106b45afb2ce4e6692202030745ff64a",
     "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
     "lighting": {
       "sun_direction_y_up": [
@@ -44,6 +46,8 @@
     "triangles": 21504
   },
   "landscape": {
+    "rock_geometry_sha256": "eea27b6c3f7fafecb9ba4f8b89bebc00f8092c43230eb55132b2a71a22d045f8",
+    "tree_casters_sha256": "e9d3d174812ac9d28d3c1a178814bc37106b45afb2ce4e6692202030745ff64a",
     "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
     "clear_glass_meshes": 1,
     "lighting": {
@@ -84,17 +88,17 @@
     "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
     "vegetation_geometry_sha256": "65b568c84d517879c7d8590bb0878b4b5fb4135800047498b08c8f4d32064e16",
     "signage_geometry_sha256": "5191fe7f9e3abc9c60108558900834988cb191573c93aecb9b9701f70da39664",
-    "baked_corners": 3836498,
+    "baked_corners": 3677954,
     "export_chunks": 72,
     "bake_samples": 64,
     "display_transform": "AgX",
     "unlit_vertex_colors": true,
     "texture_uvs_required": false
   },
-  "triangles": 1308886,
+  "triangles": 1260258,
   "unused_unlit_lighting_attributes_omitted": 76,
-  "glb_bytes": 41761296,
-  "uncompressed_bytes": 173064188,
+  "glb_bytes": 42105052,
+  "uncompressed_bytes": 169642316,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -103,5 +107,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "b17d1e977cfd7051a766f4c5d7ce790969d8bbaf9f6bc8f0fe3844959cc478df"
+  "packed_sha256": "09bf3cd20bc4e2a7b261796e3a200eab28b2c9c4dd3db7271017f6d9da21e30a"
 }

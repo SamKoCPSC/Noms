@@ -4,6 +4,8 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { treeCasterBytes } from '../trees/export-casters.mjs';
+import { treePlantings } from '../trees/plantings.mjs';
 import assert from 'node:assert/strict';
 const base = 'assets/models/terraced-village/daylight';
 const config = JSON.parse(await readFile(`${base}/lighting.json`));
@@ -36,7 +38,15 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
     if(!m.getExtras().intentional_stained_glass)assert.deepEqual(m.getBaseColorFactor(),[1,1,1,1],m.getName());
   }
   assert.equal(id==='world'?receipt.ground.glass_revision:receipt.glass_revision,glassRevision,id);
-  if(id==='world')assert.equal(receipt.landscape.glass_revision,glassRevision);
+  if (id === 'world') {
+    assert.equal(receipt.landscape.glass_revision, glassRevision);
+    assert.match(receipt.landscape.rock_geometry_sha256, /^[0-9a-f]{64}$/);
+    assert.equal(receipt.ground.rock_geometry_sha256, receipt.landscape.rock_geometry_sha256,
+      'The ground and landscape must use the same stone geometry and colors');
+    const casterHash = createHash('sha256').update(await treeCasterBytes(await treePlantings())).digest('hex');
+    assert.equal(receipt.ground.tree_casters_sha256, casterHash, 'Stale ground tree shadows');
+    assert.equal(receipt.landscape.tree_casters_sha256, casterHash, 'Stale landscape tree shadows');
+  }
   const unlit = root.listMaterials().filter(m => m.getExtension('KHR_materials_unlit'));
   assert.equal(unlit.length, id === 'world' ? 5 : 2, id);
   const textures = unlit.map(m => m.getBaseColorTexture()).filter(Boolean);
