@@ -515,6 +515,13 @@ CREATE TABLE IF NOT EXISTS recipe_comments (
 CREATE INDEX IF NOT EXISTS idx_recipe_comments_thread
     ON recipe_comments(recipe_id, parent_id, id);
 
+CREATE TABLE IF NOT EXISTS recipe_comment_likes (
+    comment_id BIGINT NOT NULL REFERENCES recipe_comments(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (comment_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_recipe_comment_likes_user ON recipe_comment_likes(user_id);
+
 CREATE TYPE comment_review_status AS ENUM (
     'collecting', 'queued', 'flagged', 'unflagged', 'uncertain',
     'reviewing', 'upheld', 'dismissed', 'autoupheld', 'autodismissed'

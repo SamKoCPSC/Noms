@@ -134,6 +134,10 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
     let author = item.author.as_deref().unwrap_or("Former member");
     let date = item.created_at.format("%b %-d, %Y · %H:%M UTC");
     let nested = matches!(depth, 1 | 2);
+    let mut like_pending = use_signal(|| false);
+    let liked = item.liked_by_viewer;
+    let count = item.like_count;
+    let noun = if count == 1 { "like" } else { "likes" };
     let own = auth.is_authenticated && item.author_id == auth.current_user_id;
     rsx! {
         article {
@@ -173,6 +177,28 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
                     p { class: "discussion-body", "{body}" }
                 }
                 div { class: "discussion-actions",
+                    if item.body.is_some() {
+                        if auth.is_authenticated {
+                            button { class: "discussion-action discussion-like", aria_pressed: liked,
+                                aria_label: "Like comment, {count} {noun}", disabled: like_pending(),
+                                onclick: move |_| async move {
+                                    if like_pending() { return; }
+                                    like_pending.set(true);
+                                    error.set(String::new());
+                                    if change(account(), recipe, Change::SetLike { id, liked: !liked }).await.is_ok() {
+                                        revision += 1;
+                                    } else {
+                                        error.set("Could not update your like. Try again.".into());
+                                    }
+                                    like_pending.set(false);
+                                },
+                                if liked { "♥ Liked" } else { "♡ Like" }
+                                " · {count}"
+                            }
+                        } else {
+                            span { class: "discussion-like-count", "{count} {noun}" }
+                        }
+                    }
                     if auth.is_authenticated {
                         button { class: "discussion-action", aria_expanded: state.read().open.contains(&reply),
                             onclick: move |_| state.write().toggle(reply), "Reply" }
@@ -467,6 +493,8 @@ mod tests {
                 version_number: 3,
                 created_at: chrono::Utc::now(),
                 has_replies: true,
+                like_count: 3,
+                liked_by_viewer: false,
             };
             rsx! { CommentRow { recipe: Uuid::nil(), item, depth: 4, parent: Some(11) } }
         });
@@ -477,6 +505,7 @@ mod tests {
             "Version 3",
             "href=\"#comment-11\"",
             "Show replies",
+            "3 likes",
         ] {
             assert!(html.contains(expected), "{html}");
         }
