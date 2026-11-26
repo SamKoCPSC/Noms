@@ -93,8 +93,12 @@ fn ThreadPage(recipe: Uuid, parent: Option<i64>, depth: usize, after: i64) -> El
     let mut state = use_context::<Signal<DiscussionState>>();
     let page = Panel::NextPage(parent, after);
     let mut rows = use_resource(move || {
-        revision();
-        thread(recipe, parent, after)
+        let requested_revision = revision();
+        async move {
+            thread(recipe, parent, after)
+                .await
+                .map(|items| (requested_revision, items))
+        }
     });
     let data = rows.read();
     match data.as_ref() {
@@ -102,10 +106,10 @@ fn ThreadPage(recipe: Uuid, parent: Option<i64>, depth: usize, after: i64) -> El
         Some(Err(_)) => {
             rsx! { button { class: "btn", onclick: move |_| rows.restart(), "Retry loading comments" } }
         }
-        Some(Ok(items)) => rsx! {
+        Some(Ok((loaded_revision, items))) => rsx! {
             if items.is_empty() && parent.is_none() && after == 0 { p { "No comments yet." } }
             for item in items.iter().take(20) {
-                CommentRow { key: "{item.id}", recipe, item: item.clone(), depth, parent }
+                CommentRow { key: "{item.id}", recipe, item: item.clone(), depth, parent, loaded_revision: *loaded_revision }
             }
             if items.len()>20 {
                 if state.read().open.contains(&page) {
@@ -119,7 +123,13 @@ fn ThreadPage(recipe: Uuid, parent: Option<i64>, depth: usize, after: i64) -> El
 }
 
 #[component]
-fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) -> Element {
+fn CommentRow(
+    recipe: Uuid,
+    item: Comment,
+    depth: usize,
+    parent: Option<i64>,
+    loaded_revision: u64,
+) -> Element {
     let auth = crate::auth::context::use_auth();
     let account = crate::auth::account_binding::use_form_account();
     let mut revision = use_context::<Signal<u64>>();
@@ -180,9 +190,9 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
                     if item.body.is_some() {
                         if auth.is_authenticated {
                             button { class: "discussion-action discussion-like", aria_pressed: liked,
-                                aria_label: "Like comment, {count} {noun}", disabled: like_pending(),
+                                aria_label: "Like comment, {count} {noun}", disabled: like_pending() || loaded_revision != revision(),
                                 onclick: move |_| async move {
-                                    if like_pending() { return; }
+                                    if like_pending() || loaded_revision != revision() { return; }
                                     like_pending.set(true);
                                     error.set(String::new());
                                     if change(account(), recipe, Change::SetLike { id, liked: !liked }).await.is_ok() {
@@ -477,6 +487,58 @@ mod tests {
     }
 
     #[test]
+    fn like_button_reenables_only_with_the_refreshed_selection() {
+        fn row((loaded_revision, liked): (u64, bool)) -> Element {
+            let auth = use_signal(|| AuthContext {
+                is_authenticated: true,
+                current_user_id: Some(Uuid::nil()),
+                ..Default::default()
+            });
+            use_context_provider(|| auth);
+            let revision = use_signal(|| 1_u64);
+            use_context_provider(|| revision);
+            let state = use_signal(DiscussionState::default);
+            use_context_provider(|| state);
+            let item = Comment {
+                id: 12,
+                author_id: None,
+                author: None,
+                body: Some("Cooking note".into()),
+                version_number: 1,
+                created_at: chrono::Utc::now(),
+                has_replies: false,
+                like_count: i64::from(liked),
+                liked_by_viewer: liked,
+            };
+            rsx! { CommentRow { recipe: Uuid::nil(), item, depth: 0, parent: None, loaded_revision } }
+        }
+
+        for liked in [false, true] {
+            for loaded_revision in [0, 1] {
+                let mut dom = VirtualDom::new_with_props(row, (loaded_revision, liked));
+                dom.rebuild_in_place();
+                let html = dioxus_ssr::render(&dom);
+                let button = html
+                    .split("discussion-action discussion-like")
+                    .nth(1)
+                    .expect("like button")
+                    .split("</button>")
+                    .next()
+                    .unwrap();
+                assert_eq!(
+                    button.contains("disabled"),
+                    loaded_revision == 0,
+                    "{button}"
+                );
+                assert!(
+                    button.contains(&format!("aria-pressed={liked}")),
+                    "{button}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn signed_out_reader_sees_nested_context_without_mutation_controls() {
         let mut dom = VirtualDom::new(|| {
             let auth = use_signal(AuthContext::default);
@@ -496,7 +558,7 @@ mod tests {
                 like_count: 3,
                 liked_by_viewer: false,
             };
-            rsx! { CommentRow { recipe: Uuid::nil(), item, depth: 4, parent: Some(11) } }
+            rsx! { CommentRow { recipe: Uuid::nil(), item, depth: 4, parent: Some(11), loaded_revision: 0 } }
         });
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
