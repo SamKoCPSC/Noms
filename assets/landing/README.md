@@ -16,9 +16,13 @@ cropped and composited into the original screenshots.
 | Mushroom ramen | [Japanese ramen noodle bowl with toppings](https://www.pexels.com/photo/delicious-japanese-ramen-noodle-bowl-with-toppings-29519810/), Pexels |
 | Cookies in Explore and version 1 | [Close-up of chocolate chip cookies](https://www.pexels.com/photo/a-close-up-shot-of-chocolate-chip-cookies-14133096/), Pexels |
 | Cookies in version 2 | [Cookies on a white ceramic plate](https://www.pexels.com/photo/brown-cookies-on-white-ceramic-plate-14133098/), Pexels |
+| Fish tacos | [Fish tacos with herbs and pickled onions by Betsai Ekmeiro](https://www.pexels.com/photo/filling-of-tacos-with-herbs-15434303/), Pexels |
 
 Pexels photos are used under the [Pexels license](https://www.pexels.com/license/).
 The chicken and noodle photo crops retain their respective CC BY-SA licenses.
+The image editor and Collections previews use the fish taco photograph. The
+Collections preview uses three sample albums with covers drawn from the photos
+listed above.
 
 `calculator-checklist.webp` composes captures of the actual calculator and mobile
 ingredient checklist: chili garlic oil noodles scaled from two to four servings,

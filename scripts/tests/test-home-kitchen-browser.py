@@ -30,7 +30,7 @@ async def check_chapter_layout(page, chapter, model, aspect, output, stem):
         assert await model.locator("canvas").evaluate("(c, ratio) => Math.abs(c.clientWidth / c.clientHeight - ratio) < .02", aspect)
         text_box = await chapter.locator('.landing-chapter-copy p').bounding_box()
         model_box = await model.bounding_box()
-        image_box = await chapter.locator('.landing-shot-button').bounding_box()
+        image_box = await chapter.locator('.landing-app-window .landing-shot-button').bounding_box()
         assert model_box['y'] >= text_box['y'] + text_box['height']
         if name == 'desktop':
             if await chapter.evaluate("e => e.matches(':nth-child(even)')"):

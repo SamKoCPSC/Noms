@@ -246,11 +246,18 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .split("class=\"landing-chapters landing-wrap\"")
             .nth(1)
             .unwrap()
-            .split("class=\"landing-features landing-wrap\"")
+            .split("class=\"landing-trust landing-wrap\"")
             .next()
             .unwrap();
-        assert_eq!(stories.matches("class=\"landing-chapter-copy\"").count(), 6);
-        let discover = stories.split("</article>").next().unwrap();
+        let chapter = |title: &str| {
+            stories
+                .split("<article class=\"landing-chapter\"")
+                .skip(1)
+                .filter_map(|part| part.split_once("</article>").map(|(article, _)| article))
+                .find(|article| article.contains(title))
+                .unwrap_or_else(|| panic!("Missing landing chapter {title}"))
+        };
+        let discover = chapter("Discover new recipes.");
         assert!(discover.contains("Discover new recipes."));
         assert!(discover.contains("data-scene=\"pandacotta-banquet\""));
         assert!(discover.contains("bao, tacos, and strawberry cream cake"));
@@ -261,43 +268,86 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(
             screenshot.contains("Croissants, chocolate cake, and Korean fried chicken in Explore.")
         );
-        let cooking = stories
-            .split("</article>")
-            .find(|story| story.contains("Make cooking your favorites convenient"))
-            .unwrap();
+        let cooking = chapter("Make cooking your favorites convenient");
         let (intro, screenshot) = cooking.split_once("class=\"landing-app-window\"").unwrap();
         assert!(intro.contains("data-scene=\"owlfredo-kitchen-island\""));
         assert!(intro.contains("Owlfredo stirs, seasons, and tastes tomato soup"));
         assert!(intro.contains("loading=\"lazy\""));
-        assert!(screenshot.contains("Scale chili garlic oil noodles"));
-        let create = stories
-            .split("</article>")
-            .find(|article| article.contains("Create your signature recipe."))
-            .unwrap();
+        assert!(
+            screenshot.contains("Check off ingredients as you prepare chili garlic oil noodles")
+        );
+        assert!(screenshot.contains("Pause cooking preview"));
+        assert!(!cooking.contains("Scale your servings"));
+        let create = chapter("Create your signature recipe.");
         let (intro, screenshot) = create.split_once("class=\"landing-app-window\"").unwrap();
         assert!(intro.contains("data-scene=\"signature-recipe\""));
         assert!(intro.contains("grated truffle"));
         assert!(screenshot.contains("landing-shot-button"));
-        let history = stories
-            .split("</article>")
-            .find(|story| story.contains("Study how your recipes change."))
-            .unwrap();
+        let history = chapter("Study how your recipes change.");
         let (intro, screenshot) = history.split_once("class=\"landing-app-window\"").unwrap();
         assert!(intro.contains("data-scene=\"terrimisu-cookie-study\""));
         assert!(intro.contains("Terrimisu tastes cookies from two batches."));
         assert!(intro.contains("loading=\"lazy\""));
         assert!(screenshot.contains("Compare two batches of chocolate chip cookies"));
-        let share = stories
-            .split("</article>")
-            .find(|article| article.contains("Share your best creations."))
-            .unwrap();
+        let share = chapter("Share your best creations.");
         let (intro, screenshot) = share.split_once("class=\"landing-app-window\"").unwrap();
         assert!(intro.contains("data-scene=\"pandacotta-market-stand\""));
         assert!(intro.contains("Pandacotta hands him the recipe card"));
         assert!(intro.contains("loading=\"lazy\""));
         assert!(screenshot.contains("Robert McRobertson’s public recipes and collections."));
-        assert!(stories.contains("Use anywhere"));
-        assert!(stories.contains("features anywhere with a mobile-optimized experience"));
+        let community = stories
+            .split("id=\"landing-community-title\"")
+            .nth(1)
+            .unwrap()
+            .split("</section>")
+            .next()
+            .unwrap();
+        assert!(community.contains("Discover new recipes."));
+        assert!(community.contains("Share your best creations."));
+        let discussion = community
+            .split_once("class=\"landing-chapter landing-discussion\"")
+            .unwrap()
+            .1;
+        let (copy, preview) = discussion
+            .split_once("class=\"landing-app-window\"")
+            .unwrap();
+        assert!(copy.contains("class=\"landing-chapter-copy\""));
+        assert!(copy.contains("In progress."));
+        assert!(preview.contains("Concept preview"));
+        let pantry = stories
+            .split("id=\"landing-pantry-title\"")
+            .nth(1)
+            .unwrap()
+            .split("</section>")
+            .next()
+            .unwrap();
+        let (copy, previews) = pantry
+            .split_once("class=\"landing-feature-previews\"")
+            .unwrap();
+        assert!(copy.contains("See what you have"));
+        assert!(copy.contains("Build a grocery list"));
+        assert_eq!(previews.matches("class=\"landing-shot-button\"").count(), 2);
+        let tools = stories
+            .split("id=\"landing-features-title\"")
+            .nth(1)
+            .unwrap()
+            .split("</section>")
+            .next()
+            .unwrap();
+        let (copy, previews) = tools
+            .split_once("class=\"landing-feature-previews\"")
+            .unwrap();
+        for feature in [
+            "Built-in recipe image editor",
+            "Scale your servings",
+            "Organize your recipes",
+            "Import and export",
+        ] {
+            assert!(copy.contains(feature));
+        }
+        assert_eq!(previews.matches("class=\"landing-shot-button\"").count(), 4);
+        assert!(previews.contains("The Export recipe dialog showing JSON and HTML formats"));
+        assert_eq!(stories.matches(">Scale your servings</h3>").count(), 1);
         assert!(!html.contains("landing-chapter-number"));
         assert!(!html.contains("landing-mobile landing-wrap"));
         assert_eq!(html.matches("class=\"landing-recipe-search\"").count(), 1);
