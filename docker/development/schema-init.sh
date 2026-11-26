@@ -30,3 +30,7 @@ pgschema apply \
     --file /workspace/migrations/schema.sql \
     --schema public \
     --auto-approve
+
+PGPASSWORD="$PGPASSWORD" psql --host "$PGHOST" --port "$PGPORT" --username "$PGUSER" \
+    --dbname "$PGDATABASE" --no-password --set ON_ERROR_STOP=1 \
+    --file /workspace/migrations/backfill-comment-review-status.sql

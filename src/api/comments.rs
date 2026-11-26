@@ -160,7 +160,7 @@ async fn apply(
                 .bind(case_id).bind(user).bind(reason).bind(observed_body).bind(version)
                 .execute(&mut *tx).await.map_err(failure)?;
             sqlx::query(
-                "UPDATE comment_review_cases SET queued_at=now()
+                "UPDATE comment_review_cases SET queued_at=now(), status='queued'
                          WHERE id=$1 AND queued_at IS NULL
                          AND (SELECT count(*) FROM comment_reports WHERE case_id=$1) >= $2",
             )
@@ -240,12 +240,20 @@ mod tests {
         report(users[0], "Spam", "Original").await.unwrap();
         report(users[0], "Retry", "Original").await.unwrap();
         report(users[1], "Spam", "Original").await.unwrap();
+        let status = || {
+            sqlx::query_scalar::<_, String>(
+                "SELECT status::text FROM comment_review_cases WHERE resolved_at IS NULL",
+            )
+            .fetch_one(&pool)
+        };
+        assert_eq!(status().await.unwrap(), "collecting");
         assert_eq!(counts().await.unwrap(), (2, 0));
         tokio::try_join!(
             report(users[2], "Spam", "Original"),
             report(users[2], "Retry", "Original")
         )
         .unwrap();
+        assert_eq!(status().await.unwrap(), "queued");
         assert_eq!(counts().await.unwrap(), (3, 1));
         assert_eq!(
             read_thread(&pool, recipe, Some(root.id), 0).await.unwrap()[0].body,

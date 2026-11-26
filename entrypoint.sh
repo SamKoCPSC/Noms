@@ -131,6 +131,10 @@ apply_schema() {
         --schema public \
         --lock-timeout 30s \
         --auto-approve
+    PGPASSWORD="$MIGRATION_PGPASSWORD" psql \
+        -h "$MIGRATION_PGHOST" -p "$MIGRATION_PGPORT" -U "$MIGRATION_PGUSER" \
+        -d "$MIGRATION_PGDATABASE" -w -v ON_ERROR_STOP=1 \
+        -f /usr/local/app/migrations/backfill-comment-review-status.sql
     echo "Database schema applied."
 }
 

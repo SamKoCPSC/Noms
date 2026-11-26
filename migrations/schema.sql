@@ -514,13 +514,20 @@ CREATE TABLE IF NOT EXISTS recipe_comments (
 CREATE INDEX IF NOT EXISTS idx_recipe_comments_thread
     ON recipe_comments(recipe_id, parent_id, id);
 
+CREATE TYPE comment_review_status AS ENUM (
+    'collecting', 'queued', 'flagged', 'unflagged', 'uncertain',
+    'reviewing', 'upheld', 'dismissed', 'autoupheld', 'autodismissed'
+);
+
 -- comment_id is a historical identifier: deleting a leaf must not erase its reports.
 CREATE TABLE IF NOT EXISTS comment_review_cases (
     id BIGSERIAL PRIMARY KEY,
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
     comment_id BIGINT NOT NULL,
+    status comment_review_status DEFAULT 'collecting',
     queued_at TIMESTAMPTZ,
     resolved_at TIMESTAMPTZ,
+    CHECK (status IS NOT NULL OR resolved_at IS NOT NULL),
     CHECK (resolved_at IS NULL OR queued_at IS NOT NULL)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_comment_review_active
