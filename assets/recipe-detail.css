@@ -92,3 +92,63 @@
 .recipe-ingredient-alternatives { margin: 8px 0 4px 20px; padding-left: 16px; color: var(--text-secondary); font-size: .9em; overflow-wrap: anywhere; }
 .recipe-ingredient-alternatives li + li { margin-top: 6px; }
 .mobile-ingredient > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Recipe discussions use the same raised surface and type as the recipe album. */
+.recipe-discussion { --thread-line: color-mix(in srgb, #91a678 48%, var(--border-color)); }
+.discussion-heading, .discussion-heading .brand-title, .discussion-byline, .discussion-actions {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+}
+.discussion-heading { justify-content: space-between; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.discussion-heading h2 { font: 600 clamp(1.5rem, 3vw, 2rem)/1.1 var(--font-display); margin: 0; }
+.discussion-heading .btn { min-height: 44px; }
+.recipe-discussion form {
+    display: grid;
+    gap: .65rem;
+    padding: 1rem;
+    margin-block: .75rem;
+    border-radius: 18px;
+    background: color-mix(in srgb, #91a678 9%, var(--surface));
+    border: 1px solid var(--thread-line);
+}
+.recipe-discussion label { display: grid; gap: .45rem; font-weight: 750; }
+.recipe-discussion textarea {
+    box-sizing: border-box; width: 100%; min-height: 5rem; resize: vertical;
+    padding: .75rem .9rem; border: 1px solid var(--border-color); border-radius: 12px;
+    background: var(--surface); box-shadow: var(--elevation-inset-compact);
+    color: var(--text-primary); font: 400 1rem/1.55 var(--font-body);
+}
+.recipe-discussion textarea:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.recipe-discussion form .btn { justify-self: end; min-height: 44px; }
+.discussion-entry { min-width: 0; scroll-margin-block-start: 6rem; }
+.discussion-root { border-top: 1px solid var(--border-color); padding-block: 1.25rem; }
+.discussion-nested {
+    border-inline-start: 2px solid var(--thread-line);
+    margin-inline-start: clamp(.25rem, 2vw, 1rem);
+    padding-inline-start: clamp(.65rem, 2vw, 1.25rem);
+}
+.discussion-entry .discussion-entry { margin-block-start: .6rem; }
+.discussion-byline { flex-wrap: wrap; }
+.discussion-thread-toggle { margin-inline-start: auto; }
+.discussion-byline > div { display: flex; align-items: center; flex-wrap: wrap; gap: .2rem .55rem; min-width: 0; }
+.discussion-byline strong { color: var(--text-primary); overflow-wrap: anywhere; }
+.discussion-version { background: color-mix(in srgb, #91a678 22%, var(--surface)); color: var(--text-primary); border-radius: 20px; padding: .1rem .55rem; font-size: .76rem; font-weight: 750; }
+.discussion-byline time { font-size: .8rem; color: var(--text-secondary); }
+.discussion-body { margin: .6rem 0 .15rem; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+.discussion-deleted { color: var(--text-secondary); font-style: italic; }
+.discussion-parent { display: block; width: fit-content; margin-block: .65rem; font-size: .84rem; color: var(--accent-ink); }
+.discussion-actions { flex-wrap: wrap; gap: .2rem .65rem; }
+.discussion-report { flex-basis: 100%; }
+.discussion-action {
+    padding: .35rem .45rem; min-height: 44px; border: 0; border-radius: .6rem;
+    background: transparent; color: var(--text-secondary); font: 700 .875rem/1.2 var(--font-body); cursor: pointer;
+}
+.discussion-action:hover, .discussion-action:focus-visible { color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.discussion-toggle { color: var(--accent-ink); }
+.discussion-toggle::after { content: ""; display: inline-block; width: .4em; height: .4em; margin: 0 .15em .2em .6em; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+.discussion-toggle[aria-expanded="true"]::after { transform: rotate(225deg); margin-bottom: 0; }
+@media (max-width: 600px) {
+    .discussion-byline time { flex-basis: 100%; }
+    .discussion-actions { column-gap: .25rem; }
+}
