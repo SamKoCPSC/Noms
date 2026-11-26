@@ -427,6 +427,56 @@ const VILLAGE_SOCIAL_KITCHEN: Asset = asset!("/assets/about/village/social-kitch
 const VILLAGE_RIVERSIDE_CAMPSITE: Asset = asset!("/assets/about/village/riverside-campsite.glb");
 const VILLAGE_GARDEN: Asset = asset!("/assets/about/village/garden.glb");
 
+const TOUR_MUSIC_PLAYER: Asset = asset!(
+    "/assets/about-tour-music.js",
+    JsAssetOptions::new().with_minify(false)
+);
+const TOUR_TRACKS: [(&str, &str, Asset); 3] = [
+    (
+        "Amberlight",
+        "amberlight",
+        asset!("/assets/about/music/amberlight.mp3"),
+    ),
+    (
+        "Echoes Of Home",
+        "echoes-of-home",
+        asset!("/assets/about/music/echoes-of-home.mp3"),
+    ),
+    (
+        "Ice Cream",
+        "ice-cream",
+        asset!("/assets/about/music/ice-cream.mp3"),
+    ),
+];
+
+#[component]
+fn TourMusic() -> Element {
+    rsx! {
+        document::Script { r#type: "module", src: TOUR_MUSIC_PLAYER }
+        noms-tour-soundtrack {
+            audio { preload: "none" }
+            button { class: "village-view-toggle tour-music-play", r#type: "button", "Play music" }
+            button { class: "village-view-toggle tour-music-credits", r#type: "button",
+                popovertarget: "tour-music-panel", aria_label: "Music credits", title: "Music credits",
+                span { aria_hidden: "true", "ⓘ" }
+            }
+            div { id: "tour-music-panel", popover: "auto", aria_label: "Tour music", role: "group",
+                p { class: "tour-music-status", role: "status" }
+                p { "Music by " a { href: "https://www.scottbuckley.com.au/", target: "_blank", rel: "noopener", "Scott Buckley" } }
+                ul {
+                    for (title, slug, audio) in TOUR_TRACKS {
+                        li { key: "{slug}", a {
+                            href: "https://www.scottbuckley.com.au/library/{slug}/", target: "_blank", rel: "noopener",
+                            "data-audio": audio, "{title}"
+                        } }
+                    }
+                }
+                a { href: "https://creativecommons.org/licenses/by/4.0/", target: "_blank", rel: "noopener", "CC BY 4.0" }
+            }
+        }
+    }
+}
+
 #[component]
 pub fn About() -> Element {
     #[cfg(target_arch = "wasm32")]
@@ -497,7 +547,10 @@ pub fn About() -> Element {
       span{class:"walk-help touch-walk-help","Move with the stick · Swipe to look"}
      }
      div{id:"village-walk-stick",aria_hidden:"true",span{}}
-     button{id:"village-view-toggle",class:"village-view-toggle",r#type:"button",hidden:true,"Read as page"}
+     div{class:"village-utilities",
+      TourMusic {}
+      button{id:"village-view-toggle",class:"village-view-toggle",r#type:"button",hidden:true,"Read as page"}
+     }
      div{id:"story",class:"story",
       for i in 0..IDS.len() {
        article{id:"panel-{i}",class:"story-panel","data-panel":"{i}","data-model":"{MODEL_FOR_STOP[i]}",aria_labelledby:"title-{i}",

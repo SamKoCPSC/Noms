@@ -180,3 +180,22 @@ html:has(.about-tour[data-looking]),body:has(.about-tour[data-looking]){overflow
  .about-tour[data-walking] #village-walk-stick{display:grid;place-items:center;position:fixed;z-index:19;left:max(20px,env(safe-area-inset-left));bottom:calc(72px + env(safe-area-inset-bottom));width:92px;height:92px;border-radius:50%;background:#34403580;border:1px solid #faf7f0bf;touch-action:none;user-select:none}
  .about-tour #village-walk-stick span{display:block;width:38px;height:38px;border-radius:50%;background:#faf7f0e6;pointer-events:none;transform:translate(var(--stick-x,0px),var(--stick-y,0px))}
 }
+
+.about-tour .village-utilities{position:fixed;right:18px;bottom:12px;z-index:20;display:flex;align-items:center;gap:6px}
+.about-tour .village-utilities .village-view-toggle{position:static}
+.about-tour[data-entry-state=loading] .village-utilities,.about-tour noms-tour-soundtrack:not(:defined){display:none}
+.about-tour #tour-music-panel{position:fixed;inset:auto 18px 62px auto;margin:0;padding:16px 20px;border:1px solid #6c79554d;border-radius:16px;background:#faf7f0;color:#35412f;font:inherit;font-size:14px;box-shadow:0 6px 24px #23391d24}
+.about-tour #tour-music-panel p{margin:8px 0}
+.about-tour #tour-music-panel ul{list-style:none;margin:6px 0;padding:0}
+.about-tour #tour-music-panel a{text-decoration:underline;text-underline-offset:2px}
+.about-tour noms-tour-soundtrack{display:inline-flex;align-items:center;gap:2px;white-space:nowrap}
+.about-tour .tour-music-credits{min-width:32px;padding-inline:4px;font-size:16px}
+@media(max-width:380px){
+ .about-tour.is-flight:not([data-looking]) noms-tour-soundtrack{position:absolute;right:0;bottom:calc(100% + 6px)}
+ .about-tour.is-flight:not([data-looking]) #tour-music-panel{bottom:94px}
+}
+.about-tour .tour-music-status:empty{display:none}
+.about-tour[data-looking] .village-utilities{top:calc(var(--tour-top) + 8px);bottom:auto}
+.about-tour[data-looking] #tour-music-panel{top:calc(var(--tour-top) + 58px);bottom:auto}
+@media(max-width:700px){.about-tour .village-utilities{right:12px;bottom:8px}}
+@media print{.about-tour .village-utilities,.about-tour #tour-music-panel{display:none!important}}

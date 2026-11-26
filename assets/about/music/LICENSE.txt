@@ -1,0 +1,10 @@
+Music by Scott Buckley (https://www.scottbuckley.com.au/), used under
+Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+
+Amberlight — https://www.scottbuckley.com.au/library/amberlight/
+Echoes Of Home — https://www.scottbuckley.com.au/library/echoes-of-home/
+Ice Cream — https://www.scottbuckley.com.au/library/ice-cream/
+
+The full mixes were lowered to -32 LUFS integrated loudness with a fixed gain
+per track and re-encoded as smaller MP3s for quiet background playback.
