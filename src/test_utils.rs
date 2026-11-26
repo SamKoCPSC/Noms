@@ -112,6 +112,7 @@ pub async fn apply_test_schema(pool: &PgPool) {
          avatar_original_url TEXT,\
          avatar_edit JSONB,\
          bio TEXT,\
+         last_login_at TIMESTAMPTZ,\
          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\
          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\
          )",

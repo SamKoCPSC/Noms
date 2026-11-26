@@ -12,6 +12,7 @@
 .user-portrait { flex-shrink: 0; }
 .user-profile .profile-name { font-size: clamp(28px, 4vw, 40px); margin: 4px 0; }
 .user-profile .profile-username { font-size: 16px; color: var(--text-secondary); }
+.user-profile .profile-last-login { margin-block: 8px; color: var(--text-secondary); font-size: 14px; }
 .user-profile .profile-bio { max-width: 640px; margin-block: 12px; font-size: 16px; white-space: pre-wrap; }
 .user-profile .profile-stats { display: inline-block; color: var(--accent-ink); background: var(--neumo-surface); padding: 6px 12px; border-radius: 999px; box-shadow: var(--elevation-inset-compact); }
 .user-disclosure { background: var(--neumo-surface); border-radius: 24px; box-shadow: var(--elevation-raised); margin-bottom: 28px; min-width: 0; }

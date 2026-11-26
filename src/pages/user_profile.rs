@@ -324,6 +324,12 @@ fn UserProfileContents(username: String) -> Element {
                 if let Some(ref bio) = profile_data.bio {
                     p { class: "profile-bio", "{bio}" }
                 }
+                if let Some(date) = profile_data.last_login_date {
+                    p { class: "profile-last-login",
+                        "Last login on "
+                        time { datetime: date.to_string(), {date.format("%b %-d, %Y").to_string()} }
+                    }
+                }
                 p { class: "profile-stats",
                     "{recipe_count_text} shared publicly"
                 }
@@ -461,6 +467,7 @@ mod identity_tests {
             avatar_url: None,
             bio: None,
             public_recipe_count: 0,
+            last_login_date: None,
         }
     }
 
