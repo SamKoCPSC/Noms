@@ -342,7 +342,7 @@ pub fn start() -> Result<(), JsValue> {
             .target()
             .and_then(|t| t.dyn_into::<Element>().ok())
             .and_then(|e| {
-                e.closest("input, textarea, select, [contenteditable='true'], [role='dialog'], nav")
+                e.closest("input, textarea, select, [contenteditable='true'], [role='dialog'], nav, noms-tour-soundtrack")
                     .ok()
                     .flatten()
             })

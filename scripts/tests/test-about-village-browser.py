@@ -162,6 +162,49 @@ async def check_explore(page, out, progress):
     assert await button.inner_text()=='Explore village'
     print('PASS first-person movement and return to fractional tour pose',flush=True)
 
+async def check_soundtrack(page):
+    music = page.locator('noms-tour-soundtrack')
+    audio = music.locator('audio')
+    credits = music.get_by_role('button', name='Music credits')
+    play = music.locator('.tour-music-play')
+    tracks = await music.locator('[data-audio]').evaluate_all(
+        'links => links.map(link => new URL(link.dataset.audio, location.href).href)')
+    assert len(set(tracks)) == 3
+
+    async def wait_for_track(previous=None):
+        await page.wait_for_function("""previous => {
+            const a = document.querySelector('noms-tour-soundtrack audio');
+            return a.currentSrc && a.currentSrc !== previous && !a.paused && a.currentTime > 0;
+        }""", arg=previous, polling=50)
+        return await audio.evaluate('a => a.currentSrc')
+
+    order = [await wait_for_track()]
+    assert await play.inner_text() == 'Pause music'
+    await play.click()
+    await credits.click()
+    assert await music.locator('#tour-music-panel').is_visible()
+    await credits.click()
+    assert await audio.evaluate('a => a.paused')
+    assert await play.inner_text() == 'Play music'
+    await play.click()
+    assert await wait_for_track() == order[0]
+
+    explore = page.locator('#village-look-toggle')
+    for _ in range(2):
+        await explore.click()
+        await page.evaluate('step(1)')
+        await page.evaluate('step(1,1201)')
+        assert await audio.evaluate('a => !a.paused && a.currentSrc') == order[0]
+
+    for _ in range(5):
+        # Simulate the track boundary so this check also works on servers without byte ranges.
+        await audio.dispatch_event('ended')
+        order.append(await wait_for_track(order[-1]))
+    assert set(order[:3]) == set(order[3:]) == set(tracks)
+    assert order[2] != order[3]
+    await play.click()
+    print('PASS shuffled soundtrack, pause/resume and continuous Explore playback', flush=True)
+
 async def check_kitchen_collision(page):
     canvas = page.locator('#story-three-canvas')
     button = page.locator('#village-look-toggle')
@@ -208,7 +251,7 @@ async def check_kitchen_collision(page):
 async def main(url,out):
     assert urlsplit(url).hostname in ['127.0.0.1','localhost'];out.mkdir(parents=True,exist_ok=True)
     async with async_playwright() as p:
-        browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader'])
+        browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--autoplay-policy=no-user-gesture-required','--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader'])
         initial_viewport={'width':393,'height':852} if '--mobile' in sys.argv else {'width':1280,'height':900}
         context=await browser.new_context(viewport=initial_viewport,device_scale_factor=1)
         await context.add_init_script(CLOCK);page=await context.new_page();page.set_default_timeout(120000)
@@ -235,6 +278,7 @@ async def main(url,out):
         assert math.dist(await eye(),first['eye'])<1e-5
         assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         print('PASS opening approach and first-stop landing',flush=True)
+        await check_soundtrack(page)
         await check_kitchen_collision(page)
         await check_explore(page,out,.55)
         await page.locator(".waypoint").first.evaluate("e=>e.scrollIntoView({behavior:'instant'})")
