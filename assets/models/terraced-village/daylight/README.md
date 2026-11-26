@@ -212,3 +212,47 @@ The full native world retains the corrected materials and geometry, and
 `source/glass-native.json` records every material, opening and hidden backdrop.
 Asset verification checks exported transmission, roughness, tint, absence of frost
 textures, and the current policy hash alongside normal geometry/lighting checks.
+
+## Outdoor tour trees
+
+The browser world grows cherry blossoms, firs, autumn maples and green oaks at
+the 116 planting locations in the landscape snapshot. Both outdoor Cycles passes
+replace the native scene's original trees in memory and import the tour's trunks,
+branches and leaf cutouts at their planted positions. The ground textures and
+the vertex lighting on grass, paths and outdoor props receive their shadows. The
+leaf atlas uses the same alpha cutoff of 0.4 in the bake and in the browser.
+The bake receipts record the tree geometry and material hash for verification.
+[Compare outdoor tree shadows before and after the bake.](previews/village-tree-shadows.jpg)
+
+The four species share an embedded cutout atlas. Each has four seeded canopy
+shapes that the renderer instances at different sizes and orientations. Explore
+uses solid trunk and branch geometry for collision and lets players pass through
+leaf sprays. The gallery shows the trees at walking height. [Village tree gallery](previews/village-trees.jpg)
+
+After changing the tree shapes, placements or leaf atlas, rebuild the outdoor
+lighting and the shipped world from the repository root. The atlas painting step
+is only needed after editing the sprig artwork.
+
+```sh
+python tools/about/village/trees/paint-sprigs.py
+blender -b -t 4 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/bake-ground.py -- /tmp/village-daylight/world
+blender -b -t 4 --disable-autoexec --python-exit-code 1 --python tools/about/village/daylight/bake-landscape.py -- /tmp/village-daylight/world
+node tools/about/village/daylight/pack-world.mjs /tmp/village-daylight/world
+node tools/about/village/daylight/check-assets.mjs
+node tools/about/village/build-app-assets.mjs
+```
+
+## Sculpted landscape rocks
+
+The two outdoor Blender bakes run `tools/about/village/daylight/rocks.py` on the
+native village. It uses the original 81 boulder locations and footprints to
+place fractured limestone blocks, low slabs, paired pinnacles and loose chips.
+Sloping ledges pinch out around the sides, and clipped ridges break up the top
+silhouettes. The daylight bake lights the stone faces and casts shadows onto
+the surrounding terrain. Explore collision comes from the exported geometry.
+[Studio view of four village formations](previews/village-rock-study.jpg) ·
+[Before and after in the tour](previews/village-rocks.jpg)
+
+To rebuild after changing a rock shape or color, run both outdoor bakes and the
+packing and verification commands in the tree section above. Both bake receipts
+record a hash of the finished stone geometry and its material assignments.

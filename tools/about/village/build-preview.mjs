@@ -1,7 +1,8 @@
-// Copy the actual production assets byte-for-byte into a portable review folder.
+// Assemble the portable review scene and the input to the production texture pass.
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
+import { buildTreeWorld } from './build-tree-world.mjs';
 import { build } from 'esbuild';
 import { mkdir, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -33,9 +34,11 @@ for (const stop of layout.stops) {
   console.log('PREVIEW',stop.id,triangles);
 }
 if(layout.shared_lighting){
-  const source=layout.shared_lighting.environment,bytes=await readFile(source);
-  await copyFile(source,`${out}/models/world.glb`);
-  receipts.push({id:'world',source,sha256:createHash('sha256').update(bytes).digest('hex')});
+  const source=layout.shared_lighting.environment;
+  await buildTreeWorld(source,`${out}/models/world.glb`);
+  const bytes=await readFile(`${out}/models/world.glb`);
+  receipts.push({id:'world',source,source_sha256:createHash('sha256').update(await readFile(source)).digest('hex'),
+    sha256:createHash('sha256').update(bytes).digest('hex')});
   layout.shared_lighting.environment='models/world.glb';
   layout.shared_lighting.settings=JSON.parse(await readFile(layout.shared_lighting.settings));
 }
