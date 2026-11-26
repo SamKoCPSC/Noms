@@ -41,7 +41,6 @@ migrate-extensions:
 # After changing schema or compile-time queries, run `just sqlx-prepare` explicitly.
 migrate:
 	@source .env.local && pgschema apply --host "$PGHOST" --port "$PGPORT" --db "$PGDATABASE" --user "$PGUSER" --password "$PGPASSWORD" --plan-host "$PGHOST" --plan-port "$PGPORT" --plan-db "$PGDATABASE" --plan-user "$PGUSER" --plan-password "$PGPASSWORD" --file migrations/schema.sql --schema public --auto-approve
-	@source .env.local && psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/backfill-comment-review-status.sql
 
 # Regenerate the .sqlx/ offline query cache (requires a running DB with current schema)
 sqlx-prepare:

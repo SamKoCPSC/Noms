@@ -524,10 +524,9 @@ CREATE TABLE IF NOT EXISTS comment_review_cases (
     id BIGSERIAL PRIMARY KEY,
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
     comment_id BIGINT NOT NULL,
-    status comment_review_status DEFAULT 'collecting',
+    status comment_review_status NOT NULL DEFAULT 'collecting',
     queued_at TIMESTAMPTZ,
     resolved_at TIMESTAMPTZ,
-    CHECK (status IS NOT NULL OR resolved_at IS NOT NULL),
     CHECK (resolved_at IS NULL OR queued_at IS NOT NULL)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_comment_review_active
