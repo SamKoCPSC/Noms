@@ -11,6 +11,8 @@ pub struct Comment {
     pub version_number: i32,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub has_replies: bool,
+    pub like_count: i64,
+    pub liked_by_viewer: bool,
 }
 
 #[server]
@@ -21,7 +23,8 @@ pub async fn thread(
 ) -> Result<Vec<Comment>, ServerFnError> {
     crate::security::enforce_request_budget(None, crate::security::RequestClass::PublicDiscovery)
         .map_err(|_| ServerFnError::new("Please try again later"))?;
-    read_thread(&crate::db::get_pool(), recipe, parent, after).await
+    let viewer = crate::auth::session::extract_user_id_from_fullstack().await;
+    read_thread(&crate::db::get_pool(), recipe, parent, after, viewer).await
 }
 
 #[cfg(feature = "server")]
@@ -30,12 +33,15 @@ async fn read_thread(
     recipe: Uuid,
     parent: Option<i64>,
     after: i64,
+    viewer: Option<Uuid>,
 ) -> Result<Vec<Comment>, ServerFnError> {
     sqlx::query_as::<_, Comment>("SELECT c.id,c.author_id,u.username AS author,c.body,c.version_number,c.created_at,
+        (SELECT count(*) FROM recipe_comment_likes l WHERE l.comment_id=c.id) AS like_count,
+        EXISTS(SELECT 1 FROM recipe_comment_likes l WHERE l.comment_id=c.id AND l.user_id=$4) AS liked_by_viewer,
         EXISTS(SELECT 1 FROM recipe_comments child WHERE child.recipe_id=c.recipe_id AND child.parent_id=c.id) AS has_replies
         FROM recipe_comments c JOIN recipes r ON r.id=c.recipe_id LEFT JOIN users u ON u.id=c.author_id
         WHERE c.recipe_id=$1 AND r.visibility='public' AND c.parent_id IS NOT DISTINCT FROM $2 AND c.id>$3 ORDER BY c.id LIMIT 21")
-        .bind(recipe).bind(parent).bind(after).fetch_all(pool).await.map_err(|_| ServerFnError::new("Could not load comments"))
+        .bind(recipe).bind(parent).bind(after).bind(viewer).fetch_all(pool).await.map_err(|_| ServerFnError::new("Could not load comments"))
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -48,6 +54,10 @@ pub enum Change {
     Edit {
         id: i64,
         body: String,
+    },
+    SetLike {
+        id: i64,
+        liked: bool,
     },
     Report {
         id: i64,
@@ -117,6 +127,27 @@ async fn apply(
             sqlx::query("UPDATE recipe_comments SET body=$4 WHERE recipe_id=$1 AND id=$2 AND author_id=$3 RETURNING id")
                 .bind(recipe).bind(id).bind(user).bind(validate(body)?).fetch_one(&mut *tx).await.map_err(failure)?;
         }
+        Change::SetLike { id, liked } => {
+            sqlx::query(
+                "SELECT id FROM recipe_comments WHERE id=$1 AND recipe_id=$2 AND body IS NOT NULL",
+            )
+            .bind(id)
+            .bind(recipe)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(failure)?;
+            let query = if liked {
+                "INSERT INTO recipe_comment_likes (comment_id,user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING"
+            } else {
+                "DELETE FROM recipe_comment_likes WHERE comment_id=$1 AND user_id=$2"
+            };
+            sqlx::query(query)
+                .bind(id)
+                .bind(user)
+                .execute(&mut *tx)
+                .await
+                .map_err(failure)?;
+        }
         Change::Report {
             id,
             observed_body,
@@ -173,6 +204,11 @@ async fn apply(
         Change::Delete { id } => {
             sqlx::query("UPDATE recipe_comments SET body=NULL,author_id=NULL WHERE recipe_id=$1 AND id=$2 AND author_id=$3 RETURNING id")
                 .bind(recipe).bind(id).bind(user).fetch_one(&mut *tx).await.map_err(failure)?;
+            sqlx::query("DELETE FROM recipe_comment_likes WHERE comment_id=$1")
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(failure)?;
             let mut candidate = Some(id);
             while let Some(id) = candidate {
                 candidate = sqlx::query_scalar::<_, Option<i64>>("DELETE FROM recipe_comments c WHERE c.recipe_id=$1 AND c.id=$2 AND c.body IS NULL
@@ -211,11 +247,14 @@ mod tests {
             request_id: Uuid::new_v4(),
         };
         apply(&pool, users[0], recipe, publish(None)).await.unwrap();
-        let root = read_thread(&pool, recipe, None, 0).await.unwrap().remove(0);
+        let root = read_thread(&pool, recipe, None, 0, None)
+            .await
+            .unwrap()
+            .remove(0);
         apply(&pool, users[1], recipe, publish(Some(root.id)))
             .await
             .unwrap();
-        let reply = read_thread(&pool, recipe, Some(root.id), 0)
+        let reply = read_thread(&pool, recipe, Some(root.id), 0, None)
             .await
             .unwrap()
             .remove(0);
@@ -256,7 +295,10 @@ mod tests {
         assert_eq!(status().await.unwrap(), "queued");
         assert_eq!(counts().await.unwrap(), (3, 1));
         assert_eq!(
-            read_thread(&pool, recipe, Some(root.id), 0).await.unwrap()[0].body,
+            read_thread(&pool, recipe, Some(root.id), 0, None)
+                .await
+                .unwrap()[0]
+                .body,
             reply.body
         );
         sqlx::query("UPDATE comment_review_cases SET resolved_at=now()")
@@ -322,7 +364,10 @@ mod tests {
             body: "Cooking note".into(),
         };
         apply(&pool, user, recipe, publish(None)).await.unwrap();
-        let root = read_thread(&pool, recipe, None, 0).await.unwrap().remove(0);
+        let root = read_thread(&pool, recipe, None, 0, None)
+            .await
+            .unwrap()
+            .remove(0);
         assert_eq!(root.version_number, 2);
         sqlx::query(version)
             .bind(recipe)
@@ -333,11 +378,36 @@ mod tests {
         apply(&pool, user, recipe, publish(Some(root.id)))
             .await
             .unwrap();
-        let reply = read_thread(&pool, recipe, Some(root.id), 0)
+        let reply = read_thread(&pool, recipe, Some(root.id), 0, None)
             .await
             .unwrap()
             .remove(0);
         assert_eq!(reply.version_number, 3);
+        let other: Uuid = sqlx::query_scalar("INSERT INTO users(username,display_name,email) VALUES ('reader','Reader','reader@example.test') RETURNING id").fetch_one(&pool).await.unwrap();
+        let set_like =
+            |actor, id, liked| apply(&pool, actor, recipe, Change::SetLike { id, liked });
+        tokio::try_join!(
+            set_like(user, reply.id, true),
+            set_like(other, reply.id, true),
+            set_like(user, reply.id, true)
+        )
+        .unwrap();
+        for viewer in [None, Some(user), Some(other)] {
+            let rows = read_thread(&pool, recipe, Some(root.id), 0, viewer)
+                .await
+                .unwrap();
+            assert_eq!(rows[0].like_count, 2);
+            assert_eq!(rows[0].liked_by_viewer, viewer.is_some());
+        }
+        set_like(user, reply.id, false).await.unwrap();
+        set_like(user, reply.id, false).await.unwrap();
+        let rows = read_thread(&pool, recipe, Some(root.id), 0, Some(user))
+            .await
+            .unwrap();
+        assert_eq!(rows[0].like_count, 1);
+        assert!(!rows[0].liked_by_viewer);
+        set_like(other, root.id, true).await.unwrap();
+
         apply(&pool, user, recipe, publish(Some(reply.id)))
             .await
             .unwrap();
@@ -361,22 +431,27 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(
-            read_thread(&pool, recipe, None, 0).await.unwrap()[0].version_number,
+            read_thread(&pool, recipe, None, 0, None).await.unwrap()[0].version_number,
             2
         );
         apply(&pool, user, recipe, Change::Delete { id: root.id })
             .await
             .unwrap();
-        let deleted = read_thread(&pool, recipe, None, 0).await.unwrap().remove(0);
+        let deleted = read_thread(&pool, recipe, None, 0, None)
+            .await
+            .unwrap()
+            .remove(0);
+        assert_eq!(deleted.like_count, 0);
+        assert!(set_like(other, root.id, true).await.is_err());
         assert!(deleted.body.is_none() && deleted.author_id.is_none() && deleted.has_replies);
-        let leaf = read_thread(&pool, recipe, Some(reply.id), 0)
+        let leaf = read_thread(&pool, recipe, Some(reply.id), 0, None)
             .await
             .unwrap()
             .remove(0);
         apply(&pool, user, recipe, Change::Delete { id: leaf.id })
             .await
             .unwrap();
-        assert!(read_thread(&pool, recipe, Some(reply.id), 0)
+        assert!(read_thread(&pool, recipe, Some(reply.id), 0, None)
             .await
             .unwrap()
             .is_empty());
@@ -385,10 +460,11 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        assert!(read_thread(&pool, recipe, Some(root.id), 0)
+        assert!(read_thread(&pool, recipe, Some(root.id), 0, None)
             .await
             .unwrap()
             .is_empty());
+        assert!(set_like(other, reply.id, false).await.is_err());
         assert!(apply(&pool, user, recipe, publish(None)).await.is_err());
     }
 }

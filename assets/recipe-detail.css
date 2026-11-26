@@ -145,6 +145,8 @@
     background: transparent; color: var(--text-secondary); font: 700 .875rem/1.2 var(--font-body); cursor: pointer;
 }
 .discussion-action:hover, .discussion-action:focus-visible { color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.discussion-like[aria-pressed="true"] { color: var(--accent-ink); }
+.discussion-like-count { font-size: .875rem; color: var(--text-secondary); }
 .discussion-toggle { color: var(--accent-ink); }
 .discussion-toggle::after { content: ""; display: inline-block; width: .4em; height: .4em; margin: 0 .15em .2em .6em; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
 .discussion-toggle[aria-expanded="true"]::after { transform: rotate(225deg); margin-bottom: 0; }
