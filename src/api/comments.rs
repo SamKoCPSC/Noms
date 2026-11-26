@@ -134,8 +134,8 @@ async fn apply(
                 .filter(|n| *n > 0)
                 .unwrap_or(3);
             // The recipe lock above serializes submissions with edits, deletes and other reports.
-            let version: i32 = sqlx::query_scalar(
-                "SELECT version_number FROM recipe_comments
+            let (version, author_id): (i32, Option<Uuid>) = sqlx::query_as(
+                "SELECT version_number, author_id FROM recipe_comments
                  WHERE recipe_id=$1 AND id=$2 AND body=$3",
             )
             .bind(recipe)
@@ -155,9 +155,9 @@ async fn apply(
             .fetch_one(&mut *tx)
             .await
             .map_err(failure)?;
-            sqlx::query("INSERT INTO comment_reports (case_id,reporter_id,reason,reported_body,recipe_version)
-                         VALUES ($1,$2,$3,$4,$5) ON CONFLICT (case_id,reporter_id) DO NOTHING")
-                .bind(case_id).bind(user).bind(reason).bind(observed_body).bind(version)
+            sqlx::query("INSERT INTO comment_reports (case_id,reporter_id,reason,reported_body,recipe_version,reported_author_id)
+                         VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (case_id,reporter_id) DO NOTHING")
+                .bind(case_id).bind(user).bind(reason).bind(observed_body).bind(version).bind(author_id)
                 .execute(&mut *tx).await.map_err(failure)?;
             sqlx::query(
                 "UPDATE comment_review_cases SET queued_at=now(), status='queued'
@@ -212,7 +212,7 @@ mod tests {
         };
         apply(&pool, users[0], recipe, publish(None)).await.unwrap();
         let root = read_thread(&pool, recipe, None, 0).await.unwrap().remove(0);
-        apply(&pool, users[0], recipe, publish(Some(root.id)))
+        apply(&pool, users[1], recipe, publish(Some(root.id)))
             .await
             .unwrap();
         let reply = read_thread(&pool, recipe, Some(root.id), 0)
@@ -276,13 +276,25 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        apply(&pool, users[0], recipe, Change::Delete { id: reply.id })
+        apply(&pool, users[1], recipe, Change::Delete { id: reply.id })
             .await
             .unwrap();
         assert!(report(users[1], "Deleted", "Original").await.is_err());
-        let retained: i64 = sqlx::query_scalar("SELECT count(*) FROM comment_reports WHERE reported_body='Original' AND recipe_version=1")
-            .fetch_one(&pool).await.unwrap();
+        let retained: i64 = sqlx::query_scalar("SELECT count(*) FROM comment_reports WHERE reported_body='Original' AND recipe_version=1 AND reported_author_id=$1")
+            .bind(users[1]).fetch_one(&pool).await.unwrap();
         assert_eq!(retained, 4);
+        sqlx::query("DELETE FROM users WHERE id=$1")
+            .bind(users[1])
+            .execute(&pool)
+            .await
+            .unwrap();
+        let anonymized: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM comment_reports WHERE reported_author_id IS NULL",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(anonymized, 4);
     }
 
     #[tokio::test]

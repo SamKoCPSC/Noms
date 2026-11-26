@@ -15,6 +15,7 @@ enum Editor {
 enum Panel {
     Editor(Editor),
     Replies(i64),
+    Report(i64),
     NextPage(Option<i64>, i64),
 }
 
@@ -27,6 +28,7 @@ struct Draft {
 #[derive(Default)]
 struct DiscussionState {
     drafts: HashMap<Editor, Draft>,
+    report_reasons: HashMap<i64, String>,
     open: HashSet<Panel>,
     collapsed_threads: HashSet<i64>,
 }
@@ -213,8 +215,16 @@ fn CommentRow(recipe: Uuid, item: Comment, depth: usize, parent: Option<i64>) ->
 #[component]
 fn ReportComment(recipe: Uuid, id: i64, body: String) -> Element {
     let account = crate::auth::account_binding::use_form_account();
-    let mut open = use_signal(|| false);
-    let mut reason = use_signal(String::new);
+    let mut state = use_context::<Signal<DiscussionState>>();
+    let panel = Panel::Report(id);
+    let open = state.read().open.contains(&panel);
+    let reason = state
+        .read()
+        .report_reasons
+        .get(&id)
+        .cloned()
+        .unwrap_or_default();
+    let empty = reason.trim().is_empty();
     let mut busy = use_signal(|| false);
     let mut sent = use_signal(|| false);
     let mut failed = use_signal(|| false);
@@ -222,18 +232,20 @@ fn ReportComment(recipe: Uuid, id: i64, body: String) -> Element {
         if sent() {
             span { role: "status", "Report received" }
         } else {
-            button { class: "discussion-action", aria_expanded: open(), disabled: busy(),
-                onclick: move |_| open.toggle(), if open() { "Cancel report" } else { "Report" }
+            button { class: "discussion-action", aria_expanded: open, disabled: busy(),
+                onclick: move |_| state.write().toggle(panel), if open { "Cancel report" } else { "Report" }
             }
-            if open() {
+            if open {
                 form { class: "discussion-report", onsubmit: move |event| {
                     event.prevent_default();
-                    let action = Change::Report { id, observed_body: body.clone(), reason: reason() };
+                    let action = Change::Report { id, observed_body: body.clone(), reason: state.peek().report_reasons.get(&id).cloned().unwrap_or_default() };
                     async move {
                         if busy() { return; }
                         busy.set(true);
                         failed.set(false);
                         if change(account(), recipe, action).await.is_ok() {
+                            state.write().report_reasons.remove(&id);
+                            state.write().open.remove(&panel);
                             sent.set(true);
                         } else {
                             failed.set(true);
@@ -242,10 +254,10 @@ fn ReportComment(recipe: Uuid, id: i64, body: String) -> Element {
                     }
                 },
                     label { "Reason for reporting"
-                        textarea { value: reason(), required: true, maxlength: "500", disabled: busy(),
-                            oninput: move |event| reason.set(event.value()) }
+                        textarea { value: reason, required: true, maxlength: "500", disabled: busy(),
+                            oninput: move |event| { state.write().report_reasons.insert(id, event.value()); } }
                     }
-                    button { class: "btn btn-primary", disabled: busy() || reason.read().trim().is_empty(),
+                    button { class: "btn btn-primary", disabled: busy() || empty,
                         r#type: "submit", "Submit report" }
                     if failed() { p { role: "alert", "Could not submit your report. Check that the comment is still current and try again." } }
                 }
@@ -363,6 +375,79 @@ mod tests {
         assert!(state.open.contains(&Panel::NextPage(None, 0)));
         assert!(state.open.contains(&Panel::Replies(3)));
         assert!(state.open.contains(&Panel::Editor(pending)));
+    }
+
+    #[test]
+    fn report_form_restores_its_reason_when_replies_remount() {
+        use dioxus::html::{SerializedFormData, SerializedHtmlEventConverter, SerializedMouseData};
+        use std::rc::Rc;
+
+        set_event_converter(Box::new(SerializedHtmlEventConverter));
+        let mut dom = VirtualDom::new(|| {
+            let auth = use_signal(AuthContext::default);
+            use_context_provider(|| auth);
+            let mut state = use_signal(DiscussionState::default);
+            use_context_provider(|| state);
+            let replies = Panel::Replies(1);
+            rsx! {
+                button { onclick: move |_| state.write().toggle(replies), "Toggle replies" }
+                if state.read().open.contains(&replies) {
+                    ReportComment { recipe: Uuid::nil(), id: 2, body: "Cooking note" }
+                }
+            }
+        });
+        let listener = |mutations: dioxus_core::Mutations, event: &str| {
+            mutations
+                .edits
+                .into_iter()
+                .find_map(|edit| match edit {
+                    dioxus_core::Mutation::NewEventListener { name, id } if name == event => {
+                        Some(id)
+                    }
+                    _ => None,
+                })
+                .unwrap()
+        };
+        let click = |dom: &VirtualDom, id| {
+            dom.runtime().handle_event(
+                "click",
+                Event::new(
+                    Rc::new(PlatformEventData::new(Box::new(
+                        SerializedMouseData::default(),
+                    ))) as Rc<dyn std::any::Any>,
+                    true,
+                ),
+                id,
+            );
+        };
+        let branch = listener(dom.rebuild_to_vec(), "click");
+        click(&dom, branch);
+        let report = listener(dom.render_immediate_to_vec(), "click");
+        click(&dom, report);
+        let input = listener(dom.render_immediate_to_vec(), "input");
+        let reason = "Unrelated advertising";
+        dom.runtime().handle_event(
+            "input",
+            Event::new(
+                Rc::new(PlatformEventData::new(Box::new(SerializedFormData::new(
+                    reason.into(),
+                    vec![],
+                )))) as Rc<dyn std::any::Any>,
+                true,
+            ),
+            input,
+        );
+        dom.render_immediate_to_vec();
+        click(&dom, branch);
+        dom.render_immediate_to_vec();
+        assert!(!dioxus_ssr::render(&dom).contains("Reason for reporting"));
+        click(&dom, branch);
+        dom.render_immediate_to_vec();
+        let html = dioxus_ssr::render(&dom);
+        assert!(
+            html.contains("Cancel report") && html.contains(reason),
+            "{html}"
+        );
     }
 
     #[test]

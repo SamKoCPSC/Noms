@@ -538,6 +538,8 @@ CREATE TABLE IF NOT EXISTS comment_reports (
     id BIGSERIAL PRIMARY KEY,
     case_id BIGINT NOT NULL REFERENCES comment_review_cases(id) ON DELETE CASCADE,
     reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    -- Retain attribution after comment deletion; anonymize it on account deletion.
+    reported_author_id UUID REFERENCES users(id) ON DELETE SET NULL,
     reason TEXT NOT NULL CHECK (char_length(trim(reason)) BETWEEN 1 AND 500),
     reported_body TEXT NOT NULL,
     recipe_version INTEGER NOT NULL,
