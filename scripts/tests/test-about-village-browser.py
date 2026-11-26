@@ -27,15 +27,45 @@ async def settle(page):
     await page.evaluate('paint()'); await page.evaluate('step(22)'); await page.evaluate('paint()')
 async def geometry(page,i):
     return await page.evaluate('''i=>{const c=document.querySelector('#story-three-canvas'),p=document.querySelector(`#panel-${i}`),s=document.querySelector('#tour-scene-framing');const b=e=>{let r=e.getBoundingClientRect();return [r.left,r.top,r.right,r.bottom]};return {canvas:b(c),panel:b(p),slot:b(s),model:JSON.parse(c.dataset.modelBounds),progress:+c.dataset.progress,overflow:p.scrollHeight>p.clientHeight+1,frame:[document.documentElement.clientWidth,innerHeight],scroll:scrollY}}''',i)
+async def check_scroll_braking(page):
+    # Equal scroll distances on either side of a stop keep its card in view.
+    # Continuing to scroll carries the camera through the middle of the leg.
+    await page.mouse.move(180, 250)
+    canvas = page.locator('#story-three-canvas')
+    leg_height = await page.locator('.waypoint').nth(10).evaluate('e=>e.clientHeight')
+
+    async def wheel(fraction):
+        y = await page.evaluate('scrollY')
+        pixels = round(fraction * leg_height)
+        await page.mouse.wheel(0, pixels)
+        await page.wait_for_function('y => Math.abs(scrollY - y) <= 1', arg=y + pixels, polling=25)
+        await settle(page)
+        return float(await canvas.get_attribute('data-progress'))
+
+    before = await wheel(-.1)
+    after = await wheel(.2)
+    assert 9.97 < before < 10 < after < 10.03, (before, after)
+    assert abs((10 - before) - (after - 10)) < .002
+    assert await page.locator('#panel-10').evaluate('p=>+p.style.opacity') > .9
+    paused = await wheel(.4)
+    assert abs(paused - 10.5) < .003, paused
+    await page.evaluate('step(45)')
+    assert float(await canvas.get_attribute('data-progress'))==paused
+    assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
+    assert await page.locator('.story-panel').evaluate_all('ps=>ps.every(p=>p.scrollTop===0)')
+
 async def check_explore(page, out, progress):
     canvas = page.locator('#story-three-canvas')
     button = page.locator('#village-look-toggle')
     # Enter midway through the walk to check that the tour can resume between stops.
-    await page.locator('.waypoint').nth(int(progress)).evaluate('(e,t)=>window.scrollBy(0,e.getBoundingClientRect().top+e.clientHeight*t)',progress%1)
+    fraction = progress % 1
+    scroll = math.sqrt(fraction) / (math.sqrt(fraction) + math.sqrt(1 - fraction))
+    await page.locator('.waypoint').nth(int(progress)).evaluate('(e,t)=>window.scrollBy(0,e.getBoundingClientRect().top+e.clientHeight*t)', scroll)
     await settle(page)
     async def pose():
         return await canvas.evaluate('e=>[JSON.parse(e.dataset.cameraEye),e.dataset.modelBounds,e.dataset.projection,e.dataset.progress]')
     saved = await pose()
+    saved_scroll = await page.evaluate('scrollY')
     assert abs(float(saved[3])-progress)<.002
     assert await button.inner_text()=='Explore village'
     await button.click()
@@ -128,6 +158,7 @@ async def check_explore(page, out, progress):
     await page.evaluate('step(1)')
     await page.evaluate('step(1,1201)')
     assert await pose()==saved
+    assert abs(await page.evaluate('scrollY') - saved_scroll) <= 1
     assert await button.inner_text()=='Explore village'
     print('PASS first-person movement and return to fractional tour pose',flush=True)
 
@@ -240,15 +271,7 @@ async def main(url,out):
         await page.evaluate('step(1,1600)');assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
         assert abs(float(await page.locator('#story-three-canvas').get_attribute('data-progress'))-10)<.001
         assert await page.evaluate('document.activeElement.id')=='title-10'
-        # A wheel gesture over text scrolls the document and camera, not the card.
-        await page.mouse.move(180,250);await page.mouse.wheel(0,-900);await page.wait_for_timeout(300);await settle(page)
-        canvas=page.locator('#story-three-canvas')
-        paused=float(await canvas.get_attribute('data-progress'))
-        assert abs(paused-(10-900/(3.4*852)))<.005,paused
-        await page.evaluate('step(45)')
-        assert float(await canvas.get_attribute('data-progress'))==paused
-        assert await page.locator('#about-tour').get_attribute('data-camera-moving')=='false'
-        assert await page.locator('.story-panel').evaluate_all('ps=>ps.every(p=>p.scrollTop===0)')
+        await check_scroll_braking(page)
         await check_explore(page,out,9.7)
         await page.locator('#village-view-toggle').click();assert await page.locator('#about-tour').get_attribute('data-renderer')=='fallback'
         await page.locator('#village-view-toggle').click();await settle(page);assert await page.locator('#about-tour').get_attribute('data-renderer')=='three-village'
