@@ -2619,19 +2619,24 @@ pub async fn cleanup_expired_auth_states(
 
 // ── Session queries ─────────────────────────────────────────────────────────
 
-/// Insert a new session row and return it.
+/// Create a session and record the login on the user in one statement.
 pub async fn insert_session(
     executor: impl sqlx::Executor<'_, Database = Postgres>,
     user_id: Uuid,
     expires_at: DateTime<Utc>,
 ) -> Result<Session, DbError> {
-    sqlx::query_as!(
-        Session,
-        "INSERT INTO sessions (user_id, expires_at) VALUES ($1, $2)
+    sqlx::query_as::<_, Session>(
+        "WITH signed_in AS (
+             UPDATE users SET last_login_at = GREATEST(last_login_at, statement_timestamp())
+             WHERE id = $1
+             RETURNING id
+         )
+         INSERT INTO sessions (user_id, created_at, expires_at)
+         SELECT id, statement_timestamp(), $2 FROM signed_in
          RETURNING id, user_id, created_at, expires_at, refreshed_at, revoked",
-        user_id,
-        expires_at,
     )
+    .bind(user_id)
+    .bind(expires_at)
     .fetch_one(executor)
     .await
     .map_err(DbError::Query)
@@ -3610,6 +3615,25 @@ pub async fn get_user_by_username(
     sqlx::query_as::<_, User>(&format!(
         "SELECT u.id, u.username, u.display_name, u.email, {} AS avatar_url, \
              u.bio, u.created_at, u.updated_at FROM users u WHERE (u.username || '') = $1",
+        media_assets::managed_avatar_url_projection("u")
+    ))
+    .bind(username)
+    .fetch_optional(executor)
+    .await
+    .map_err(DbError::Query)
+}
+
+/// Read exactly the fields shown on a public profile. Expose the UTC date only.
+pub async fn get_public_user_profile(
+    executor: impl sqlx::Executor<'_, Database = Postgres>,
+    username: &str,
+) -> Result<Option<crate::types::UserProfile>, DbError> {
+    sqlx::query_as::<_, crate::types::UserProfile>(&format!(
+        "SELECT u.id, u.username, u.display_name, {} AS avatar_url, u.bio,
+                (u.last_login_at AT TIME ZONE 'UTC')::date AS last_login_date,
+                (SELECT COUNT(*) FROM recipes r
+                 WHERE r.user_id = u.id AND r.visibility = 'public') AS public_recipe_count
+         FROM users u WHERE (u.username || '') = $1",
         media_assets::managed_avatar_url_projection("u")
     ))
     .bind(username)

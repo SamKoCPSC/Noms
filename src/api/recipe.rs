@@ -1640,23 +1640,10 @@ pub async fn get_user_profile(
 ) -> Result<crate::types::UserProfile, ServerFnError> {
     let pool = crate::db::get_pool();
 
-    let user = crate::db::get_user_by_username(&pool, &username)
+    crate::db::get_public_user_profile(&pool, &username)
         .await
         .map_err(|e| ServerFnError::new(e.to_string()))?
-        .ok_or_else(|| ServerFnError::new("User not found"))?;
-
-    let public_count = crate::db::count_user_public_recipes(&pool, user.id)
-        .await
-        .map_err(|e| ServerFnError::new(e.to_string()))?;
-
-    Ok(crate::types::UserProfile {
-        id: user.id,
-        username: user.username,
-        display_name: user.display_name,
-        avatar_url: user.avatar_url,
-        bio: user.bio,
-        public_recipe_count: public_count,
-    })
+        .ok_or_else(|| ServerFnError::new("User not found"))
 }
 
 /// Get a user's public recipes by username with pagination. No authentication required.

@@ -168,7 +168,7 @@ fn now_secs() -> u64 {
 
 /// Create a signed JWT session token for the given user.
 ///
-/// Inserts a row into the `sessions` table, then returns a compact JWT
+/// Creates a session and records the login, then returns a compact JWT
 /// with `sub = session_id`. The JWT is valid for [`SESSION_LIFETIME_SECS`] seconds.
 pub async fn create_session(
     pool: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
@@ -738,14 +738,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_session_inserts_db_row() {
+    async fn create_session_records_public_login_date_that_survives_refresh_and_cleanup() {
         with_secret(TEST_SECRET);
         let (_db, pool) = test_utils::setup_test_db().await;
         let u = test_utils::uid();
-
+        let username = format!("dbrow_{u}");
         let user = crate::db::insert_user(
             &pool,
-            &format!("dbrow_{u}"),
+            &username,
             "DB Row User",
             &format!("dbrow{u}@example.com"),
             None,
@@ -753,15 +753,62 @@ mod tests {
         .await
         .unwrap();
 
-        let _token = create_session(&pool, user.id).await.unwrap();
+        let before_login = crate::db::get_public_user_profile(&pool, &username)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(before_login.last_login_date, None);
 
-        // Verify a row exists in the sessions table
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sessions WHERE user_id = $1")
+        create_session(&pool, user.id).await.unwrap();
+        let session: crate::db::Session = sqlx::query_as(
+            "SELECT id, user_id, created_at, expires_at, refreshed_at, revoked
+             FROM sessions WHERE user_id = $1",
+        )
+        .bind(user.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        let profile = crate::db::get_public_user_profile(&pool, &username)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            profile.last_login_date,
+            Some(session.created_at.date_naive())
+        );
+
+        // Anchor the timestamp in the past so an accidental refresh write
+        // would be visible even when both operations run on the same UTC day.
+        let earlier_login = session.created_at - chrono::Duration::days(2);
+        sqlx::query("UPDATE users SET last_login_at = $1 WHERE id = $2")
+            .bind(earlier_login)
             .bind(user.id)
-            .fetch_one(&pool)
+            .execute(&pool)
             .await
             .unwrap();
-        assert_eq!(count, 1);
+        let refreshed = crate::db::refresh_session(&pool, session.id, session.expires_at)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(refreshed.created_at, session.created_at);
+        sqlx::query("DELETE FROM sessions WHERE id = $1")
+            .bind(session.id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let profile = crate::db::get_public_user_profile(&pool, &username)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(profile.last_login_date, Some(earlier_login.date_naive()));
+
+        create_session(&pool, user.id).await.unwrap();
+        let profile = crate::db::get_public_user_profile(&pool, &username)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(profile.last_login_date > Some(earlier_login.date_naive()));
     }
 
     #[tokio::test]

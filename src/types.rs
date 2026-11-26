@@ -1044,8 +1044,9 @@ pub struct CollectionContents {
     pub recipes: CollectionRecipeList,
 }
 
-/// Public user profile with recipe count.
+/// Public user profile with recipe count and UTC login date.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "server", derive(sqlx::FromRow))]
 pub struct UserProfile {
     pub id: Uuid,
     pub username: String,
@@ -1053,6 +1054,8 @@ pub struct UserProfile {
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
     pub public_recipe_count: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_login_date: Option<chrono::NaiveDate>,
 }
 
 // ── Search contract ────────────────────────────────────────────────────────
