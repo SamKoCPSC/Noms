@@ -19,6 +19,8 @@ camera turns toward the path over the first 36% of each leg and toward the
 destination over the last 36%. Reversing a scroll eases from the current bearing.
 Native scrolling over the scene or cards controls the camera directly, including
 when paused between sections. Each full leg spans 3.4 viewport heights of scrolling.
+The camera slows near each section in both directions, so a small scroll past a
+waypoint keeps its card in view. Continued scrolling carries it into the next leg.
 Explore village places the eyes 1.65 m above the floor in each room’s original
 model scale. On the approach, eye height blends smoothly between the meadow
 and the enlarged room over the width of that room. Visitors can walk the paths,

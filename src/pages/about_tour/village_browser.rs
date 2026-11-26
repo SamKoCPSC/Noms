@@ -53,6 +53,21 @@ const MODELS: [&str; 12] = [
 const TRANSITION_MS: f64 = 6400.;
 const OPENING_MS: f64 = 4800.;
 
+// Give the camera more scroll distance near both ends of each leg. The
+// normalized weights keep the midpoint fixed and let a gesture cross a stop.
+fn camera_fraction(scroll: f64) -> f64 {
+    let from = scroll.powi(2);
+    let to = (1. - scroll).powi(2);
+    from / (from + to)
+}
+
+// Invert the same weights when restoring a fractional pose after Explore or resize.
+fn scroll_fraction(camera: f64) -> f64 {
+    let from = camera.sqrt();
+    let to = (1. - camera).sqrt();
+    from / (from + to)
+}
+
 #[derive(Clone, Copy)]
 enum OpeningShot {
     Wide,
@@ -627,7 +642,7 @@ impl State {
         let anchor = self.anchors[index].get_bounding_client_rect();
         let y = self.window.scroll_y().unwrap_or(0.)
             + anchor.top()
-            + anchor.height() * self.target.fract();
+            + anchor.height() * scroll_fraction(self.target.fract());
         self.expected_scroll = Some(y);
         let options = web_sys::ScrollToOptions::new();
         options.set_top(y);
@@ -642,8 +657,8 @@ impl State {
             .collect();
         for i in 0..tops.len() - 1 {
             if tops[i + 1] > 0. {
-                return (i as f64 + (-tops[i] / (tops[i + 1] - tops[i]).max(1.)).clamp(0., 1.))
-                    .clamp(0., (IDS.len() - 1) as f64);
+                let scroll = (-tops[i] / (tops[i + 1] - tops[i]).max(1.)).clamp(0., 1.);
+                return i as f64 + camera_fraction(scroll);
             }
         }
         (IDS.len() - 1) as f64
