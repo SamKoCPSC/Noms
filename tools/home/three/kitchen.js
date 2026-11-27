@@ -64,6 +64,7 @@ function lightStudio(renderer, scene, root, sceneName) {
   });
   let key;
   if (sceneName === 'pandacotta-market-stand') key = lightMarket(renderer, scene);
+  else if (sceneName === 'cattatouille-picnic') key = lightPicnic(renderer, scene);
   else if (sceneName === 'signature-recipe') key = lightPlating(renderer, scene);
   else key = lightDeskOrBanquet(renderer, scene, sceneName === 'pandacotta-banquet');
   return {dispose() {key.shadow.dispose(); environment.dispose();}};
@@ -116,6 +117,24 @@ function lightMarket(renderer, scene) {
   aimedLight(scene, 1.6, 0xe2edff, .78, 3.2, 4.5, 4.5);
   aimedLight(scene, 1.6, 0xffe3c6, 1.3, 1.4, 6, -3);
   aimedLight(scene, 1.6, 0xfff2dd, .37, -.5, .6, 6);
+  return key;
+}
+
+function lightPicnic(renderer, scene) {
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = .91;
+  scene.environmentIntensity = .66;
+  scene.add(new THREE.HemisphereLight(0xfff6e8, 0xbca585, .4));
+  const key = aimedLight(scene, 2, 0xfff0df, 2.05, -4.5, 8, 6);
+  key.castShadow = true;
+  Object.assign(key.shadow.camera, {left: -4, right: 4, top: 4, bottom: -4, near: .5, far: 20});
+  key.shadow.camera.updateProjectionMatrix();
+  key.shadow.mapSize.set(512, 512);
+  key.shadow.intensity = .46;
+  key.shadow.normalBias = .009;
+  key.shadow.bias = -.00013;
+  aimedLight(scene, 2, 0xeaf2ff, .85, 4.5, 4, 4);
+  aimedLight(scene, 2, 0xffdec1, .9, 1, 7, -1.4);
   return key;
 }
 
@@ -194,6 +213,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     if (isKitchen) view = kitchenCamera(root);
     else if (sceneName === 'signature-recipe') view = studioCamera([.11, 5.88, 12.7], [0, 2.08, .35], 6.16235, 6.16235 * 876 / 1059);
     else if (sceneName === 'terrimisu-cookie-study') view = studioCamera([1.13, 5.6, 10.9], [0, 2.19, .47], 5.79, 5.06);
+    else if (sceneName === 'cattatouille-picnic') view = studioCamera([-2.4, 7.4, 11.7], [0, 1.68, 0], 7.4, 5.55);
     else if (isMarket) view = studioCamera([.41, 5.13, 13.25], [.16, 2.05, .56], 7.36, 7.36 * 800 / 1152);
     else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
     else if (sceneName === 'owlfredo-kitchen-island') view = studioCamera([3.75, 5.66, 11.4], [0, 2.51, .72], 7.0, 6.45);

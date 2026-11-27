@@ -87,6 +87,11 @@
 .landing-chapter:nth-child(even) .landing-chapter-copy { order: 2; }
 .landing-page .landing-chapter-copy :is(h2,h3) { font-size: 36px; margin-bottom: 20px; }
 .landing-chapter p { max-width: 500px; }
+.landing-anywhere { padding-block: 32px; }
+.landing-anywhere .landing-model { width: min(100%, 28rem); margin-inline: auto; }
+.landing-anywhere .landing-model__viewer { height: auto; aspect-ratio: 4 / 3; }
+.landing-mobile-previews { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); align-items: start; gap: clamp(8px,1vw,16px); padding: clamp(12px,1.5vw,22px); border-radius: 24px; background: var(--landing-surface); box-shadow: var(--landing-inset); }
+.landing-mobile-previews .landing-preview-controls { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--landing-muted); }
 .landing-app-window { background: var(--landing-surface); padding: 13px; border-radius: 20px; box-shadow: var(--landing-raised); border: 1px solid var(--landing-line); }
 .landing-window-bar { display: flex; align-items: center; gap: 5px; padding-bottom: 12px; font-size: 10px; color: var(--landing-muted); }
 .landing-window-bar i { width: 6px; height: 6px; border-radius: 50%; background: var(--landing-line); flex-shrink: 0; }
@@ -111,7 +116,8 @@
 .landing-feature-previews .landing-shot-button { background: var(--landing-bg); box-shadow: var(--landing-inset); }
 .landing-cooking-previews { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); align-items: start; gap: 16px; }
 .landing-cooking-phone { display: grid; justify-items: center; gap: 14px; min-width: 0; }
-.landing-cooking-phone .landing-phone { width: 100%; max-width: 230px; border: 7px solid color-mix(in srgb,var(--landing-muted) 22%,var(--landing-bg)); border-radius: 29px; overflow: hidden; box-shadow: var(--landing-raised); }
+.landing-phone { width: 100%; max-width: 230px; border: 7px solid color-mix(in srgb,var(--landing-muted) 22%,var(--landing-bg)); border-radius: 29px; overflow: hidden; box-shadow: var(--landing-raised); }
+.landing-phone:has(.landing-shot-button:focus-visible) { outline: 3px solid var(--landing-accent); outline-offset: 3px; }
 .landing-cooking-phone .btn { padding-inline: 12px; }
 .landing-phone img { border-radius: 20px; }
 .landing-cooking-frames { position: relative; aspect-ratio: 1/2; }
@@ -189,7 +195,7 @@
     .landing-community { padding-top: 32px; }
     .landing-recipe-tools .landing-feature-previews { grid-template-columns: minmax(0,1fr); }
     .landing-cooking-previews { gap: 10px; }
-    .landing-cooking-phone .landing-phone { border-width: 3px; border-radius: 16px; }
+    .landing-phone { border-width: 3px; border-radius: 16px; }
     .landing-phone img { border-radius: 12px; }
     .landing-page .landing-trust { padding: 28px 24px; margin-block: 30px 45px; }
     .landing-trust-grid { grid-template-columns: 1fr; gap: 25px; margin-top: 30px; }
@@ -221,6 +227,7 @@
 @media (prefers-reduced-motion: reduce) {
     .landing-page *, .landing-page *::before, .landing-page *::after { animation: none !important; transition: none !important; scroll-behavior: auto; }
     .landing-cooking-frames img:not(:first-child) { display: none; }
+    .landing-preview-controls button { display: none; }
 }
 @media (forced-colors: active) {
     .landing-app-window, .landing-phone, .landing-trust { border: 1px solid CanvasText; }

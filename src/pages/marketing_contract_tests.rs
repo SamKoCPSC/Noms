@@ -289,6 +289,28 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
         assert!(intro.contains("Terrimisu tastes cookies from two batches."));
         assert!(intro.contains("loading=\"lazy\""));
         assert!(screenshot.contains("Compare two batches of chocolate chip cookies"));
+        let anywhere = stories
+            .split_once("id=\"landing-anywhere-title\"")
+            .unwrap()
+            .1
+            .split_once("</section>")
+            .unwrap()
+            .0;
+        assert!(anywhere.contains("Use anywhere"));
+        assert!(anywhere.contains("data-scene=\"cattatouille-picnic\""));
+        assert!(anywhere.contains("Cattatouille checks a recipe on his phone"));
+        assert!(anywhere.contains("loading=\"lazy\""));
+        let (_, gallery) = anywhere
+            .split_once("class=\"landing-mobile-previews\"")
+            .unwrap();
+        for title in [
+            "Browse recipes on mobile",
+            "Edit recipes on mobile",
+            "Cook on mobile",
+        ] {
+            assert!(gallery.contains(&format!("Enlarge screenshot: {title}")));
+        }
+        assert!(gallery.contains("Pause cooking preview"));
         let share = chapter("Share your best creations.");
         let (intro, screenshot) = share.split_once("class=\"landing-app-window\"").unwrap();
         assert!(intro.contains("data-scene=\"pandacotta-market-stand\""));
