@@ -6,5 +6,5 @@ Amberlight — https://www.scottbuckley.com.au/library/amberlight/
 Echoes Of Home — https://www.scottbuckley.com.au/library/echoes-of-home/
 Ice Cream — https://www.scottbuckley.com.au/library/ice-cream/
 
-The full mixes were lowered to -32 LUFS integrated loudness with a fixed gain
-per track and re-encoded as smaller MP3s for quiet background playback.
+The full mixes were normalized to -32 LUFS and encoded as smaller MP3s.
+Playback gain was then lowered by 6 dB for quiet background music.
