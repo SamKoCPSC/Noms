@@ -390,6 +390,7 @@ fn LoadingPenguini() -> Element {
     }
 }
 
+const CAT_SONG: Asset = asset!("/assets/about/oiia-spinning-cat.mp3");
 const VILLAGE_BRIDGE: Asset = asset!(
     "/assets/about-three-village.js",
     JsAssetOptions::new().with_minify(false)
@@ -400,6 +401,7 @@ const VILLAGE_LAYOUT: Asset = asset!("/assets/about/village/layout.json");
 // Track regenerated derivatives so incremental builds refresh Manganis URLs.
 const _: &str = include_str!("../../assets/about/village/layout.json");
 const _: &[u8] = include_bytes!("../../assets/about/village/world.glb");
+const _: &[u8] = include_bytes!("../../assets/about/village/tabby.glb");
 const _: &[u8] = include_bytes!("../../assets/about/village/kitchen.glb");
 const _: &[u8] = include_bytes!("../../assets/about/village/library.glb");
 const _: &[u8] = include_bytes!("../../assets/about/village/bedroom.glb");
@@ -413,6 +415,7 @@ const _: &[u8] = include_bytes!("../../assets/about/village/social-kitchen.glb")
 const _: &[u8] = include_bytes!("../../assets/about/village/riverside-campsite.glb");
 const _: &[u8] = include_bytes!("../../assets/about/village/garden.glb");
 
+const VILLAGE_TABBY: Asset = asset!("/assets/about/village/tabby.glb");
 const VILLAGE_WORLD: Asset = asset!("/assets/about/village/world.glb");
 const VILLAGE_KITCHEN: Asset = asset!("/assets/about/village/kitchen.glb");
 const VILLAGE_LIBRARY: Asset = asset!("/assets/about/village/library.glb");
@@ -485,7 +488,7 @@ pub fn About() -> Element {
       PageMeta{title:"About Noms — The Ultimate Recipe Manager", description:"Meet Sam, learn why Noms was created, and explore the philosophy behind an easier way to save, develop and share recipes.",path:"/about"}
       document::Stylesheet{href:TOUR_CSS}
       div{id:"about-tour",class:"about-tour is-reader","data-kitchen-url":KITCHEN_MODEL,"data-kitchen-laptop-url":KITCHEN_LAPTOP,"data-kitchen-cookbook-url":KITCHEN_COOKBOOK,"data-kitchen-surface-color-url":KITCHEN_SURFACE_COLOR,"data-kitchen-surface-normal-url":KITCHEN_SURFACE_NORMAL,
-       "data-village-layout-url":VILLAGE_LAYOUT,"data-village-collision-url":VILLAGE_COLLISION,"data-village-world-url":VILLAGE_WORLD,"data-village-bridge-url":VILLAGE_BRIDGE,
+       "data-cat-song-url":CAT_SONG,"data-village-tabby-url":VILLAGE_TABBY,"data-village-layout-url":VILLAGE_LAYOUT,"data-village-collision-url":VILLAGE_COLLISION,"data-village-world-url":VILLAGE_WORLD,"data-village-bridge-url":VILLAGE_BRIDGE,
     "data-village-kitchen-url":VILLAGE_KITCHEN,
     "data-village-library-url":VILLAGE_LIBRARY,
     "data-village-bedroom-url":VILLAGE_BEDROOM,
