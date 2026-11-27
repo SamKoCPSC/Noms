@@ -168,7 +168,7 @@ fn CommentRow(
                         time { datetime: item.created_at.to_rfc3339(), "{date}" }
                     }
                 } else {
-                    span { class: "discussion-deleted", "Comment deleted" }
+                    span { class: "discussion-deleted", if item.moderation_hidden { "Comment hidden by moderation" } else { "Comment deleted" } }
                 }
                 button {
                     class: "discussion-action discussion-toggle discussion-thread-toggle",
@@ -506,6 +506,7 @@ mod tests {
                 body: Some("Cooking note".into()),
                 version_number: 1,
                 created_at: chrono::Utc::now(),
+                moderation_hidden: false,
                 has_replies: false,
                 like_count: i64::from(liked),
                 liked_by_viewer: liked,
@@ -554,6 +555,7 @@ mod tests {
                 body: Some("Used oat milk.".into()),
                 version_number: 3,
                 created_at: chrono::Utc::now(),
+                moderation_hidden: false,
                 has_replies: true,
                 like_count: 3,
                 liked_by_viewer: false,

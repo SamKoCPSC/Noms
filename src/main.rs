@@ -43,9 +43,10 @@ use components::{AppLayout, ErrorFallback, KitchenLayout};
 use pages::{
     About, CollectionDetail, CollectionEdit, CollectionList, CollectionNew, CommunityHome,
     Dashboard, Explore, GroceryListDetail, GroceryListFromPantry, GroceryListNew, GroceryLists,
-    Home, HowTo, Login, MobileYou, NotFound, Pantry, PantryDetail, PantryNew, RecipeDetail,
-    RecipeDraftEdit, RecipeEdit, RecipeImport, RecipeNew, RecipeVersionDetail, RecipeVersionGraph,
-    Search, SettingsAccounts, SettingsProfile, UserProfile,
+    Home, HowTo, Login, MobileYou, ModerationCase, ModerationQueue, NotFound, Pantry, PantryDetail,
+    PantryNew, RecipeDetail, RecipeDraftEdit, RecipeEdit, RecipeImport, RecipeNew,
+    RecipeVersionDetail, RecipeVersionGraph, Search, SettingsAccounts, SettingsProfile,
+    UserProfile,
 };
 
 // The route inventory is shared by the generated renderer and the raw-query boundary.
@@ -64,6 +65,11 @@ enum GeneratedRoute {
         HowTo {},
         #[route("/login")]
         Login {},
+        #[redirect("/admin", || Self::ModerationQueue { view: None, page: None })]
+        #[route("/admin/moderation/comments?:view&:page")]
+        ModerationQueue { view: Option<String>, page: Option<u32> },
+        #[route("/admin/moderation/comments/:id?:view&:page")]
+        ModerationCase { id: i64, view: Option<String>, page: Option<u32> },
         #[route("/dashboard")]
         Dashboard {},
         #[route("/recipes/new")]

@@ -499,6 +499,7 @@ ON kitchen_profiles (owner_id, (lower(btrim(regexp_replace(name, '[[:space:]]+',
 
 CREATE TABLE IF NOT EXISTS recipe_comments (
     request_id UUID NOT NULL,
+    moderation_hidden BOOLEAN NOT NULL DEFAULT false,
     UNIQUE (author_id, request_id),
     id BIGSERIAL PRIMARY KEY,
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
@@ -533,6 +534,9 @@ CREATE TABLE IF NOT EXISTS comment_review_cases (
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
     comment_id BIGINT NOT NULL,
     status comment_review_status NOT NULL DEFAULT 'collecting',
+    reported_parent_id BIGINT,
+    claimant UUID REFERENCES users(id) ON DELETE SET NULL,
+    revision BIGINT NOT NULL DEFAULT 0,
     queued_at TIMESTAMPTZ,
     resolved_at TIMESTAMPTZ,
     CHECK (resolved_at IS NULL OR queued_at IS NOT NULL)
@@ -541,6 +545,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_comment_review_active
     ON comment_review_cases(comment_id) WHERE resolved_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_comment_review_queue
     ON comment_review_cases(queued_at, id) WHERE queued_at IS NOT NULL AND resolved_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS comment_review_events (
+    id BIGSERIAL PRIMARY KEY,
+    case_id BIGINT NOT NULL REFERENCES comment_review_cases(id) ON DELETE CASCADE,
+    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    action TEXT NOT NULL CHECK (action IN ('claimed','released','upheld','dismissed','upheld and hid comment')),
+    rationale TEXT NOT NULL CHECK (char_length(rationale) <= 2000),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_comment_review_events_case ON comment_review_events(case_id,id);
 
 CREATE TABLE IF NOT EXISTS comment_reports (
     id BIGSERIAL PRIMARY KEY,

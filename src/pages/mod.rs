@@ -1,3 +1,5 @@
+pub(crate) mod admin;
+pub use admin::{ModerationCase, ModerationQueue};
 mod pantry;
 mod pantry_recipes;
 pub use pantry::{Pantry, PantryDetail, PantryNew};
