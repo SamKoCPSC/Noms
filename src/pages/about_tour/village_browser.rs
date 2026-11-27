@@ -468,7 +468,7 @@ fn maybe_load(state: &StateRef) {
             .iter()
             .map(|name| url(&format!("data-village-{name}-url")))
             .collect();
-        (s.canvas.clone(), serde_json::json!({"layout":url("data-village-layout-url"),"collision":url("data-village-collision-url"),"world":url("data-village-world-url"),"models":models}).to_string(), url("data-village-bridge-url"), s.generation)
+        (s.canvas.clone(), serde_json::json!({"layout":url("data-village-layout-url"),"collision":url("data-village-collision-url"),"world":url("data-village-world-url"),"tabby":url("data-village-tabby-url"),"models":models}).to_string(), url("data-village-bridge-url"), s.generation)
     };
     let weak = Rc::downgrade(state);
     wasm_bindgen_futures::spawn_local(async move {

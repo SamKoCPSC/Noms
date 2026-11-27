@@ -8,6 +8,7 @@ import { createWalkingTurn, frameCamera } from './village-camera.js';
 
 import {createFence, createPerimeter} from '../village/perimeter.js';
 import {createCollisionMap} from './village-collision.js';
+import { createVillageCat } from './village-cat.js';
 import { createFirstPersonCamera } from './village-walk.js';
 
 export function createVillage(canvas,catalog) {
@@ -27,7 +28,25 @@ export function createVillage(canvas,catalog) {
  }
  const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
  function disposeRoot(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(o.geometry)geometries.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());textures.forEach(t=>{t.source?.data?.close?.();t.dispose();});materials.forEach(m=>m.dispose());}
- let firstPerson;
+ let firstPerson,cat,solids,catWalk;
+ let loadingCat=false, catLoadFailed=false;
+ async function loadCat(){
+   loadingCat=true;
+   try {
+     const bytes=await fetchAsset(catalog.tabby);
+     const gltf=await loader.parseAsync(bytes,new URL('.',new URL(catalog.tabby,document.baseURI)).href);
+     if(disposed){disposeRoot(gltf.scene);return;}
+     const mesh=gltf.scene.getObjectByName('Tabby');
+     if(!mesh?.isMesh){disposeRoot(gltf.scene);throw Error('Missing tabby mesh');}
+     cat=createVillageCat(scene,camera,canvas,solids,()=>renderer.render(scene,camera),sky,mesh);
+     cat.update(catWalk);
+     if(mesh.visible) renderer.render(scene,camera);
+   } catch(error) {
+     if(!disposed){catLoadFailed=true;console.warn('Village cat could not load',error);}
+   } finally {
+     loadingCat=false;
+   }
+ }
  const walkingTurn = createWalkingTurn();
  const api={
   ready:null,
@@ -37,6 +56,10 @@ export function createVillage(canvas,catalog) {
    const {backwards, offset} = walkingTurn(layout, progress);
    frameCamera(camera,layout,progress,width,height,slot,backwards,openingDistance,look,offset);
    firstPerson(camera,walk);
+   catWalk=walk;
+   if(!walk?.length) catLoadFailed=false;
+   else if(catalog.tabby && !cat && !loadingCat && !catLoadFailed) void loadCat();
+   cat?.update(walk);
    renderer.render(scene,camera);
    canvas.dataset.progress=String(progress);canvas.dataset.renderer='three-village';canvas.dataset.ready='true';canvas.dataset.calls=String(renderer.info.render.calls);
    canvas.dataset.cameraEye=JSON.stringify(camera.position.toArray());canvas.dataset.projection=JSON.stringify(camera.projectionMatrix.elements);
@@ -45,7 +68,7 @@ export function createVillage(canvas,catalog) {
    canvas.dataset.modelBounds=JSON.stringify([Math.min(...projected.map(p=>p[0])),Math.min(...projected.map(p=>p[1])),Math.max(...projected.map(p=>p[0])),Math.max(...projected.map(p=>p[1]))]);
    return true;
   },
-  dispose(){if(disposed)return;disposed=true;controllers.forEach(c=>c.abort());roots.forEach(disposeRoot);roots.length=0;disposeRoot(sky);environment?.dispose();renderer.dispose();canvas.dataset.ready='false';}
+  dispose(){if(disposed)return;disposed=true;cat?.dispose();controllers.forEach(c=>c.abort());roots.forEach(disposeRoot);roots.length=0;disposeRoot(sky);environment?.dispose();renderer.dispose();canvas.dataset.ready='false';}
  };
  canvas.dataset.renderer='three-village';canvas.dataset.animations='0';canvas.dataset.bakedShadows='true';canvas.dataset.totalModels=String(catalog.models.length+1);canvas.dataset.ready='false';notify();
  api.ready=(async()=>{
@@ -54,7 +77,8 @@ export function createVillage(canvas,catalog) {
    layout=villageLayout;if(disposed)throw new DOMException('Disposed','AbortError');
    if(layout.stops.length!==catalog.models.length)throw Error('Village/story mismatch');
    const perimeter=createPerimeter(layout.walk.outline);
-   firstPerson=createFirstPersonCamera(layout,perimeter,createCollisionMap(collision));
+   solids=createCollisionMap(collision);
+   firstPerson=createFirstPersonCamera(layout,perimeter,solids);
    const fence=createFence(perimeter,layout.walk);
    scene.add(fence);roots.push(fence);
    const settings=layout.lighting;renderer.toneMappingExposure=2**settings.exposure;
