@@ -108,8 +108,6 @@
     .landing-recipe-tools .landing-feature-previews { align-items: stretch; }
     .landing-recipe-tools .landing-feature-previews .landing-shot-button img { aspect-ratio: 4 / 3; object-fit: contain; }
 }
-.landing-features-heading { display: flex; align-items: center; gap: 12px; }
-.landing-features-heading .brand-mark { flex: none; }
 .landing-feature-previews .landing-shot-button { background: var(--landing-bg); box-shadow: var(--landing-inset); }
 .landing-cooking-previews { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); align-items: start; gap: 16px; }
 .landing-cooking-phone { display: grid; justify-items: center; gap: 14px; min-width: 0; }
