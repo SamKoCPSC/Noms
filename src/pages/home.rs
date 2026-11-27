@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::auth::context::use_auth;
-use crate::components::base::{BrandMark, SharedModal};
+use crate::components::base::SharedModal;
 use crate::components::informational::PageMeta;
 use crate::Route;
 
@@ -280,10 +280,7 @@ pub fn Home() -> Element {
                 }
                 section { class: "landing-chapter landing-feature-section landing-recipe-tools", id: "landing-features", aria_labelledby: "landing-features-title",
                     div { class: "landing-chapter-copy",
-                        h2 { id: "landing-features-title", class: "landing-features-heading",
-                            BrandMark {}
-                            "Recipe tools"
-                        }
+                        h2 { id: "landing-features-title", "Recipe tools" }
                         FeatureDescriptions { features: RECIPE_TOOLS }
                     }
                     FeaturePreviews { features: RECIPE_TOOLS }
