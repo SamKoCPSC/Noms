@@ -5,6 +5,8 @@ use std::f32::consts::{PI, TAU};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{KeyboardEvent, PointerEvent};
 
+const LOOK_SENSITIVITY: f32 = 1.0 / 3.0;
+
 #[derive(Default)]
 pub(super) struct Look {
     pub(super) walk: Walk,
@@ -21,8 +23,8 @@ impl Look {
 
     fn turn(&mut self, yaw: f32, tilt: f32) {
         if !self.returning {
-            self.yaw = (self.yaw + yaw + PI).rem_euclid(TAU) - PI;
-            self.tilt = (self.tilt + tilt).clamp(-1., 1.);
+            self.yaw = (self.yaw + yaw * LOOK_SENSITIVITY + PI).rem_euclid(TAU) - PI;
+            self.tilt = (self.tilt + tilt * LOOK_SENSITIVITY).clamp(-1., 1.);
         }
     }
 }
