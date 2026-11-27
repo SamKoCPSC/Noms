@@ -206,6 +206,35 @@ async def main(args):
         await check_chapter_layout(page, history, cookies, 8/7, args.output, 'terrimisu-cookie-study')
         await page.evaluate('window.oldCookies=document.querySelector("#landing-terrimisu-cookie-study-canvas")')
         print('PASS cookie tasting poses, loop, independent pause, and history chapter layout', flush=True)
+        anywhere = page.get_by_role('region', name='Use anywhere')
+        gallery = anywhere.locator('.landing-mobile-previews')
+        for title in ('Browse recipes on mobile', 'Edit recipes on mobile', 'Cook on mobile'):
+            thumbnail = gallery.get_by_role('button', name=f'Enlarge screenshot: {title}')
+            await thumbnail.click()
+            await expect(page.get_by_role('dialog', name=title)).to_be_visible()
+            await page.keyboard.press('Escape')
+            await expect(thumbnail).to_be_focused()
+        await gallery.get_by_role('button', name='Pause cooking preview').click()
+        await expect(gallery.locator('.landing-cooking-frames')).to_have_class('landing-cooking-frames is-paused')
+        await expect(cooking.get_by_role('button', name='Pause cooking preview')).to_have_attribute('aria-pressed', 'false')
+        picnic = anywhere.locator('#landing-cattatouille-picnic')
+        picnic_canvas = picnic.locator('canvas')
+        picnic_button = picnic.get_by_role('button')
+        await picnic.scroll_into_view_if_needed()
+        await ready(page, '#landing-cattatouille-picnic')
+        await expect(picnic_button).to_have_attribute('aria-label', 'Pause picnic animation')
+        duration = float(await picnic_canvas.get_attribute('data-duration'))
+        assert abs(duration - 2111 / 24) < .001
+        await page.evaluate('step(3)')
+        start = float(await picnic_canvas.get_attribute('data-time'))
+        await page.evaluate('ms => step(1, ms)', duration * 1000)
+        assert abs(float(await picnic_canvas.get_attribute('data-time')) - start) < .005
+        await picnic_button.click()
+        await page.evaluate('step(2)')
+        held = await picnic_canvas.get_attribute('data-time')
+        await page.evaluate('step(4)')
+        assert await picnic_canvas.get_attribute('data-time') == held
+        await picnic_canvas.evaluate('c => window.oldPicnic = c')
         # A live preference change stops motion; explicit Play still works.
         await page.emulate_media(reduced_motion='reduce');await page.evaluate('paint()')
         await expect(control).to_have_attribute('aria-label','Play kitchen animation');await page.evaluate('step(3)')
@@ -217,6 +246,7 @@ async def main(args):
         await page.evaluate('window.oldKitchen=document.querySelector("#landing-kitchen-canvas")')
         await page.locator('.landing-more-links a[href="/how-to"]').click();await page.wait_for_selector('#landing-kitchen',state='detached')
         assert await page.evaluate('oldKitchen.dataset.disposed')=='true'
+        assert await page.evaluate('oldPicnic.dataset.disposed')=='true'
         assert await page.evaluate('oldCookies.dataset.disposed')=='true'
         assert await page.evaluate('oldIsland.dataset.disposed')=='true'
         assert await page.evaluate('oldDesk.dataset.disposed')=='true'
@@ -225,6 +255,14 @@ async def main(args):
         assert await page.locator('#landing-kitchen-canvas').count()==1
         assert await page.locator('#landing-kitchen button').get_attribute('aria-label')=='Play kitchen animation'
         print('PASS offscreen suspension, reduced motion, route cleanup/remount',flush=True)
+        previous_picnic_loads = sum('cattatouille-picnic' in url for url in model_requests)
+        await picnic.scroll_into_view_if_needed()
+        await expect(picnic_button).to_have_attribute('aria-label', 'Play picnic animation')
+        await expect(picnic.locator('img')).to_be_visible()
+        assert sum('cattatouille-picnic' in url for url in model_requests) == previous_picnic_loads
+        await picnic_button.click()
+        await ready(page, '#landing-cattatouille-picnic')
+        assert sum('cattatouille-picnic' in url for url in model_requests) == previous_picnic_loads + 1
         previous_cookie_loads = sum('terrimisu-cookie-study' in url for url in model_requests)
         await cookies.scroll_into_view_if_needed()
         await expect(cookie_button).to_have_attribute('aria-label', 'Play cookie tasting animation')
@@ -253,6 +291,7 @@ async def main(args):
         await page.route('**/*recipe-desk*.glb',lambda r:r.abort())
         await page.route('**/*pandacotta-banquet*.glb',lambda r:r.abort())
         await page.route('**/*terrimisu-cookie-study*.glb',lambda r:r.abort())
+        await page.route('**/*cattatouille-picnic*.glb',lambda r:r.abort())
         await page.route('**/*penguini-kitchen*.glb',lambda r:r.abort())
         await page.goto(args.url);await page.wait_for_selector('#landing-kitchen[data-state="fallback"]',timeout=120000)
         assert await page.locator('#landing-kitchen img').is_visible()
@@ -269,6 +308,9 @@ async def main(args):
         await page.locator('#landing-terrimisu-cookie-study').scroll_into_view_if_needed()
         await expect(page.locator('#landing-terrimisu-cookie-study')).to_have_attribute('data-state','fallback')
         await expect(page.locator('#landing-terrimisu-cookie-study img')).to_be_visible()
+        await page.locator('#landing-cattatouille-picnic').scroll_into_view_if_needed()
+        await expect(page.locator('#landing-cattatouille-picnic')).to_have_attribute('data-state','fallback')
+        await expect(page.locator('#landing-cattatouille-picnic img')).to_be_visible()
         await failed.close()
         nojs=await browser.new_context(java_script_enabled=False);page=await nojs.new_page();await page.goto(args.url)
         assert await page.locator('#landing-kitchen img').is_visible()
@@ -276,6 +318,7 @@ async def main(args):
         assert await page.locator('#landing-pandacotta-banquet img').is_visible()
         assert await page.locator('#landing-owlfredo-kitchen-island img').is_visible()
         assert await page.locator('#landing-terrimisu-cookie-study img').is_visible()
+        assert await page.locator('#landing-cattatouille-picnic img').is_visible()
         assert await page.locator('.landing-recipe-search input').is_visible()
         print('PASS context loss, failed asset, and no-JavaScript fallback',flush=True)
         await browser.close()

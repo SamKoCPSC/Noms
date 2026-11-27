@@ -190,7 +190,6 @@ fn FeaturePreviews(features: &'static [Feature]) -> Element {
 #[component]
 pub fn Home() -> Element {
     let auth = use_auth();
-    let mut paused = use_signal(|| false);
     rsx! {
         document::Link { rel: "stylesheet", href: HOME_CSS }
         PageMeta {
@@ -259,17 +258,31 @@ pub fn Home() -> Element {
                             size: (440, 732),
                         }
                         div { class: "landing-cooking-phone",
-                            LandingScreenshot {
-                                source: COOK_ONE, title: "Cook on mobile", caption: "Miso mushroom ramen in cooking mode.",
-                                size: (390, 780), phone: true, animate: true, paused: paused(),
-                            }
-                            button { class: "btn btn-secondary", r#type: "button", aria_pressed: paused(), onclick: move |_| paused.toggle(),
-                                if paused() { "Play cooking preview" } else { "Pause cooking preview" }
-                            }
+                            CookingPreview {}
                         }
                     }
                 }
                 LandingChapter { story: VERSION_HISTORY_STORY }
+                section { class: "landing-chapter landing-anywhere", aria_labelledby: "landing-anywhere-title",
+                    div { class: "landing-chapter-copy",
+                        h2 { id: "landing-anywhere-title", "Use anywhere" }
+                        p { "Take your recipe book along. Look up ingredients and follow the steps on your phone, even at a picnic." }
+                        HomeScene { scene: Scene::Picnic }
+                    }
+                    div { class: "landing-mobile-previews",
+                        LandingScreenshot {
+                            source: asset!("/assets/landing/mobile-browse.webp"), title: "Browse recipes on mobile",
+                            caption: "The mobile Explore page with recipe search, tags, and community recipes.",
+                            size: (390, 780), phone: true,
+                        }
+                        LandingScreenshot {
+                            source: asset!("/assets/landing/mobile-edit.webp"), title: "Edit recipes on mobile",
+                            caption: "Editing the name and description of a caramelized onion and mushroom burger draft.",
+                            size: (390, 780), phone: true,
+                        }
+                        CookingPreview { hint: "Select a screen to enlarge it." }
+                    }
+                }
                 section { class: "landing-chapter landing-feature-section", aria_labelledby: "landing-pantry-title",
                     div { class: "landing-chapter-copy",
                         h2 { id: "landing-pantry-title", "Kitchen Pantry" }
@@ -368,6 +381,23 @@ fn LandingActions(
             }
         }
         p { class: "landing-tiny", "Free to use · Browse public recipes without an account" }
+    }
+}
+
+#[component]
+fn CookingPreview(hint: Option<&'static str>) -> Element {
+    let mut paused = use_signal(|| false);
+    rsx! {
+        LandingScreenshot {
+            source: COOK_ONE, title: "Cook on mobile", caption: "Miso mushroom ramen in cooking mode.",
+            size: (390, 780), phone: true, animate: true, paused: paused(),
+        }
+        div { class: "landing-preview-controls",
+            if let Some(hint) = hint { span { "{hint}" } }
+            button { class: "btn btn-secondary", r#type: "button", aria_pressed: paused(), onclick: move |_| paused.toggle(),
+                if paused() { "Play cooking preview" } else { "Pause cooking preview" }
+            }
+        }
     }
 }
 
