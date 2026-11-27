@@ -26,7 +26,11 @@ export function createCatPartyLights(scene, sky, home, camera) {
       x: 0.4 + 1.65 * Math.floor(i / 2),
       z: (i % 2 ? 1 : -1) * (3.5 + 0.32 * Math.floor(i / 2)),
       bank: 'wings'
-    }))
+    })),
+    ...Array.from({ length: 10 }, (_, i) => {
+      const angle = (i + 0.25) * 2 * Math.PI / 10;
+      return { x: 3.2 * Math.cos(angle), z: 3.2 * Math.sin(angle), angle, bank: 'ring' };
+    })
   ];
   const beams = fixtures.map(({ x, z, bank }, i) => {
     const material = new THREE.ShaderMaterial({
@@ -41,7 +45,7 @@ export function createCatPartyLights(scene, sky, home, camera) {
         varying vec3 beamCoords;
         void main() {
           vec3 p = position;
-          float width = mix(0.12, 4.8, uv.y);
+          float width = mix(0.12, 9.6, uv.y);
           p.x *= width;
           beamCoords = vec3(2. * p.x, width, uv.y);
           p.y *= 7.;
@@ -71,6 +75,7 @@ export function createCatPartyLights(scene, sky, home, camera) {
     beam.position.set(x, -0.13, z);
     if (bank === 'fan') beam.scale.set(0.62, 1.35, 1);
     if (bank === 'wings') beam.scale.set(0.44, 1.15, 1);
+    if (bank === 'ring') beam.scale.set(0.30, 0.66, 1);
     rig.add(beam);
     return beam;
   });
@@ -115,9 +120,9 @@ export function createCatPartyLights(scene, sky, home, camera) {
         THREE.MathUtils.clamp(beat - 16, 0, 24) / 2 +
         Math.max(0, beat - 40);
       beams.forEach((beam, i) => {
-        const { z, bank } = fixtures[i];
+        const { z, bank, angle } = fixtures[i];
         // Stagger the accents across the stage; each beam holds its hue between hits.
-        const cue = colorSteps + (5 - z) * 0.09;
+        const cue = colorSteps + (bank === 'ring' ? angle / (2 * Math.PI) : (5 - z) * 0.09);
         const step = Math.floor(cue);
         const phase = cue - step;
         const previous = (i + step) % colors.length;
@@ -132,6 +137,11 @@ export function createCatPartyLights(scene, sky, home, camera) {
           axis.set(-0.15, 1, z * spread + 0.35 * Math.sin(sweep + z * 0.15));
           const chase = 0.5 + 0.5 * Math.cos((beat * Math.PI) / 2 - z * 0.85);
           uniforms.strength.value = envelope * (0.4 + 0.38 * flight + 0.22 * chase);
+        } else if (bank === 'ring') {
+          // Tip the short beams outward to leave the dancers visible in the center.
+          const heading = angle + 0.48 * Math.sin(sweep + angle);
+          axis.set(0.58 * Math.cos(heading), 1, 0.58 * Math.sin(heading));
+          uniforms.strength.value = envelope * (0.38 + 0.24 * accent + 0.22 * flight);
         } else if (bank === 'wings') {
           // Cross the sky from opposite sides above the smoke jets.
           axis.set(0.28 + 0.48 * Math.sin(wave), 1, -Math.sign(z) * (0.8 + 0.5 * Math.cos(wave)));

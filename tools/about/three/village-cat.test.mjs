@@ -165,8 +165,13 @@ test('nearby taps unlock the song on the third interaction and restore the tour 
   const openingDensity = smoke.material.uniforms.density.value;
   assert.ok(openingDensity > 0);
   const beams = rig.children.filter((child) => child.isMesh && child !== smoke);
-  assert.equal(beams.length, 18);
-  const backBeam = beams.at(-1);
+  assert.equal(beams.length, 28);
+  const ringLights = beams.slice(18);
+  function quadrants(positions) {
+    return new Set(positions.map(({x, z}) => Math.sign(x) + ',' + Math.sign(z))).size;
+  }
+  assert.equal(quadrants(ringLights.map((light) => light.position)), 4);
+  const backBeam = beams[17];
   const openingStrength = backBeam.material.uniforms.strength.value;
   assert.ok(scene.fog.far < daylight.far);
   assert.ok(!sky.material.uniforms.top.value.equals(dayTop));
@@ -182,14 +187,38 @@ test('nearby taps unlock the song on the third interaction and restore the tour 
   assert.ok(!beam.material.uniforms.tint.value.equals(openingColor));
   assert.ok(backBeam.material.uniforms.strength.value > openingStrength);
   assert.ok(smoke.material.uniforms.density.value > openingDensity);
-  assert.equal(dancers.count, 4);
+  assert.equal(dancers.count, 14);
   const aloft = cat.position.clone();
   callback();
   assert.ok(cat.position.equals(aloft));
   audio.currentTime = 22;
   callback();
-  assert.equal(dancers.count, 8);
-  assert.ok(dancers.position.equals(cat.position));
+  assert.equal(dancers.count, 18);
+  assert.ok(dancers.position.equals(perch));
+  function positions() {
+    const matrix = new THREE.Matrix4();
+    return Array.from({length: dancers.count}, (_, i) => {
+      dancers.getMatrixAt(i, matrix);
+      return new THREE.Vector3().setFromMatrixPosition(matrix);
+    });
+  }
+  const before = positions();
+  assert.equal(quadrants(before.slice(4, 12)), 4);
+  callback();
+  assert.deepEqual(positions(), before);
+  audio.currentTime += 0.4;
+  callback();
+  const after = positions();
+  for (let i = 4; i < 12; i++) {
+    assert.equal(after[i].x, before[i].x);
+    assert.equal(after[i].z, before[i].z);
+  }
+  // Four orbit in opposite directions while the remaining two cross the perch.
+  for (let i = 12; i < 18; i++) {
+    const turn = before[i].x * after[i].z - before[i].z * after[i].x;
+    assert.ok(after[i].distanceTo(before[i]) > 0.1);
+    if ((i - 12) % 3 !== 2) assert.ok(i % 2 ? turn < 0 : turn > 0);
+  }
   audio.currentTime = audio.duration - 0.1;
   callback();
   assert.ok(cat.position.distanceTo(perch) < 0.01);

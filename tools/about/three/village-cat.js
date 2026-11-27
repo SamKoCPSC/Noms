@@ -172,7 +172,7 @@ export function createVillageCat(scene, camera, canvas, collision, redraw, sky, 
         restoreAmbient = true;
       }
       if (!reduced && !frame) {
-        dancers = createCatDancers(scene, cat);
+        dancers = createCatDancers(scene, cat, home);
         lights = createCatPartyLights(scene, sky, home, camera);
         animate();
       }
