@@ -8,6 +8,7 @@ pub struct Comment {
     pub author_id: Option<Uuid>,
     pub author: Option<String>,
     pub body: Option<String>,
+    pub moderation_hidden: bool,
     pub version_number: i32,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub has_replies: bool,
@@ -28,16 +29,18 @@ pub async fn thread(
 }
 
 #[cfg(feature = "server")]
-async fn read_thread(
+pub(super) async fn read_thread(
     pool: &sqlx::PgPool,
     recipe: Uuid,
     parent: Option<i64>,
     after: i64,
     viewer: Option<Uuid>,
 ) -> Result<Vec<Comment>, ServerFnError> {
-    sqlx::query_as::<_, Comment>("SELECT c.id,c.author_id,u.username AS author,c.body,c.version_number,c.created_at,
-        (SELECT count(*) FROM recipe_comment_likes l WHERE l.comment_id=c.id) AS like_count,
-        EXISTS(SELECT 1 FROM recipe_comment_likes l WHERE l.comment_id=c.id AND l.user_id=$4) AS liked_by_viewer,
+    sqlx::query_as::<_, Comment>("SELECT c.id, CASE WHEN NOT c.moderation_hidden THEN c.author_id END AS author_id,
+        CASE WHEN NOT c.moderation_hidden THEN u.username END AS author,
+        CASE WHEN NOT c.moderation_hidden THEN c.body END AS body,c.moderation_hidden,c.version_number,c.created_at,
+        (SELECT count(*) FROM recipe_comment_likes l WHERE l.comment_id=c.id AND NOT c.moderation_hidden) AS like_count,
+        EXISTS(SELECT 1 FROM recipe_comment_likes l WHERE l.comment_id=c.id AND NOT c.moderation_hidden AND l.user_id=$4) AS liked_by_viewer,
         EXISTS(SELECT 1 FROM recipe_comments child WHERE child.recipe_id=c.recipe_id AND child.parent_id=c.id) AS has_replies
         FROM recipe_comments c JOIN recipes r ON r.id=c.recipe_id LEFT JOIN users u ON u.id=c.author_id
         WHERE c.recipe_id=$1 AND r.visibility='public' AND c.parent_id IS NOT DISTINCT FROM $2 AND c.id>$3 ORDER BY c.id LIMIT 21")
@@ -124,12 +127,12 @@ async fn apply(
             .map_err(failure)?;
         }
         Change::Edit { id, body } => {
-            sqlx::query("UPDATE recipe_comments SET body=$4 WHERE recipe_id=$1 AND id=$2 AND author_id=$3 RETURNING id")
+            sqlx::query("UPDATE recipe_comments SET body=$4 WHERE NOT moderation_hidden AND recipe_id=$1 AND id=$2 AND author_id=$3 RETURNING id")
                 .bind(recipe).bind(id).bind(user).bind(validate(body)?).fetch_one(&mut *tx).await.map_err(failure)?;
         }
         Change::SetLike { id, liked } => {
             sqlx::query(
-                "SELECT id FROM recipe_comments WHERE id=$1 AND recipe_id=$2 AND body IS NOT NULL",
+                "SELECT id FROM recipe_comments WHERE id=$1 AND recipe_id=$2 AND body IS NOT NULL AND NOT moderation_hidden",
             )
             .bind(id)
             .bind(recipe)
@@ -167,7 +170,7 @@ async fn apply(
             // The recipe lock above serializes submissions with edits, deletes and other reports.
             let (version, author_id): (i32, Option<Uuid>) = sqlx::query_as(
                 "SELECT version_number, author_id FROM recipe_comments
-                 WHERE recipe_id=$1 AND id=$2 AND body=$3",
+                 WHERE recipe_id=$1 AND id=$2 AND body=$3 AND NOT moderation_hidden",
             )
             .bind(recipe)
             .bind(id)
@@ -177,7 +180,8 @@ async fn apply(
             .map_err(failure)?
             .ok_or_else(|| ServerFnError::new("Comment changed or unavailable"))?;
             let case_id: i64 = sqlx::query_scalar(
-                "INSERT INTO comment_review_cases (recipe_id,comment_id) VALUES ($1,$2)
+                "INSERT INTO comment_review_cases (recipe_id,comment_id,reported_parent_id)
+                 SELECT recipe_id,id,parent_id FROM recipe_comments WHERE recipe_id=$1 AND id=$2
                  ON CONFLICT (comment_id) WHERE resolved_at IS NULL
                  DO UPDATE SET comment_id=EXCLUDED.comment_id RETURNING id",
             )
@@ -186,10 +190,17 @@ async fn apply(
             .fetch_one(&mut *tx)
             .await
             .map_err(failure)?;
-            sqlx::query("INSERT INTO comment_reports (case_id,reporter_id,reason,reported_body,recipe_version,reported_author_id)
+            let inserted = sqlx::query("INSERT INTO comment_reports (case_id,reporter_id,reason,reported_body,recipe_version,reported_author_id)
                          VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (case_id,reporter_id) DO NOTHING")
                 .bind(case_id).bind(user).bind(reason).bind(observed_body).bind(version).bind(author_id)
                 .execute(&mut *tx).await.map_err(failure)?;
+            if inserted.rows_affected() > 0 {
+                sqlx::query("UPDATE comment_review_cases SET revision=revision+1 WHERE id=$1")
+                    .bind(case_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(failure)?;
+            }
             sqlx::query(
                 "UPDATE comment_review_cases SET queued_at=now(), status='queued'
                          WHERE id=$1 AND queued_at IS NULL

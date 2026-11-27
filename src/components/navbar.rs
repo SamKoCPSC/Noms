@@ -162,6 +162,7 @@ pub fn Navbar(theme: UseTheme) -> Element {
                                         AccountMenuIcon { kind: "dashboard" }
                                         "Dashboard"
                                     }
+                                    crate::pages::admin::AdminMenuLink { identity, menu: true }
                                     a {
                                         href: format!("/u/{}", auth.current_user.as_ref().map(|u| u.username.clone()).unwrap_or_default()),
                                         class: "account-menu-item", role: "menuitem", tabindex: "-1",

@@ -2,6 +2,7 @@ pub mod collection;
 pub mod collection_portability;
 pub mod comments;
 pub mod grocery_list;
+pub mod moderation;
 pub mod pantry;
 pub mod recipe;
 

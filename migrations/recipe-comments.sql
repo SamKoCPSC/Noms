@@ -1,6 +1,7 @@
 
 CREATE TABLE IF NOT EXISTS recipe_comments (
     request_id UUID NOT NULL,
+    moderation_hidden BOOLEAN NOT NULL DEFAULT false,
     UNIQUE (author_id, request_id),
     id BIGSERIAL PRIMARY KEY,
     recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,

@@ -191,6 +191,7 @@ pub fn MobileYou() -> Element {
             }
             if auth.is_authenticated {
                 section { class: "neumo-card mobile-hub-group", aria_label: "Your account",
+                    crate::pages::admin::AdminMenuLink { identity: auth.current_user_id, menu: false }
                     Link { to: Route::SettingsProfile {}, class: "mobile-hub-row", NavigationArtwork { kind: Some(PageIconKind::Profile) } div { strong { "Profile settings" } small { "Your name, photo, and bio" } } span { aria_hidden: "true", "›" } }
                     Link { to: Route::SettingsAccounts {}, class: "mobile-hub-row", NavigationArtwork { kind: Some(PageIconKind::Accounts) } div { strong { "Linked accounts" } small { "Manage your ways to sign in" } } span { aria_hidden: "true", "›" } }
                 }
