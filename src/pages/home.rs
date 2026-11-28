@@ -283,11 +283,12 @@ pub fn Home() -> Element {
                         CookingPreview { hint: "Select a screen to enlarge it." }
                     }
                 }
-                section { class: "landing-chapter landing-feature-section", aria_labelledby: "landing-pantry-title",
+                section { class: "landing-chapter landing-feature-section landing-pantry", aria_labelledby: "landing-pantry-title",
                     div { class: "landing-chapter-copy",
                         h2 { id: "landing-pantry-title", "Kitchen Pantry" }
                         p { "Check what you have before you cook, then turn the ingredients you’re missing into a shopping list." }
                         FeatureDescriptions { features: PANTRY_FEATURES }
+                        HomeScene { scene: Scene::Pantry }
                     }
                     FeaturePreviews { features: PANTRY_FEATURES }
                 }

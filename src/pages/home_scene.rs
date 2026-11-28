@@ -32,6 +32,11 @@ const PICNIC_POSTER: Asset = asset!(
     manganis::AssetOptions::builder()
 );
 const PICNIC_MODEL: Asset = asset!("/assets/landing/cattatouille-picnic/cattatouille-picnic.glb");
+const PANTRY_POSTER: Asset = asset!(
+    "/assets/landing/owlfredo-pantry/poster.webp",
+    manganis::AssetOptions::builder()
+);
+const PANTRY_MODEL: Asset = asset!("/assets/landing/owlfredo-pantry/owlfredo-pantry.glb");
 const LIGHTING: Asset = asset!("/assets/landing/kitchen/lighting.json");
 const RENDERER: Asset = asset!(
     "/assets/home-kitchen.js",
@@ -49,6 +54,7 @@ pub(super) enum Scene {
     CookieStudy,
     MarketStand,
     Picnic,
+    Pantry,
 }
 
 #[component]
@@ -68,6 +74,8 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
             "Terrimisu tastes cookies from two batches. He tilts his head and squints at the first, then hops with delight while holding the second."),
         Scene::Picnic => ("cattatouille-picnic", "picnic animation", PICNIC_MODEL, PICNIC_POSTER, 960, 720,
             "Cattatouille checks a recipe on his phone, builds a sandwich at a picnic table, photographs it, and takes a bite before packing his basket."),
+        Scene::Pantry => ("owlfredo-pantry", "pantry animation", PANTRY_MODEL, PANTRY_POSTER, 800, 600,
+            "Owlfredo unpacks a paper grocery bag, passes each item from wing to wing, and places it on a pantry shelf. He jumps for joy when the bag is empty."),
         Scene::MarketStand => ("pandacotta-market-stand", "bakery stand animation", MARKET_MODEL, MARKET_POSTER, 1152, 800,
             "Pandacotta and Penguini wave hello at the bakery stand. Penguini studies the pastries, picks a berry swirl, takes a bite, and jumps with delight. Pandacotta hands him the recipe card, and Penguini jumps again with the card and bun in his flippers."),
     };
@@ -128,7 +136,7 @@ pub(super) fn HomeScene(scene: Scene, caption: Option<&'static str>) -> Element 
                     let reduced = window.match_media("(prefers-reduced-motion: reduce)")
                         .ok().flatten().is_some_and(|m| m.matches());
                     paused.set(reduced);
-                    if reduced && matches!(scene, Scene::Plating | Scene::CookieStudy | Scene::MarketStand | Scene::Picnic) {
+                    if reduced && matches!(scene, Scene::Plating | Scene::CookieStudy | Scene::MarketStand | Scene::Picnic | Scene::Pantry) {
                         manual_start.set(true);
                     } else {
                         load_requested.set(true);

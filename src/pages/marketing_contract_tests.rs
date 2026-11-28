@@ -348,6 +348,9 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             .unwrap();
         assert!(copy.contains("See what you have"));
         assert!(copy.contains("Build a grocery list"));
+        assert!(copy.contains("data-scene=\"owlfredo-pantry\""));
+        assert!(copy.contains("Owlfredo unpacks a paper grocery bag"));
+        assert!(copy.contains("loading=\"lazy\""));
         assert_eq!(previews.matches("class=\"landing-shot-button\"").count(), 2);
         let tools = stories
             .split("id=\"landing-features-title\"")

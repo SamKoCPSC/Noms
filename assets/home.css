@@ -74,7 +74,7 @@
 .landing-mission .landing-model__viewer { height: auto; aspect-ratio: 6 / 5; }
 .landing-chapter-copy > .landing-model { margin-top: 16px; }
 .landing-chapter-copy .landing-model__viewer { height: auto; aspect-ratio: 7 / 4; }
-.landing-chapter-copy [data-scene="owlfredo-kitchen-island"] .landing-model__viewer { aspect-ratio: 4 / 3; }
+.landing-chapter-copy :is([data-scene="owlfredo-kitchen-island"], [data-scene="owlfredo-pantry"]) .landing-model__viewer { aspect-ratio: 4 / 3; }
 .landing-chapter-copy [data-scene="terrimisu-cookie-study"] .landing-model__viewer { aspect-ratio: 8 / 7; }
 .landing-chapter-copy [data-scene="pandacotta-market-stand"] .landing-model__viewer { aspect-ratio: 1152 / 800; }
 .landing-chapter-copy > #landing-signature-recipe { width: min(100%, 28rem); margin: 0 auto; }
@@ -110,6 +110,10 @@
 .landing-recipe-tools { scroll-margin-top: 110px; }
 .landing-recipe-tools .landing-feature-previews { grid-template-columns: repeat(2,minmax(0,1fr)); }
 @media (min-width: 761px) {
+    .landing-chapter.landing-pantry { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .landing-pantry .landing-chapter-copy { align-self: stretch; display: flex; flex-direction: column; padding-bottom: 16px; }
+    .landing-pantry .landing-feature-descriptions { margin-bottom: 16px; }
+    .landing-pantry .landing-model { width: min(100%, 32rem); margin: auto; }
     .landing-recipe-tools .landing-feature-previews { align-items: stretch; }
     .landing-recipe-tools .landing-feature-previews .landing-shot-button img { aspect-ratio: 4 / 3; object-fit: contain; }
 }
@@ -193,6 +197,7 @@
     .landing-app-window figcaption { font-size: 9px; gap: 8px; }
     .landing-app-window figcaption span { font-size: 8px; }
     .landing-community { padding-top: 32px; }
+    .landing-pantry .landing-feature-previews { width: 92%; justify-self: center; }
     .landing-recipe-tools .landing-feature-previews { grid-template-columns: minmax(0,1fr); }
     .landing-cooking-previews { gap: 10px; }
     .landing-phone { border-width: 3px; border-radius: 16px; }
