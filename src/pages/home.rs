@@ -192,8 +192,9 @@ pub fn Home() -> Element {
             section { id: "why-noms-exists", class: "landing-mission landing-wrap", aria_labelledby: "landing-mission-title",
                 div { class: "landing-section-head",
                     p { class: "landing-eyebrow", "Why Noms exists" }
-                    h2 { id: "landing-mission-title", "Create and share your signature recipes." }
-                    p { "Noms makes it easier for cooks from all backgrounds to save and discover their best dishes. Bringing together a community that's passionate about making and eating great food." }
+                    h2 { id: "landing-mission-title", "Discover your next signature recipe" }
+                    p { "The Noms mission is to give cooks the ultimate solution for building their cooking repertoire - bringing together a community passionate about cooking, and more importantly, eating great food." }
+                    p { "Noms aims to solve your everyday cooking problems so that you can focus on the important stuff. With Noms you can save your new recipes in seconds, keep track of changes you've made, scale your recipes when you have too much or too little, plan your next grocery trip, check what you can cook based on your available ingredients, and much more." }
                 }
                 HomeScene { scene: Scene::RecipeDesk, caption: "Good food brings people together." }
             }
