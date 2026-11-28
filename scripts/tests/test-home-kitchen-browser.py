@@ -307,7 +307,7 @@ async def main(args):
         await page.route('**/*penguini-kitchen*.glb',lambda r:r.abort())
         await page.goto(args.url);await page.wait_for_selector('#landing-kitchen[data-state="fallback"]',timeout=120000)
         assert await page.locator('#landing-kitchen img').is_visible()
-        assert await page.get_by_role('heading',name='The Ultimate Recipe Manager').is_visible()
+        assert await page.get_by_role('heading',name='Welcome to Noms The Ultimate Recipe Manager',exact=True).is_visible()
         await page.locator('#landing-recipe-desk').scroll_into_view_if_needed()
         await expect(page.locator('#landing-recipe-desk')).to_have_attribute('data-state','fallback')
         await expect(page.locator('#landing-recipe-desk img')).to_be_visible()
