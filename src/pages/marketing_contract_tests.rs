@@ -1,4 +1,3 @@
-use super::home::{home_cta, HomeCtaDestination};
 use super::how_to::HOW_TO_SECTIONS;
 use dioxus::prelude::*;
 
@@ -15,24 +14,6 @@ fn LandingTestRoot(signed_in: bool) -> Element {
             Router::<crate::Route> {}
         }
     }
-}
-
-#[test]
-fn signed_out_home_cta_starts_recipe_creation_through_login() {
-    let cta = home_cta(false);
-    let home_source = include_str!("home.rs");
-
-    assert_eq!(cta.label, "Start your recipe book");
-    assert_eq!(cta.destination, HomeCtaDestination::LoginThenCreateRecipe);
-    assert!(home_source.contains("/login?redirect_uri=/recipes/new"));
-}
-
-#[test]
-fn signed_in_home_cta_opens_dashboard() {
-    let cta = home_cta(true);
-
-    assert_eq!(cta.label, "Open dashboard");
-    assert_eq!(cta.destination, HomeCtaDestination::Dashboard);
 }
 
 #[test]
@@ -241,7 +222,45 @@ fn landing_preserves_public_exploration_and_authenticated_creation() {
             VirtualDom::new_with_props(LandingTestRoot, LandingTestRootProps { signed_in });
         dom.rebuild_in_place();
         let html = dioxus_ssr::render(&dom);
-        assert!(html.contains("The Ultimate Recipe Manager"));
+        let (welcome, tagline) = html
+            .split_once("<h1 id=\"home-title\">")
+            .unwrap()
+            .1
+            .split_once("</span>")
+            .unwrap();
+        assert!(welcome.contains("Welcome to Noms"));
+        assert!(tagline
+            .trim_start()
+            .starts_with("The Ultimate Recipe Manager</h1>"));
+        let hero_actions = html
+            .split_once("class=\"landing-recipe-search\"")
+            .unwrap()
+            .1
+            .split_once("</form>")
+            .unwrap()
+            .1
+            .split_once("class=\"landing-tiny\"")
+            .unwrap()
+            .0;
+        assert!(hero_actions.contains("href=\"#why-noms-exists\""));
+        assert!(hero_actions.contains(">Learn more</a>"));
+        assert!(hero_actions.contains("href=\"/explore\""));
+        assert!(hero_actions.contains(">Explore</a>"));
+        assert!(html.contains("id=\"why-noms-exists\""));
+        let (account_url, account_label) = if signed_in {
+            ("href=\"/dashboard\"", "Open dashboard")
+        } else {
+            ("href=\"/login\"", "Create your account")
+        };
+        assert!(hero_actions.contains(account_url));
+        assert!(hero_actions.contains(account_label));
+        assert_eq!(
+            hero_actions
+                .matches("class=\"btn btn-primary touch-target\"")
+                .count(),
+            3
+        );
+        assert!(!hero_actions.contains("Start your recipe book"));
         let stories = html
             .split("class=\"landing-chapters landing-wrap\"")
             .nth(1)

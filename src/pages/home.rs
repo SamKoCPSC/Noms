@@ -14,30 +14,6 @@ const COOK_ONE: Asset = asset!("/assets/landing/cook-1.webp");
 const COOK_TWO: Asset = asset!("/assets/landing/cook-2.webp");
 const COOK_THREE: Asset = asset!("/assets/landing/cook-3.webp");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum HomeCtaDestination {
-    LoginThenCreateRecipe,
-    Dashboard,
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) struct HomeCta {
-    pub label: &'static str,
-    pub destination: HomeCtaDestination,
-}
-pub(super) fn home_cta(is_authenticated: bool) -> HomeCta {
-    if is_authenticated {
-        HomeCta {
-            label: "Open dashboard",
-            destination: HomeCtaDestination::Dashboard,
-        }
-    } else {
-        HomeCta {
-            label: "Start your recipe book",
-            destination: HomeCtaDestination::LoginThenCreateRecipe,
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq)]
 struct Story {
     title: &'static str,
@@ -198,22 +174,22 @@ pub fn Home() -> Element {
             path: "/",
         }
         div { class: "home-page landing-page",
-            section { class: "landing-hero landing-wrap", aria_labelledby: "home-title",
-                div { class: "landing-hero-copy",
-                    h1 { id: "home-title", "The Ultimate Recipe Manager" }
-                    p { class: "landing-intro", "Noms is a community-focused recipe archive designed for saving, sharing, and developing recipes" }
-                    LandingActions { signed_in: auth.is_authenticated, search: true }
-                }
-                div { class: "landing-hero-visual",
-                    HomeScene { scene: Scene::Kitchen }
+            div { class: "landing-hero-background",
+                section { class: "landing-hero landing-wrap", aria_labelledby: "home-title",
+                    div { class: "landing-hero-copy",
+                        h1 { id: "home-title",
+                            span { class: "landing-hero-welcome", "Welcome to Noms" }
+                            " The Ultimate Recipe Manager"
+                        }
+                        p { class: "landing-intro", "Noms is a community-focused recipe manager where you can save, cook, refine, and share your signature recipes. Discover what other cooks are making and find inspiration for your next dish." }
+                        LandingActions { signed_in: auth.is_authenticated, hero: true }
+                    }
+                    div { class: "landing-hero-visual",
+                        HomeScene { scene: Scene::Kitchen }
+                    }
                 }
             }
-            div { class: "landing-promises landing-wrap", aria_label: "Noms commitments",
-                for promise in ["For every kind of cook", "Free to use", "No intrusive advertising", "Your data stays yours"] {
-                    span { "{promise}" }
-                }
-            }
-            section { class: "landing-mission landing-wrap", aria_labelledby: "landing-mission-title",
+            section { id: "why-noms-exists", class: "landing-mission landing-wrap", aria_labelledby: "landing-mission-title",
                 div { class: "landing-section-head",
                     p { class: "landing-eyebrow", "Why Noms exists" }
                     h2 { id: "landing-mission-title", "Create and share your signature recipes." }
@@ -318,7 +294,7 @@ pub fn Home() -> Element {
             section { class: "landing-closing landing-wrap", aria_labelledby: "landing-closing-title",
                 p { class: "landing-eyebrow", "You can start with one recipe." }
                 h2 { id: "landing-closing-title", "Begin your kitchen journal." }
-                LandingActions { signed_in: auth.is_authenticated, create: true }
+                LandingActions { signed_in: auth.is_authenticated, hero: false }
                 div { class: "landing-more-links",
                     Link { to: Route::About {}, "About Noms" }
                     Link { to: Route::HowTo {}, "How to use Noms" }
@@ -340,19 +316,14 @@ pub fn Home() -> Element {
 }
 
 #[component]
-fn LandingActions(
-    signed_in: bool,
-    #[props(default)] create: bool,
-    #[props(default)] search: bool,
-) -> Element {
-    let cta = home_cta(signed_in);
+fn LandingActions(signed_in: bool, hero: bool) -> Element {
     let mut search_text = use_signal(String::new);
     let mut submit = move |text: String| {
         search_text.set(text.clone());
         navigator().push(crate::pages::search::public_recipe_search_url(&text));
     };
     rsx! {
-        if search {
+        if hero {
             form { class: "landing-recipe-search", role: "search", aria_label: "Find a recipe", action: "/search", method: "get",
                 "data-autocomplete-anchor": "true",
                 onsubmit: move |event| { event.prevent_default(); submit(search_text()); },
@@ -370,13 +341,20 @@ fn LandingActions(
             }
         }
         div { class: "landing-actions",
-            if cta.destination == HomeCtaDestination::Dashboard {
-                if create { Link { to: Route::RecipeNew {}, class: "btn btn-primary touch-target", "Create a recipe →" } }
-                else { Link { to: Route::Dashboard {}, class: "btn btn-primary touch-target", "{cta.label} →" } }
+            if hero {
+                Link {
+                    to: if signed_in { Route::Dashboard {} } else { Route::Login {} },
+                    class: "btn btn-primary touch-target",
+                    if signed_in { "Open dashboard" } else { "Create your account" }
+                }
+                Link { to: Route::Explore {}, class: "btn btn-primary touch-target", "Explore" }
+                a { href: "#why-noms-exists", class: "btn btn-primary touch-target", "Learn more" }
             } else {
-                a { href: "/login?redirect_uri=/recipes/new", class: "btn btn-primary touch-target", "{cta.label} →" }
-            }
-            if !search {
+                if signed_in {
+                    Link { to: Route::RecipeNew {}, class: "btn btn-primary touch-target", "Create a recipe →" }
+                } else {
+                    a { href: "/login?redirect_uri=/recipes/new", class: "btn btn-primary touch-target", "Start your recipe book →" }
+                }
                 Link { to: Route::Explore {}, class: "btn btn-secondary touch-target", "Explore recipes" }
             }
         }
