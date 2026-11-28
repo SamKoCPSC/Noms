@@ -64,7 +64,8 @@ function lightStudio(renderer, scene, root, sceneName) {
   });
   let key;
   if (sceneName === 'pandacotta-market-stand') key = lightMarket(renderer, scene);
-  else if (sceneName === 'cattatouille-picnic') key = lightPicnic(renderer, scene);
+  else if (sceneName === 'cattatouille-picnic') key = lightWarmStudio(renderer, scene, .66);
+  else if (sceneName === 'owlfredo-pantry') key = lightWarmStudio(renderer, scene, .25);
   else if (sceneName === 'signature-recipe') key = lightPlating(renderer, scene);
   else key = lightDeskOrBanquet(renderer, scene, sceneName === 'pandacotta-banquet');
   return {dispose() {key.shadow.dispose(); environment.dispose();}};
@@ -120,10 +121,10 @@ function lightMarket(renderer, scene) {
   return key;
 }
 
-function lightPicnic(renderer, scene) {
+function lightWarmStudio(renderer, scene, environmentIntensity) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = .91;
-  scene.environmentIntensity = .66;
+  scene.environmentIntensity = environmentIntensity;
   scene.add(new THREE.HemisphereLight(0xfff6e8, 0xbca585, .4));
   const key = aimedLight(scene, 2, 0xfff0df, 2.05, -4.5, 8, 6);
   key.castShadow = true;
@@ -164,7 +165,8 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
   const isKitchen = sceneName === 'kitchen';
   const isBanquet = sceneName === 'pandacotta-banquet';
   const isMarket = sceneName === 'pandacotta-market-stand';
-  const fadeOnLoop = isKitchen || isMarket;
+  const isPantry = sceneName === 'owlfredo-pantry';
+  const fadeOnLoop = isKitchen || isMarket || isPantry;
   let renderer, root, environment, mixer, api;
   try {
     renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true, powerPreference:'low-power'});
@@ -214,6 +216,7 @@ export async function createScene(canvas, sceneName, modelUrl, lightingUrl, sign
     else if (sceneName === 'signature-recipe') view = studioCamera([.11, 5.88, 12.7], [0, 2.08, .35], 6.16235, 6.16235 * 876 / 1059);
     else if (sceneName === 'terrimisu-cookie-study') view = studioCamera([1.13, 5.6, 10.9], [0, 2.19, .47], 5.79, 5.06);
     else if (sceneName === 'cattatouille-picnic') view = studioCamera([-2.4, 7.4, 11.7], [0, 1.68, 0], 7.4, 5.55);
+    else if (isPantry) view = studioCamera([4.3, 5.85, 16], [-.48, 1.83, .77], 9.54, 7.155);
     else if (isMarket) view = studioCamera([.41, 5.13, 13.25], [.16, 2.05, .56], 7.36, 7.36 * 800 / 1152);
     else if (isBanquet) view = studioCamera([.13, 5.02, 14], [0, 2.57, -.3], 10.675, 6.1);
     else if (sceneName === 'owlfredo-kitchen-island') view = studioCamera([3.75, 5.66, 11.4], [0, 2.51, .72], 7.0, 6.45);

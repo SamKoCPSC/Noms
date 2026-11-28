@@ -251,6 +251,7 @@ async def main(args):
         assert await page.evaluate('oldIsland.dataset.disposed')=='true'
         assert await page.evaluate('oldDesk.dataset.disposed')=='true'
         assert await page.evaluate('oldBanquet.dataset.disposed')=='true'
+        loads_before_return = len(model_requests)
         await page.go_back();await ready(page)
         assert await page.locator('#landing-kitchen-canvas').count()==1
         assert await page.locator('#landing-kitchen button').get_attribute('aria-label')=='Play kitchen animation'
@@ -263,6 +264,16 @@ async def main(args):
         await picnic_button.click()
         await ready(page, '#landing-cattatouille-picnic')
         assert sum('cattatouille-picnic' in url for url in model_requests) == previous_picnic_loads + 1
+        pantry = page.get_by_role('region', name='Kitchen Pantry').locator('#landing-owlfredo-pantry')
+        await pantry.scroll_into_view_if_needed()
+        await expect(pantry.locator('img')).to_be_visible()
+        await expect(pantry.get_by_role('button', name='Play pantry animation')).to_be_visible()
+        assert not any('owlfredo-pantry' in url for url in model_requests[loads_before_return:])
+        await pantry.get_by_role('button', name='Play pantry animation').click()
+        await ready(page, '#landing-owlfredo-pantry')
+        await expect(pantry.locator('canvas')).to_have_attribute('data-duration', '45')
+        await pantry.get_by_role('button', name='Pause pantry animation').click()
+        await expect(pantry.get_by_role('button', name='Play pantry animation')).to_have_attribute('aria-pressed', 'true')
         previous_cookie_loads = sum('terrimisu-cookie-study' in url for url in model_requests)
         await cookies.scroll_into_view_if_needed()
         await expect(cookie_button).to_have_attribute('aria-label', 'Play cookie tasting animation')
@@ -292,6 +303,7 @@ async def main(args):
         await page.route('**/*pandacotta-banquet*.glb',lambda r:r.abort())
         await page.route('**/*terrimisu-cookie-study*.glb',lambda r:r.abort())
         await page.route('**/*cattatouille-picnic*.glb',lambda r:r.abort())
+        await page.route('**/*owlfredo-pantry*.glb',lambda r:r.abort())
         await page.route('**/*penguini-kitchen*.glb',lambda r:r.abort())
         await page.goto(args.url);await page.wait_for_selector('#landing-kitchen[data-state="fallback"]',timeout=120000)
         assert await page.locator('#landing-kitchen img').is_visible()
@@ -311,6 +323,10 @@ async def main(args):
         await page.locator('#landing-cattatouille-picnic').scroll_into_view_if_needed()
         await expect(page.locator('#landing-cattatouille-picnic')).to_have_attribute('data-state','fallback')
         await expect(page.locator('#landing-cattatouille-picnic img')).to_be_visible()
+        pantry = page.locator('#landing-owlfredo-pantry')
+        await pantry.scroll_into_view_if_needed()
+        await expect(pantry).to_have_attribute('data-state','fallback')
+        await expect(pantry.locator('img')).to_be_visible()
         await failed.close()
         nojs=await browser.new_context(java_script_enabled=False);page=await nojs.new_page();await page.goto(args.url)
         assert await page.locator('#landing-kitchen img').is_visible()

@@ -3,7 +3,7 @@
 `HomeScene` owns each model's poster, pause control, reduced-motion preference
 and route cleanup. All scenes share one locally bundled Three.js renderer.
 The kitchen loads in the hero. The recipe desk, Pandacotta’s banquet, the plating
-scene, Owlfredo’s soup island, Terrimisu’s cookie study, the bakery stand, and Cattatouille’s picnic load
+scene, Owlfredo’s soup island, Terrimisu’s cookie study, the bakery stand, Cattatouille’s picnic, and Owlfredo’s pantry load
 as their sections approach the viewport.
 
 The kitchen plays the full recipe and fades as the tray and bowl reset. The desk
@@ -24,6 +24,12 @@ reduced motion is enabled. Its editable source is
 `design/landing/cattatouille-picnic/cattatouille-picnic.blend`. The web GLB
 keeps the complete 2,111-frame loop and its animated mouth and apron shapes.
 The poster shows Cattatouille photographing the sandwich at 62.8 seconds.
+
+In “Kitchen Pantry,” Owlfredo puts away six groceries and celebrates with three hops.
+The 45-second scene fades when the bag refills. Visitors who prefer reduced motion
+see the celebration poster until they press Play. The editable scene is in
+`design/landing/owlfredo-pantry/owlfredo-pantry.blend`, with the Meshopt-packed
+GLB and transparent poster in `assets/landing/owlfredo-pantry/`.
 
 Each scene has its own pause control, suspends playback offscreen and in
 background tabs, and starts paused for reduced motion. Its poster is visible
