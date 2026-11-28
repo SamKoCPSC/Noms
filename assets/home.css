@@ -76,6 +76,7 @@
 }
 .landing-section-head { max-width: 760px; }
 .landing-section-head h2 { margin-bottom: 22px; }
+.landing-mission .landing-section-head p + p { margin-top: 14px; }
 .landing-mission .landing-model__viewer { height: auto; aspect-ratio: 6 / 5; }
 .landing-chapter-copy > .landing-model { margin-top: 16px; }
 .landing-chapter-copy .landing-model__viewer { height: auto; aspect-ratio: 7 / 4; }
