@@ -89,7 +89,21 @@ for room in glass_report['rooms'].values():
             hit=trees[obj.name].ray_cast(inv@origin,local_direction.normalized(),distance)
             assert hit[0] is None,(cut,tuple(hit[0]))
         opening_rays+=1
-assert opening_rays>70 and terrain['clear_window_openings']==32
+from wayside_layout import COTTAGES
+wayside_windows = 0
+for plot in COTTAGES:
+    panes = terrain.objects['Wayside glazing – '+plot['id']]
+    wall = terrain.objects['Colored cottage walls – '+plot['id']].data
+    assert panes.active_material.get('village_clear_glass')
+    tree = BVHTree.FromPolygons([v.co for v in wall.vertices], [tuple(p.vertices) for p in wall.polygons])
+    # Each rectangular pane has two broad faces. Both must see through the plaster.
+    faces = [p for p in panes.data.polygons if p.area > .5]
+    assert faces and len(faces) % 2 == 0
+    for face in faces:
+        hit = tree.ray_cast(face.center + .25*face.normal, -face.normal, .5)
+        assert hit[0] is None, (plot['id'], face.index)
+    wayside_windows += len(faces) // 2
+assert opening_rays>70 and terrain['clear_window_openings']==32 + wayside_windows
 report = dict(glass_revision=glass_revision(),clear_cottage_window_openings=terrain.get('clear_window_openings'),clear_backing_rays=opening_rays,native_world_reopened=True, model_instances=len(instances),
     native_objects=sum(len(o.instance_collection.all_objects) for o in instances),
     shared_suns=1, lighting=CONFIG, original_master_hashes_verified=len(receipts),

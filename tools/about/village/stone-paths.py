@@ -6,6 +6,7 @@ junctions therefore cannot contain overlapping strips or conflicting heights.
 """
 import gzip, hashlib, json, math, random
 from pathlib import Path
+from daylight.wayside_layout import COTTAGES, LANE_RADIUS, walk_points
 import numpy as np
 from shapely import constrained_delaunay_triangles, voronoi_polygons
 from shapely.geometry import LineString, MultiPoint, Point, Polygon
@@ -53,6 +54,14 @@ for stop, entry in zip(layout['stops'], entrances):
     points = [(1-t)**2*a+2*(1-t)*t*control+t*t*b for t in np.linspace(0,1,65)]
     branch = LineString(points); branches.append(branch)
     footprints.extend([branch.buffer(1.25, quad_segs=8), polygon])
+
+# Each cottage walk overlaps an established tour route at its start. Unioning
+# before laying stone gives the junction a continuous surface and a single height.
+cottage_walks = [LineString(walk_points(plot)) for plot in COTTAGES]
+main_paths = unary_union(footprints)
+for walk in cottage_walks:
+    assert main_paths.covers(Point(walk.coords[0]))
+    footprints.append(walk.buffer(LANE_RADIUS, quad_segs=8))
 
 # Round inward junction corners only after the strips are united. There is a
 # single boundary and a single height function, including the entrance patios.
@@ -160,14 +169,14 @@ for i,cell in enumerate(cells):
 assert clearance >= .069
 for route in routes:
     assert all(network.covers(Point(p[0],p[2])) for p in route)
-assert all(network.covers(b) for b in branches)
+assert all(network.covers(b) for b in [*branches, *cottage_walks])
 output=ASSET/'daylight/source/stone-paths.json.gz'
 payload=json.dumps(dict(remove_names=REMOVED,meshes=meshes),separators=(',',':')).encode()
 output.write_bytes(gzip.compress(payload,mtime=0))
 report=dict(connected_components=1,valid_footprint=True,stone_count=stones,
     partition_overlap_area=abs(sum(p.area for p in cells)-network.area),
     uncovered_area=covered.symmetric_difference(network).area,minimum_terrain_clearance=clearance,
-    entrances_connected=len(branches),walking_routes_covered=len(routes),
+    cottage_walks_connected=len(cottage_walks),entrances_connected=len(branches),walking_routes_covered=len(routes),
     one_height_field=True,continuous_grout_bed=True,beveled_edges=True,
     triangles=sum(len(m['indices'])//3 for m in meshes),sha256=hashlib.sha256(output.read_bytes()).hexdigest())
 (ASSET/'daylight/source/stone-path-verification.json').write_text(json.dumps(report,indent=2)+'\n')

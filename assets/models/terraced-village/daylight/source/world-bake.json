@@ -40,16 +40,17 @@
     "tiles": 4,
     "atlas_size": 2048,
     "full_world_occluders": true,
-    "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
-    "vegetation_geometry_sha256": "65b568c84d517879c7d8590bb0878b4b5fb4135800047498b08c8f4d32064e16",
+    "stone_path_geometry_sha256": "13aa38622309bd47176c870801262f7514b65ccaff2fc2ef945d3f1e9cf7e612",
+    "vegetation_geometry_sha256": "ab167cc6d3fd47a90be5a03bf3de49722abfcae45f92683db43919c0f43b5022",
     "signage_geometry_sha256": "5191fe7f9e3abc9c60108558900834988cb191573c93aecb9b9701f70da39664",
     "triangles": 21504
   },
   "landscape": {
+    "cottage_walls_refined": 12,
     "rock_geometry_sha256": "eea27b6c3f7fafecb9ba4f8b89bebc00f8092c43230eb55132b2a71a22d045f8",
     "tree_casters_sha256": "e9d3d174812ac9d28d3c1a178814bc37106b45afb2ce4e6692202030745ff64a",
     "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
-    "clear_glass_meshes": 1,
+    "clear_glass_meshes": 5,
     "lighting": {
       "sun_direction_y_up": [
         -60,
@@ -85,20 +86,20 @@
       ]
     },
     "full_world_occluders": true,
-    "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
-    "vegetation_geometry_sha256": "65b568c84d517879c7d8590bb0878b4b5fb4135800047498b08c8f4d32064e16",
+    "stone_path_geometry_sha256": "13aa38622309bd47176c870801262f7514b65ccaff2fc2ef945d3f1e9cf7e612",
+    "vegetation_geometry_sha256": "ab167cc6d3fd47a90be5a03bf3de49722abfcae45f92683db43919c0f43b5022",
     "signage_geometry_sha256": "5191fe7f9e3abc9c60108558900834988cb191573c93aecb9b9701f70da39664",
-    "baked_corners": 3677954,
+    "baked_corners": 4021062,
     "export_chunks": 72,
     "bake_samples": 64,
     "display_transform": "AgX",
     "unlit_vertex_colors": true,
     "texture_uvs_required": false
   },
-  "triangles": 1260258,
+  "triangles": 1421932,
   "unused_unlit_lighting_attributes_omitted": 76,
-  "glb_bytes": 42105052,
-  "uncompressed_bytes": 169642316,
+  "glb_bytes": 43251696,
+  "uncompressed_bytes": 175560744,
   "display_texture_format": "PNG RGB8 sRGB, original resolution",
   "geometry_compression": {
     "extension": "EXT_meshopt_compression",
@@ -107,5 +108,5 @@
     "uv_bits": 16,
     "triangles_removed": 0
   },
-  "packed_sha256": "09bf3cd20bc4e2a7b261796e3a200eab28b2c9c4dd3db7271017f6d9da21e30a"
+  "packed_sha256": "e4c1c793eb8f805d12e65e6ae4faecacab897e28f996a5ff94a0c1f447532bf6"
 }

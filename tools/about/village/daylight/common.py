@@ -88,6 +88,8 @@ def environment(scene,bounds=None):
         mesh.materials.append(materials[key]);obj=bpy.data.objects.new(item['name'],mesh);collection.objects.link(obj);obj['environment_index']=i
     from glass import apply_environment_glass
     apply_environment_glass(collection)
+    from wayside_cottages import install
+    install(collection, LAYOUT, bounds)
     return collection
 def originals():
     import hashlib

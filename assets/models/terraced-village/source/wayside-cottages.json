@@ -1,0 +1,6 @@
+[
+  {"id":"willow","kind":"hipped","center":[-60.75,11],"width":5.8,"depth":4.45,"eave":3.15,"rise":1.7,"join":[-49.5,16.5],"bend":[-54.9,15.6],"plaster":"e9cea3","roof":"747f78","paint":"648781"},
+  {"id":"hearth","kind":"thatched","center":[-39,-34.25],"width":7.2,"depth":4.7,"eave":2.95,"rise":2.15,"join":[-28.5,-45],"bend":[-33.15,-40.9],"plaster":"eedcaf","roof":"ae8454","paint":"8b5d4e"},
+  {"id":"rowan","kind":"timbered","center":[-30.5,-86],"width":6.3,"depth":5.15,"eave":3.55,"rise":2.65,"join":[-13.02,-75.28],"bend":[-21.2,-78.25],"plaster":"e7d5b6","roof":"a46250","paint":"536f62"},
+  {"id":"bluebell","kind":"gambrel","center":[45,-47.25],"width":5.95,"depth":4.65,"eave":3.15,"rise":2.35,"join":[44.1,-32.28],"bend":[45.85,-38.7],"plaster":"a7bfc0","roof":"555e70","paint":"866447"}
+]

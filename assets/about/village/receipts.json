@@ -229,9 +229,9 @@
   },
   {
     "id": "world",
-    "source_sha256": "e163bd20348470e94468950ee505945fe4407a51de024f782e4464e6270ffb77",
-    "original_bytes": 44051424,
-    "preview_bytes": 23642928,
+    "source_sha256": "b79eaa4a9693dbaa28acc18a88101af99637fe029ef14597e8e231b98babb4c9",
+    "original_bytes": 45202344,
+    "preview_bytes": 24833372,
     "texture_dimensions": [
       [
         2048,
@@ -254,8 +254,8 @@
         1024
       ]
     ],
-    "geometry_views_verified": 287,
+    "geometry_views_verified": 295,
     "texture_format": "WebP quality 76, original resolution",
-    "sha256": "de0c2da16f5ec0317108a732eaae2a580fa0dd303fb5565abd433313c08435b4"
+    "sha256": "18e3c6a82aa1e2d6cc7d1263950055a7902684e50771aaf63c4ba86be1622a1e"
   }
 ]

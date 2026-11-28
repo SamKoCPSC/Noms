@@ -95,3 +95,35 @@ test('the maple near the brick kitchen has walkable ground under its crown and a
  walk.move(body,x,trunkZ,0,0);
  assert.ok(body.z>trunkZ+.25 && body.z<trunkZ+1);
 });
+
+test('every wayside cottage has a walkable approach from the paved tour route to its closed front door', () => {
+  const plots = JSON.parse(readFileSync('assets/models/terraced-village/source/wayside-cottages.json'));
+  const route = layout.routes.flat().map(pose => pose.eye);
+  for (const {id, center, join, bend, depth} of plots) {
+    assert.ok(route.some(([x, , z]) => Math.hypot(x - join[0], z - join[1]) < .65), id + ' joins the tour');
+    const dx = bend[0] - center[0], dz = bend[1] - center[1];
+    // Leave room for the player's body between the end of the walk and the sill.
+    const distance = (depth / 2 + 1.1) / Math.hypot(dx, dz);
+    const end = [center[0] + dx * distance, center[1] + dz * distance];
+    const walk = createWalkBody(surface, village);
+    const body = walk.spawn(...join);
+
+    function reach(t) {
+      const [x, z] = join.map((start, axis) =>
+        (1 - t) ** 2 * start + 2 * t * (1 - t) * bend[axis] + t ** 2 * end[axis]);
+      walk.move(body, x, z, 0, 0);
+      assert.ok(Math.hypot(body.x - x, body.z - z) < .04, id + ' walk blocked at ' + t);
+      if (t === .5) {
+        const y = surface.sample(x, z).floor;
+        const stone = village.gap(x, z, y - 1, y + .3, .14);
+        assert.ok(stone && stone.bottom >= y - .05, id + ' has a stone surface underfoot');
+      }
+    }
+
+    for (let i = 0; i <= 48; i++) reach(i / 48);
+    walk.move(body, ...center, 0, 0);
+    const doorDistance = Math.hypot(body.x - center[0], body.z - center[1]) - depth / 2;
+    assert.ok(doorDistance >= 0 && doorDistance < 1.2, id + ' stops the player at the doorstep');
+    for (let i = 48; i >= 0; i--) reach(i / 48);
+  }
+});

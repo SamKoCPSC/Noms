@@ -7,6 +7,7 @@ away from paving, rooms, water, foundations and low landscape props.
 """
 import gzip, hashlib, json, math, random
 from pathlib import Path
+from daylight.wayside_layout import COTTAGES, on_plot
 import numpy as np
 from shapely import contains_xy
 from shapely.geometry import Point, Polygon, box
@@ -55,6 +56,10 @@ for item in items:
         for v in components(item):
             lo=v.min(0);hi=v.max(0)
             obstacles.append(box(lo[0],lo[2],hi[0],hi[2]).buffer(.22))
+# Leave room for the cottage roofs, shutters and stoops as well as their paved walks.
+for plot in COTTAGES:
+    w, d = plot['width']/2 + .65, plot['depth']/2 + .65
+    obstacles.append(Polygon([on_plot(plot, x, z) for x,z in [(-w,-d),(w,-d),(w,d),(-w,d)]]))
 excluded=unary_union([network.buffer(.32),*obstacles]);safe=prep(excluded)
 near=prep(network.buffer(6));middle=prep(network.buffer(15))
 

@@ -13,6 +13,7 @@ const layout = JSON.parse(await readFile('assets/models/terraced-village/layout.
 await MeshoptDecoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptDecoder });
 const reports = [];
+const wayside = JSON.parse(await readFile('assets/models/terraced-village/source/wayside-cottages.json'));
 const glassRevision=createHash('sha256').update(await readFile('tools/about/village/daylight/glass.py')).digest('hex');
 for (const id of [...layout.stops.map(s => s.id), 'world']) {
   const bytes = await readFile(`${base}/models/${id}.glb`);
@@ -40,6 +41,9 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
   assert.equal(id==='world'?receipt.ground.glass_revision:receipt.glass_revision,glassRevision,id);
   if (id === 'world') {
     assert.equal(receipt.landscape.glass_revision, glassRevision);
+    for (const {id} of wayside) assert(root.listNodes().some(n => n.getName() === 'Wayside glazing – ' + id), id);
+    assert.equal(receipt.landscape.cottage_walls_refined, layout.neighborhood.houses.length + wayside.length,
+      'Every cut cottage shell needs face-local lighting samples');
     assert.match(receipt.landscape.rock_geometry_sha256, /^[0-9a-f]{64}$/);
     assert.equal(receipt.ground.rock_geometry_sha256, receipt.landscape.rock_geometry_sha256,
       'The ground and landscape must use the same stone geometry and colors');
@@ -60,6 +64,7 @@ for (const id of [...layout.stops.map(s => s.id), 'world']) {
       assert.equal(receipt.landscape.stone_path_geometry_sha256,hash);
       const paths=JSON.parse(await readFile(layout.stone_paths.verification));
       assert.equal(paths.sha256,hash);
+      assert.equal(paths.cottage_walks_connected, wayside.length);
     }
     if(layout.vegetation){
       const hash=createHash('sha256').update(await readFile(layout.vegetation.geometry)).digest('hex');
