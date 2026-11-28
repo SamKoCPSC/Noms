@@ -20,6 +20,13 @@ The browser assets are derivatives of this native scene:
   complete native world, at 32 samples per texel.
 - Rounded paths, steps, houses, signs and other landscape surfaces use baked
   vertex colors at 64 samples. This avoids dark seams from tiny UV islands.
+  Cottage walls have separate normals on the flat panels and window reveals.
+  A half-metre grid gives the bake enough samples to resolve shadows under the
+  eaves and around the frames.
+  The four wayside cottages share their plot and doorstep coordinates with the
+  limestone and meadow generators. Each approach joins the paving before the
+  stones are laid. Roof and trim lighting samples sit just inside each face so
+  shadows at the edges of a course stay local. [Cottage placements and roof styles](../source/wayside-cottages.json)
 - Opaque lighting is already display transformed with Blender AgX and is not
   lit or tone mapped again in Three.js. Glass and reflective metal retain
   view-dependent rendering with an outdoor reflection environment.

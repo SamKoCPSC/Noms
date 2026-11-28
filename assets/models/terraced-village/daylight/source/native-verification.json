@@ -1,6 +1,6 @@
 {
   "glass_revision": "73ebbf5781d94203aad9738c8fd795b791f19295c0d00d31bccd4e3a047d3a6f",
-  "clear_cottage_window_openings": 32,
+  "clear_cottage_window_openings": 56,
   "clear_backing_rays": 91,
   "native_world_reopened": true,
   "model_instances": 12,
@@ -41,15 +41,15 @@
     ]
   },
   "original_master_hashes_verified": 12,
-  "world_meshes": 421,
+  "world_meshes": 433,
   "matte_world_materials": true,
   "preserved_edge_normals": true,
   "portable_images": true,
   "external_libraries": 0,
   "walking_camera_preserved": true,
-  "sha256": "840b3b0418d18e5e4d3d33a836fed601f4775faace3bd060d8c242d11181b556",
-  "bytes": 86344763,
-  "stone_path_geometry_sha256": "a4c507a10ff4a77843eb17fbeb49acc6732ac275001e89eb56e9e71224962a9b",
-  "vegetation_geometry_sha256": "65b568c84d517879c7d8590bb0878b4b5fb4135800047498b08c8f4d32064e16",
+  "sha256": "97e8090b70d5480cae991f63261e7593ff5cce943093846652f7f1a97a2c45f4",
+  "bytes": 85279301,
+  "stone_path_geometry_sha256": "13aa38622309bd47176c870801262f7514b65ccaff2fc2ef945d3f1e9cf7e612",
+  "vegetation_geometry_sha256": "ab167cc6d3fd47a90be5a03bf3de49722abfcae45f92683db43919c0f43b5022",
   "signage_geometry_sha256": "5191fe7f9e3abc9c60108558900834988cb191573c93aecb9b9701f70da39664"
 }
